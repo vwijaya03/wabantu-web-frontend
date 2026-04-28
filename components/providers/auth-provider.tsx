@@ -41,6 +41,8 @@ export function AuthProvider({
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
+    } catch {
+      // Even if API is unreachable, clear local auth state so user can proceed.
     } finally {
       setUser(null);
       if (typeof window !== "undefined") window.location.href = "/login";

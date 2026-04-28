@@ -18,10 +18,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { getServerUser } from "@/lib/api/server";
+import { getServerUser, getServerWhatsappChannels } from "@/lib/api/server";
 
 export default async function DashboardOverviewPage() {
-  const user = await getServerUser();
+  const [user, channels] = await Promise.all([
+    getServerUser(),
+    getServerWhatsappChannels(),
+  ]);
+  const hasConnectedWhatsapp = channels.some((c) => c.status === "connected");
+
   const setupSteps = [
     {
       key: "register",
@@ -32,7 +37,7 @@ export default async function DashboardOverviewPage() {
     {
       key: "wa",
       label: "Sambungkan WhatsApp",
-      done: false,
+      done: hasConnectedWhatsapp,
       href: "/dashboard/whatsapp",
     },
     {
@@ -139,12 +144,18 @@ export default async function DashboardOverviewPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Badge variant="outline">Belum tersambung</Badge>
+            <Badge variant={hasConnectedWhatsapp ? "success" : "outline"}>
+              {hasConnectedWhatsapp ? "Tersambung" : "Belum tersambung"}
+            </Badge>
             <p className="text-sm text-muted-foreground">
-              Kami merekomendasikan Meta Cloud API resmi untuk stabilitas.
+              {hasConnectedWhatsapp
+                ? "Nomor bisnis Anda sudah aktif dan siap menerima chat masuk."
+                : "Hubungkan nomor bisnis Anda untuk mulai menerima chat masuk."}
             </p>
-            <Button asChild size="sm">
-              <Link href="/dashboard/whatsapp">Connect sekarang</Link>
+            <Button asChild size="sm" variant={hasConnectedWhatsapp ? "outline" : "default"}>
+              <Link href="/dashboard/whatsapp">
+                {hasConnectedWhatsapp ? "Kelola koneksi" : "Connect sekarang"}
+              </Link>
             </Button>
           </CardContent>
         </Card>

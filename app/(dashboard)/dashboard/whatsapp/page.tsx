@@ -1,10 +1,11 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CheckCircle2, Plug, XCircle } from "lucide-react";
+import { CheckCircle2, Link2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,17 +23,15 @@ import { toApiError } from "@/lib/api/client";
 import { whatsappApi } from "@/lib/api/whatsapp";
 
 const CHANNELS_KEY = ["whatsapp-channels"] as const;
+const OAUTH_PENDING_STORAGE_KEY = "wabantu:meta-oauth-pending";
 
-const schema = z.object({
+const oauthSchema = z.object({
   displayName: z.string().min(2).max(120),
   phoneNumber: z
     .string()
     .regex(/^\+?[0-9]{8,20}$/, "Format E.164 (mis. +6281234567890)"),
-  metaPhoneNumberId: z.string().min(4).max(64),
-  accessToken: z.string().min(20),
-  metaWabaId: z.string().min(0).max(64).optional(),
 });
-type FormValues = z.infer<typeof schema>;
+type OauthFormValues = z.infer<typeof oauthSchema>;
 
 export default function WhatsappPage() {
   const qc = useQueryClient();
@@ -40,24 +39,13 @@ export default function WhatsappPage() {
     queryKey: CHANNELS_KEY,
     queryFn: whatsappApi.list,
   });
-
   const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
-
-  const connectMut = useMutation({
-    mutationFn: (values: FormValues) =>
-      whatsappApi.connect({ provider: "meta_cloud", ...values }),
-    onSuccess: () => {
-      reset();
-      toast.success("Channel tersambung");
-      void qc.invalidateQueries({ queryKey: CHANNELS_KEY });
-    },
-    onError: (err) => toast.error(toApiError(err).message),
-  });
+    register: registerOauth,
+    handleSubmit: handleSubmitOauth,
+    reset: resetOauth,
+    formState: { errors: oauthErrors },
+  } = useForm<OauthFormValues>({ resolver: zodResolver(oauthSchema) });
+  const isProcessingOauthRef = useRef(false);
 
   const disconnectMut = useMutation({
     mutationFn: (id: string) => whatsappApi.disconnect(id),
@@ -67,72 +55,127 @@ export default function WhatsappPage() {
     onError: (err) => toast.error(toApiError(err).message),
   });
 
+  const initOauthMut = useMutation({
+    mutationFn: async (values: OauthFormValues) => {
+      const res = await whatsappApi.initMetaConnect({
+        redirectUri: `${window.location.origin}/dashboard/whatsapp`,
+      });
+      return { res, values };
+    },
+    onSuccess: ({ res, values }) => {
+      localStorage.setItem(
+        OAUTH_PENDING_STORAGE_KEY,
+        JSON.stringify({ ...values, state: res.state }),
+      );
+      window.location.assign(res.oauthUrl);
+      toast.success("OAuth URL dibuat. Selesaikan izin di Meta.");
+    },
+    onError: (err) => toast.error(toApiError(err).message),
+  });
+
+  const completeOauthMut = useMutation({
+    mutationFn: (values: OauthFormValues & { code: string; state: string }) =>
+      whatsappApi.completeMetaConnect(values),
+    onSuccess: () => {
+      toast.success("Channel tersambung via OAuth");
+      localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
+      resetOauth();
+      void qc.invalidateQueries({ queryKey: CHANNELS_KEY });
+      window.history.replaceState({}, "", "/dashboard/whatsapp");
+    },
+    onError: (err) => toast.error(toApiError(err).message),
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const state = params.get("state");
+    if (!code || !state || isProcessingOauthRef.current) return;
+
+    const raw = localStorage.getItem(OAUTH_PENDING_STORAGE_KEY);
+    if (!raw) {
+      toast.error(
+        "Data OAuth tidak ditemukan. Ulangi dari tombol Generate OAuth URL.",
+      );
+      return;
+    }
+
+    let pending: unknown;
+    try {
+      pending = JSON.parse(raw);
+    } catch {
+      localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
+      toast.error("Data OAuth rusak. Ulangi proses connect.");
+      return;
+    }
+
+    const parsed = oauthSchema.safeParse(pending);
+    if (!parsed.success) {
+      localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
+      toast.error("Data connect tidak lengkap. Ulangi proses.");
+      return;
+    }
+
+    const pendingState =
+      typeof (pending as { state?: unknown }).state === "string"
+        ? (pending as { state: string }).state
+        : "";
+
+    if (!pendingState || pendingState !== state) {
+      toast.error("State OAuth tidak cocok. Ulangi proses connect.");
+      return;
+    }
+
+    isProcessingOauthRef.current = true;
+    completeOauthMut.mutate({
+      code,
+      state,
+      ...parsed.data,
+    });
+  }, [completeOauthMut]);
+
   return (
     <>
       <PageHeader
         title="WhatsApp"
-        description="Kelola koneksi nomor WhatsApp bisnis Anda."
+        description="Hubungkan nomor WhatsApp bisnis lewat OAuth resmi Meta."
       />
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Plug className="h-4 w-4 text-primary" />
-            Hubungkan via Meta Cloud API
+            <Link2 className="h-4 w-4 text-primary" />
+            Connect WhatsApp (OAuth Meta)
           </CardTitle>
           <CardDescription>
-            Dapatkan access token & phone_number_id dari{" "}
-            <a
-              href="https://business.facebook.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-primary hover:underline"
-            >
-              Meta Business Manager
-            </a>
-            . Token kami simpan terenkripsi.
+            Satu-satunya metode koneksi: isi data channel, generate OAuth URL,
+            authorize di Meta, lalu sistem auto-complete saat redirect kembali.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form
-            onSubmit={handleSubmit((v) => connectMut.mutate(v))}
+            onSubmit={handleSubmitOauth((v) => initOauthMut.mutate(v))}
             className="grid gap-4 sm:grid-cols-2"
           >
-            <Field label="Nama channel" error={errors.displayName?.message}>
-              <Input placeholder="Toko Pusat" {...register("displayName")} />
-            </Field>
-            <Field label="Nomor WhatsApp" error={errors.phoneNumber?.message}>
-              <Input
-                placeholder="+6281234567890"
-                {...register("phoneNumber")}
-              />
+            <Field label="Nama channel" error={oauthErrors.displayName?.message}>
+              <Input placeholder="Toko Pusat" {...registerOauth("displayName")} />
             </Field>
             <Field
-              label="Phone Number ID (Meta)"
-              error={errors.metaPhoneNumberId?.message}
+              label="Nomor WhatsApp Business"
+              error={oauthErrors.phoneNumber?.message}
             >
-              <Input
-                placeholder="1234567890..."
-                {...register("metaPhoneNumberId")}
-              />
-            </Field>
-            <Field label="WABA ID (opsional)" error={errors.metaWabaId?.message}>
-              <Input placeholder="..." {...register("metaWabaId")} />
-            </Field>
-            <Field
-              label="Access Token"
-              className="sm:col-span-2"
-              error={errors.accessToken?.message}
-            >
-              <Input
-                type="password"
-                placeholder="EAAG..."
-                {...register("accessToken")}
-              />
+              <Input placeholder="+6281234567890" {...registerOauth("phoneNumber")} />
             </Field>
             <div className="sm:col-span-2 flex justify-end">
-              <Button type="submit" disabled={connectMut.isPending}>
-                {connectMut.isPending ? "Menyambungkan..." : "Connect"}
+              <Button
+                type="submit"
+                disabled={initOauthMut.isPending || completeOauthMut.isPending}
+              >
+                {initOauthMut.isPending
+                  ? "Membuat URL..."
+                  : completeOauthMut.isPending
+                    ? "Menyelesaikan OAuth..."
+                    : "Generate OAuth URL"}
               </Button>
             </div>
           </form>
