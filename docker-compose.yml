@@ -1,0 +1,53 @@
+# =====================================================================
+# WABantu Web Frontend — standalone deployment
+#
+# Bring up:    cd web-frontend && docker compose up -d --build
+# Logs:        docker compose logs -f web
+# Tear down:   docker compose down
+#
+# Prerequisite: shared `wabantu_net` network exists (created by
+# `infra/docker-compose.yml`). The frontend itself only needs that
+# network if you also run the API inside Docker — otherwise it can be
+# pointed at any reachable API URL via NEXT_PUBLIC_API_URL.
+# =====================================================================
+
+name: wabantu-web
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* are inlined at build time, so they must be set
+        # here (not in `environment:`) to take effect in the bundle.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-WABantu}
+        NEXT_PUBLIC_APP_TAGLINE: ${NEXT_PUBLIC_APP_TAGLINE:-AI WhatsApp Auto-Reply untuk UMKM}
+    image: wabantu-web:local
+    container_name: wabantu-web
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      # Server-side fetcher target (e.g. dashboard's getServerUser()).
+      # When the API runs in the same Docker network, prefer the docker
+      # service name `wabantu-api` instead of localhost.
+      API_URL_INTERNAL: ${API_URL_INTERNAL:-http://wabantu-api:3001/api/v1}
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    networks:
+      - wabantu_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+networks:
+  wabantu_net:
+    name: wabantu_net
+    external: true

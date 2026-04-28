@@ -1,0 +1,100 @@
+"use client";
+
+import { Bell, ChevronDown, LogOut, Settings, User } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/components/providers/auth-provider";
+
+function initials(name?: string | null, email?: string) {
+  const src = (name || email || "").trim();
+  if (!src) return "?";
+  return src
+    .split(/\s+/)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+export function Topbar() {
+  const { user, logout } = useAuth();
+
+  return (
+    <div className="flex h-16 items-center justify-between border-b bg-background px-6">
+      <div className="flex items-center gap-3">
+        {user?.tenant && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 px-3 text-sm font-medium"
+          >
+            <span className="grid h-5 w-5 place-items-center rounded bg-primary/10 text-primary text-[10px] font-bold">
+              {user.tenant.name.charAt(0).toUpperCase()}
+            </span>
+            {user.tenant.name}
+            <ChevronDown className="h-3 w-3 opacity-60" />
+          </Button>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" aria-label="Notifications">
+          <Bell className="h-4 w-4" />
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-9 gap-2 px-2">
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className="text-xs">
+                  {initials(user?.name, user?.email)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="hidden text-sm font-medium sm:inline">
+                {user?.name || user?.email}
+              </span>
+              <ChevronDown className="h-3 w-3 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="flex flex-col gap-0.5">
+              <span className="text-sm font-semibold">{user?.name}</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {user?.email}
+              </span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a href="/dashboard/team">
+                <User className="mr-2 h-4 w-4" />
+                Profile saya
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href="/dashboard/ai-settings">
+                <Settings className="mr-2 h-4 w-4" />
+                Pengaturan
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => void logout()}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Keluar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
