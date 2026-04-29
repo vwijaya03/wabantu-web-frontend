@@ -25,6 +25,7 @@ app/
         ├── ai-settings/       # Business profile form
         ├── knowledge-base/    # FAQ CRUD
         ├── whatsapp/          # Channel management
+        │   └── onboarding/    # OAuth onboarding + help page
         ├── analytics/
         ├── billing/
         └── team/
@@ -37,14 +38,33 @@ layout, providers, and auth gate.
 ## Auth
 
 - API issues an HttpOnly cookie `wabantu_at` on login/register
+- `/login` now does server-side session check (`getServerUser()`); active
+  sessions are redirected to `/dashboard`
 - `proxy.ts` (Next.js 16's renamed middleware) does an optimistic edge
   redirect: visiting `/dashboard/*` without the cookie bounces to
-  `/login`; visiting `/login` or `/register` while logged-in bounces
-  to `/dashboard`
+  `/login`
 - The dashboard layout calls `getServerUser()` (forwards cookies to
   `GET /auth/me`) and either redirects or seeds `AuthProvider` with
   the resolved user — so client code never sees a "loading" first
   render
+- Logout catches network failures and still clears local auth state +
+  redirects to `/login`
+
+## WhatsApp onboarding (OAuth-only)
+
+- New sellers are guided via `/dashboard/whatsapp/onboarding`
+- Required input in onboarding:
+  - channel name
+  - WhatsApp business number
+  - `Meta App ID`
+  - `Meta App Secret`
+- Frontend generates OAuth URL via `POST /whatsapp/meta/connect/init`
+- After Meta redirects with `code/state`, frontend auto-calls
+  `POST /whatsapp/meta/connect/callback`
+- `/dashboard/whatsapp` is now focused on connected channel management
+  (Disconnect/Reconnect)
+- Dashboard overview checklist and status cards now read live channel
+  state from `/whatsapp/channels` (not hardcoded)
 
 ## Data fetching
 
@@ -108,3 +128,7 @@ through the shared `wabantu_net` network without a public hop.
 - `params` and `searchParams` are `Promise`-based — `await` them in pages
 - Use `useSearchParams` only inside a `<Suspense>` boundary, otherwise
   the prerender step bails out
+- For ngrok/dev external origin access, `next.config.ts` includes
+  `allowedDevOrigins`
+- Browser API requests use same-origin `/api/v1` by default and rely on
+  Next rewrites to `http://localhost:3001/api/v1` in dev

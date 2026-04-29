@@ -7,6 +7,7 @@ export interface WhatsappChannel {
   phoneNumber: string;
   metaPhoneNumberId: string | null;
   metaWabaId: string | null;
+  metaAppId: string | null;
   status: "connected" | "disconnected" | "error" | "pending";
   lastError: string | null;
   connectedAt: string | null;
@@ -14,6 +15,8 @@ export interface WhatsappChannel {
 
 export interface MetaConnectInitInput {
   redirectUri: string;
+  metaAppId: string;
+  metaAppSecret: string;
 }
 
 export interface MetaConnectInitResult {

@@ -38,7 +38,7 @@ export default async function DashboardOverviewPage() {
       key: "wa",
       label: "Sambungkan WhatsApp",
       done: hasConnectedWhatsapp,
-      href: "/dashboard/whatsapp",
+      href: "/dashboard/whatsapp/onboarding",
     },
     {
       key: "profile",
@@ -153,7 +153,13 @@ export default async function DashboardOverviewPage() {
                 : "Hubungkan nomor bisnis Anda untuk mulai menerima chat masuk."}
             </p>
             <Button asChild size="sm" variant={hasConnectedWhatsapp ? "outline" : "default"}>
-              <Link href="/dashboard/whatsapp">
+              <Link
+                href={
+                  hasConnectedWhatsapp
+                    ? "/dashboard/whatsapp"
+                    : "/dashboard/whatsapp/onboarding"
+                }
+              >
                 {hasConnectedWhatsapp ? "Kelola koneksi" : "Connect sekarang"}
               </Link>
             </Button>

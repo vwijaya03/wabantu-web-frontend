@@ -6,6 +6,15 @@ const nextConfig: NextConfig = {
   // avoid shipping the full node_modules tree.
   // See https://nextjs.org/docs/app/api-reference/config/next-config-js/output
   output: "standalone",
+  allowedDevOrigins: ["mystify-wilder-federal.ngrok-free.dev"],
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://localhost:3001/api/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
