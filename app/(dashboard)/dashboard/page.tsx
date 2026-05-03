@@ -18,12 +18,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { getServerUser, getServerWhatsappChannels } from "@/lib/api/server";
+import {
+  getServerAnalyticsOverview,
+  getServerUser,
+  getServerWhatsappChannels,
+} from "@/lib/api/server";
+import {
+  formatAvgFirstResponse,
+  formatOpenRateCard,
+} from "@/lib/format/analytics-overview";
 
 export default async function DashboardOverviewPage() {
-  const [user, channels] = await Promise.all([
+  const [user, channels, analytics] = await Promise.all([
     getServerUser(),
     getServerWhatsappChannels(),
+    getServerAnalyticsOverview(30),
   ]);
   const hasConnectedWhatsapp = channels.some((c) => c.status === "connected");
 
@@ -54,11 +63,44 @@ export default async function DashboardOverviewPage() {
     },
   ];
 
+  const windowDays = analytics?.windowDays ?? 30;
+  const todayIn = analytics?.today?.inbound ?? 0;
+  const todayAi = analytics?.today?.aiReplies ?? 0;
+  const todayAiPct = analytics?.today?.aiCoveragePct ?? 0;
+  const reportingTz = analytics?.reportingTimezone ?? "Asia/Jakarta";
+  const openFmt = formatOpenRateCard(
+    analytics?.overview?.openRatePct ?? null,
+    windowDays,
+  );
+  const avgFmt = formatAvgFirstResponse(
+    analytics?.overview?.avgFirstResponseSec ?? null,
+  );
+
   const stats = [
-    { label: "Pesan masuk hari ini", value: "0", icon: Inbox, hint: "—" },
-    { label: "Dibalas AI", value: "0", icon: Bot, hint: "0% rate" },
-    { label: "Open rate", value: "—", icon: TrendingUp, hint: "Butuh data" },
-    { label: "Avg. respon", value: "—", icon: MessageSquare, hint: "Butuh data" },
+    {
+      label: "Pesan masuk hari ini",
+      value: String(todayIn),
+      icon: Inbox,
+      hint: `Kalender · ${reportingTz}`,
+    },
+    {
+      label: "Dibalas AI",
+      value: String(todayAi),
+      icon: Bot,
+      hint: `${todayAiPct}% dari masuk hari ini`,
+    },
+    {
+      label: "Open rate",
+      value: openFmt.value,
+      icon: TrendingUp,
+      hint: openFmt.hint,
+    },
+    {
+      label: "Avg. respon",
+      value: avgFmt.value,
+      icon: MessageSquare,
+      hint: avgFmt.hint,
+    },
   ];
 
   return (

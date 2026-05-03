@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { env } from "@/lib/env";
+import type { AnalyticsOverview } from "./analytics";
 import type { AuthUser } from "./auth";
 import type { WhatsappChannel } from "./whatsapp";
 
@@ -67,5 +68,42 @@ export async function getServerWhatsappChannels(): Promise<WhatsappChannel[]> {
     return Array.isArray(json) ? json : [];
   } catch {
     return [];
+  }
+}
+
+/**
+ * Analytics overview for dashboard summary cards (same contract as GET /analytics/overview).
+ */
+export async function getServerAnalyticsOverview(
+  days = 30,
+): Promise<AnalyticsOverview | null> {
+  try {
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore
+      .getAll()
+      .map((c) => `${c.name}=${c.value}`)
+      .join("; ");
+
+    const q = new URLSearchParams({ days: String(days) });
+    const res = await fetch(
+      `${env.apiUrlInternal}/analytics/overview?${q.toString()}`,
+      {
+        headers: {
+          cookie: cookieHeader,
+          accept: "application/json",
+        },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as
+      | { success?: boolean; data?: AnalyticsOverview }
+      | AnalyticsOverview;
+    if (json && typeof json === "object" && "success" in json && json.success) {
+      return (json.data ?? null) as AnalyticsOverview | null;
+    }
+    return json as AnalyticsOverview;
+  } catch {
+    return null;
   }
 }

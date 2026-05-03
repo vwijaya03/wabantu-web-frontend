@@ -20,7 +20,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { toApiError } from "@/lib/api/client";
-import { whatsappApi } from "@/lib/api/whatsapp";
+import {
+  whatsappApi,
+  type MetaConnectCallbackInput,
+} from "@/lib/api/whatsapp";
 
 const CHANNELS_KEY = ["whatsapp-channels"] as const;
 const OAUTH_PENDING_STORAGE_KEY = "wabantu:meta-oauth-pending";
@@ -85,7 +88,7 @@ export default function WhatsappOnboardingPage() {
   });
 
   const completeOauthMut = useMutation({
-    mutationFn: (values: OauthFormValues & { code: string; state: string }) =>
+    mutationFn: (values: MetaConnectCallbackInput) =>
       whatsappApi.completeMetaConnect(values),
     onSuccess: () => {
       toast.success("WhatsApp berhasil tersambung.");

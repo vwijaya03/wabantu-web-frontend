@@ -21,7 +21,7 @@ export default function ContactsPage() {
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads"],
     queryFn: () => leadsApi.list(),
-    refetchInterval: 8000,
+    refetchInterval: 60000,
   });
   const updateMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: Lead["status"] }) =>
