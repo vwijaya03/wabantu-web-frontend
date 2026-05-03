@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -16,12 +16,33 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { businessApi, type BusinessProfile } from "@/lib/api/business";
 import { toApiError } from "@/lib/api/client";
+import {
+  DEFAULT_REPORTING_TIMEZONE_UI,
+  isReportingTimezoneId,
+  REPORTING_TIMEZONE_GROUPS,
+  REPORTING_TIMEZONE_IDS,
+  reportingTimezoneSelectLabel,
+  reportingTimezoneTriggerLabel,
+} from "@/lib/reporting-timezones";
 
 const PROFILE_KEY = ["business-profile"] as const;
+
+const reportingTimezoneEnum = z.enum(
+  REPORTING_TIMEZONE_IDS as unknown as [string, ...string[]],
+);
 
 const schema = z.object({
   businessName: z.string().min(2).max(200),
@@ -34,42 +55,58 @@ const schema = z.object({
   greetingTemplate: z.string().max(2000).optional().nullable(),
   tone: z.enum(["friendly", "formal", "casual"]),
   aiEnabled: z.boolean(),
+  reportingTimezone: reportingTimezoneEnum,
 });
 type FormValues = z.infer<typeof schema>;
 
 export default function AiSettingsPage() {
-  const qc = useQueryClient();
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isPending, isError } = useQuery({
     queryKey: PROFILE_KEY,
     queryFn: businessApi.get,
   });
 
+  return (
+    <>
+      <PageHeader
+        title="AI Settings"
+        description="Info bisnis ini dipakai AI sebagai konteks saat membalas pelanggan."
+      />
+      {isPending ? (
+        <p className="text-sm text-muted-foreground">Memuat profil…</p>
+      ) : isError || !profile ? (
+        <p className="text-sm text-destructive">
+          Profil bisnis tidak bisa dimuat. Coba muat ulang halaman.
+        </p>
+      ) : (
+        <AiSettingsForm profile={profile} />
+      )}
+    </>
+  );
+}
+
+function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
+  const qc = useQueryClient();
+
   const {
     register,
+    control,
     handleSubmit,
-    reset,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      tone: "friendly",
-      aiEnabled: true,
-      businessName: "",
-    },
+    defaultValues: toFormValues(profile),
   });
 
-  // Hydrate the form once the profile arrives. Wrapped in useEffect with
-  // a stable dependency on the profile object so React Compiler is happy.
-  useEffect(() => {
-    if (profile) reset(toFormValues(profile));
+  useLayoutEffect(() => {
+    reset(toFormValues(profile));
   }, [profile, reset]);
 
   const saveMut = useMutation({
     mutationFn: businessApi.update,
     onSuccess: (updated) => {
-      reset(toFormValues(updated));
       qc.setQueryData(PROFILE_KEY, updated);
       toast.success("Profil disimpan");
     },
@@ -81,11 +118,6 @@ export default function AiSettingsPage() {
 
   return (
     <>
-      <PageHeader
-        title="AI Settings"
-        description="Info bisnis ini dipakai AI sebagai konteks saat membalas pelanggan."
-      />
-
       <form
         onSubmit={handleSubmit((v) => saveMut.mutate(v))}
         className="space-y-6"
@@ -114,6 +146,65 @@ export default function AiSettingsPage() {
             >
               {aiEnabled ? "Matikan" : "Aktifkan"}
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Zona waktu laporan</CardTitle>
+            <CardDescription>
+              Menentukan batas &quot;hari ini&quot; untuk statistik dashboard (pesan
+              masuk hari ini, dll.). Offset UTC menyesuaikan DST jika zona
+              memakainya.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Field
+              label="Zona waktu bisnis"
+              error={errors.reportingTimezone?.message}
+            >
+              <Controller
+                name="reportingTimezone"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    key={`tz-${profile?.id ?? "pending"}-${profile?.reportingTimezone ?? "pending"}`}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger
+                      id="reporting-timezone"
+                      className="w-full max-w-md"
+                      aria-invalid={Boolean(errors.reportingTimezone)}
+                    >
+                      <SelectValue placeholder="Pilih zona waktu">
+                        {field.value
+                          ? isReportingTimezoneId(field.value)
+                            ? reportingTimezoneTriggerLabel(field.value)
+                            : field.value
+                          : null}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent position="popper" sideOffset={4}>
+                      {REPORTING_TIMEZONE_GROUPS.map((group) => (
+                        <SelectGroup key={group.label}>
+                          <SelectLabel>{group.label}</SelectLabel>
+                          {group.zones.map((z) => (
+                            <SelectItem key={z.id} value={z.id}>
+                              {reportingTimezoneSelectLabel(z.id, z.label)}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </Field>
+            <p className="text-xs text-muted-foreground">
+              Daftar mengikuti identifier IANA (tzdb). Backend dan query analitik
+              memakai zona yang sama.
+            </p>
           </CardContent>
         </Card>
 
@@ -220,10 +311,7 @@ export default function AiSettingsPage() {
         </Card>
 
         <div className="flex items-center justify-end gap-2">
-          <Button
-            type="submit"
-            disabled={saveMut.isPending || isLoading}
-          >
+          <Button type="submit" disabled={saveMut.isPending}>
             {saveMut.isPending ? "Menyimpan..." : "Simpan perubahan"}
           </Button>
         </div>
@@ -253,6 +341,8 @@ function Field({
 }
 
 function toFormValues(p: BusinessProfile): FormValues {
+  const tzRaw =
+    typeof p.reportingTimezone === "string" ? p.reportingTimezone.trim() : "";
   return {
     businessName: p.businessName,
     description: p.description ?? "",
@@ -264,5 +354,8 @@ function toFormValues(p: BusinessProfile): FormValues {
     greetingTemplate: p.greetingTemplate ?? "",
     tone: p.tone,
     aiEnabled: p.aiEnabled,
+    reportingTimezone: isReportingTimezoneId(tzRaw)
+      ? tzRaw
+      : DEFAULT_REPORTING_TIMEZONE_UI,
   };
 }

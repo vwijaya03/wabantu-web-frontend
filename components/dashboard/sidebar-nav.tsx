@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
   Bot,
@@ -14,6 +15,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { INBOX_UNREAD_QUERY_KEY, inboxApi } from "@/lib/api/inbox";
 
 const groups: Array<{
   label: string;
@@ -51,6 +53,17 @@ const groups: Array<{
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { data: unreadSummary } = useQuery({
+    queryKey: INBOX_UNREAD_QUERY_KEY,
+    queryFn: () => inboxApi.unreadSummary(),
+    staleTime: Number.POSITIVE_INFINITY,
+    refetchOnWindowFocus: "always",
+    /** SSE (`InboxActivityBridge`) + focus refetch if push did not arrive. */
+  });
+  const inboxUnread = unreadSummary?.totalUnreadMessages ?? 0;
+  const showInboxDot =
+    inboxUnread > 0 && !pathname.startsWith("/dashboard/inbox");
+
   return (
     <nav className="flex flex-col gap-6 px-3 py-4">
       {groups.map((g) => (
@@ -69,7 +82,7 @@ export function SidebarNav() {
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                      "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                       active
                         ? "bg-sidebar-accent text-sidebar-accent-foreground"
                         : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
@@ -77,6 +90,13 @@ export function SidebarNav() {
                   >
                     <item.icon className="h-4 w-4 shrink-0" />
                     <span>{item.label}</span>
+                    {item.href === "/dashboard/inbox" && showInboxDot ? (
+                      <span
+                        className="absolute right-2 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary ring-2 ring-sidebar"
+                        title={`${inboxUnread} pesan belum dibaca`}
+                        aria-label={`${inboxUnread} pesan belum dibaca`}
+                      />
+                    ) : null}
                   </Link>
                 </li>
               );

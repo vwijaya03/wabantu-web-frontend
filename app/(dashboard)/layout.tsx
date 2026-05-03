@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { WabantuLogo } from "@/components/brand/wabantu-logo";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { InboxActivityBridge } from "@/components/dashboard/inbox-activity-bridge";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
 import { Topbar } from "@/components/dashboard/topbar";
 import { getServerUser } from "@/lib/api/server";
@@ -21,6 +22,7 @@ export default async function DashboardLayout({
 
   return (
     <AuthProvider initialUser={user}>
+      <InboxActivityBridge />
       <div className="grid min-h-svh grid-cols-1 lg:grid-cols-[260px_1fr]">
         <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:flex lg:flex-col">
           <div className="flex h-16 items-center gap-2 border-b px-6">

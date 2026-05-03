@@ -9,7 +9,7 @@ export default function AnalyticsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["analytics-overview"],
     queryFn: () => analyticsApi.overview(30),
-    refetchInterval: 10000,
+    refetchInterval: 60000,
   });
   const totals = data?.totals;
   const kpis = data?.kpis;

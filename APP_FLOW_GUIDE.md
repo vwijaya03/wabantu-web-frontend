@@ -49,18 +49,40 @@ Detail edge case (ID kosong, webhook backfill) ada di `../api/APP_FLOW_GUIDE.md`
 
 ---
 
-## 5) File yang sering disentuh
+## 5) AI Settings & zona waktu laporan
+
+1. User membuka `/dashboard/ai-settings`.
+2. `useQuery` memanggil `GET /api/v1/business/profile` (cookie auth).
+3. Selama `profile` belum ada, UI menampilkan **Memuat profil…** — form **tidak**
+   di-mount, supaya default internal tidak mem-flash `Asia/Jakarta` sebelum data server.
+4. Setelah `profile` ada, form di-mount dengan `defaultValues` dari server;
+   `useLayoutEffect` memanggil `reset(toFormValues(profile))` saat `profile`
+   berubah (mis. setelah simpan).
+5. Zona waktu: Radix `Select` terkontrol oleh `react-hook-form`; label trigger
+   diisi eksplisit lewat `reportingTimezoneTriggerLabel` (`lib/reporting-timezones.ts`)
+   agar teks tetap tampil walau item dropdown di portal belum termount.
+6. Simpan memanggil `PATCH /api/v1/business/profile` dengan body form; respons
+   memperbarui cache React Query. Klien memakai `lib/api/business.ts` yang
+   menggabungkan `reportingTimezone` / `reporting_timezone` dan mengabaikan string kosong.
+
+Daftar IANA yang boleh dipilih harus **sama** dengan allowlist backend
+(`api/src/common/constants/reporting-timezones.constants.ts`).
+
+---
+
+## 6) File yang sering disentuh
 
 | Kebutuhan | File |
 |-----------|------|
 | Rewrite API / middleware edge | `proxy.ts`, `next.config.ts` |
 | Server fetch dengan cookie | `lib/api/server.ts` |
 | Client API + envelope | `lib/api/client.ts` |
+| Profil bisnis + timezone | `lib/api/business.ts`, `lib/reporting-timezones.ts`, `app/(dashboard)/dashboard/ai-settings/page.tsx` |
 | Env terpusat | `lib/env.ts` |
 | Dashboard shell + auth seed | `app/(dashboard)/layout.tsx` |
 
 ---
 
-## 6) Next steps
+## 7) Next steps
 
-Setelah nyaman dengan flow di atas, lanjutkan ke **`../api/APP_FLOW_GUIDE.md`** untuk inbox, leads, billing, dan webhook WhatsApp.
+Setelah nyaman dengan flow di atas, lanjutkan ke **`../api/APP_FLOW_GUIDE.md`** untuk inbox, leads, billing, webhook WhatsApp, dan detail respons profil bisnis.

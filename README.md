@@ -80,8 +80,24 @@ For the same “how does this app hang together” narrative as the API guide, s
 
 - `lib/api/client.ts` — shared axios instance with `withCredentials: true`,
   unwraps the `{ success, data }` envelope, redirects on 401
+- `lib/api/business.ts` — `GET`/`PATCH` business profile; normalizes
+  `reportingTimezone` from camelCase or `reporting_timezone`, trims values,
+  and ignores empty strings so the real zone is not lost
 - Mutations use `@tanstack/react-query` (`useMutation` + `invalidateQueries`)
 - Forms use `react-hook-form` + `zod` resolver
+
+## AI Settings (`/dashboard/ai-settings`)
+
+- Loads `GET /api/v1/business/profile` via React Query; the page shows a short
+  loading state until `profile` exists, then mounts the form with
+  `defaultValues: toFormValues(profile)` so the default timezone is not a
+  spurious `Asia/Jakarta` flash.
+- `useLayoutEffect` + `reset(toFormValues(profile))` keeps the form aligned when
+  the cached profile updates (e.g. after save).
+- Reporting timezone dropdown uses the IANA allowlist in
+  `lib/reporting-timezones.ts` (must match the API allowlist). Radix `Select`
+  uses an explicit `SelectValue` label from `reportingTimezoneTriggerLabel` so
+  the trigger text stays correct after route changes (portal/unmounted items).
 
 ## UI primitives
 

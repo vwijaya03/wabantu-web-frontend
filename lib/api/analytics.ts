@@ -10,6 +10,19 @@ export interface AnalyticsOverview {
     leadsGenerated: number;
     unreadConversations: number;
   };
+  /** Calendar day in `reportingTimezone`, aligned with “hari ini” on the dashboard. */
+  today: {
+    inbound: number;
+    aiReplies: number;
+    aiCoveragePct: number;
+  };
+  /** IANA zone used for `today.*` (copied from business profile). */
+  reportingTimezone: string;
+  /** Extra KPIs for the overview cards (rolling `windowDays`). */
+  overview: {
+    openRatePct: number | null;
+    avgFirstResponseSec: number | null;
+  };
   kpis: {
     aiCoveragePct: number;
     handoffRatePct: number;

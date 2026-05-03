@@ -7,6 +7,12 @@ export const env = {
   // Browser requests should hit same-origin `/api/v1` first (rewritten by
   // Next to backend in dev/ngrok), avoiding mixed-content + cookie issues.
   apiUrl: process.env.NEXT_PUBLIC_API_URL ?? "/api/v1",
+  /**
+   * Optional absolute API base for SSE only, e.g. `http://localhost:3001/api/v1`.
+   * EventSource through Next rewrites often breaks; point this at the Nest server
+   * and set `CORS_ORIGINS` + credentials on the API.
+   */
+  sseApiUrl: process.env.NEXT_PUBLIC_SSE_API_URL?.replace(/\/$/, "") ?? "",
   appName: process.env.NEXT_PUBLIC_APP_NAME ?? "WABantu",
   appTagline:
     process.env.NEXT_PUBLIC_APP_TAGLINE ?? "AI WhatsApp Auto-Reply untuk UMKM",
