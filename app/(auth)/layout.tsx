@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WabantuLogo } from "@/components/brand/wabantu-logo";
 import { env } from "@/lib/env";
 
 export default function AuthLayout({
@@ -13,13 +14,7 @@ export default function AuthLayout({
           href="/"
           className="flex items-center gap-2 text-sm font-semibold"
         >
-          <span
-            aria-hidden
-            className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground"
-          >
-            W
-          </span>
-          {env.appName}
+          <WabantuLogo textClassName="text-base" />
         </Link>
         <div className="flex flex-1 items-center justify-center py-12">
           <div className="w-full max-w-sm">{children}</div>

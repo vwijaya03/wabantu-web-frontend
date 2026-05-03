@@ -9,9 +9,11 @@ app/
 ├── layout.tsx                 # Root layout (Theme + Query providers, Toaster)
 ├── global-error.tsx           # Standalone fallback (no providers)
 ├── (marketing)/               # Public marketing site
-│   ├── layout.tsx             # Top nav + footer
+│   ├── layout.tsx             # Top nav + footer (links: Privasi, Penghapusan data)
 │   ├── page.tsx               # Landing
-│   └── pricing/page.tsx
+│   ├── pricing/page.tsx
+│   ├── privacy/page.tsx       # /privacy — kebijakan privasi (Meta / umum)
+│   └── data-deletion/page.tsx # /data-deletion — instruksi penghapusan data
 ├── (auth)/                    # Login / register split layout
 │   ├── layout.tsx
 │   ├── login/page.tsx
@@ -49,6 +51,14 @@ layout, providers, and auth gate.
   render
 - Logout catches network failures and still clears local auth state +
   redirects to `/login`
+
+## Legal & support URLs
+
+- **`NEXT_PUBLIC_SUPPORT_EMAIL`** (see `.env.example`) — used in legal/copy where a contact email is required; defaults to a sensible placeholder if unset.
+
+## Flow guide
+
+For the same “how does this app hang together” narrative as the API guide, see **`APP_FLOW_GUIDE.md`** in this folder (marketing vs dashboard, cookies, WhatsApp onboarding).
 
 ## WhatsApp onboarding (OAuth-only)
 

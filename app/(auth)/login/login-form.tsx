@@ -89,6 +89,7 @@ export function LoginForm() {
               id="password"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
+              placeholder="Masukkan kata sandi akun Anda"
               className="pr-10"
               {...register("password")}
             />

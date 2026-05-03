@@ -1,11 +1,17 @@
 "use client";
 
-import { ThemeProvider as NextThemesProvider } from "next-themes";
-import type { ComponentProps } from "react";
+import type { ReactNode } from "react";
 
 export function ThemeProvider({
   children,
-  ...props
-}: ComponentProps<typeof NextThemesProvider>) {
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
+}: {
+  children: ReactNode;
+  attribute?: string;
+  defaultTheme?: string;
+  enableSystem?: boolean;
+  disableTransitionOnChange?: boolean;
+}) {
+  // Keep this as a no-op wrapper for now to avoid client render errors
+  // caused by script injection from third-party theme providers.
+  return <>{children}</>;
 }

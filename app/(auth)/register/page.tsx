@@ -111,6 +111,7 @@ export default function RegisterPage() {
               id="password"
               type={showPassword ? "text" : "password"}
               autoComplete="new-password"
+              placeholder="Minimal 8 karakter, huruf dan angka"
               className="pr-10"
               {...register("password")}
             />
