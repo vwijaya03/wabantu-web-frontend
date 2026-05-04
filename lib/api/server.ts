@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { env } from "@/lib/env";
 import type { AnalyticsOverview } from "./analytics";
 import type { AuthUser } from "./auth";
+import type { BusinessProfile } from "./business";
 import type { WhatsappChannel } from "./whatsapp";
 
 /**
@@ -105,5 +106,83 @@ export async function getServerAnalyticsOverview(
     return json as AnalyticsOverview;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Current tenant business profile (GET /business/profile).
+ * Returns null on failure (e.g. not logged in).
+ */
+export async function getServerBusinessProfile(): Promise<BusinessProfile | null> {
+  try {
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore
+      .getAll()
+      .map((c) => `${c.name}=${c.value}`)
+      .join("; ");
+
+    const res = await fetch(`${env.apiUrlInternal}/business/profile`, {
+      headers: {
+        cookie: cookieHeader,
+        accept: "application/json",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as
+      | { success?: boolean; data?: BusinessProfile }
+      | BusinessProfile;
+    if (json && typeof json === "object" && "success" in json && json.success) {
+      return (json.data ?? null) as BusinessProfile | null;
+    }
+    if (
+      json &&
+      typeof json === "object" &&
+      "businessName" in json &&
+      typeof (json as BusinessProfile).businessName === "string"
+    ) {
+      return json as BusinessProfile;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Total FAQ entries for the tenant (from list metadata). */
+export async function getServerKnowledgeBaseTotal(): Promise<number> {
+  try {
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore
+      .getAll()
+      .map((c) => `${c.name}=${c.value}`)
+      .join("; ");
+
+    const q = new URLSearchParams({ page: "1", pageSize: "1" });
+    const res = await fetch(
+      `${env.apiUrlInternal}/knowledge-base?${q.toString()}`,
+      {
+        headers: {
+          cookie: cookieHeader,
+          accept: "application/json",
+        },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return 0;
+    const json = (await res.json()) as
+      | { success?: boolean; data?: { total?: number } }
+      | { total?: number };
+    if (json && typeof json === "object" && "success" in json && json.success) {
+      const t = json.data?.total;
+      return typeof t === "number" ? t : 0;
+    }
+    if (json && typeof json === "object" && "total" in json) {
+      const t = (json as { total?: number }).total;
+      return typeof t === "number" ? t : 0;
+    }
+    return 0;
+  } catch {
+    return 0;
   }
 }

@@ -73,8 +73,10 @@ For the same “how does this app hang together” narrative as the API guide, s
   `POST /whatsapp/meta/connect/callback`
 - `/dashboard/whatsapp` is now focused on connected channel management
   (Disconnect/Reconnect)
-- Dashboard overview checklist and status cards now read live channel
-  state from `/whatsapp/channels` (not hardcoded)
+- Dashboard overview: setup checklist and “AI status” read server data —
+  WhatsApp from `/whatsapp/channels`, business profile from
+  `/business/profile`, FAQ count from `/knowledge-base` (see
+  `lib/api/server.ts`, `lib/business-profile-card-complete.ts`)
 
 ## Data fetching
 
