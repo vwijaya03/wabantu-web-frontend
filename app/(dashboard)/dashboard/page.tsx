@@ -20,21 +20,30 @@ import {
 import { PageHeader } from "@/components/dashboard/page-header";
 import {
   getServerAnalyticsOverview,
+  getServerBusinessProfile,
+  getServerKnowledgeBaseTotal,
   getServerUser,
   getServerWhatsappChannels,
 } from "@/lib/api/server";
+import { isBusinessProfileCardComplete } from "@/lib/business-profile-card-complete";
 import {
   formatAvgFirstResponse,
   formatOpenRateCard,
 } from "@/lib/format/analytics-overview";
 
 export default async function DashboardOverviewPage() {
-  const [user, channels, analytics] = await Promise.all([
-    getServerUser(),
-    getServerWhatsappChannels(),
-    getServerAnalyticsOverview(30),
-  ]);
+  const [user, channels, analytics, businessProfile, kbTotal] =
+    await Promise.all([
+      getServerUser(),
+      getServerWhatsappChannels(),
+      getServerAnalyticsOverview(30),
+      getServerBusinessProfile(),
+      getServerKnowledgeBaseTotal(),
+    ]);
   const hasConnectedWhatsapp = channels.some((c) => c.status === "connected");
+  const profileDone = isBusinessProfileCardComplete(businessProfile);
+  const kbDone = kbTotal >= 5;
+  const aiReady = profileDone && kbDone;
 
   const setupSteps = [
     {
@@ -52,13 +61,13 @@ export default async function DashboardOverviewPage() {
     {
       key: "profile",
       label: "Lengkapi info bisnis",
-      done: false,
+      done: profileDone,
       href: "/dashboard/ai-settings",
     },
     {
       key: "kb",
       label: "Isi minimal 5 FAQ",
-      done: false,
+      done: kbDone,
       href: "/dashboard/knowledge-base",
     },
   ];
@@ -218,12 +227,22 @@ export default async function DashboardOverviewPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Badge variant="warning">Menunggu konfigurasi</Badge>
+            <Badge variant={aiReady ? "success" : "warning"}>
+              {aiReady ? "Siap membalas" : "Menunggu konfigurasi"}
+            </Badge>
             <p className="text-sm text-muted-foreground">
-              Lengkapi profil bisnis dan minimal 5 entri FAQ.
+              {aiReady
+                ? "Info bisnis dan FAQ sudah memenuhi minimum."
+                : "Lengkapi profil bisnis dan minimal 5 entri FAQ."}
             </p>
             <Button asChild size="sm" variant="outline">
-              <Link href="/dashboard/ai-settings">Lengkapi profil</Link>
+              <Link
+                href={
+                  profileDone ? "/dashboard/knowledge-base" : "/dashboard/ai-settings"
+                }
+              >
+                {profileDone ? "Kelola FAQ" : "Lengkapi profil"}
+              </Link>
             </Button>
           </CardContent>
         </Card>

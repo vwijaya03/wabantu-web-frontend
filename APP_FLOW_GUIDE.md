@@ -70,7 +70,20 @@ Daftar IANA yang boleh dipilih harus **sama** dengan allowlist backend
 
 ---
 
-## 6) File yang sering disentuh
+## 6) Ringkasan dashboard (`/dashboard`)
+
+1. Server component memuat paralel: user, channel WA, analytics ringkas,
+   **profil bisnis** (`GET /api/v1/business/profile`), dan **total FAQ**
+   (`GET /api/v1/knowledge-base?page=1&pageSize=1` → field `total`).
+2. Checklist **“Lengkapi info bisnis”** dianggap selesai jika semua field
+   kartu Profil bisnis (sama seperti di AI Settings) terisi — logika di
+   `lib/business-profile-card-complete.ts`.
+3. Checklist **“Isi minimal 5 FAQ”** selesai bila `total >= 5`.
+4. Kartu **AI status** “Siap” bila kedua syarat di atas terpenuhi.
+
+---
+
+## 7) File yang sering disentuh
 
 | Kebutuhan | File |
 |-----------|------|
@@ -78,11 +91,12 @@ Daftar IANA yang boleh dipilih harus **sama** dengan allowlist backend
 | Server fetch dengan cookie | `lib/api/server.ts` |
 | Client API + envelope | `lib/api/client.ts` |
 | Profil bisnis + timezone | `lib/api/business.ts`, `lib/reporting-timezones.ts`, `app/(dashboard)/dashboard/ai-settings/page.tsx` |
+| Checklist dashboard / kelengkapan profil | `app/(dashboard)/dashboard/page.tsx`, `lib/business-profile-card-complete.ts` |
 | Env terpusat | `lib/env.ts` |
 | Dashboard shell + auth seed | `app/(dashboard)/layout.tsx` |
 
 ---
 
-## 7) Next steps
+## 8) Next steps
 
 Setelah nyaman dengan flow di atas, lanjutkan ke **`../api/APP_FLOW_GUIDE.md`** untuk inbox, leads, billing, webhook WhatsApp, dan detail respons profil bisnis.
