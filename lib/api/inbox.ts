@@ -24,6 +24,14 @@ export interface InboxConversation {
   };
 }
 
+export interface InboxContact {
+  id: string;
+  phoneNumber: string;
+  displayName: string | null;
+  notes: string | null;
+  tags: string[];
+}
+
 export interface InboxMessage {
   id: string;
   conversationId: string;
@@ -109,5 +117,18 @@ export const inboxApi = {
 
   async sendMessage(conversationId: string, body: string): Promise<void> {
     await api.post(`/inbox/conversations/${conversationId}/messages`, { body });
+  },
+
+  async getContact(contactId: string): Promise<InboxContact> {
+    const res = await api.get<InboxContact>(`/inbox/contacts/${contactId}`);
+    return res.data;
+  },
+
+  async updateContact(
+    contactId: string,
+    input: { displayName?: string; notes?: string },
+  ): Promise<InboxContact> {
+    const res = await api.patch<InboxContact>(`/inbox/contacts/${contactId}`, input);
+    return res.data;
   },
 };
