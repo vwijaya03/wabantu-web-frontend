@@ -89,6 +89,26 @@ export default function InboxPage() {
     [conversations, selectedId],
   );
 
+  const [isEditingContactName, setIsEditingContactName] = useState(false);
+  const [contactNameDraft, setContactNameDraft] = useState("");
+
+  useEffect(() => {
+    if (!selectedConversation) return;
+    setContactNameDraft(selectedConversation.contact.displayName ?? "");
+    setIsEditingContactName(false);
+  }, [selectedConversation?.contact.id]);
+
+  const updateContactMut = useMutation({
+    mutationFn: ({ contactId, displayName }: { contactId: string; displayName: string }) =>
+      inboxApi.updateContact(contactId, { displayName }),
+    onSuccess: () => {
+      toast.success("Nama kontak diperbarui");
+      qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      setIsEditingContactName(false);
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
   const messagesInfinite = useInfiniteQuery({
     queryKey: ["inbox-messages", selectedId, MSG_PAGE],
     queryFn: ({ pageParam }) =>
@@ -386,8 +406,8 @@ export default function InboxPage() {
             </CardContent>
           ) : (
             <div className="flex min-h-0 flex-col">
-              <div className="flex items-center justify-between border-b px-4 py-3">
-                <div>
+              <div className="flex flex-col gap-2 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col">
                   <p className="text-sm font-semibold">
                     {selectedConversation.contact.displayName ||
                       selectedConversation.contact.phoneNumber}
@@ -396,15 +416,76 @@ export default function InboxPage() {
                     {selectedConversation.contact.phoneNumber}
                   </p>
                 </div>
-                <Button
-                  variant={selectedConversation.aiHandled ? "outline" : "default"}
-                  size="sm"
-                  onClick={() => handoffMut.mutate()}
-                  disabled={handoffMut.isPending}
-                >
-                  {selectedConversation.aiHandled ? "Take over manual" : "Lanjut AI"}
-                </Button>
+
+                <div className="flex items-center gap-2">
+                  {!isEditingContactName ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => {
+                        setIsEditingContactName(true);
+                        setContactNameDraft(
+                          selectedConversation.contact.displayName ?? "",
+                        );
+                      }}
+                    >
+                      Ubah nama
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-xs"
+                      disabled={updateContactMut.isPending}
+                      onClick={() => {
+                        setIsEditingContactName(false);
+                        setContactNameDraft(
+                          selectedConversation.contact.displayName ?? "",
+                        );
+                      }}
+                    >
+                      Batal
+                    </Button>
+                  )}
+
+                  <Button
+                    variant={selectedConversation.aiHandled ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => handoffMut.mutate()}
+                    disabled={handoffMut.isPending}
+                  >
+                    {selectedConversation.aiHandled
+                      ? "Take over manual"
+                      : "Lanjut AI"}
+                  </Button>
+                </div>
               </div>
+
+              {isEditingContactName ? (
+                <div className="mx-4 my-3 rounded-lg border p-3">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      className="h-8"
+                      value={contactNameDraft}
+                      onChange={(e) => setContactNameDraft(e.target.value)}
+                      placeholder="Nama kontak"
+                    />
+                    <Button
+                      size="sm"
+                      disabled={updateContactMut.isPending}
+                      onClick={() =>
+                        updateContactMut.mutate({
+                          contactId: selectedConversation.contact.id,
+                          displayName: contactNameDraft,
+                        })
+                      }
+                    >
+                      Simpan
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
               <div
                 ref={scrollRef}
                 role="log"
