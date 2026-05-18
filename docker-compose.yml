@@ -21,7 +21,7 @@ services:
       args:
         # NEXT_PUBLIC_* are inlined at build time, so they must be set
         # here (not in `environment:`) to take effect in the bundle.
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/v1}
         NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-WABantu}
         NEXT_PUBLIC_APP_TAGLINE: ${NEXT_PUBLIC_APP_TAGLINE:-AI WhatsApp Auto-Reply untuk UMKM}
     image: wabantu-web:local
@@ -31,9 +31,9 @@ services:
       - .env.local
     environment:
       # Server-side fetcher target (e.g. dashboard's getServerUser()).
-      # When the API runs in the same Docker network, prefer the docker
-      # service name `wabantu-api` instead of localhost.
-      API_URL_INTERNAL: ${API_URL_INTERNAL:-http://wabantu-api:3001/api/v1}
+      # When api-go runs in the same Docker network, use service `wabantu-api-go`.
+      API_BACKEND_URL: ${API_BACKEND_URL:-http://wabantu-api-go:4000}
+      API_URL_INTERNAL: ${API_URL_INTERNAL:-http://wabantu-api-go:4000}
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
     ports:

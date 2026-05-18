@@ -12,12 +12,17 @@ export interface Lead {
   createdAt: string;
 }
 
+interface ListLeadsResponse {
+  items: Lead[];
+}
+
 export const leadsApi = {
   async list(status?: Lead["status"]): Promise<Lead[]> {
-    const res = await api.get<Lead[]>("/leads", {
+    const res = await api.get<ListLeadsResponse | Lead[]>("/leads", {
       params: status ? { status } : undefined,
     });
-    return res.data;
+    const data = res.data;
+    return Array.isArray(data) ? data : data.items;
   },
   async update(
     id: string,

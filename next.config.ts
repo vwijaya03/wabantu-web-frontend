@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 
+/** Encore api-go — rewrite `/api/v1/*` to API_BACKEND_URL (default :4000). */
+const apiBackend = (
+  process.env.API_BACKEND_URL ?? "http://localhost:4000"
+).replace(/\/$/, "");
+
 const nextConfig: NextConfig = {
   // Emit a self-contained server bundle in `.next/standalone` so the
   // Docker runtime image can copy just `server.js` + minimal deps and
@@ -8,10 +13,11 @@ const nextConfig: NextConfig = {
   output: "standalone",
   allowedDevOrigins: ["mystify-wilder-federal.ngrok-free.dev"],
   async rewrites() {
+    // Browser calls /api/v1/...; api-go registers the same /api/v1 prefix.
     return [
       {
-        source: "/api/:path*",
-        destination: "http://localhost:3001/api/:path*",
+        source: "/api/v1/:path*",
+        destination: `${apiBackend}/api/v1/:path*`,
       },
     ];
   },

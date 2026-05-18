@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { billingApi } from "@/lib/api/billing";
+import { paymentApi } from "@/lib/api/payment";
+import { usageApi } from "@/lib/api/usage";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 
@@ -20,6 +22,10 @@ export default function BillingPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["billing-overview"],
     queryFn: () => billingApi.overview(),
+  });
+  const { data: usage } = useQuery({
+    queryKey: ["usage-summary"],
+    queryFn: () => usageApi.summary(),
   });
   const sub = data?.subscription;
   const selectPlanMut = useMutation({
@@ -80,26 +86,48 @@ export default function BillingPage() {
               </button>
             ))}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              onClick={() =>
-                selectPlanMut.mutate({ planCode: "basic", provider: "midtrans" })
-              }
+              onClick={async () => {
+                try {
+                  const inv = data?.invoices?.[0];
+                  const amount = data?.plans?.find((p) => p.code === sub?.planCode)?.amountIdr ?? 299000;
+                  const qris = await paymentApi.createQRIS({
+                    invoiceId: inv?.id ?? sub?.id ?? "plan",
+                    amountIdr: amount,
+                    description: `WABantu ${sub?.planName ?? "plan"}`,
+                  });
+                  window.open(qris.qrUrl, "_blank", "noopener,noreferrer");
+                  toast.success("QRIS dibuka — selesaikan pembayaran di tab baru");
+                } catch (e) {
+                  toast.error(toApiError(e).message);
+                }
+              }}
             >
-              Checkout Midtrans (simulasi)
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() =>
-                selectPlanMut.mutate({ planCode: "pro", provider: "xendit" })
-              }
-            >
-              Checkout Xendit (simulasi)
+              Bayar via QRIS (Midtrans)
             </Button>
           </div>
         </CardContent>
       </Card>
+      {usage ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pemakaian bulan ini ({usage.period})</CardTitle>
+            <CardDescription>Paket: {usage.plan}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-2 sm:grid-cols-2">
+            {usage.quotas.map((q) => (
+              <div key={q.eventType} className="rounded border p-3 text-sm">
+                <p className="font-medium">{q.eventType}</p>
+                <p className="text-muted-foreground">
+                  {q.used} / {q.limit > 0 ? q.limit : "∞"} (sisa {q.remaining})
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>Riwayat invoice</CardTitle>

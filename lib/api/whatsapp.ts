@@ -34,10 +34,17 @@ export interface MetaConnectCallbackInput {
   metaWabaId?: string;
 }
 
+interface ListChannelsResponse {
+  items: WhatsappChannel[];
+}
+
 export const whatsappApi = {
   async list(): Promise<WhatsappChannel[]> {
-    const res = await api.get<WhatsappChannel[]>("/whatsapp/channels");
-    return res.data;
+    const res = await api.get<ListChannelsResponse | WhatsappChannel[]>(
+      "/whatsapp/channels",
+    );
+    const data = res.data;
+    return Array.isArray(data) ? data : data.items;
   },
   async initMetaConnect(
     input: MetaConnectInitInput,

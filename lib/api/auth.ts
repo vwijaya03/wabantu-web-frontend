@@ -4,7 +4,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string | null;
-  role: "owner" | "staff";
+  role: "owner" | "staff" | "super_admin";
   tenant: { id: string; slug: string; name: string };
 }
 

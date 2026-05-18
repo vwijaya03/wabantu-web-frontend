@@ -19,7 +19,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Public env vars must be present during `next build` to be inlined.
-ARG NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
+ARG NEXT_PUBLIC_API_URL=/api/v1
 ARG NEXT_PUBLIC_APP_NAME=WABantu
 ARG NEXT_PUBLIC_APP_TAGLINE="AI WhatsApp Auto-Reply untuk UMKM"
 

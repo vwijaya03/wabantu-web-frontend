@@ -2,7 +2,7 @@ import { api } from "./client";
 
 export interface Subscription {
   id: string;
-  planCode: "starter" | "basic" | "pro";
+  planCode: "starter" | "basic" | "business" | "pro";
   planName: string;
   isTrial: boolean;
   trialEndsAt: string | null;
@@ -12,7 +12,7 @@ export interface Subscription {
 }
 
 export interface Plan {
-  code: "starter" | "basic" | "pro";
+  code: "starter" | "basic" | "business" | "pro";
   name: string;
   amountIdr: number;
   limits: { channels: number; seats: number };
@@ -21,7 +21,7 @@ export interface Plan {
 export interface Invoice {
   id: string;
   invoiceNo: string;
-  planCode: "starter" | "basic" | "pro";
+  planCode: "starter" | "basic" | "business" | "pro";
   planName: string;
   amountIdr: number;
   status: "issued" | "paid" | "void";
@@ -39,7 +39,7 @@ export const billingApi = {
     return res.data;
   },
   async selectPlan(input: {
-    planCode: "starter" | "basic" | "pro";
+    planCode: "starter" | "basic" | "business" | "pro";
     provider?: "midtrans" | "xendit";
   }): Promise<Subscription> {
     const res = await api.post<Subscription>("/billing/select-plan", input);

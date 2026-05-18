@@ -7,15 +7,14 @@ import { env } from "@/lib/env";
 
 function inboxStreamUrl(): string {
   const path = "/inbox/stream";
+  const apiV1 = env.apiUrl.replace(/\/$/, "");
   if (env.sseApiUrl) {
-    return `${env.sseApiUrl}${path}`;
+    return `${env.sseApiUrl.replace(/\/$/, "")}${path}`;
   }
-  const base = `${env.apiUrl.replace(/\/$/, "")}${path}`;
-  if (typeof window === "undefined") return base;
-  if (base.startsWith("http://") || base.startsWith("https://")) return base;
-  const origin = window.location.origin;
-  const rel = env.apiUrl.startsWith("/") ? env.apiUrl : `/${env.apiUrl}`;
-  return `${origin}${rel.replace(/\/$/, "")}${path}`;
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}${apiV1}${path}`;
+  }
+  return `${apiV1}${path}`;
 }
 
 const MAX_SSE_BACKOFF_MS = 30_000;

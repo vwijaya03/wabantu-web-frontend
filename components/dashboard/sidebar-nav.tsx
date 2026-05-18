@@ -6,13 +6,19 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
   Bot,
+  Building2,
   CreditCard,
   Inbox,
   LayoutDashboard,
+  Megaphone,
   MessageSquare,
+  Package,
   Plug,
+  Shield,
+  Upload,
   Users,
   UsersRound,
+  Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { INBOX_UNREAD_QUERY_KEY, inboxApi } from "@/lib/api/inbox";
@@ -44,9 +50,21 @@ const groups: Array<{
   {
     label: "Bisnis",
     items: [
+      { href: "/dashboard/catalog", label: "Katalog", icon: Package },
+      { href: "/dashboard/orders", label: "Pesanan", icon: Package },
+      { href: "/dashboard/broadcast", label: "Broadcast", icon: Megaphone },
+      { href: "/dashboard/import", label: "Import", icon: Upload },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
       { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
       { href: "/dashboard/team", label: "Team", icon: Users },
+    ],
+  },
+  {
+    label: "Lanjutan",
+    items: [
+      { href: "/dashboard/branches", label: "Cabang", icon: Building2 },
+      { href: "/dashboard/workflow", label: "Workflow", icon: Workflow },
+      { href: "/dashboard/admin", label: "Admin", icon: Shield },
     ],
   },
 ];

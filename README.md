@@ -2,6 +2,59 @@
 
 Next.js 16 (App Router) + Tailwind v4 + shadcn/ui-style components.
 
+Backend aktif: **[`../api-go/`](../api-go/)** (Encore, port **4000**, prefix **`/api/v1`**). Stack Nest **`../api/`** (port 3001) **tidak** dipakai oleh frontend ini.
+
+Alur lengkap: **[APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md)** · Backend: **[../api-go/README.md](../api-go/README.md)**.
+
+---
+
+## Untuk developer baru — checklist sebelum `npm run dev`
+
+| # | Harus sudah ready | Cara cek |
+|---|-------------------|----------|
+| 1 | **Node.js 18+** (disarankan 20/22) | `node -v` — Next 16 tidak jalan di Node 14 |
+| 2 | **api-go** sedang jalan | `curl -s http://localhost:4000/api/v1/health` → JSON OK |
+| 3 | **Redis** (untuk session api-go) | `redis-cli ping` → `PONG` (lihat `../infra`) |
+| 4 | File env frontend | `cp .env.example .env.local` (atau `.env`) |
+| 5 | Dependencies terpasang | `npm install` |
+
+**Urutan hari pertama:**
+
+```bash
+# Terminal 1 — Redis + API (detail: api-go/README.md)
+cd ../infra && docker compose up -d redis
+cd ../api-go && encore auth login && ./scripts/setup-secrets-from-env.sh && encore run
+
+# Terminal 2 — Frontend
+cd web-frontend
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+Buka **http://localhost:3000** → `/register` atau `/login` → `/dashboard`.
+
+Super admin dev: daftar/login dengan **`superadmin@gmail.com`** → menu **Admin** di sidebar.
+
+---
+
+## Environment variables
+
+| Variabel | Default dev | Keterangan |
+|----------|-------------|------------|
+| `NEXT_PUBLIC_API_URL` | `/api/v1` | Base URL browser (same-origin; hindari CORS) |
+| `API_BACKEND_URL` | `http://localhost:4000` | Target rewrite Next (`next.config.ts`) |
+| `API_URL_INTERNAL` | `http://localhost:4000` | Server Components; `/api/v1` ditambah otomatis (`lib/env.ts`) |
+| `NEXT_PUBLIC_SSE_API_URL` | (kosong) | Opsional: SSE inbox langsung ke API (mis. `http://localhost:4000`) |
+| `NEXT_PUBLIC_APP_NAME` | `WABantu` | Branding |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | — | Email di halaman legal |
+
+**Jangan** arahkan ke Nest: `API_BACKEND_URL=http://localhost:3001` akan memanggil stack lama.
+
+Copy template: `.env.example` → `.env.local` (gitignore) atau pakai `.env` yang sudah ada.
+
+---
+
 ## Route structure
 
 ```
@@ -30,7 +83,14 @@ app/
         │   └── onboarding/    # OAuth onboarding + help page
         ├── analytics/
         ├── billing/
-        └── team/
+        ├── team/
+        ├── catalog/             # Katalog produk
+        ├── orders/              # Pesanan
+        ├── broadcast/           # Broadcast WA (Business+)
+        ├── import/              # Import CSV/XLSX
+        ├── branches/            # Multi cabang (Pro)
+        ├── workflow/            # Rule automation (Business+)
+        └── admin/               # Super admin
 ```
 
 Route groups (`(marketing)`, `(auth)`, `(dashboard)`) keep URLs flat
@@ -56,9 +116,23 @@ layout, providers, and auth gate.
 
 - **`NEXT_PUBLIC_SUPPORT_EMAIL`** (see `.env.example`) — used in legal/copy where a contact email is required; defaults to a sensible placeholder if unset.
 
+## Plan gating (sidebar / halaman)
+
+`hooks/use-plan.ts` memuat `GET /api/v1/billing/overview`:
+
+| Plan | Broadcast & workflow | Multi cabang |
+|------|----------------------|--------------|
+| `starter` | ❌ | ❌ |
+| `business` / `basic` | ✅ | ❌ |
+| `pro` | ✅ | ✅ |
+
+Halaman tetap bisa diakses manual lewat URL; enforcement utama di API (`entitlement`).
+
+---
+
 ## Flow guide
 
-For the same “how does this app hang together” narrative as the API guide, see **`APP_FLOW_GUIDE.md`** in this folder (marketing vs dashboard, cookies, WhatsApp onboarding).
+Lihat **`APP_FLOW_GUIDE.md`** (auth, rewrite API, WhatsApp OAuth, inbox SSE, halaman baru).
 
 ## WhatsApp onboarding (OAuth-only)
 
@@ -119,11 +193,21 @@ emerald.
 ## Scripts
 
 ```bash
-npm run dev      # Turbopack dev server
-npm run build    # Production build (NODE_ENV=production assumed)
+npm run dev      # Dev server :3000 (butuh api-go :4000)
+npm run build    # Production build — butuh Node 18+
 npm run start    # Serve the built output
 npm run lint     # Next ESLint config
 ```
+
+## Troubleshooting
+
+| Gejala | Penyebab | Solusi |
+|--------|----------|--------|
+| API 404 / network error | `encore run` belum jalan | Jalankan `api-go` dulu |
+| Login loop | Cookie invalid + proxy | Clear cookie `wabantu_at`; cek `API_BACKEND_URL` |
+| Dashboard kosong / redirect login | `getServerUser` gagal | Pastikan `API_URL_INTERNAL` → api-go; lihat `lib/env.ts` |
+| Inbox tidak real-time | SSE via rewrite | Set `NEXT_PUBLIC_SSE_API_URL=http://localhost:4000` |
+| `npm run build` syntax error | Node 14 | `nvm use 20` atau 22 |
 
 ## Docker (standalone deploy unit)
 
@@ -147,8 +231,9 @@ NEXT_PUBLIC_API_URL=https://api.your-domain.id/api/v1 \
 
 `API_URL_INTERNAL` (used by server components like the dashboard's
 `getServerUser()`) is read at runtime from `environment:` and defaults
-to `http://wabantu-api:3001/api/v1` so the container can reach the API
-through the shared `wabantu_net` network without a public hop.
+to `http://wabantu-api-go:4000` (with `/api/v1` appended automatically)
+so the container can reach **Encore api-go** on `wabantu_net` without a
+public hop. Do not point the frontend at the legacy Nest `api/` service.
 
 ## Notes for Next.js 16 specifically
 
@@ -159,4 +244,4 @@ through the shared `wabantu_net` network without a public hop.
 - For ngrok/dev external origin access, `next.config.ts` includes
   `allowedDevOrigins`
 - Browser API requests use same-origin `/api/v1` by default and rely on
-  Next rewrites to `http://localhost:3001/api/v1` in dev
+  Next rewrites to **`http://localhost:4000/api/v1`** (Encore `api-go`) in dev
