@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -27,7 +26,6 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const {
@@ -41,8 +39,7 @@ export default function RegisterPage() {
     try {
       await authApi.register(values);
       toast.success("Akun berhasil dibuat");
-      router.replace("/dashboard");
-      router.refresh();
+      window.location.assign("/dashboard");
     } catch (err) {
       const e = toApiError(err);
       toast.error(e.message || "Gagal mendaftar");

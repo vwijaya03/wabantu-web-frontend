@@ -15,9 +15,8 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 /**
  * Auth context backed by server-rendered initial state.
  *
- * The dashboard layout fetches the current user via `getServerUser()` and
- * passes it down — meaning client code never has to deal with a "loading"
- * pseudo-state on first render. `refresh()` is only used after explicit
+ * `DashboardAuthShell` loads the user via `authApi.me()` and passes it down.
+ * `refresh()` is only used after explicit
  * actions (profile update, role change) to re-sync.
  */
 export function AuthProvider({

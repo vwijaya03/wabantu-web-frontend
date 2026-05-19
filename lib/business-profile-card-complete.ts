@@ -9,10 +9,11 @@ function filled(s: string | null | undefined): boolean {
  * content (nama bisnis minimal 2 karakter, selaras validasi form).
  */
 export function isBusinessProfileCardComplete(
-  profile: BusinessProfile | null,
+  profile: BusinessProfile | null | undefined,
 ): boolean {
   if (!profile) return false;
-  if (profile.businessName.trim().length < 2) return false;
+  const name = profile.businessName;
+  if (typeof name !== "string" || name.trim().length < 2) return false;
   return (
     filled(profile.description) &&
     filled(profile.address) &&

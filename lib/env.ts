@@ -24,7 +24,9 @@ export const env = {
    */
   sseApiUrl: process.env.NEXT_PUBLIC_SSE_API_URL
     ? withApiV1Prefix(process.env.NEXT_PUBLIC_SSE_API_URL)
-    : "",
+    : process.env.NODE_ENV === "development"
+      ? withApiV1Prefix("http://localhost:4000")
+      : "",
   appName: process.env.NEXT_PUBLIC_APP_NAME ?? "WABantu",
   appTagline:
     process.env.NEXT_PUBLIC_APP_TAGLINE ?? "AI WhatsApp Auto-Reply untuk UMKM",

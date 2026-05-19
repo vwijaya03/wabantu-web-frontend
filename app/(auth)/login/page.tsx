@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { getServerUser } from "@/lib/api/server";
+import { LoginSessionGate } from "@/components/auth/login-session-gate";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage({
@@ -23,13 +23,11 @@ export default async function LoginPage({
     redirect(safeTarget);
   }
 
-  const user = await getServerUser();
-  if (user) redirect("/dashboard");
-
-  // useSearchParams() in LoginForm requires Suspense per Next.js 16.
   return (
     <Suspense fallback={null}>
-      <LoginForm />
+      <LoginSessionGate>
+        <LoginForm />
+      </LoginSessionGate>
     </Suspense>
   );
 }

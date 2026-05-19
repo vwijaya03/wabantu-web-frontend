@@ -1,15 +1,22 @@
 import axios, { AxiosError, type AxiosInstance } from "axios";
+import { clearClientSession, getAccessToken } from "@/lib/auth/session";
 import { env } from "@/lib/env";
 
 /**
- * Browser-side axios instance.
- * - withCredentials so the HttpOnly auth cookie is included automatically
- * - normalizes API errors into a typed shape the UI layer can render
+ * Browser API client — Bearer token only (no HttpOnly cookie).
+ * Aligns with accessToken in login/register body (Nest also returns this field).
  */
 export const api: AxiosInstance = axios.create({
   baseURL: env.apiUrl,
-  withCredentials: true,
   timeout: 30_000,
+});
+
+api.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 export interface ApiError {
@@ -39,6 +46,17 @@ export function toApiError(err: unknown): ApiError {
   };
 }
 
+let authRedirectInFlight = false;
+
+function shouldRedirectOn401(requestUrl?: string): boolean {
+  if (typeof window === "undefined") return false;
+  const path = window.location.pathname;
+  if (path.startsWith("/login") || path.startsWith("/register")) return false;
+  const url = requestUrl ?? "";
+  if (url.includes("/auth/login") || url.includes("/auth/register")) return false;
+  return true;
+}
+
 api.interceptors.response.use(
   (res) => {
     if (res.data && typeof res.data === "object" && "data" in res.data) {
@@ -50,12 +68,15 @@ api.interceptors.response.use(
     return res;
   },
   async (error: AxiosError) => {
-    if (error.response?.status === 401 && typeof window !== "undefined") {
-      // Defer the redirect so React isn't mid-render when we navigate.
+    if (
+      error.response?.status === 401 &&
+      shouldRedirectOn401(error.config?.url) &&
+      !authRedirectInFlight
+    ) {
+      authRedirectInFlight = true;
+      clearClientSession();
       const path = window.location.pathname;
-      if (!path.startsWith("/login") && !path.startsWith("/register")) {
-        window.location.href = `/login?next=${encodeURIComponent(path)}`;
-      }
+      window.location.replace(`/login?next=${encodeURIComponent(path)}`);
     }
     return Promise.reject(error);
   },
