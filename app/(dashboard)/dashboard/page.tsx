@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
   Bot,
@@ -18,30 +21,40 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
-import {
-  getServerAnalyticsOverview,
-  getServerBusinessProfile,
-  getServerKnowledgeBaseTotal,
-  getServerUser,
-  getServerWhatsappChannels,
-} from "@/lib/api/server";
+import { useAuth } from "@/components/providers/auth-provider";
+import { analyticsApi } from "@/lib/api/analytics";
+import { businessApi } from "@/lib/api/business";
+import { knowledgeBaseApi } from "@/lib/api/knowledge-base";
+import { whatsappApi } from "@/lib/api/whatsapp";
 import { isBusinessProfileCardComplete } from "@/lib/business-profile-card-complete";
 import {
   formatAvgFirstResponse,
   formatOpenRateCard,
 } from "@/lib/format/analytics-overview";
 
-export default async function DashboardOverviewPage() {
-  const [user, channels, analytics, businessProfile, kbTotal] =
-    await Promise.all([
-      getServerUser(),
-      getServerWhatsappChannels(),
-      getServerAnalyticsOverview(30),
-      getServerBusinessProfile(),
-      getServerKnowledgeBaseTotal(),
-    ]);
+export default function DashboardOverviewPage() {
+  const { user } = useAuth();
+
+  const { data: channels = [] } = useQuery({
+    queryKey: ["whatsapp-channels"],
+    queryFn: () => whatsappApi.list(),
+  });
+  const { data: analytics } = useQuery({
+    queryKey: ["analytics-overview", 30],
+    queryFn: () => analyticsApi.overview(30),
+  });
+  const { data: businessProfile } = useQuery({
+    queryKey: ["business-profile"],
+    queryFn: () => businessApi.get(),
+  });
+  const { data: kbList } = useQuery({
+    queryKey: ["knowledge-base-total"],
+    queryFn: () => knowledgeBaseApi.list({ page: 1, pageSize: 1 }),
+  });
+
+  const kbTotal = kbList?.total ?? 0;
   const hasConnectedWhatsapp = channels.some((c) => c.status === "connected");
-  const profileDone = isBusinessProfileCardComplete(businessProfile);
+  const profileDone = isBusinessProfileCardComplete(businessProfile ?? null);
   const kbDone = kbTotal >= 5;
   const aiReady = profileDone && kbDone;
 
@@ -203,7 +216,11 @@ export default async function DashboardOverviewPage() {
                 ? "Nomor bisnis Anda sudah aktif dan siap menerima chat masuk."
                 : "Hubungkan nomor bisnis Anda untuk mulai menerima chat masuk."}
             </p>
-            <Button asChild size="sm" variant={hasConnectedWhatsapp ? "outline" : "default"}>
+            <Button
+              asChild
+              size="sm"
+              variant={hasConnectedWhatsapp ? "outline" : "default"}
+            >
               <Link
                 href={
                   hasConnectedWhatsapp
@@ -238,7 +255,9 @@ export default async function DashboardOverviewPage() {
             <Button asChild size="sm" variant="outline">
               <Link
                 href={
-                  profileDone ? "/dashboard/knowledge-base" : "/dashboard/ai-settings"
+                  profileDone
+                    ? "/dashboard/knowledge-base"
+                    : "/dashboard/ai-settings"
                 }
               >
                 {profileDone ? "Kelola FAQ" : "Lengkapi profil"}

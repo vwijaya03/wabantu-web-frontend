@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -21,7 +21,6 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function LoginForm() {
-  const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next") || "/dashboard";
   const [submitting, setSubmitting] = useState(false);
@@ -38,8 +37,7 @@ export function LoginForm() {
     try {
       await authApi.login(values);
       toast.success("Berhasil masuk");
-      router.replace(next);
-      router.refresh();
+      window.location.assign(next);
     } catch (err) {
       const e = toApiError(err);
       toast.error(e.message || "Gagal masuk");

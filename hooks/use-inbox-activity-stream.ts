@@ -2,34 +2,41 @@
 
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { getAccessToken } from "@/lib/auth/session";
 import { INBOX_UNREAD_QUERY_KEY } from "@/lib/api/inbox";
 import { env } from "@/lib/env";
 
-function inboxStreamUrl(): string {
+function inboxStreamUrl(): string | null {
+  const token = getAccessToken();
+  if (!token) return null;
+
   const path = "/inbox/stream";
-  const apiV1 = env.apiUrl.replace(/\/$/, "");
+  const q = new URLSearchParams({ access_token: token });
+
   if (env.sseApiUrl) {
-    return `${env.sseApiUrl.replace(/\/$/, "")}${path}`;
+    return `${env.sseApiUrl.replace(/\/$/, "")}${path}?${q.toString()}`;
   }
+
+  const apiV1 = env.apiUrl.replace(/\/$/, "");
   if (typeof window !== "undefined") {
-    return `${window.location.origin}${apiV1}${path}`;
+    return `${window.location.origin}${apiV1}${path}?${q.toString()}`;
   }
-  return `${apiV1}${path}`;
+  return `${apiV1}${path}?${q.toString()}`;
 }
 
 const MAX_SSE_BACKOFF_MS = 30_000;
 
 /**
  * Subscribes to inbox SSE (Redis push when webhook stores an inbound message).
- * Invalidates unread + conversation caches — push + reconnect.
- * Fallback: inbox queries also use `refetchOnWindowFocus: "always"` so UI updates
- * if SSE fails (common when EventSource goes through Next rewrites).
+ * Uses access_token query — EventSource cannot send Authorization headers.
  */
 export function useInboxActivityStream(): void {
   const qc = useQueryClient();
 
   useEffect(() => {
     const url = inboxStreamUrl();
+    if (!url) return;
+
     let cancelled = false;
     let es: EventSource | null = null;
     let retryAttempt = 0;
@@ -63,13 +70,16 @@ export function useInboxActivityStream(): void {
 
     const connect = () => {
       if (cancelled) return;
+      const nextUrl = inboxStreamUrl();
+      if (!nextUrl) return;
+
       if (retryTimer) {
         clearTimeout(retryTimer);
         retryTimer = null;
       }
       es?.close();
-      es = new EventSource(url, { withCredentials: true } as EventSourceInit);
-      es.addEventListener("message", onMessage);
+      es = new EventSource(nextUrl);
+      es.onmessage = onMessage;
       es.addEventListener("open", () => {
         retryAttempt = 0;
       });
@@ -85,7 +95,7 @@ export function useInboxActivityStream(): void {
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
-      es?.removeEventListener("message", onMessage);
+      if (es) es.onmessage = null;
       es?.close();
     };
   }, [qc]);
