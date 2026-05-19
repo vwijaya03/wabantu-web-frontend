@@ -8,7 +8,13 @@ import { InboxActivityBridge } from "@/components/dashboard/inbox-activity-bridg
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
 import { Topbar } from "@/components/dashboard/topbar";
 import { AuthProvider } from "@/components/providers/auth-provider";
-import { authApi, type AuthUser } from "@/lib/api/auth";
+import { ImpersonationBanner } from "@/components/dashboard/impersonation-banner";
+import {
+  authApi,
+  hasTenantDashboardAccess,
+  isPlatformOperatorHome,
+  type AuthUser,
+} from "@/lib/api/auth";
 import { hasAccessToken } from "@/lib/auth/session";
 
 export function DashboardAuthShell({ children }: { children: React.ReactNode }) {
@@ -29,6 +35,20 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
         const me = await authApi.me();
         if (!cancelled) {
           setUser(me);
+          const path = pathname || "/dashboard";
+          if (isPlatformOperatorHome(me) && !path.startsWith("/dashboard/admin")) {
+            router.replace("/dashboard/admin");
+            return;
+          }
+          if (
+            me.role === "super_admin" &&
+            !hasTenantDashboardAccess(me) &&
+            path !== "/dashboard/admin" &&
+            !path.startsWith("/dashboard/admin")
+          ) {
+            router.replace("/dashboard/admin");
+            return;
+          }
           setReady(true);
         }
       } catch {
@@ -54,7 +74,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
 
   return (
     <AuthProvider initialUser={user}>
-      <InboxActivityBridge />
+      {hasTenantDashboardAccess(user) ? <InboxActivityBridge /> : null}
       <div className="grid min-h-svh grid-cols-1 lg:grid-cols-[260px_1fr]">
         <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:flex lg:flex-col">
           <div className="flex h-16 items-center gap-2 border-b px-6">
@@ -67,6 +87,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
           </div>
         </aside>
         <div className="flex min-w-0 flex-col">
+          <ImpersonationBanner />
           <Topbar />
           <main className="flex-1 overflow-y-auto bg-muted/20 p-6 lg:p-8">
             <div className="mx-auto max-w-6xl space-y-6">{children}</div>

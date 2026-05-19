@@ -15,11 +15,12 @@ export const adminApi = {
     const res = await api.get("/admin/tenants");
     return res.data;
   },
-  async impersonate(tenantId: string): Promise<{ token: string; expiresAt: string }> {
+  async impersonate(tenantId: string): Promise<{ ok: boolean; tenant: AdminTenant }> {
     const res = await api.post(`/admin/impersonate/${tenantId}`);
     return res.data;
   },
-  async stopImpersonation(): Promise<void> {
-    await api.post("/admin/stop-impersonation");
+  async stopImpersonation(): Promise<{ ok: boolean; message: string }> {
+    const res = await api.post("/admin/stop-impersonation");
+    return res.data;
   },
 };

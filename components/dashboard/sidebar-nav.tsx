@@ -20,8 +20,10 @@ import {
   UsersRound,
   Workflow,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/providers/auth-provider";
+import { hasTenantDashboardAccess } from "@/lib/api/auth";
 import { INBOX_UNREAD_QUERY_KEY, inboxApi } from "@/lib/api/inbox";
+import { cn } from "@/lib/utils";
 
 const groups: Array<{
   label: string;
@@ -69,14 +71,22 @@ const groups: Array<{
   },
 ];
 
+const platformOnlyGroups = ["Lanjutan"];
+
 export function SidebarNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const tenantMode = hasTenantDashboardAccess(user);
+  const visibleGroups = tenantMode
+    ? groups
+    : groups.filter((g) => platformOnlyGroups.includes(g.label));
+
   const { data: unreadSummary } = useQuery({
     queryKey: INBOX_UNREAD_QUERY_KEY,
     queryFn: () => inboxApi.unreadSummary(),
+    enabled: tenantMode,
     staleTime: Number.POSITIVE_INFINITY,
     refetchOnWindowFocus: "always",
-    /** SSE (`InboxActivityBridge`) + focus refetch if push did not arrive. */
   });
   const inboxUnread = unreadSummary?.totalUnreadMessages ?? 0;
   const showInboxDot =
@@ -84,13 +94,18 @@ export function SidebarNav() {
 
   return (
     <nav className="flex flex-col gap-6 px-3 py-4">
-      {groups.map((g) => (
+      {visibleGroups.map((g) => (
         <div key={g.label}>
           <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {g.label}
           </p>
           <ul className="space-y-1">
-            {g.items.map((item) => {
+            {g.items
+              .filter(
+                (item) =>
+                  item.href !== "/dashboard/admin" || user?.role === "super_admin",
+              )
+              .map((item) => {
               const active =
                 item.href === "/dashboard"
                   ? pathname === "/dashboard"
