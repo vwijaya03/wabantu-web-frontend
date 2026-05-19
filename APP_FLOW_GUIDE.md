@@ -5,6 +5,7 @@ Panduan **alur frontend** untuk developer baru: apa yang harus sudah jalan, baga
 | Dokumen terkait | Isi |
 |-----------------|-----|
 | [README.md](./README.md) | Route, env, Docker, troubleshooting singkat |
+| [DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUMENTATION.md) | Arsitektur FE + panduan React/Next untuk pemula |
 | [../api-go/README.md](../api-go/README.md) | Encore, secrets, 2 DB, Redis |
 | [../api-go/APP_FLOW_GUIDE.md](../api-go/APP_FLOW_GUIDE.md) | Webhook, AI Pub/Sub, multi-tenant |
 | [../api-go/ENDPOINT_COMPATIBILITY.md](../api-go/ENDPOINT_COMPATIBILITY.md) | Perbandingan path vs Nest |
@@ -32,22 +33,22 @@ Panduan **alur frontend** untuk developer baru: apa yang harus sudah jalan, baga
 Semua klien memakai path **`/api/v1/...`** (sama dengan Nest). Perbedaannya hanya **host tujuan rewrite**.
 
 ```
-┌─────────────┐     GET /api/v1/auth/me      ┌──────────────┐     rewrite      ┌─────────────┐
+┌─────────────┐   Authorization: Bearer      ┌──────────────┐     rewrite      ┌─────────────┐
 │   Browser   │ ───────────────────────────► │  Next :3000  │ ───────────────► │ api-go :4000 │
-│  axios + RQ │     (cookie wabantu_at)      │ next.config  │  API_BACKEND_URL │   Encore    │
+│ axios + RQ  │   (token di sessionStorage)  │ next.config  │ API_BACKEND_URL  │   Encore    │
 └─────────────┘                              └──────────────┘                  └─────────────┘
-       ▲                                                                              │
-       │  Server Component (layout dashboard)                                         │
-       └──────── getServerUser() ── fetch API_URL_INTERNAL/api/v1/auth/me ──────────┘
-                         (langsung ke :4000, tanpa lewat rewrite browser)
+       │
+       │  EventSource /inbox/stream?access_token=…  (dev: sering langsung ke :4000)
+       └──────────────────────────────────────────────────────────────────────────────►
 ```
 
 | Lapisan | File | Base URL |
 |---------|------|----------|
-| Browser (client) | `lib/api/client.ts` | `env.apiUrl` → `/api/v1` |
-| Server (RSC) | `lib/api/server.ts` | `env.apiUrlInternal` → `http://localhost:4000/api/v1` |
+| Browser REST | `lib/api/client.ts` | `env.apiUrl` → `/api/v1` + Bearer header |
+| Token | `lib/auth/session.ts` | `sessionStorage` key `wabantu_access_token` |
 | Rewrite | `next.config.ts` | `/api/v1/:path*` → `${API_BACKEND_URL}/api/v1/:path*` |
-| SSE inbox | `hooks/use-inbox-activity-stream.ts` | same-origin atau `NEXT_PUBLIC_SSE_API_URL` |
+| SSE inbox | `hooks/use-inbox-activity-stream.ts` | `env.sseApiUrl` atau same-origin `/api/v1/inbox/stream` |
+| Auth gate UI | `components/dashboard/dashboard-auth-shell.tsx` | `GET /auth/me` setelah token ada |
 
 Envelope respons: backend mengembalikan `{ success: true, data: ... }`; axios interceptor di `client.ts` meng-unwrap `data` untuk hooks.
 
@@ -67,13 +68,17 @@ Group `(marketing|auth|dashboard)` **tidak** muncul di URL — hanya mengorganis
 
 ## 3) Auth (browser → API)
 
-1. Login/register: `POST /api/v1/auth/login` | `register` (via axios, `withCredentials: true`).
-2. API set cookie HttpOnly **`wabantu_at`** + body berisi `accessToken`.
-3. **`proxy.ts`**: redirect optimistik — `/dashboard/*` tanpa cookie → `/login` (bukan sumber kebenaran session).
-4. **`app/(dashboard)/layout.tsx`**: `getServerUser()` → `GET /api/v1/auth/me` dengan cookie request — **ini** yang menentukan session valid.
-5. Logout: `POST /api/v1/auth/logout` + clear state lokal.
+1. Login/register: `POST /api/v1/auth/login` | `register` via `lib/api/auth.ts` → simpan **`accessToken`** ke **`sessionStorage`** (`lib/auth/session.ts`).
+2. Axios (`lib/api/client.ts`) menambahkan **`Authorization: Bearer <token>`** pada setiap request API.
+3. **`app/(dashboard)/layout.tsx`** → **`DashboardAuthShell`**: tanpa token → `/login?next=…`; dengan token → **`authApi.me()`** → render sidebar + **`AuthProvider`**.
+4. **`LoginSessionGate`** di `/login`: jika token masih valid → redirect ke `next` atau `/dashboard`.
+5. Setelah login: **`window.location.assign`** (bukan hanya `router.push`) supaya shell bersih.
+6. **`proxy.ts`**: pass-through — **tidak** memeriksa cookie/token di edge.
+7. Logout: `POST /api/v1/auth/logout` + `clearClientSession()` + redirect `/login`.
 
-Edge case: jangan redirect `/login` → `/dashboard` hanya karena cookie ada (stale cookie = loop). Login page juga memanggil `getServerUser()` sebelum render form.
+**401:** interceptor axios menghapus token dan redirect sekali (`authRedirectInFlight`) — hindari loop di halaman login.
+
+Diagram lengkap: [DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUMENTATION.md) §8.
 
 ---
 
@@ -108,13 +113,13 @@ Webhook Meta dikonfigurasi di **backend** (`/api/v1/webhook/whatsapp` atau alias
 
 ## 7) Dashboard overview (`/dashboard`)
 
-Server load paralel (`lib/api/server.ts`):
+Halaman **client** (`"use client"`) — React Query paralel di `app/(dashboard)/dashboard/page.tsx`:
 
-- `GET /api/v1/auth/me` (via layout)
+- User dari **`useAuth()`** (di-seed oleh `DashboardAuthShell`)
 - `GET /api/v1/whatsapp/channels`
 - `GET /api/v1/analytics/overview?days=30`
 - `GET /api/v1/business/profile`
-- `GET /api/v1/knowledge-base?page=1&pageSize=1` → `total`
+- `GET /api/v1/knowledge-base` (total FAQ)
 
 Checklist “lengkapi profil” / “≥5 FAQ” / kartu “AI status”: `lib/business-profile-card-complete.ts`.
 
@@ -157,9 +162,10 @@ Register/login **`superadmin@gmail.com`** → role `super_admin` → `/dashboard
 
 ## 9) Inbox realtime (SSE)
 
-1. Hook `useInboxActivityStream` subscribe `GET /api/v1/inbox/stream` (`EventSource`, `withCredentials`).
-2. Default URL: `window.location.origin` + `/api/v1/inbox/stream` (lewat rewrite).
-3. Jika koneksi gagal berulang: set di `.env.local`:
+1. `InboxActivityBridge` memasang hook **`useInboxActivityStream`** di seluruh dashboard.
+2. `EventSource` ke `GET /api/v1/inbox/stream?access_token=<JWT>` — browser **tidak bisa** set header Authorization pada SSE.
+3. **Dev:** `lib/env.ts` default SSE ke `http://localhost:4000/api/v1` (bypass rewrite Next yang sering mem-buffer stream).
+4. Opsional production/dev override:
 
 ```env
 NEXT_PUBLIC_SSE_API_URL=http://localhost:4000
@@ -167,7 +173,8 @@ NEXT_PUBLIC_SSE_API_URL=http://localhost:4000
 
 (`/api/v1` ditambahkan otomatis di `lib/env.ts`.)
 
-4. Fallback: query inbox `refetchOnWindowFocus: 'always'`.
+5. Pada event (kecuali `ping`): `invalidateQueries` untuk `inbox-unread-summary`, `inbox-conversations`, `inbox-messages`.
+6. Fallback: query inbox `refetchOnWindowFocus: 'always'`.
 
 ---
 
@@ -193,12 +200,14 @@ Production build frontend: Node 18+, env `NEXT_PUBLIC_*` di-inline saat `npm run
 |-----------|------|
 | Rewrite API | `next.config.ts` |
 | Env terpusat | `lib/env.ts`, `.env.example` |
-| Edge auth gate | `proxy.ts` |
-| Server fetch + cookie | `lib/api/server.ts` |
-| Client axios + envelope | `lib/api/client.ts` |
+| Edge hook (no-op) | `proxy.ts` |
+| JWT session | `lib/auth/session.ts` |
+| Client axios + Bearer + envelope | `lib/api/client.ts` |
+| Auth gate + layout | `components/dashboard/dashboard-auth-shell.tsx`, `app/(dashboard)/layout.tsx` |
+| Auth context | `components/providers/auth-provider.tsx` |
+| SSE inbox | `hooks/use-inbox-activity-stream.ts`, `components/dashboard/inbox-activity-bridge.tsx` |
 | Profil bisnis | `lib/api/business.ts`, `dashboard/ai-settings/page.tsx` |
 | Plan gating | `hooks/use-plan.ts` |
-| Dashboard shell | `app/(dashboard)/layout.tsx` |
 | Sidebar | `components/dashboard/sidebar-nav.tsx` |
 
 ---
@@ -208,9 +217,9 @@ Production build frontend: Node 18+, env `NEXT_PUBLIC_*` di-inline saat `npm run
 | Gejala | Cek |
 |--------|-----|
 | Semua API gagal | `encore run`, `API_BACKEND_URL=http://localhost:4000` |
-| Hanya server component gagal | `API_URL_INTERNAL`, log `getServerUser` |
-| 401 terus | Secret JWT / Redis session; login ulang |
-| CORS di dev | Pakai `/api/v1` same-origin, jangan hardcode `:4000` di axios |
-| Inbox tidak push | `NEXT_PUBLIC_SSE_API_URL` |
+| Redirect login loop | Token di `sessionStorage`; interceptor 401; Redis api-go |
+| 401 terus | Secret JWT / Redis session; login ulang; tab yang sama |
+| CORS di dev | REST: pakai `/api/v1` same-origin; SSE boleh langsung ke `:4000` |
+| Inbox tidak push | Network → `inbox/stream` open; `NEXT_PUBLIC_SSE_API_URL` |
 
 Detail backend: **[../api-go/APP_FLOW_GUIDE.md](../api-go/APP_FLOW_GUIDE.md)**.

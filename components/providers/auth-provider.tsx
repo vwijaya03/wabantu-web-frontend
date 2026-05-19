@@ -13,11 +13,9 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 /**
- * Auth context backed by server-rendered initial state.
+ * Auth context seeded by DashboardAuthShell after client-side GET /auth/me.
  *
- * `DashboardAuthShell` loads the user via `authApi.me()` and passes it down.
- * `refresh()` is only used after explicit
- * actions (profile update, role change) to re-sync.
+ * refresh() re-fetches the user after explicit actions (profile update, role change).
  */
 export function AuthProvider({
   children,

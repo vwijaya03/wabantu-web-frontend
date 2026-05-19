@@ -4,7 +4,7 @@ Next.js 16 (App Router) + Tailwind v4 + shadcn/ui-style components.
 
 Backend aktif: **[`../api-go/`](../api-go/)** (Encore, port **4000**, prefix **`/api/v1`**). Stack Nest **`../api/`** (port 3001) **tidak** dipakai oleh frontend ini.
 
-Alur lengkap: **[APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md)** · Backend: **[../api-go/README.md](../api-go/README.md)**.
+Alur lengkap: **[APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md)** · Backend: **[../api-go/README.md](../api-go/README.md)** · Dokumentasi teknis: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUMENTATION.md)**.
 
 ---
 
@@ -45,7 +45,7 @@ Super admin dev: daftar/login dengan **`superadmin@gmail.com`** → menu **Admin
 | `NEXT_PUBLIC_API_URL` | `/api/v1` | Base URL browser (same-origin; hindari CORS) |
 | `API_BACKEND_URL` | `http://localhost:4000` | Target rewrite Next (`next.config.ts`) |
 | `API_URL_INTERNAL` | `http://localhost:4000` | Server Components; `/api/v1` ditambah otomatis (`lib/env.ts`) |
-| `NEXT_PUBLIC_SSE_API_URL` | (kosong) | Opsional: SSE inbox langsung ke API (mis. `http://localhost:4000`) |
+| `NEXT_PUBLIC_SSE_API_URL` | (kosong; dev default `:4000` di `lib/env.ts`) | SSE inbox langsung ke API — hindari rewrite Next |
 | `NEXT_PUBLIC_APP_NAME` | `WABantu` | Branding |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | — | Email di halaman legal |
 
@@ -72,7 +72,7 @@ app/
 │   ├── login/page.tsx
 │   └── register/page.tsx
 └── (dashboard)/               # Protected (force-dynamic)
-    ├── layout.tsx             # Sidebar + topbar + AuthProvider seeded from server
+    ├── layout.tsx             # DashboardAuthShell: token → GET /auth/me → AuthProvider
     └── dashboard/
         ├── page.tsx           # Overview
         ├── inbox/
@@ -99,18 +99,16 @@ layout, providers, and auth gate.
 
 ## Auth
 
-- API issues an HttpOnly cookie `wabantu_at` on login/register
-- `/login` now does server-side session check (`getServerUser()`); active
-  sessions are redirected to `/dashboard`
-- `proxy.ts` (Next.js 16's renamed middleware) does an optimistic edge
-  redirect: visiting `/dashboard/*` without the cookie bounces to
-  `/login`
-- The dashboard layout calls `getServerUser()` (forwards cookies to
-  `GET /auth/me`) and either redirects or seeds `AuthProvider` with
-  the resolved user — so client code never sees a "loading" first
-  render
-- Logout catches network failures and still clears local auth state +
-  redirects to `/login`
+- Login/register: api-go returns **`accessToken`** in JSON (no HttpOnly cookie required by the SPA).
+- Token disimpan di **`sessionStorage`** (`lib/auth/session.ts`, key `wabantu_access_token`).
+- **`lib/api/client.ts`**: setiap request memakai header **`Authorization: Bearer <token>`** (bukan `withCredentials` / cookie).
+- **`DashboardAuthShell`** (`components/dashboard/dashboard-auth-shell.tsx`): jika tidak ada token atau `GET /auth/me` gagal → redirect `/login?next=…`; jika sukses → seed **`AuthProvider`**.
+- **`LoginSessionGate`**: jika sudah punya token valid → redirect ke dashboard (hindari form login saat session masih hidup).
+- Setelah login sukses: **`window.location.assign`** (full navigation) agar state bersih.
+- **`proxy.ts`** (Next.js 16, dulu `middleware.ts`): terdaftar untuk `/dashboard`, `/login`, `/register` tetapi **pass-through** — auth tidak dicek di edge.
+- Logout: `POST /auth/logout` + hapus token; redirect ke `/login` meskipun API gagal.
+
+Detail + penjelasan React/Next: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUMENTATION.md)** §8 dan §19.
 
 ## Legal & support URLs
 
@@ -147,15 +145,15 @@ Lihat **`APP_FLOW_GUIDE.md`** (auth, rewrite API, WhatsApp OAuth, inbox SSE, hal
   `POST /whatsapp/meta/connect/callback`
 - `/dashboard/whatsapp` is now focused on connected channel management
   (Disconnect/Reconnect)
-- Dashboard overview: setup checklist and “AI status” read server data —
-  WhatsApp from `/whatsapp/channels`, business profile from
-  `/business/profile`, FAQ count from `/knowledge-base` (see
-  `lib/api/server.ts`, `lib/business-profile-card-complete.ts`)
+- Dashboard overview: setup checklist and “AI status” via **React Query** (client) —
+  WhatsApp `/whatsapp/channels`, profile `/business/profile`, FAQ count
+  `/knowledge-base` (`app/(dashboard)/dashboard/page.tsx`,
+  `lib/business-profile-card-complete.ts`)
 
 ## Data fetching
 
-- `lib/api/client.ts` — shared axios instance with `withCredentials: true`,
-  unwraps the `{ success, data }` envelope, redirects on 401
+- `lib/api/client.ts` — axios + **Bearer** dari `sessionStorage`, unwrap envelope
+  `{ success, data }`, redirect sekali pada 401
 - `lib/api/business.ts` — `GET`/`PATCH` business profile; normalizes
   `reportingTimezone` from camelCase or `reporting_timezone`, trims values,
   and ignores empty strings so the real zone is not lost
@@ -204,9 +202,9 @@ npm run lint     # Next ESLint config
 | Gejala | Penyebab | Solusi |
 |--------|----------|--------|
 | API 404 / network error | `encore run` belum jalan | Jalankan `api-go` dulu |
-| Login loop | Cookie invalid + proxy | Clear cookie `wabantu_at`; cek `API_BACKEND_URL` |
-| Dashboard kosong / redirect login | `getServerUser` gagal | Pastikan `API_URL_INTERNAL` → api-go; lihat `lib/env.ts` |
-| Inbox tidak real-time | SSE via rewrite | Set `NEXT_PUBLIC_SSE_API_URL=http://localhost:4000` |
+| Login loop / ketendang | Token hilang / 401 berulang | Cek Redis api-go; `sessionStorage` tab sama; lihat interceptor `client.ts` |
+| Dashboard “Memuat…” lama | `GET /auth/me` gagal | Pastikan api-go + JWT secret; network tab |
+| Inbox tidak real-time | SSE via rewrite | Dev: otomatis ke `:4000` di `lib/env.ts`, atau set `NEXT_PUBLIC_SSE_API_URL=http://localhost:4000` |
 | `npm run build` syntax error | Node 14 | `nvm use 20` atau 22 |
 
 ## Docker (standalone deploy unit)
@@ -229,11 +227,10 @@ NEXT_PUBLIC_API_URL=https://api.your-domain.id/api/v1 \
   docker compose build
 ```
 
-`API_URL_INTERNAL` (used by server components like the dashboard's
-`getServerUser()`) is read at runtime from `environment:` and defaults
-to `http://wabantu-api-go:4000` (with `/api/v1` appended automatically)
-so the container can reach **Encore api-go** on `wabantu_net` without a
-public hop. Do not point the frontend at the legacy Nest `api/` service.
+`API_URL_INTERNAL` is reserved for future server-side fetches (`lib/env.ts`);
+dashboard auth today is **client-only** via Bearer token. Defaults to
+`http://wabantu-api-go:4000` (+ `/api/v1`) in Docker compose for optional RSC.
+Do not point the frontend at the legacy Nest `api/` service.
 
 ## Notes for Next.js 16 specifically
 
