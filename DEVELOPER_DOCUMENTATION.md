@@ -406,7 +406,9 @@ export const inboxApi = {
 | `business.ts` | `/business/profile`, `/business/catalog` |
 | `whatsapp.ts` | `/whatsapp/channels`, `/whatsapp/meta/connect/*` |
 | `billing.ts`, `usage.ts`, `payment.ts` | Billing & payments |
+| `workflow.ts` | `/workflows` — `list`, `create`, `update` (PATCH), `remove` (DELETE) |
 | `admin.ts` | `/admin/tenants`, impersonation |
+| `ai-activity.ts` | `/admin/tenant/:id/ai-activity` (+ summary) — super_admin only |
 
 Types are **TypeScript interfaces** mirroring api-go JSON (camelCase).
 
@@ -1079,6 +1081,8 @@ const buttonVariants = cva("inline-flex items-center ...", {
 ```
 
 **Not an npm package `@shadcn/ui`** — files are **copied into repo** and editable.
+
+Dialog primitives used on workflow page: `components/ui/dialog.tsx`, `components/ui/alert-dialog.tsx` (delete rule confirmation; requires `@radix-ui/react-dialog`).
 
 ---
 

@@ -91,8 +91,8 @@ app/
         ├── broadcast/           # Broadcast WA (trial kuota / Business+)
         ├── import/              # Import CSV/XLSX
         ├── branches/            # Multi cabang (Pro)
-        ├── workflow/            # Rule automation (trial kuota / Business+)
-        └── admin/               # Super admin
+        ├── workflow/            # Rule automation — CRUD + PATCH/DELETE (trial kuota / Business+)
+        └── admin/               # Super admin (+ ai-activity log)
 ```
 
 Route groups (`(marketing)`, `(auth)`, `(dashboard)`) keep URLs flat

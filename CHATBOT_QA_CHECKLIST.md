@@ -19,6 +19,8 @@ Checklist ini untuk memastikan UI `dashboard/inbox` konsisten dengan pipeline AI
 - Saat pertanyaan di luar scope, user menerima balasan aman (bukan silence).
 - Saat profil bisnis belum lengkap, user mendapat pesan CS follow-up.
 - Saat order flow bertahap, user melihat prompt langkah berikutnya.
+- Setelah alamat/order selesai, pertanyaan ongkir/total (`ongkir kena berapa`, `total termasuk ongkir`) mendapat balasan AI (path `llm`), bukan template out-of-scope.
+- Konfirmasi pembayaran (`nanti saya transfer`, `trf`) setelah checkout tidak boleh dijawab “di luar topik bisnis”.
 
 ## Regression checks
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,11 @@ export default function AdminPage() {
         title="Konsol Platform"
         description="Internal WABantu — pantau tenant klien tanpa mendaftar toko."
       />
+      <div className="mb-4">
+        <Button variant="outline" asChild>
+          <Link href="/dashboard/admin/ai-activity">Log aktivitas AI →</Link>
+        </Button>
+      </div>
       {isPlatformOperatorHome(user) && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader className="pb-2">

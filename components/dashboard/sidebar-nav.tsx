@@ -15,6 +15,7 @@ import {
   Package,
   Plug,
   Shield,
+  Sparkles,
   Upload,
   Users,
   UsersRound,
@@ -68,9 +69,19 @@ const groups: Array<{
       { href: "/dashboard/branches", label: "Cabang", icon: Building2 },
       { href: "/dashboard/workflow", label: "Workflow", icon: Workflow },
       { href: "/dashboard/admin", label: "Admin", icon: Shield },
+      {
+        href: "/dashboard/admin/ai-activity",
+        label: "AI Activity",
+        icon: Sparkles,
+      },
     ],
   },
 ];
+
+const superAdminOnlyHrefs = new Set([
+  "/dashboard/admin",
+  "/dashboard/admin/ai-activity",
+]);
 
 const platformOnlyGroups = ["Lanjutan"];
 
@@ -106,7 +117,8 @@ export function SidebarNav() {
             {g.items
               .filter(
                 (item) =>
-                  item.href !== "/dashboard/admin" || user?.role === "super_admin",
+                  !superAdminOnlyHrefs.has(item.href) ||
+                  user?.role === "super_admin",
               )
               .map((item) => {
               const active =

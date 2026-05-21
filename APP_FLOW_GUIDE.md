@@ -139,7 +139,8 @@ Checklist “lengkapi profil” / “≥5 FAQ” / kartu “AI status”: `lib/b
 | `/dashboard/import` | `lib/api/import.ts` | preview → `jobId` → execute |
 | `/dashboard/billing` | `billing`, `usage`, `payment` | overview, kuota, QRIS |
 | `/dashboard/branches` | `lib/api/branches.ts` | cabang (Pro) |
-| `/dashboard/workflow` | `lib/api/workflow.ts` | aturan keyword |
+| `/dashboard/workflow` | `lib/api/workflow.ts` | aturan keyword — list, buat, **edit** (`PATCH`), **hapus** (`DELETE`); konfirmasi pakai `AlertDialog` |
+| `/dashboard/admin/ai-activity` | `lib/api/ai-activity.ts` | log AI per tenant — **super_admin** only |
 | `/dashboard/admin` | `lib/api/admin.ts` | super admin only |
 
 Nav: `components/dashboard/sidebar-nav.tsx` · Plan: `hooks/use-plan.ts`.
