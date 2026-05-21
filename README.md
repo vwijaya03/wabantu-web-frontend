@@ -6,6 +6,8 @@ Backend aktif: **[`../api-go/`](../api-go/)** (Encore, port **4000**, prefix **`
 
 Alur lengkap: **[APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md)** · Backend: **[../api-go/README.md](../api-go/README.md)** · Dokumentasi teknis: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUMENTATION.md)**.
 
+**Tim onboarding / sales / pitching:** **[ONBOARDING_AND_PRODUCT_GUIDE.md](./ONBOARDING_AND_PRODUCT_GUIDE.md)** — penjelasan fitur untuk customer & trainee (bahasa awam, alur bisnis, skrip demo).
+
 ---
 
 ## Untuk developer baru — checklist sebelum `npm run dev`
@@ -34,7 +36,7 @@ npm run dev
 
 Buka **http://localhost:3000** → `/register` atau `/login` → `/dashboard`.
 
-Super admin dev: daftar/login dengan **`superadmin@gmail.com`** → menu **Admin** di sidebar.
+Platform admin (internal WABantu): lihat **[../api-go/README.md](../api-go/README.md)** bagian Platform admin — bukan fitur customer.
 
 ---
 
