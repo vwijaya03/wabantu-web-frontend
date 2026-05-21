@@ -2,7 +2,8 @@
 
 > **Untuk siapa dokumen ini?** Tim yang menjelaskan WABantu ke **pelanggan UMKM** (bukan developer).  
 > **Bukan untuk:** konfigurasi server, API, atau kode — itu ada di `api-go/DEVELOPER_DOCUMENTATION.md`.  
-> **Aplikasi aktif:** dashboard di `web-frontend` (browser) + backend `api-go`.
+> **Aplikasi aktif:** dashboard di `web-frontend` (browser) + backend `api-go`.  
+> **Tabel kuota & limit (trial vs berbayar):** [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md).
 
 ---
 
@@ -16,7 +17,7 @@
 6. [Peta menu dashboard (semua fitur)](#6-peta-menu-dashboard-semua-fitur)
 7. [Alur detail per fitur](#7-alur-detail-per-fitur)
 8. [Peran pengguna (Owner, Staff, Admin internal)](#8-peran-pengguna-owner-staff-admin-internal)
-9. [Paket & batasan fitur](#9-paket--batasan-fitur)
+9. [Paket & batasan fitur](#9-paket--batasan-fitur) — detail angka: [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md)
 10. [Skrip demo untuk presentasi](#10-skrip-demo-untuk-presentasi)
 11. [FAQ untuk tim onboarding](#11-faq-untuk-tim-onboarding)
 12. [Yang perlu diingat saat jelaskan ke customer](#12-yang-perlu-diingat-saat-jelaskan-ke-customer)
@@ -143,7 +144,7 @@ Sidebar dashboard dibagi 4 kelompok. **Admin** hanya untuk tim internal WABantu,
 |------|------|-----------|
 | **Katalog** | `/dashboard/catalog` | Daftar produk/jasa + harga |
 | **Pesanan** | `/dashboard/orders` | Order yang tercatat dari alur chat (jika dipakai) |
-| **Broadcast** | `/dashboard/broadcast` | Kirim pesan massal ke banyak nomor *(paket Business/Pro)* |
+| **Broadcast** | `/dashboard/broadcast` | Kirim pesan massal *(trial: bisa coba, max ~20 kontak/bulan; Business+ lebih besar)* |
 | **Import** | `/dashboard/import` | Upload CSV/Excel untuk isi katalog/FAQ massal |
 | **Analytics** | `/dashboard/analytics` | Statistik chat & performa AI |
 | **Billing** | `/dashboard/billing` | Paket langganan & tagihan |
@@ -153,8 +154,8 @@ Sidebar dashboard dibagi 4 kelompok. **Admin** hanya untuk tim internal WABantu,
 
 | Menu | Path | Untuk apa |
 |------|------|-----------|
-| **Cabang** | `/dashboard/branches` | Multi lokasi / multi nomor *(paket Pro)* |
-| **Workflow** | `/dashboard/workflow` | Balasan otomatis berdasarkan kata kunci *(paket Business+)* |
+| **Cabang** | `/dashboard/branches` | Multi lokasi *(trial: bisa coba; Pro tanpa batas menu)* |
+| **Workflow** | `/dashboard/workflow` | Balasan kata kunci *(trial: bisa coba, max ~8 eksekusi/bulan)* |
 | **Admin** | `/dashboard/admin` | **Internal WABantu saja** — pantau semua tenant |
 
 ### Halaman publik (bukan dashboard)
@@ -311,7 +312,7 @@ Customer mengisi (semakin lengkap, semakin bagus jawaban AI):
 
 **Bedanya dengan AI:** Workflow = aturan tetap (if keyword → text). AI = memahami konteks + FAQ.
 
-**Paket:** Business / Pro (di UI akan muncul pesan upgrade jika paket Starter).
+**Paket:** Trial bisa mencoba; Starter berbayar tidak punya menu aktif; Business / Pro penuh. Kuota trial ketat (lihat §9).
 
 ---
 
@@ -345,7 +346,7 @@ Customer mengisi (semakin lengkap, semakin bagus jawaban AI):
 - Buat kampanye: nama, isi pesan, daftar nomor (pisah baris/koma).
 - Kirim kampanye (antrian di backend).
 
-**Batasan:** Hanya paket **Business / Pro**.  
+**Batasan:** Starter berbayar tidak bisa. **Trial** boleh coba (sekitar **20 kontak** per bulan). Business / Pro kuota lebih besar.  
 **Penting untuk customer:** Harus patuh aturan WhatsApp (tidak spam, consent pelanggan).
 
 ---
@@ -382,12 +383,12 @@ Contoh metrik yang ditampilkan:
 
 **Tujuan:** Kelola paket & trial.
 
-- Lihat paket aktif (Starter / Growth / Business / Pro — nama di sistem bisa sedikit beda dengan halaman marketing).
-- Pilih / ganti paket
-- Riwayat invoice
-- Pembayaran QRIS (Midtrans) jika diaktifkan
+- **Trial 7 hari:** semua fitur bisa dicoba; kuota pemakaian **lebih kecil** dari Starter berbayar (lihat kartu “Pemakaian bulan ini”).
+- Pilih paket → sistem buat tagihan **menunggu bayar** → buka **QRIS** → setelah lunas, paket aktif & invoice masuk **riwayat**.
+- **Riwayat invoice** hanya menampilkan tagihan yang **sudah dibayar** (bukan saat baru klik paket).
+- Tiga pilihan berlangganan di UI: **Starter, Business, Pro** (tidak ada duplikat nama paket).
 
-**Untuk onboarding:** Arahkan ke halaman **Pricing** (`/pricing`) untuk perbandingan marketing, **Billing** untuk langganan aktual di akun mereka.
+**Untuk onboarding:** Arahkan ke **Pricing** (`/pricing`) untuk marketing, **Billing** untuk status akun & kuota trial.
 
 ---
 
@@ -403,12 +404,12 @@ Contoh metrik yang ditampilkan:
 
 ---
 
-### 7.15 Cabang (Multi-branch, paket Pro)
+### 7.15 Cabang (Multi-branch)
 
 **Tujuan:** Bisnis punya beberapa lokasi / beberapa nomor WA.
 
 - Definisikan cabang (nama + slug).
-- Untuk brand multi-outlet (F&B chain kecil, franchise).
+- **Trial:** bisa dicoba untuk demo. **Pro** berbayar untuk operasi penuh.
 
 ---
 
@@ -436,19 +437,34 @@ Contoh metrik yang ditampilkan:
 
 ## 9. Paket & batasan fitur
 
-Halaman marketing (`/pricing`) menampilkan 3 tier contoh. Di sistem, nama paket bisa: `starter`, `basic`, `business`, `pro` — fitur gate di UI mengikuti kode paket.
+Halaman marketing (`/pricing`) menampilkan 3 tier. Di sistem berlangganan: **Starter, Business, Pro** (+ trial 7 hari saat daftar).
 
-| Fitur | Starter (umum) | Naik paket |
-|-------|------------------|------------|
-| 1 nomor WA, inbox, AI dasar, FAQ manual | ✓ | — |
-| Lebih banyak percakapan / bulan | terbatas | Growth+ |
-| Broadcast | ✗ | Business+ |
-| Workflow rule | ✗ | Business+ |
-| Multi cabang | ✗ | Pro |
-| Multi staff / analitik lengkap | terbatas | Business+ |
+**Referensi angka kuota:** [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md).
+
+### Trial 7 hari (saat baru daftar)
+
+| Yang perlu diingat | Detail untuk dijelaskan ke customer |
+|--------------------|-------------------------------------|
+| **Bisa coba semua fitur** | Broadcast, Workflow, CRM, Cabang, AI hybrid — menu terbuka |
+| **Bukan paket Starter berbayar** | Limit AI & broadcast **jauh lebih kecil** daripada setelah bayar |
+| Contoh limit trial | ~60 percakapan AI/bulan, ~100rb token AI, ~20 kontak broadcast, ~8 workflow |
+| Setelah trial | Pilih paket di Billing → bayar QRIS → kuota naik sesuai paket |
+
+### Paket berbayar (ringkas)
+
+| Fitur | Starter | Business | Pro |
+|-------|---------|----------|-----|
+| Inbox + AI (Haiku utama) | ✓ | ✓ hybrid | ✓ hybrid prioritas |
+| Broadcast | ✗ | ✓ (500 kontak/bln) | ✓ (lebih besar) |
+| Workflow | ✗ | ✓ | ✓ |
+| CRM / Contacts | ✗ | ✓ | ✓ |
+| Multi cabang | ✗ | ✗ | ✓ |
 
 **Saat customer tanya “kenapa menu X kosong?”**  
-→ Cek **Billing** → paket aktif; jelaskan upgrade, jangan bilang “rusak”.
+→ Cek **Billing**: masih trial dengan kuota habis, atau paket Starter? Jelaskan upgrade / tunggu bulan depan, bukan “rusak”.
+
+**Saat customer tanya “sudah klik Business tapi belum aktif”**  
+→ Harus **selesaikan QRIS** dulu; invoice di riwayat muncul setelah lunas.
 
 ---
 
@@ -494,7 +510,10 @@ Ya, Owner undang Staff di menu Team.
 30–60 menit pertama kali; Meta OAuth bisa butuh verifikasi bisnis.
 
 **Apakah bisa broadcast sembarangan?**  
-Fitur ada di paket tertentu; ingatkan aturan anti-spam WA & izin pelanggan.
+Trial & Business+ punya fitur broadcast dengan **batas jumlah**; ingatkan aturan anti-spam WA & izin pelanggan.
+
+**Apa bedanya trial dan Starter berbayar?**  
+Trial = **coba semua fitur** dengan kuota kecil. Starter berbayar = inbox/AI lebih besar tapi **tanpa** broadcast/workflow.
 
 **Customer marah dapat balasan AI terus?**  
 Ajarkan **Handoff** — itu fitur kunci untuk CS manusia.
@@ -508,8 +527,9 @@ Ajarkan **Handoff** — itu fitur kunci untuk CS manusia.
 - Tekankan **setup berurutan**: WA → profil → FAQ → tes.
 - Tunjukkan **Inbox** sebagai “rumah” utama kerja harian.
 - Jelaskan **Handoff** = kontrol manusia, bukan AI mengambil alih total.
-- Sebut **trial / paket** sesuai halaman Pricing & Billing.
-- Akui batasan paket (broadcast, cabang) dengan jujur → tawarkan upgrade.
+- Sebut **trial 7 hari** = coba semua fitur, kuota ketat (lihat Billing → Pemakaian bulan ini).
+- Sebut **bayar QRIS** dulu sebelum paket naik & invoice masuk riwayat.
+- Akui batasan **kuota** (bukan menu hilang) saat trial habis → tawarkan upgrade.
 
 ### DON’T (hindari)
 

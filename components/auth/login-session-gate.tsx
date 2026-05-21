@@ -5,26 +5,32 @@ import { useEffect, useState } from "react";
 import { authApi } from "@/lib/api/auth";
 import { hasAccessToken } from "@/lib/auth/session";
 
-/** If a valid Bearer session exists, send user to dashboard (no cookie check). */
+type SessionPhase = "pending" | "checking" | "guest";
+
+/**
+ * If a valid Bearer session exists, send user to dashboard (no cookie check).
+ * First paint always matches SSR (children); sessionStorage is read only in useEffect.
+ */
 export function LoginSessionGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next") || "/dashboard";
-  const [checking, setChecking] = useState(true);
+  const [phase, setPhase] = useState<SessionPhase>("pending");
 
   useEffect(() => {
     let cancelled = false;
 
     async function check() {
       if (!hasAccessToken()) {
-        if (!cancelled) setChecking(false);
+        if (!cancelled) setPhase("guest");
         return;
       }
+      if (!cancelled) setPhase("checking");
       try {
         await authApi.me();
         if (!cancelled) router.replace(next);
       } catch {
-        if (!cancelled) setChecking(false);
+        if (!cancelled) setPhase("guest");
       }
     }
 
@@ -34,7 +40,7 @@ export function LoginSessionGate({ children }: { children: React.ReactNode }) {
     };
   }, [next, router]);
 
-  if (checking && hasAccessToken()) {
+  if (phase === "checking") {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <p className="text-sm text-muted-foreground">Memeriksa sesi…</p>

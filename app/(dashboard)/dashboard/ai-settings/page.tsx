@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { businessApi, type BusinessProfile } from "@/lib/api/business";
 import { toApiError } from "@/lib/api/client";
+import { formatQueryError } from "@/lib/api/rate-limit";
 import {
   DEFAULT_REPORTING_TIMEZONE_UI,
   isReportingTimezoneId,
@@ -60,7 +61,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function AiSettingsPage() {
-  const { data: profile, isPending, isError } = useQuery({
+  const { data: profile, isPending, isError, error, refetch } = useQuery({
     queryKey: PROFILE_KEY,
     queryFn: businessApi.get,
   });
@@ -74,9 +75,24 @@ export default function AiSettingsPage() {
       {isPending ? (
         <p className="text-sm text-muted-foreground">Memuat profil…</p>
       ) : isError || !profile ? (
-        <p className="text-sm text-destructive">
-          Profil bisnis tidak bisa dimuat. Coba muat ulang halaman.
-        </p>
+        <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3">
+          <p className="text-sm font-medium text-destructive">
+            {isError ? formatQueryError(error).title : "Profil bisnis tidak ditemukan"}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {isError
+              ? formatQueryError(error).detail
+              : "Profil bisnis tidak bisa dimuat. Coba muat ulang halaman."}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => void refetch()}
+          >
+            Coba lagi
+          </Button>
+        </div>
       ) : (
         <AiSettingsForm profile={profile} />
       )}

@@ -1,28 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { getAccessToken } from "@/lib/auth/session";
-import { INBOX_UNREAD_QUERY_KEY } from "@/lib/api/inbox";
-import { env } from "@/lib/env";
-
-function inboxStreamUrl(): string | null {
-  const token = getAccessToken();
-  if (!token) return null;
-
-  const path = "/inbox/stream";
-  const q = new URLSearchParams({ access_token: token });
-
-  if (env.sseApiUrl) {
-    return `${env.sseApiUrl.replace(/\/$/, "")}${path}?${q.toString()}`;
-  }
-
-  const apiV1 = env.apiUrl.replace(/\/$/, "");
-  if (typeof window !== "undefined") {
-    return `${window.location.origin}${apiV1}${path}?${q.toString()}`;
-  }
-  return `${apiV1}${path}?${q.toString()}`;
-}
+import { useAuth } from "@/components/providers/auth-provider";
+import { tenantContextKey } from "@/lib/auth/tenant-context";
+import { AUTH_SESSION_UPDATED } from "@/lib/auth/session-sync";
+import { dispatchInboxRealtimePush } from "@/lib/inbox/realtime-events";
+import { inboxStreamUrl } from "@/lib/inbox/stream-url";
 
 const MAX_SSE_BACKOFF_MS = 30_000;
 
@@ -31,7 +14,8 @@ const MAX_SSE_BACKOFF_MS = 30_000;
  * Uses access_token query — EventSource cannot send Authorization headers.
  */
 export function useInboxActivityStream(): void {
-  const qc = useQueryClient();
+  const { user } = useAuth();
+  const tenantKey = tenantContextKey(user);
 
   useEffect(() => {
     const url = inboxStreamUrl();
@@ -42,10 +26,8 @@ export function useInboxActivityStream(): void {
     let retryAttempt = 0;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const invalidate = () => {
-      void qc.invalidateQueries({ queryKey: INBOX_UNREAD_QUERY_KEY });
-      void qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
-      void qc.invalidateQueries({ queryKey: ["inbox-messages"] });
+    const onActivity = () => {
+      dispatchInboxRealtimePush();
     };
 
     const onMessage = (ev: MessageEvent) => {
@@ -55,7 +37,7 @@ export function useInboxActivityStream(): void {
       } catch {
         /* non-JSON still counts as activity */
       }
-      invalidate();
+      onActivity();
     };
 
     const scheduleReconnect = () => {
@@ -92,11 +74,19 @@ export function useInboxActivityStream(): void {
 
     connect();
 
+    const onSessionUpdated = () => {
+      if (cancelled) return;
+      retryAttempt = 0;
+      connect();
+    };
+    window.addEventListener(AUTH_SESSION_UPDATED, onSessionUpdated);
+
     return () => {
       cancelled = true;
+      window.removeEventListener(AUTH_SESSION_UPDATED, onSessionUpdated);
       if (retryTimer) clearTimeout(retryTimer);
       if (es) es.onmessage = null;
       es?.close();
     };
-  }, [qc]);
+  }, [tenantKey]);
 }

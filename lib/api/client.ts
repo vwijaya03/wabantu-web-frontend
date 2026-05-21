@@ -1,6 +1,10 @@
 import axios, { AxiosError, type AxiosInstance } from "axios";
+import { toApiError } from "@/lib/api/errors";
+import { isRateLimitError, notifyRateLimitOnce } from "@/lib/api/rate-limit";
 import { clearClientSession, getAccessToken } from "@/lib/auth/session";
 import { env } from "@/lib/env";
+
+export { toApiError, type ApiError } from "@/lib/api/errors";
 
 /**
  * Browser API client — Bearer token only (no HttpOnly cookie).
@@ -18,33 +22,6 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
-
-export interface ApiError {
-  status: number;
-  code: string;
-  message: string;
-}
-
-export function toApiError(err: unknown): ApiError {
-  if (err instanceof AxiosError) {
-    const data = err.response?.data as
-      | { statusCode?: number; error?: string; message?: string | string[] }
-      | undefined;
-    const message = Array.isArray(data?.message)
-      ? data.message.join(", ")
-      : data?.message ?? err.message;
-    return {
-      status: err.response?.status ?? 0,
-      code: data?.error ?? "UnknownError",
-      message,
-    };
-  }
-  return {
-    status: 0,
-    code: "UnknownError",
-    message: err instanceof Error ? err.message : String(err),
-  };
-}
 
 let authRedirectInFlight = false;
 
@@ -68,6 +45,9 @@ api.interceptors.response.use(
     return res;
   },
   async (error: AxiosError) => {
+    if (isRateLimitError(error)) {
+      notifyRateLimitOnce(toApiError(error).message);
+    }
     if (
       error.response?.status === 401 &&
       shouldRedirectOn401(error.config?.url) &&

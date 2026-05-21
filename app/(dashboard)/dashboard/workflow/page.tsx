@@ -23,7 +23,14 @@ export default function WorkflowPage() {
     onSuccess: () => { toast.success("Rule dibuat"); void qc.invalidateQueries({ queryKey: ["workflows"] }); },
     onError: (e) => toast.error(toApiError(e).message),
   });
-  if (!hasWorkflow) return <PageHeader title="Workflow" description="Tersedia di paket Business/Pro." />;
+  if (!hasWorkflow) {
+    return (
+      <PageHeader
+        title="Workflow"
+        description="Tersedia di paket Business/Pro."
+      />
+    );
+  }
   return (
     <>
       <PageHeader title="Workflow" description="Automasi rule-based (mis. kata kunci booking)." />

@@ -4,7 +4,7 @@ Next.js 16 (App Router) + Tailwind v4 + shadcn/ui-style components.
 
 Backend aktif: **[`../api-go/`](../api-go/)** (Encore, port **4000**, prefix **`/api/v1`**). Stack Nest **`../api/`** (port 3001) **tidak** dipakai oleh frontend ini.
 
-Alur lengkap: **[APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md)** · Backend: **[../api-go/README.md](../api-go/README.md)** · Dokumentasi teknis: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUMENTATION.md)**.
+Alur lengkap: **[APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md)** · Backend: **[../api-go/README.md](../api-go/README.md)** · Dokumentasi teknis: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUMENTATION.md)** · **Kuota & limit:** **[LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md)**.
 
 **Tim onboarding / sales / pitching:** **[ONBOARDING_AND_PRODUCT_GUIDE.md](./ONBOARDING_AND_PRODUCT_GUIDE.md)** — penjelasan fitur untuk customer & trainee (bahasa awam, alur bisnis, skrip demo).
 
@@ -88,10 +88,10 @@ app/
         ├── team/
         ├── catalog/             # Katalog produk
         ├── orders/              # Pesanan
-        ├── broadcast/           # Broadcast WA (Business+)
+        ├── broadcast/           # Broadcast WA (trial kuota / Business+)
         ├── import/              # Import CSV/XLSX
         ├── branches/            # Multi cabang (Pro)
-        ├── workflow/            # Rule automation (Business+)
+        ├── workflow/            # Rule automation (trial kuota / Business+)
         └── admin/               # Super admin
 ```
 
@@ -118,15 +118,18 @@ Detail + penjelasan React/Next: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUM
 
 ## Plan gating (sidebar / halaman)
 
+**Dokumentasi batasan lengkap:** [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md) · api-go: [`../api-go/LIMITS_AND_QUOTAS.md`](../api-go/LIMITS_AND_QUOTAS.md).
+
 `hooks/use-plan.ts` memuat `GET /api/v1/billing/overview`:
 
-| Plan | Broadcast & workflow | Multi cabang |
-|------|----------------------|--------------|
-| `starter` | ❌ | ❌ |
-| `business` / `basic` | ✅ | ❌ |
-| `pro` | ✅ | ✅ |
+| Kondisi | Broadcast & workflow | Multi cabang | CRM leads |
+|---------|----------------------|--------------|-----------|
+| **Trial** (`isTrial`) | ✅ (kuota ketat di API) | ✅ | ✅ |
+| `starter` berbayar | ❌ | ❌ | ❌ |
+| `business` | ✅ | ❌ | ✅ |
+| `pro` | ✅ | ✅ | ✅ |
 
-Halaman tetap bisa diakses manual lewat URL; enforcement utama di API (`entitlement`).
+Halaman tetap bisa diakses manual lewat URL; enforcement utama di API (`entitlement` + `usage.CheckQuota`).
 
 ---
 

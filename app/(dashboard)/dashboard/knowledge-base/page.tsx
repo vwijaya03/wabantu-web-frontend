@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { QueryListState } from "@/components/dashboard/query-list-state";
 import { toApiError } from "@/lib/api/client";
 import { knowledgeBaseApi } from "@/lib/api/knowledge-base";
 
@@ -32,7 +33,7 @@ export default function KnowledgeBasePage() {
     category: "",
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: [...KB_KEY, activeSearch],
     queryFn: () => knowledgeBaseApi.list({ search: activeSearch }),
   });
@@ -153,15 +154,18 @@ export default function KnowledgeBasePage() {
           />
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Memuat...
-            </p>
-          ) : items.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Belum ada FAQ. Mulai dengan pertanyaan yang paling sering datang.
-            </p>
-          ) : (
+          <QueryListState
+            isLoading={isLoading}
+            isError={isError}
+            error={error}
+            isEmpty={items.length === 0}
+            onRetry={() => void refetch()}
+            empty={
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                Belum ada FAQ. Mulai dengan pertanyaan yang paling sering datang.
+              </p>
+            }
+          >
             <ul className="space-y-3">
               {items.map((item) => (
                 <li
@@ -199,7 +203,7 @@ export default function KnowledgeBasePage() {
                 </li>
               ))}
             </ul>
-          )}
+          </QueryListState>
         </CardContent>
       </Card>
     </>

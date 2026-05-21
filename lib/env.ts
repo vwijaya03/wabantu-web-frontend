@@ -18,15 +18,13 @@ export const env = {
   // Browser requests hit same-origin `/api/v1/...` (rewritten to api-go in dev).
   apiUrl: process.env.NEXT_PUBLIC_API_URL ?? "/api/v1",
   /**
-   * Optional absolute API base for SSE only, e.g. `http://localhost:4000/api/v1`.
-   * Paths are appended as `/inbox/stream` (full URL: base + path).
-   * EventSource through Next rewrites often breaks; point at API directly.
+   * Optional absolute API base for SSE only, e.g. `https://api.example.com` or `http://localhost:4000`.
+   * When unset, the client picks same-origin `/api/v1` (ngrok/production) or `localhost:4000`
+   * only when the page itself is opened on localhost.
    */
   sseApiUrl: process.env.NEXT_PUBLIC_SSE_API_URL
     ? withApiV1Prefix(process.env.NEXT_PUBLIC_SSE_API_URL)
-    : process.env.NODE_ENV === "development"
-      ? withApiV1Prefix("http://localhost:4000")
-      : "",
+    : "",
   appName: process.env.NEXT_PUBLIC_APP_NAME ?? "WABantu",
   appTagline:
     process.env.NEXT_PUBLIC_APP_TAGLINE ?? "AI WhatsApp Auto-Reply untuk UMKM",

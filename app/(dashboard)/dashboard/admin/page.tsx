@@ -10,6 +10,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi } from "@/lib/api/admin";
 import { isPlatformOperatorHome } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
+import { resetTenantScopedQueries } from "@/lib/query/platform-console";
 import { toast } from "sonner";
 
 export default function AdminPage() {
@@ -26,9 +27,9 @@ export default function AdminPage() {
     mutationFn: (tenantId: string) => adminApi.impersonate(tenantId),
     onSuccess: async () => {
       await refresh();
-      await qc.invalidateQueries();
+      resetTenantScopedQueries(qc);
       toast.success("Memantau tenant — mode internal aktif");
-      router.push("/dashboard");
+      router.replace("/dashboard");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -77,7 +78,10 @@ export default function AdminPage() {
                   <div>
                     <p className="font-medium">{t.companyName}</p>
                     <p className="text-muted-foreground">
-                      {t.ownerEmail || "—"} · {t.schemaName}
+                      {t.ownerEmail || "—"}
+                    </p>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {t.schemaName}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

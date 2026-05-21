@@ -2,7 +2,7 @@
 
 > **Audience:** Full-stack developers who may be strong in backend (Go, Node, PHP) but **new to Next.js / React 19**.  
 > **Codebase:** `web-frontend/` — Next.js 16 App Router talking to **`api-go/`** only (`/api/v1`, port 4000).  
-> **Companion docs:** [README.md](./README.md) · [APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md) · Backend: [../api-go/DEVELOPER_DOCUMENTATION.md](../api-go/DEVELOPER_DOCUMENTATION.md)
+> **Companion docs:** [README.md](./README.md) · [APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md) · [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md) · Backend: [../api-go/DEVELOPER_DOCUMENTATION.md](../api-go/DEVELOPER_DOCUMENTATION.md) · [../api-go/LIMITS_AND_QUOTAS.md](../api-go/LIMITS_AND_QUOTAS.md)
 
 **Belum paham React/Next?** Langsung ke **[§19 React & Next.js untuk developer baru](#19-react--nextjs-guide-for-developers-new-to-this-stack)**.
 
@@ -494,10 +494,15 @@ const conversations = useMemo(
 
 ## 7.5 Plan-gated features
 
+**Dokumentasi kuota & limit:** [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md) · [api-go/LIMITS_AND_QUOTAS.md](../api-go/LIMITS_AND_QUOTAS.md).
+
 `usePlan()` reads `billing-overview`:
 
-- `hasBroadcast`, `hasWorkflow`, `hasMultiBranch`.
+- **`isTrial`:** `hasBroadcast`, `hasWorkflow`, `hasMultiBranch`, `hasCRMLeads` semua `true` (kuota ketat di API).
+- Paket berbayar: gate seperti tabel di doc di atas.
 - Pages show upgrade UI if false (sidebar may still list links).
+
+**HTTP 429:** toast + banner — `lib/api/rate-limit.ts`, `dashboard-rate-limit-notice.tsx`; `/auth/me` sekali per sesi dashboard.
 
 ---
 
@@ -1080,12 +1085,15 @@ const buttonVariants = cva("inline-flex items-center ...", {
 ## 19.13 Custom hooks
 
 ```ts
-// hooks/use-plan.ts
+// hooks/use-plan.ts — lihat LIMITS_AND_QUOTAS.md
 export function usePlan() {
-  const { data } = useQuery({ queryKey: ["billing-overview"], queryFn: ... });
+  const isTrial = data?.subscription?.isTrial ?? false;
   return {
-    planCode: data?.planCode ?? "starter",
-    hasBroadcast: ...,
+    isTrial,
+    planCode: isTrial ? "trial" : planCode,
+    hasBroadcast: isTrial || isPaidBusinessOrPro,
+    hasWorkflow: isTrial || isPaidBusinessOrPro,
+    hasMultiBranch: isTrial || planCode === "pro",
   };
 }
 ```

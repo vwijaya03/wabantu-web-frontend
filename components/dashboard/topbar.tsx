@@ -17,7 +17,10 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi } from "@/lib/api/admin";
 import { hasTenantDashboardAccess, isPlatformOperatorHome } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
-import { resetQueriesForPlatformConsole } from "@/lib/query/platform-console";
+import {
+  resetQueriesForPlatformConsole,
+  resetTenantScopedQueries,
+} from "@/lib/query/platform-console";
 import { toast } from "sonner";
 
 function initials(name?: string | null, email?: string) {
@@ -49,9 +52,9 @@ export function Topbar() {
     mutationFn: (tenantId: string) => adminApi.impersonate(tenantId),
     onSuccess: async () => {
       await refresh();
-      await qc.invalidateQueries();
+      resetTenantScopedQueries(qc);
       toast.success("Memantau tenant — mode internal aktif");
-      router.push("/dashboard");
+      router.replace("/dashboard");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });

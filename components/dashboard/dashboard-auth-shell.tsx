@@ -15,46 +15,71 @@ import {
   isPlatformOperatorHome,
   type AuthUser,
 } from "@/lib/api/auth";
+import { toApiError } from "@/lib/api/errors";
+import { rateLimitTitle, RATE_LIMIT_USER_MESSAGE } from "@/lib/api/rate-limit";
 import { hasAccessToken } from "@/lib/auth/session";
+import { AUTH_SESSION_UPDATED } from "@/lib/auth/session-sync";
+import { tenantContextKey } from "@/lib/auth/tenant-context";
+import { DashboardRateLimitNotice } from "@/components/dashboard/dashboard-rate-limit-notice";
+import { useSyncQueriesOnTenantChange } from "@/hooks/use-sync-queries-on-tenant-change";
+
+function applyPlatformRouteGuards(
+  me: AuthUser,
+  path: string,
+  router: ReturnType<typeof useRouter>,
+): boolean {
+  if (isPlatformOperatorHome(me) && !path.startsWith("/dashboard/admin")) {
+    router.replace("/dashboard/admin");
+    return true;
+  }
+  if (
+    me.role === "super_admin" &&
+    !hasTenantDashboardAccess(me) &&
+    path !== "/dashboard/admin" &&
+    !path.startsWith("/dashboard/admin")
+  ) {
+    router.replace("/dashboard/admin");
+    return true;
+  }
+  return false;
+}
 
 export function DashboardAuthShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [ready, setReady] = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
 
+  useSyncQueriesOnTenantChange(user);
+
+  // Fetch /auth/me once per dashboard session — not on every client-side navigation.
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
+      const nextPath = pathname || "/dashboard";
       if (!hasAccessToken()) {
-        router.replace(`/login?next=${encodeURIComponent(pathname || "/dashboard")}`);
+        router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
         return;
       }
       try {
         const me = await authApi.me();
-        if (!cancelled) {
-          setUser(me);
-          const path = pathname || "/dashboard";
-          if (isPlatformOperatorHome(me) && !path.startsWith("/dashboard/admin")) {
-            router.replace("/dashboard/admin");
-            return;
-          }
-          if (
-            me.role === "super_admin" &&
-            !hasTenantDashboardAccess(me) &&
-            path !== "/dashboard/admin" &&
-            !path.startsWith("/dashboard/admin")
-          ) {
-            router.replace("/dashboard/admin");
-            return;
-          }
-          setReady(true);
+        if (cancelled) return;
+        setUser(me);
+        setRateLimited(false);
+        // Always mark ready after /auth/me — route guards may redirect (e.g. super_admin
+        // /dashboard → /dashboard/admin) and must not leave the shell on "Memuat dashboard…".
+        setReady(true);
+        applyPlatformRouteGuards(me, nextPath, router);
+      } catch (err) {
+        if (cancelled) return;
+        const apiErr = toApiError(err);
+        if (apiErr.status === 429) {
+          setRateLimited(true);
+          return;
         }
-      } catch {
-        if (!cancelled) {
-          router.replace(`/login?next=${encodeURIComponent(pathname || "/dashboard")}`);
-        }
+        router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
       }
     }
 
@@ -62,7 +87,50 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
     return () => {
       cancelled = true;
     };
-  }, [pathname, router]);
+  }, [router]);
+
+  // Keep shell session in sync after impersonate / stop (AuthProvider.refresh updates context only).
+  useEffect(() => {
+    if (!ready) return;
+
+    const onSessionUpdated = (ev: Event) => {
+      const me = (ev as CustomEvent<AuthUser>).detail;
+      if (!me) return;
+      setUser(me);
+      applyPlatformRouteGuards(me, pathname || "/dashboard", router);
+    };
+
+    window.addEventListener(AUTH_SESSION_UPDATED, onSessionUpdated);
+    return () => window.removeEventListener(AUTH_SESSION_UPDATED, onSessionUpdated);
+  }, [pathname, ready, router]);
+
+  // Re-run guards when navigating (uses latest shell user, including after impersonation).
+  useEffect(() => {
+    if (!user || !ready) return;
+    applyPlatformRouteGuards(user, pathname || "/dashboard", router);
+  }, [pathname, ready, router, user]);
+
+  if (rateLimited && !ready) {
+    return (
+      <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-muted/20 px-6 text-center">
+        <div className="max-w-md space-y-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-5 py-4">
+          <p className="text-sm font-medium text-amber-950 dark:text-amber-50">
+            {rateLimitTitle()}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {RATE_LIMIT_USER_MESSAGE}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          onClick={() => window.location.reload()}
+        >
+          Muat ulang halaman
+        </button>
+      </div>
+    );
+  }
 
   if (!ready || !user) {
     return (
@@ -72,8 +140,10 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
     );
   }
 
+  const authProviderKey = tenantContextKey(user);
+
   return (
-    <AuthProvider initialUser={user}>
+    <AuthProvider key={authProviderKey} initialUser={user}>
       {hasTenantDashboardAccess(user) ? <InboxActivityBridge /> : null}
       <div className="grid min-h-svh grid-cols-1 lg:grid-cols-[260px_1fr]">
         <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:flex lg:flex-col">
@@ -95,7 +165,10 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
           <ImpersonationBanner />
           <Topbar />
           <main className="flex-1 overflow-y-auto bg-muted/20 p-6 lg:p-8">
-            <div className="mx-auto max-w-6xl space-y-6">{children}</div>
+            <div className="mx-auto max-w-6xl space-y-6">
+              <DashboardRateLimitNotice />
+              {children}
+            </div>
           </main>
         </div>
       </div>

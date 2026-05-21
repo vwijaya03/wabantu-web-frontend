@@ -12,7 +12,7 @@ export interface Subscription {
 }
 
 export interface Plan {
-  code: "starter" | "basic" | "business" | "pro";
+  code: "starter" | "business" | "pro";
   name: string;
   amountIdr: number;
   limits: { channels: number; seats: number };
@@ -24,25 +24,36 @@ export interface Invoice {
   planCode: "starter" | "basic" | "business" | "pro";
   planName: string;
   amountIdr: number;
-  status: "issued" | "paid" | "void";
+  status: "pending" | "issued" | "paid" | "void";
   issuedAt: string;
   paidAt: string | null;
 }
 
+export interface BillingOverview {
+  subscription: Subscription;
+  plans: Plan[];
+  invoices: Invoice[];
+  pendingCheckout?: Invoice | null;
+}
+
+export interface SelectPlanResult {
+  subscription: Subscription;
+  pendingInvoice?: Invoice;
+}
+
 export const billingApi = {
-  async overview(): Promise<{
-    subscription: Subscription;
-    plans: Plan[];
-    invoices: Invoice[];
-  }> {
-    const res = await api.get("/billing/overview");
+  async overview(): Promise<BillingOverview> {
+    const res = await api.get<BillingOverview>("/billing/overview");
     return res.data;
   },
   async selectPlan(input: {
-    planCode: "starter" | "basic" | "business" | "pro";
+    planCode: "starter" | "business" | "pro";
     provider?: "midtrans" | "xendit";
-  }): Promise<Subscription> {
-    const res = await api.post<Subscription>("/billing/select-plan", input);
+  }): Promise<SelectPlanResult> {
+    const res = await api.post<SelectPlanResult>("/billing/select-plan", {
+      ...input,
+      provider: input.provider ?? "midtrans",
+    });
     return res.data;
   },
 };

@@ -135,7 +135,7 @@ Checklist “lengkapi profil” / “≥5 FAQ” / kartu “AI status”: `lib/b
 | `/dashboard/team` | `lib/api/team.ts` | `GET/POST/DELETE /api/v1/team/members` |
 | `/dashboard/catalog` | `lib/api/catalog.ts` | katalog produk |
 | `/dashboard/orders` | `lib/api/orders.ts` | pesanan |
-| `/dashboard/broadcast` | `lib/api/broadcast.ts` | broadcast (plan Business+) |
+| `/dashboard/broadcast` | `lib/api/broadcast.ts` | broadcast (Business+ berbayar; trial dengan kuota) |
 | `/dashboard/import` | `lib/api/import.ts` | preview → `jobId` → execute |
 | `/dashboard/billing` | `billing`, `usage`, `payment` | overview, kuota, QRIS |
 | `/dashboard/branches` | `lib/api/branches.ts` | cabang (Pro) |
@@ -146,13 +146,16 @@ Nav: `components/dashboard/sidebar-nav.tsx` · Plan: `hooks/use-plan.ts`.
 
 ### Plan gating (UI)
 
-| `planCode` | Broadcast / workflow | Multi cabang |
-|------------|----------------------|--------------|
-| `starter` | hidden / disabled | hidden |
-| `business`, `basic` | ✅ | ❌ |
+**→ [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md)**
+
+| Kondisi | Broadcast / workflow | Multi cabang |
+|---------|----------------------|--------------|
+| **Trial** (`subscription.isTrial`) | ✅ | ✅ |
+| `starter` (berbayar) | ❌ / pesan upgrade | ❌ |
+| `business` | ✅ | ❌ |
 | `pro` | ✅ | ✅ |
 
-Enforcement kuat tetap di api-go (`entitlement`).
+Enforcement kuat di api-go (`entitlement` + kuota `usage`). Billing: checkout `pending` → QRIS → invoice `paid`.
 
 ### Super admin (dev)
 

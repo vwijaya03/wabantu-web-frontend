@@ -23,6 +23,7 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { hasTenantDashboardAccess } from "@/lib/api/auth";
 import { INBOX_UNREAD_QUERY_KEY, inboxApi } from "@/lib/api/inbox";
+import { tenantContextKey } from "@/lib/auth/tenant-context";
 import { cn } from "@/lib/utils";
 
 const groups: Array<{
@@ -81,12 +82,14 @@ export function SidebarNav() {
     ? groups
     : groups.filter((g) => platformOnlyGroups.includes(g.label));
 
+  const tenantKey = tenantContextKey(user);
+
   const { data: unreadSummary } = useQuery({
-    queryKey: INBOX_UNREAD_QUERY_KEY,
+    queryKey: [...INBOX_UNREAD_QUERY_KEY, tenantKey],
     queryFn: () => inboxApi.unreadSummary(),
     enabled: tenantMode,
-    staleTime: Number.POSITIVE_INFINITY,
-    refetchOnWindowFocus: tenantMode ? "always" : false,
+    staleTime: 0,
+    refetchOnWindowFocus: tenantMode,
   });
   const inboxUnread = unreadSummary?.totalUnreadMessages ?? 0;
   const showInboxDot =

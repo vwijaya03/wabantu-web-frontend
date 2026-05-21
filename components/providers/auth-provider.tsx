@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useState } from "react";
 import { authApi, type AuthUser } from "@/lib/api/auth";
+import { dispatchAuthSessionUpdated } from "@/lib/auth/session-sync";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -30,6 +31,7 @@ export function AuthProvider({
     try {
       const me = await authApi.me();
       setUser(me);
+      dispatchAuthSessionUpdated(me);
     } catch {
       setUser(null);
     }

@@ -11,7 +11,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authApi } from "@/lib/api/auth";
+import {
+  authApi,
+  hasTenantDashboardAccess,
+  isPlatformOperatorHome,
+} from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
 
 const schema = z.object({
@@ -35,9 +39,16 @@ export function LoginForm() {
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
     try {
-      await authApi.login(values);
+      const user = await authApi.login(values);
       toast.success("Berhasil masuk");
-      window.location.assign(next);
+      let dest = next;
+      if (
+        isPlatformOperatorHome(user) ||
+        (user.role === "super_admin" && !hasTenantDashboardAccess(user))
+      ) {
+        dest = "/dashboard/admin";
+      }
+      window.location.assign(dest);
     } catch (err) {
       const e = toApiError(err);
       toast.error(e.message || "Gagal masuk");

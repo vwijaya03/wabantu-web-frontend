@@ -21,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { useAuth } from "@/components/providers/auth-provider";
+import { tenantContextKey } from "@/lib/auth/tenant-context";
 import { Input } from "@/components/ui/input";
 import {
   INBOX_UNREAD_QUERY_KEY,
@@ -28,6 +30,7 @@ import {
   type InboxConversation,
 } from "@/lib/api/inbox";
 import { toApiError } from "@/lib/api/client";
+import { refreshInboxQueries } from "@/lib/query/inbox-queries";
 import { toast } from "sonner";
 
 const CONVO_PAGE = 30;
@@ -49,23 +52,31 @@ function useDebouncedValue<T>(value: T, ms: number): T {
 
 export default function InboxPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const tenantKey = tenantContextKey(user);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
   const [draft, setDraft] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
 
+  useEffect(() => {
+    setSelectedId(null);
+    setSearch("");
+    setDraft("");
+    setUnreadOnly(false);
+  }, [tenantKey]);
+
   const unreadSummaryQuery = useQuery({
-    queryKey: INBOX_UNREAD_QUERY_KEY,
+    queryKey: [...INBOX_UNREAD_QUERY_KEY, tenantKey],
     queryFn: () => inboxApi.unreadSummary(),
-    staleTime: Number.POSITIVE_INFINITY,
-    /** SSE is primary; this still refreshes when the tab regains focus if push failed. */
-    refetchOnWindowFocus: "always",
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
   const totalUnread = unreadSummaryQuery.data?.totalUnreadMessages ?? 0;
 
   const convosInfinite = useInfiniteQuery({
-    queryKey: ["inbox-conversations", debouncedSearch, unreadOnly],
+    queryKey: ["inbox-conversations", tenantKey, debouncedSearch, unreadOnly],
     queryFn: ({ pageParam }) =>
       inboxApi.listPage({
         search: debouncedSearch || undefined,
@@ -75,8 +86,8 @@ export default function InboxPage() {
       }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
-    staleTime: Number.POSITIVE_INFINITY,
-    refetchOnWindowFocus: "always",
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const conversations = useMemo(
@@ -110,7 +121,7 @@ export default function InboxPage() {
   });
 
   const messagesInfinite = useInfiniteQuery({
-    queryKey: ["inbox-messages", selectedId, MSG_PAGE],
+    queryKey: ["inbox-messages", tenantKey, selectedId, MSG_PAGE],
     queryFn: ({ pageParam }) =>
       inboxApi.messagesPage(selectedId!, {
         limit: MSG_PAGE,
@@ -122,8 +133,8 @@ export default function InboxPage() {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     enabled: Boolean(selectedId),
-    staleTime: Number.POSITIVE_INFINITY,
-    refetchOnWindowFocus: "always",
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const messages = useMemo(() => {
@@ -159,7 +170,9 @@ export default function InboxPage() {
     const prev = prevMessagesConvoIdRef.current;
     prevMessagesConvoIdRef.current = selectedId;
     if (prev && prev !== selectedId) {
-      void qc.removeQueries({ queryKey: ["inbox-messages", prev, MSG_PAGE] });
+      void qc.removeQueries({
+        queryKey: ["inbox-messages", tenantKey, prev, MSG_PAGE],
+      });
     }
   }, [selectedId, qc]);
 
@@ -253,9 +266,7 @@ export default function InboxPage() {
   ]);
 
   const invalidateAll = async () => {
-    await qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
-    await qc.invalidateQueries({ queryKey: ["inbox-messages"] });
-    await qc.invalidateQueries({ queryKey: INBOX_UNREAD_QUERY_KEY });
+    await refreshInboxQueries(qc, tenantKey);
   };
 
   const handoffMut = useMutation({
