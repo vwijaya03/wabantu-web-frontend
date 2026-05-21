@@ -21,7 +21,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/auth-provider";
+import { hasTenantDashboardAccess } from "@/lib/api/auth";
 import { analyticsApi } from "@/lib/api/analytics";
 import { businessApi } from "@/lib/api/business";
 import { knowledgeBaseApi } from "@/lib/api/knowledge-base";
@@ -34,23 +37,39 @@ import {
 
 export default function DashboardOverviewPage() {
   const { user } = useAuth();
+  const router = useRouter();
+  const tenantReady = hasTenantDashboardAccess(user);
+
+  useEffect(() => {
+    if (user && !tenantReady) {
+      router.replace("/dashboard/admin");
+    }
+  }, [user, tenantReady, router]);
 
   const { data: channels = [] } = useQuery({
     queryKey: ["whatsapp-channels"],
     queryFn: () => whatsappApi.list(),
+    enabled: tenantReady,
   });
   const { data: analytics } = useQuery({
     queryKey: ["analytics-overview", 30],
     queryFn: () => analyticsApi.overview(30),
+    enabled: tenantReady,
   });
   const { data: businessProfile } = useQuery({
     queryKey: ["business-profile"],
     queryFn: () => businessApi.get(),
+    enabled: tenantReady,
   });
   const { data: kbList } = useQuery({
     queryKey: ["knowledge-base-total"],
     queryFn: () => knowledgeBaseApi.list({ page: 1, pageSize: 1 }),
+    enabled: tenantReady,
   });
+
+  if (!tenantReady) {
+    return null;
+  }
 
   const kbTotal = kbList?.total ?? 0;
   const hasConnectedWhatsapp = channels.some((c) => c.status === "connected");

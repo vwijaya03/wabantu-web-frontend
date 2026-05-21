@@ -17,6 +17,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi } from "@/lib/api/admin";
 import { hasTenantDashboardAccess, isPlatformOperatorHome } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
+import { resetQueriesForPlatformConsole } from "@/lib/query/platform-console";
 import { toast } from "sonner";
 
 function initials(name?: string | null, email?: string) {
@@ -59,9 +60,9 @@ export function Topbar() {
     mutationFn: () => adminApi.stopImpersonation(),
     onSuccess: async () => {
       await refresh();
-      await qc.invalidateQueries();
+      resetQueriesForPlatformConsole(qc);
       toast.success("Kembali ke konsol platform");
-      router.push("/dashboard/admin");
+      router.replace("/dashboard/admin");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });

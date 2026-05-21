@@ -78,7 +78,12 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
       <div className="grid min-h-svh grid-cols-1 lg:grid-cols-[260px_1fr]">
         <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:flex lg:flex-col">
           <div className="flex h-16 items-center gap-2 border-b px-6">
-            <Link href="/dashboard" className="flex items-center gap-2">
+            <Link
+              href={
+                isPlatformOperatorHome(user) ? "/dashboard/admin" : "/dashboard"
+              }
+              className="flex items-center gap-2"
+            >
               <WabantuLogo />
             </Link>
           </div>

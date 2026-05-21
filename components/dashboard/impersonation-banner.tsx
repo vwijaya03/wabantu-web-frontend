@@ -4,20 +4,26 @@ import { AlertTriangle, X } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { adminApi } from "@/lib/api/admin";
 import { toApiError } from "@/lib/api/client";
+import { resetQueriesForPlatformConsole } from "@/lib/query/platform-console";
 import { toast } from "sonner";
 
 export function ImpersonationBanner() {
   const { user, refresh } = useAuth();
+  const qc = useQueryClient();
+  const router = useRouter();
   const active = user?.impersonation?.active && user.tenant;
 
   const stopMut = useMutation({
     mutationFn: () => adminApi.stopImpersonation(),
     onSuccess: async () => {
       await refresh();
+      resetQueriesForPlatformConsole(qc);
       toast.success("Keluar dari mode pantau tenant");
-      window.location.href = "/dashboard/admin";
+      router.replace("/dashboard/admin");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });

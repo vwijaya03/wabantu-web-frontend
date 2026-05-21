@@ -86,7 +86,7 @@ export function SidebarNav() {
     queryFn: () => inboxApi.unreadSummary(),
     enabled: tenantMode,
     staleTime: Number.POSITIVE_INFINITY,
-    refetchOnWindowFocus: "always",
+    refetchOnWindowFocus: tenantMode ? "always" : false,
   });
   const inboxUnread = unreadSummary?.totalUnreadMessages ?? 0;
   const showInboxDot =
