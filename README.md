@@ -87,6 +87,7 @@ app/
         ├── billing/
         ├── team/
         ├── catalog/             # Katalog produk
+        │   └── import-image/    # Import screenshot → AI vision → konfirmasi → simpan
         ├── orders/              # Pesanan
         ├── broadcast/           # Broadcast WA (trial kuota / Business+)
         ├── import/              # Import CSV/XLSX

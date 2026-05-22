@@ -107,7 +107,7 @@ Ini **checklist onboarding** yang muncul di halaman **Overview** (`/dashboard`).
 | 2 | **Sambungkan WhatsApp** — OAuth Meta | `/dashboard/whatsapp/onboarding` | Tanpa ini, tidak ada pesan masuk |
 | 3 | **Lengkapi info bisnis** — nama, alamat, jam buka, tone AI | `/dashboard/ai-settings` | AI pakai ini sebagai konteks jawaban |
 | 4 | **Isi minimal ~5 FAQ** | `/dashboard/knowledge-base` | Jawaban spesifik (ongkir, promo, dll.) |
-| 5 | **(Opsional)** Isi katalog produk | `/dashboard/catalog` | AI bisa sebut harga/nama produk |
+| 5 | **(Opsional)** Isi katalog produk | `/dashboard/catalog` atau **Import dari screenshot** (`/dashboard/catalog/import-image`) | AI jawab dari `business_catalog_item`; import gambar pakai kuota token AI (hingga 5 screenshot, 5 MB/file) |
 | 6 | **Nyalakan AI** | AI Settings → toggle AI enabled | Kalau mati, hanya manusia yang balas |
 | 7 | **Tes** — kirim WA ke nomor bisnis | HP customer | Lihat pesan muncul di Inbox + balasan AI |
 
@@ -142,10 +142,11 @@ Sidebar dashboard dibagi 4 kelompok. **Admin** hanya untuk tim internal WABantu,
 
 | Menu | Path | Untuk apa |
 |------|------|-----------|
-| **Katalog** | `/dashboard/catalog` | Daftar produk/jasa + harga |
+| **Katalog** | `/dashboard/catalog` | Daftar produk/jasa + harga (manual) |
+| **Import katalog (gambar)** | `/dashboard/catalog/import-image` | Screenshot Shopee/dll. → AI baca → **konfirmasi** → simpan; **mengurangi kuota token AI** |
 | **Pesanan** | `/dashboard/orders` | Order yang tercatat dari alur chat (jika dipakai) |
 | **Broadcast** | `/dashboard/broadcast` | Kirim pesan massal *(trial: bisa coba, max ~20 kontak/bulan; Business+ lebih besar)* |
-| **Import** | `/dashboard/import` | Upload CSV/Excel untuk isi katalog/FAQ massal |
+| **Import CSV** | `/dashboard/import` | Upload CSV/Excel untuk isi katalog/FAQ massal |
 | **Analytics** | `/dashboard/analytics` | Statistik chat & performa AI |
 | **Billing** | `/dashboard/billing` | Paket langganan & tagihan |
 | **Team** | `/dashboard/team` | Undang staff (hanya **Owner**) |

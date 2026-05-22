@@ -404,6 +404,8 @@ export const inboxApi = {
 | `auth.ts` | `/auth/register`, `/login`, `/logout`, `/me` |
 | `inbox.ts` | `/inbox/conversations`, `.../messages`, `/inbox/stream` (SSE built in hook) |
 | `business.ts` | `/business/profile`, `/business/catalog` |
+| `catalogImage.ts` | `/business/catalog/import-image/preview` (multipart `files`), `import-image-limits`, `import-image/draft/:jobId/commit` |
+| `catalog-image-limits.ts` | Konstanta validasi client (5 MB/file, 5 file, 20 MB total, JPG/PNG/WEBP); jangan set header `Content-Type` manual pada FormData (biarkan axios set boundary) |
 | `whatsapp.ts` | `/whatsapp/channels`, `/whatsapp/meta/connect/*` |
 | `billing.ts`, `usage.ts`, `payment.ts` | Billing & payments |
 | `workflow.ts` | `/workflows` — `list`, `create`, `update` (PATCH), `remove` (DELETE) |

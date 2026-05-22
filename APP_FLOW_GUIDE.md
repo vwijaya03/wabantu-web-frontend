@@ -133,7 +133,8 @@ Checklist “lengkapi profil” / “≥5 FAQ” / kartu “AI status”: `lib/b
 | `/dashboard/contacts` | `lib/api/leads.ts` | leads / contacts |
 | `/dashboard/knowledge-base` | `lib/api/knowledge-base.ts` | FAQ CRUD |
 | `/dashboard/team` | `lib/api/team.ts` | `GET/POST/DELETE /api/v1/team/members` |
-| `/dashboard/catalog` | `lib/api/catalog.ts` | katalog produk |
+| `/dashboard/catalog` | `lib/api/catalog.ts` | katalog produk (CRUD manual) |
+| `/dashboard/catalog/import-image` | `lib/api/catalogImage.ts`, `lib/catalog-image-limits.ts` | Multi-screenshot (≤ **5** file, **5 MB**/file, **20 MB** total) → AI (Haiku) → pratinjau editable → commit; pakai kuota `ai_token` di preview saja. Backend: [api-go/docs/CATALOG_IMAGE_IMPORT.md](../api-go/docs/CATALOG_IMAGE_IMPORT.md) |
 | `/dashboard/orders` | `lib/api/orders.ts` | pesanan |
 | `/dashboard/broadcast` | `lib/api/broadcast.ts` | broadcast (Business+ berbayar; trial dengan kuota) |
 | `/dashboard/import` | `lib/api/import.ts` | preview → `jobId` → execute |

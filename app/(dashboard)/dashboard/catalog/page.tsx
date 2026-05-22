@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,15 @@ export default function CatalogPage() {
   return (
     <>
       <PageHeader title="Katalog Produk" description="Kelola produk untuk AI dan pesanan." />
+      <p className="mb-4 text-sm">
+        <Link
+          href="/dashboard/catalog/import-image"
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          Import dari screenshot (AI)
+        </Link>
+        <span className="text-muted-foreground"> — untuk seller tanpa export CSV; memakai kuota token AI.</span>
+      </p>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>

@@ -21,6 +21,14 @@ Checklist ini untuk memastikan UI `dashboard/inbox` konsisten dengan pipeline AI
 - Saat order flow bertahap, user melihat prompt langkah berikutnya.
 - Setelah alamat/order selesai, pertanyaan ongkir/total (`ongkir kena berapa`, `total termasuk ongkir`) mendapat balasan AI (path `llm`), bukan template out-of-scope.
 - Konfirmasi pembayaran (`nanti saya transfer`, `trf`) setelah checkout tidak boleh dijawab “di luar topik bisnis”.
+- Minta **list produk** / katalog: balasan dari `business_catalog_item` (path `catalog_db`), bukan mengarah ke IG/website dulu jika katalog DB terisi.
+- Katalog DB kosong: ada penanda `[Katalog WABantu: kosong]`; URL eksternal hanya pelengkap.
+
+## Catalog import (dashboard, bukan inbox)
+
+- `/dashboard/catalog/import-image`: file > 5 MB, > 5 file, atau total > 20 MB ditolak di UI sebelum upload API.
+- Banner peringatan: fitur AI mengurangi kuota `ai_token`.
+- Alur: upload → proses AI → edit tabel → simpan (commit tanpa AI tambahan).
 
 ## Regression checks
 
