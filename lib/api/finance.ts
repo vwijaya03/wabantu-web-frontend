@@ -30,6 +30,19 @@ export interface Category {
   displayOrder: number;
 }
 
+export interface TransactionType {
+  id: string;
+  code: string;
+  label: string;
+  flow: "income" | "expense" | "transfer" | "adjustment";
+  categoryKind: "income" | "expense" | "investment" | "any";
+  showInQuick: boolean;
+  displayOrder: number;
+  isSystem: boolean;
+  ownerOnly: boolean;
+  isActive: boolean;
+}
+
 export interface Transaction {
   id: string;
   type: string;
@@ -48,6 +61,11 @@ export interface Transaction {
   status: "approved" | "pending_approval" | "rejected" | "draft";
   tags: string[];
   attachmentUrls: string[];
+  assetId?: string;
+  assetName?: string;
+  assetTicker?: string;
+  assetQty?: string;
+  assetPricePerUnit?: string;
   createdBy: string;
   createdAt: string;
 }
@@ -112,10 +130,13 @@ export interface AssetWithPortfolio {
   ticker?: string;
   type: string;
   unitName: string;
+  unitMultiplier: string;
+  priceUnitName: string;
   walletId: string;
   notes?: string;
   isActive: boolean;
   qtyHeld: string;
+  qtyHeldBase: string;
   avgBuyPrice: string;
   totalCost: string;
   latestPrice?: string;
@@ -131,6 +152,9 @@ export interface PortfolioSummary {
   unrealizedPnl: string;
   unrealizedPct: string;
   totalDividend: string;
+  total: number;
+  page: number;
+  pageSize: number;
   assets: AssetWithPortfolio[];
 }
 
@@ -233,6 +257,38 @@ export const financeApi = {
   deleteCategory: (id: string) =>
     api.delete<{ ok: boolean }>(`/finance/categories/${id}`).then((r) => r.data),
 
+  // Transaction types
+  listTransactionTypes: (params?: {
+    q?: string;
+    page?: number;
+    pageSize?: number;
+    activeOnly?: boolean;
+  }) =>
+    api
+      .get<{ items: TransactionType[]; total: number }>("/finance/transaction-types", { params })
+      .then((r) => r.data),
+  createTransactionType: (d: {
+    code: string;
+    label: string;
+    flow: TransactionType["flow"];
+    categoryKind?: TransactionType["categoryKind"];
+    showInQuick?: boolean;
+    displayOrder?: number;
+  }) => api.post<TransactionType>("/finance/transaction-types", d).then((r) => r.data),
+  updateTransactionType: (
+    id: string,
+    d: Partial<{
+      label: string;
+      flow: TransactionType["flow"];
+      categoryKind: TransactionType["categoryKind"];
+      showInQuick: boolean;
+      displayOrder: number;
+      isActive: boolean;
+    }>,
+  ) => api.put<TransactionType>(`/finance/transaction-types/${id}`, d).then((r) => r.data),
+  deleteTransactionType: (id: string) =>
+    api.delete<{ ok: boolean }>(`/finance/transaction-types/${id}`).then((r) => r.data),
+
   // Transactions
   listTransactions: (params?: Record<string, string | number>) =>
     api.get<{ items: Transaction[]; total: number }>("/finance/transactions", { params }).then((r) => r.data),
@@ -276,11 +332,61 @@ export const financeApi = {
     }).then((r) => r.data),
 
   // Investment
-  portfolio: () => api.get<PortfolioSummary>("/finance/investments/portfolio").then((r) => r.data),
+  portfolio: (params?: { search?: string; page?: number; pageSize?: number }) =>
+    api.get<PortfolioSummary>("/finance/investments/portfolio", { params }).then((r) => r.data),
   createAsset: (d: { name: string; ticker?: string; type: string; unitName: string; walletId: string; notes?: string }) =>
     api.post<AssetWithPortfolio>("/finance/investments/assets", d).then((r) => r.data),
+  updateAsset: (
+    id: string,
+    d: {
+      name?: string;
+      ticker?: string;
+      type?: string;
+      unitName?: string;
+      walletId?: string;
+      notes?: string;
+    }
+  ) => api.put(`/finance/investments/assets/${id}`, d).then((r) => r.data),
+  deleteAsset: (id: string) =>
+    api.delete<{ ok: boolean }>(`/finance/investments/assets/${id}`).then((r) => r.data),
   updateAssetPrice: (assetId: string, price: number) =>
     api.post("/finance/investments/prices", { assetId, price }).then((r) => r.data),
+  recordAssetTrade: (
+    assetId: string,
+    d: {
+      side: "buy" | "sell";
+      quantity: number;
+      pricePerUnit: number;
+      fee?: number;
+      feePercent?: number;
+      transactionDate?: string;
+      description?: string;
+    }
+  ) =>
+    api
+      .post<{ transactionId: string; qtyHeld: string; amount: string; status: string }>(
+        `/finance/investments/assets/${assetId}/trades`,
+        d
+      )
+      .then((r) => r.data),
+  listAssetTrades: (assetId: string) =>
+    api
+      .get<{
+        items: {
+          id: string;
+          type: string;
+          quantity: string;
+          pricePerUnit: string;
+          fee: string;
+          amount: string;
+          transactionDate: string;
+          description?: string;
+          status: string;
+        }[];
+      }>(`/finance/investments/assets/${assetId}/trades`)
+      .then((r) => r.data),
+  deleteAssetTrade: (assetId: string, txnId: string) =>
+    api.delete<{ ok: boolean }>(`/finance/investments/assets/${assetId}/trades/${txnId}`).then((r) => r.data),
   assetPriceHistory: (assetId: string) =>
     api.get(`/finance/investments/assets/${assetId}/prices`).then((r) => r.data),
 
@@ -322,25 +428,69 @@ export function formatIDR(value: string | number): string {
   return "Rp " + num.toLocaleString("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
-export function txnTypeLabel(type: string): string {
-  const map: Record<string, string> = {
-    income: "Pemasukan",
-    expense: "Pengeluaran",
-    transfer: "Transfer",
-    investment_buy: "Beli Aset",
-    investment_sell: "Jual Aset",
-    dividend: "Dividen",
-    interest: "Bunga",
-    cashback: "Cashback",
-    adjustment: "Penyesuaian",
-  };
-  return map[type] ?? type;
+/** Parse user input with dot or comma as decimal separator (e.g. 1191.69 or 1191,69). */
+export function parseDecimalInput(raw: string): number {
+  const s = raw.trim().replace(/\s/g, "");
+  if (!s) return NaN;
+  if (s.includes(",") && s.includes(".")) {
+    return parseFloat(s.replace(/\./g, "").replace(",", "."));
+  }
+  if (s.includes(",")) {
+    return parseFloat(s.replace(",", "."));
+  }
+  return parseFloat(s);
 }
 
-export function txnTypeColor(type: string): string {
-  if (["income", "dividend", "interest", "cashback", "investment_sell"].includes(type)) return "text-green-600";
-  if (["expense", "investment_buy"].includes(type)) return "text-red-600";
-  if (type === "transfer") return "text-blue-600";
+/** IDR for unit prices (avg buy, market price) — keeps fractional rupiah when present. */
+export function formatIDRPrice(value: string | number): string {
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "Rp 0";
+  const hasFrac = Math.abs(num - Math.round(num)) > 1e-9;
+  return (
+    "Rp " +
+    num.toLocaleString("id-ID", {
+      minimumFractionDigits: hasFrac ? 2 : 0,
+      maximumFractionDigits: 4,
+    })
+  );
+}
+
+/** Default labels when API types are not loaded yet. */
+export const TXN_TYPE_LABEL_FALLBACK: Record<string, string> = {
+  income: "Pemasukan",
+  expense: "Pengeluaran",
+  transfer: "Transfer",
+  investment_buy: "Beli Aset",
+  investment_sell: "Jual Aset",
+  dividend: "Dividen",
+  interest: "Bunga",
+  cashback: "Cashback",
+  adjustment: "Penyesuaian (Owner)",
+};
+
+export function resolveTxnType(types: TransactionType[] | undefined, code: string): TransactionType | undefined {
+  return types?.find((t) => t.code === code);
+}
+
+export function txnTypeLabel(type: string, types?: TransactionType[]): string {
+  return resolveTxnType(types, type)?.label ?? TXN_TYPE_LABEL_FALLBACK[type] ?? type;
+}
+
+export function txnTypeFlow(type: string, types?: TransactionType[]): string {
+  const t = resolveTxnType(types, type);
+  if (t) return t.flow;
+  if (["income", "dividend", "interest", "cashback", "investment_sell"].includes(type)) return "income";
+  if (["expense", "investment_buy"].includes(type)) return "expense";
+  if (type === "transfer") return "transfer";
+  if (type === "adjustment") return "adjustment";
+  return "expense";
+}
+
+export function txnTypeColor(type: string, types?: TransactionType[]): string {
+  const flow = txnTypeFlow(type, types);
+  if (flow === "income") return "text-green-600";
+  if (flow === "expense") return "text-red-600";
+  if (flow === "transfer") return "text-blue-600";
   return "text-muted-foreground";
 }
 
@@ -354,17 +504,11 @@ export function statusLabel(status: string): string {
   return map[status] ?? status;
 }
 
-export const TXN_TYPES = [
-  { value: "income", label: "Pemasukan" },
-  { value: "expense", label: "Pengeluaran" },
-  { value: "transfer", label: "Transfer" },
-  { value: "investment_buy", label: "Beli Aset" },
-  { value: "investment_sell", label: "Jual Aset" },
-  { value: "dividend", label: "Dividen" },
-  { value: "interest", label: "Bunga" },
-  { value: "cashback", label: "Cashback" },
-  { value: "adjustment", label: "Penyesuaian (Owner)" },
-] as const;
+/** @deprecated Prefer `listTransactionTypes` from API. */
+export const TXN_TYPES = Object.entries(TXN_TYPE_LABEL_FALLBACK).map(([value, label]) => ({
+  value,
+  label,
+}));
 
 export const WALLET_TYPES = [
   { value: "cash", label: "Kas Tunai" },

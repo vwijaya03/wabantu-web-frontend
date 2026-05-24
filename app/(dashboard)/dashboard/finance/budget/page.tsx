@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,13 +15,17 @@ import { financeApi, formatIDR, type Budget } from "@/lib/api/finance";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
+import { canPerformOwnerActions } from "@/lib/api/auth";
+import { currentFinancePeriod } from "@/lib/finance/utils";
+
+const NO_CATEGORY = "__no_category__";
 
 export default function BudgetPage() {
   const { user } = useAuth();
-  const isOwner = user?.role === "owner";
+  const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
 
-  const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7));
+  const [period, setPeriod] = useState(currentFinancePeriod);
   const [openCreate, setOpenCreate] = useState(false);
   const [form, setForm] = useState({ categoryId: "", amount: "" });
 
@@ -172,18 +176,24 @@ export default function BudgetPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Tambah / Ubah Anggaran</DialogTitle>
+            <DialogDescription>Atur batas pengeluaran per kategori untuk periode yang dipilih.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
               <Label>Kategori</Label>
               <Select
-                value={form.categoryId}
-                onValueChange={(v) => setForm((f) => ({ ...f, categoryId: v }))}
+                value={form.categoryId || NO_CATEGORY}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, categoryId: v === NO_CATEGORY ? "" : v }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih kategori" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={NO_CATEGORY} disabled>
+                    Pilih kategori
+                  </SelectItem>
                   {expenseCategories.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name}

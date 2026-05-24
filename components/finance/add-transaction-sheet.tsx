@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Sheet,
@@ -15,14 +15,19 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Category } from "@/lib/api/finance";
 import { Textarea } from "@/components/ui/textarea";
-import { financeApi, TXN_TYPES } from "@/lib/api/finance";
+import { financeApi, type TransactionType } from "@/lib/api/finance";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
+import { canPerformOwnerActions } from "@/lib/api/auth";
+import { NO_WALLET } from "@/lib/finance/utils";
 
 interface Props {
   open: boolean;
@@ -30,10 +35,53 @@ interface Props {
   onCreated?: () => void;
 }
 
-const INCOME_TYPES = new Set(["income", "dividend", "interest", "cashback", "investment_sell"]);
+/** Radix Select forbids empty string as item value. */
+const NO_CATEGORY = "__none__";
+const MORE_TYPE_NONE = "__more_none__";
+
+function filterCategoriesForType(categories: Category[], kind: string) {
+  if (kind === "any") return categories;
+  if (kind === "income") return categories.filter((c) => c.type === "income" || c.type === "investment");
+  if (kind === "expense") return categories.filter((c) => c.type === "expense" || c.type === "any");
+  if (kind === "investment") return categories.filter((c) => c.type === "investment");
+  return categories;
+}
+
+/** Group sub-categories under one parent label (guards against duplicate DB rows). */
+function buildCategoryGroups(categories: Category[]) {
+  const parents = categories
+    .filter((c) => !c.parentId)
+    .sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name));
+
+  const seen = new Set<string>();
+  const groups: { parent: Category; children: Category[] }[] = [];
+
+  for (const parent of parents) {
+    const key = parent.name.trim().toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const children = categories
+      .filter((c) => c.parentId === parent.id)
+      .sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name));
+
+    const childSeen = new Set<string>();
+    const uniqueChildren = children.filter((c) => {
+      const ck = c.name.trim().toLowerCase();
+      if (childSeen.has(ck)) return false;
+      childSeen.add(ck);
+      return true;
+    });
+
+    groups.push({ parent, children: uniqueChildren });
+  }
+
+  return groups;
+}
 
 export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
   const { user } = useAuth();
+  const canManage = canPerformOwnerActions(user);
 
   const [form, setForm] = useState({
     type: "expense",
@@ -58,22 +106,42 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
     enabled: open,
   });
 
+  const { data: typesData } = useQuery({
+    queryKey: ["finance-transaction-types", "picker"],
+    queryFn: () => financeApi.listTransactionTypes({ activeOnly: true, pageSize: 100 }),
+    enabled: open,
+  });
+
+  const txnTypes = useMemo(() => {
+    const items = (typesData?.items ?? []).filter((t) => t.isActive && (!t.ownerOnly || canManage));
+    return [...items].sort((a, b) => a.displayOrder - b.displayOrder || a.label.localeCompare(b.label));
+  }, [typesData, canManage]);
+
+  const quickTypes = txnTypes.filter((t) => t.showInQuick);
+  const moreTypes = txnTypes.filter((t) => !t.showInQuick);
+
+  const selectedType: TransactionType | undefined = txnTypes.find((t) => t.code === form.type);
+  const isTransfer = selectedType?.flow === "transfer";
+
   const wallets = walletsData?.wallets ?? [];
   const categories = categoriesData?.categories ?? [];
+  const filteredCategories = filterCategoriesForType(categories, selectedType?.categoryKind ?? "any");
+  const categoryGroups = useMemo(
+    () => buildCategoryGroups(filteredCategories),
+    [filteredCategories],
+  );
 
-  const isTransfer = form.type === "transfer";
-
-  const filteredCategories = categories.filter((c) => {
-    if (c.type === "any") return true;
-    if (INCOME_TYPES.has(form.type)) return c.type === "income" || c.type === "investment";
-    if (form.type === "expense") return c.type === "expense" || c.type === "any";
-    if (["investment_buy", "investment_sell"].includes(form.type)) return c.type === "investment";
-    return true;
-  });
+  useEffect(() => {
+    if (!open || txnTypes.length === 0) return;
+    if (!txnTypes.some((t) => t.code === form.type)) {
+      const next = quickTypes[0]?.code ?? txnTypes[0]?.code ?? "expense";
+      setForm((f) => ({ ...f, type: next, categoryId: "", toWalletId: "" }));
+    }
+  }, [open, txnTypes, quickTypes, form.type]);
 
   const reset = () => {
     setForm({
-      type: "expense",
+      type: quickTypes[0]?.code ?? txnTypes[0]?.code ?? "expense",
       amount: "",
       walletId: "",
       toWalletId: "",
@@ -124,37 +192,46 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
         </SheetHeader>
 
         <div className="mt-4 space-y-4">
-          {/* Type selector tabs */}
           <div className="flex flex-wrap gap-2">
-            {TXN_TYPES.slice(0, 5).map((t) => (
+            {quickTypes.map((t) => (
               <button
-                key={t.value}
+                key={t.code}
+                type="button"
                 className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                  form.type === t.value
+                  form.type === t.code
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
-                onClick={() => setForm((f) => ({ ...f, type: t.value, toWalletId: "", categoryId: "" }))}
+                onClick={() => setForm((f) => ({ ...f, type: t.code, toWalletId: "", categoryId: "" }))}
               >
                 {t.label}
               </button>
             ))}
-            <Select
-              value={["investment_buy","investment_sell","dividend","interest","cashback","adjustment"].includes(form.type) ? form.type : ""}
-              onValueChange={(v) => setForm((f) => ({ ...f, type: v, categoryId: "" }))}
-            >
-              <SelectTrigger className="h-8 w-auto rounded-full px-3 text-sm">
-                <SelectValue placeholder="Lainnya…" />
-              </SelectTrigger>
-              <SelectContent>
-                {TXN_TYPES.slice(5).map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {moreTypes.length > 0 && (
+              <Select
+                value={moreTypes.some((t) => t.code === form.type) ? form.type : MORE_TYPE_NONE}
+                onValueChange={(v) => {
+                  if (v === MORE_TYPE_NONE) return;
+                  setForm((f) => ({ ...f, type: v, categoryId: "" }));
+                }}
+              >
+                <SelectTrigger className="h-8 w-auto rounded-full px-3 text-sm">
+                  <SelectValue placeholder="Lainnya…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={MORE_TYPE_NONE} className="text-muted-foreground">
+                    Lainnya…
+                  </SelectItem>
+                  {moreTypes.map((t) => (
+                    <SelectItem key={t.code} value={t.code}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
-          {/* Amount */}
           <div>
             <Label>Jumlah (Rp)</Label>
             <Input
@@ -168,10 +245,12 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
             />
           </div>
 
-          {/* Wallet */}
           <div>
             <Label>Dompet {isTransfer ? "Asal" : ""}</Label>
-            <Select value={form.walletId} onValueChange={(v) => setForm((f) => ({ ...f, walletId: v }))}>
+            <Select
+              value={form.walletId || NO_WALLET}
+              onValueChange={(v) => setForm((f) => ({ ...f, walletId: v === NO_WALLET ? "" : v }))}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Pilih dompet" />
               </SelectTrigger>
@@ -185,11 +264,13 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
             </Select>
           </div>
 
-          {/* Transfer to */}
           {isTransfer && (
             <div>
               <Label>Dompet Tujuan</Label>
-              <Select value={form.toWalletId} onValueChange={(v) => setForm((f) => ({ ...f, toWalletId: v }))}>
+              <Select
+                value={form.toWalletId || NO_WALLET}
+                onValueChange={(v) => setForm((f) => ({ ...f, toWalletId: v === NO_WALLET ? "" : v }))}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih dompet tujuan" />
                 </SelectTrigger>
@@ -202,37 +283,35 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
             </div>
           )}
 
-          {/* Category */}
           {!isTransfer && (
             <div>
               <Label>Kategori (opsional)</Label>
-              <Select value={form.categoryId} onValueChange={(v) => setForm((f) => ({ ...f, categoryId: v }))}>
+              <Select
+                value={form.categoryId || NO_CATEGORY}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, categoryId: v === NO_CATEGORY ? "" : v }))
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih kategori" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">— Tanpa kategori —</SelectItem>
-                  {filteredCategories.filter((c) => !c.parentId).map((parent) => {
-                    const children = filteredCategories.filter((c) => c.parentId === parent.id);
-                    return (
-                      <>
-                        <SelectItem key={parent.id} value={parent.id} className="font-semibold">
-                          {parent.name}
+                  <SelectItem value={NO_CATEGORY}>— Tanpa kategori —</SelectItem>
+                  {categoryGroups.map(({ parent, children }) => (
+                    <SelectGroup key={parent.id}>
+                      <SelectLabel>{parent.name}</SelectLabel>
+                      {children.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
                         </SelectItem>
-                        {children.map((c) => (
-                          <SelectItem key={c.id} value={c.id} className="pl-6">
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </>
-                    );
-                  })}
+                      ))}
+                    </SelectGroup>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           )}
 
-          {/* Date */}
           <div>
             <Label>Tanggal</Label>
             <Input
@@ -242,7 +321,6 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
             />
           </div>
 
-          {/* Description */}
           <div>
             <Label>Keterangan (opsional)</Label>
             <Textarea
@@ -258,7 +336,7 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
           <Button variant="outline" className="flex-1" onClick={() => { onOpenChange(false); reset(); }}>
             Batal
           </Button>
-          <Button className="flex-1" onClick={handleSubmit} disabled={loading}>
+          <Button className="flex-1" onClick={handleSubmit} disabled={loading || !selectedType}>
             {loading ? "Menyimpan..." : "Simpan Transaksi"}
           </Button>
         </SheetFooter>

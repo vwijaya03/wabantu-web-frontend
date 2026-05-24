@@ -7,14 +7,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { financeApi, formatIDR, TXN_TYPES, type Recurring } from "@/lib/api/finance";
+import { financeApi, formatIDR, type Recurring } from "@/lib/api/finance";
 import { toast } from "sonner";
+import { useAuth } from "@/components/providers/auth-provider";
+import { canPerformOwnerActions } from "@/lib/api/auth";
+import { NO_WALLET } from "@/lib/finance/utils";
 
 export default function RecurringPage() {
+  const { user } = useAuth();
+  const canManage = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const [openCreate, setOpenCreate] = useState(false);
   const [form, setForm] = useState({
@@ -31,6 +36,14 @@ export default function RecurringPage() {
     queryKey: ["finance-wallets"],
     queryFn: () => financeApi.listWallets(),
   });
+
+  const { data: txnTypesData } = useQuery({
+    queryKey: ["finance-transaction-types", "recurring"],
+    queryFn: () => financeApi.listTransactionTypes({ activeOnly: true, pageSize: 100 }),
+  });
+  const txnTypes = (txnTypesData?.items ?? []).filter(
+    (t) => t.isActive && (!t.ownerOnly || canManage),
+  );
 
   const createMut = useMutation({
     mutationFn: () => financeApi.createRecurring({ ...form, amount: parseFloat(form.amount) as any } as any),
@@ -118,7 +131,10 @@ export default function RecurringPage() {
 
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Tambah Transaksi Berulang</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Tambah Transaksi Berulang</DialogTitle>
+            <DialogDescription>Jadwalkan transaksi otomatis atau pengingat berkala.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-3">
             <div>
               <Label>Judul</Label>
@@ -127,11 +143,14 @@ export default function RecurringPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Jenis</Label>
-                <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v }))}>
+                <Select
+                  value={txnTypes.some((t) => t.code === form.type) ? form.type : txnTypes[0]?.code ?? "expense"}
+                  onValueChange={(v) => setForm((f) => ({ ...f, type: v }))}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {TXN_TYPES.slice(0, 4).map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    {txnTypes.map((t) => (
+                      <SelectItem key={t.code} value={t.code}>{t.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -143,7 +162,10 @@ export default function RecurringPage() {
             </div>
             <div>
               <Label>Dompet</Label>
-              <Select value={form.walletId} onValueChange={(v) => setForm((f) => ({ ...f, walletId: v }))}>
+              <Select
+                value={form.walletId || NO_WALLET}
+                onValueChange={(v) => setForm((f) => ({ ...f, walletId: v === NO_WALLET ? "" : v }))}
+              >
                 <SelectTrigger><SelectValue placeholder="Pilih dompet" /></SelectTrigger>
                 <SelectContent>
                   {wallets?.wallets.map((w) => (

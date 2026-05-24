@@ -17,6 +17,7 @@ Bukan software akuntansi — ini **buku kas digital** yang mudah dipakai UMKM.
 | Kategori | Saat input transaksi | Owner (kelola) + Staff (lihat) |
 | Anggaran bulanan | `/dashboard/finance/budget` | Owner (kelola) + semua (lihat) |
 | Investasi & aset | `/dashboard/finance/investment` | Owner saja |
+| Jenis transaksi | `/dashboard/finance/transaction-types` | Owner saja |
 | Transaksi berulang | `/dashboard/finance/recurring` | Owner saja |
 | Checklist harian | `/dashboard/finance/checklist` | Owner + Staff |
 | Laporan & export | `/dashboard/finance/reports` | Owner + Staff |
@@ -68,10 +69,33 @@ Berguna untuk tutup buku akhir bulan.
 
 ---
 
-## Investasi — harga manual
+## Investasi & aset
 
-WABantu **tidak** mengambil harga pasar otomatis.  
-Owner harus tap **"Update Harga"** untuk memasukkan harga terkini — lalu P&L dihitung otomatis.
+Alur yang benar:
+
+1. **Tambah Aset** — hanya mendaftarkan instrumen (nama, ticker, dompet).
+2. **Catat Pembelian / Catat Penjualan** — menambah/mengurangi lot dan modal (bukan dari menu Transaksi umum).
+3. **Update Harga** — harga pasar manual per lembar; P&L unrealized dihitung setelah ada kepemilikan.
+
+**Saham Indonesia:** 1 lot = 100 lembar. Harga diinput **per lembar** (mis. 1191,69).  
+Biaya broker bisa **persen** (default beli 0,15% / jual 0,25% dari nilai transaksi) atau nominal.
+
+**Riwayat** pada kartu aset: hapus transaksi beli/jual yang salah sebelum menghapus aset.
+
+WABantu **tidak** mengambil harga pasar otomatis dari bursa.
+
+---
+
+## Transaksi (daftar)
+
+Semua transaksi termasuk **Beli/Jual Aset** muncul di `/dashboard/finance/transactions` dengan filter periode, jenis, status, dan **pencarian**.  
+Owner bisa **ubah** (deskripsi/tanggal; investasi: qty/harga lewat menu Investasi) dan **hapus**.
+
+---
+
+## Dompet & rekening
+
+Dompet **tidak bisa dihapus** jika masih ada transaksi, aset investasi aktif, atau transaksi berulang yang memakai dompet tersebut.
 
 ---
 
@@ -103,4 +127,13 @@ Export berjalan di background — status bisa dicek di halaman Laporan.
 - Dokumentasi endpoint lengkap: [`api-go/docs/FINANCE_MODULE.md`](../../api-go/docs/FINANCE_MODULE.md)
 - API client frontend: `lib/api/finance.ts`
 - Komponen input transaksi: `components/finance/add-transaction-sheet.tsx`
+- Cache invalidation: `lib/finance/utils.ts`
 - Kuota & limit: [`LIMITS_AND_QUOTAS.md`](../LIMITS_AND_QUOTAS.md)
+
+---
+
+## Changelog UI
+
+| Tanggal | Catatan |
+|---------|---------|
+| 2026-05-24 | Investasi: catat beli/jual, biaya %, lot/lembar, riwayat & hapus transaksi aset; Transaksi: search, edit, hapus, badge investasi; Dompet: guard hapus; Jenis transaksi: halaman CRUD; perbaikan Select & kategori duplikat |

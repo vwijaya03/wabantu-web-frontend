@@ -51,6 +51,14 @@ export function hasTenantDashboardAccess(user: AuthUser | null): boolean {
   return Boolean(user.tenant?.id || user.impersonation?.active);
 }
 
+/** Mirrors api-go `AuthUser.CanPerformOwnerActions` (owner, or super_admin while impersonating). */
+export function canPerformOwnerActions(user: AuthUser | null): boolean {
+  if (!user || !hasTenantDashboardAccess(user)) return false;
+  if (user.role === "owner") return true;
+  if (user.role === "super_admin") return Boolean(user.impersonation?.active);
+  return false;
+}
+
 /** True for internal platform home (no tenant selected). */
 export function isPlatformOperatorHome(user: AuthUser | null): boolean {
   return user?.role === "super_admin" && Boolean(user.platform) && !hasTenantDashboardAccess(user);

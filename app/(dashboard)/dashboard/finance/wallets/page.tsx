@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { PlusCircle, Trash2, Edit2, Eye } from "lucide-react";
+import { PlusCircle, Trash2, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,13 +10,26 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { financeApi, formatIDR, WALLET_TYPES } from "@/lib/api/finance";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
+import { canPerformOwnerActions } from "@/lib/api/auth";
+import { invalidateFinanceCaches } from "@/lib/finance/utils";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -38,9 +51,10 @@ const WALLET_COLORS: Record<string, string> = {
 
 export default function WalletsPage() {
   const { user } = useAuth();
-  const isOwner = user?.role === "owner";
+  const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const [openCreate, setOpenCreate] = useState(false);
+  const [deleteWalletId, setDeleteWalletId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", type: "cash", institution: "", currency: "IDR", initialBalance: "" });
 
   const { data, isLoading } = useQuery({
@@ -68,12 +82,15 @@ export default function WalletsPage() {
     mutationFn: (id: string) => financeApi.deleteWallet(id),
     onSuccess: () => {
       toast.success("Dompet dihapus");
-      qc.invalidateQueries({ queryKey: ["finance-wallets"] });
+      invalidateFinanceCaches(qc);
+      setDeleteWalletId(null);
     },
-    onError: () => toast.error("Gagal menghapus"),
+    onError: (e: { response?: { data?: { message?: string } } }) =>
+      toast.error(e?.response?.data?.message ?? "Gagal menghapus dompet"),
   });
 
   const wallets = data?.wallets ?? [];
+  const deleteTarget = deleteWalletId ? wallets.find((w) => w.id === deleteWalletId) : undefined;
   const totalBalance = wallets.reduce((sum, w) => sum + parseFloat(w.balance || "0"), 0);
 
   return (
@@ -96,6 +113,10 @@ export default function WalletsPage() {
           <p className="mt-1 text-3xl font-bold">{formatIDR(totalBalance)}</p>
         </CardContent>
       </Card>
+
+      <p className="text-xs text-muted-foreground">
+        Dompet hanya bisa dihapus jika tidak ada transaksi, aset investasi, atau transaksi berulang yang masih terhubung.
+      </p>
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Memuat...</p>
@@ -136,9 +157,8 @@ export default function WalletsPage() {
                       variant="ghost"
                       size="sm"
                       className="text-destructive"
-                      onClick={() => {
-                        if (confirm("Hapus dompet ini?")) deleteMut.mutate(w.id);
-                      }}
+                      title="Hapus dompet"
+                      onClick={() => setDeleteWalletId(w.id)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -150,11 +170,39 @@ export default function WalletsPage() {
         </div>
       )}
 
+      <AlertDialog open={!!deleteWalletId} onOpenChange={(open) => !open && setDeleteWalletId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus dompet?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `Dompet "${deleteTarget.name}" akan dihapus dari daftar.`
+                : "Dompet akan dihapus dari daftar."}
+              <span className="block mt-2">
+                Jika masih ada transaksi terkait dompet ini, hapus transaksi di menu Transaksi (atau ubah dompet aset
+                investasi) terlebih dahulu.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMut.isPending}
+              onClick={() => deleteWalletId && deleteMut.mutate(deleteWalletId)}
+            >
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Create dialog */}
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Tambah Dompet Baru</DialogTitle>
+            <DialogDescription>Tambahkan sumber dana seperti kas, bank, atau e-wallet.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>

@@ -7,21 +7,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { financeApi, formatIDR } from "@/lib/api/finance";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
+import { canPerformOwnerActions } from "@/lib/api/auth";
 
 export default function ChecklistPage() {
   const { user } = useAuth();
-  const isOwner = user?.role === "owner";
+  const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const [tab, setTab] = useState<"today" | "templates">("today");
   const [openCreate, setOpenCreate] = useState(false);
-  const [form, setForm] = useState({ title: "", frequency: "daily", amountHint: "" });
+  const [form, setForm] = useState({ title: "", frequency: "daily", amountHint: "", dayOfMonth: "1" });
 
   const { data: today, isLoading } = useQuery({
     queryKey: ["finance-checklist-today"],
@@ -49,12 +50,13 @@ export default function ChecklistPage() {
         title: form.title,
         frequency: form.frequency as any,
         amountHint: form.amountHint ? parseFloat(form.amountHint) : undefined,
+        dayOfMonth: form.frequency === "monthly" ? parseInt(form.dayOfMonth, 10) : undefined,
       } as any),
     onSuccess: () => {
       toast.success("Template ditambahkan");
       qc.invalidateQueries({ queryKey: ["finance-checklist-templates"] });
       setOpenCreate(false);
-      setForm({ title: "", frequency: "daily", amountHint: "" });
+      setForm({ title: "", frequency: "daily", amountHint: "", dayOfMonth: "1" });
     },
     onError: () => toast.error("Gagal menyimpan"),
   });
@@ -201,7 +203,10 @@ export default function ChecklistPage() {
       {/* Create template dialog */}
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Tambah Template Checklist</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Tambah Template Checklist</DialogTitle>
+            <DialogDescription>Buat tugas keuangan harian atau bulanan yang muncul di checklist.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-3">
             <div>
               <Label>Judul Tugas</Label>
@@ -222,6 +227,18 @@ export default function ChecklistPage() {
                 <option value="monthly">Bulanan (tanggal tertentu)</option>
               </select>
             </div>
+            {form.frequency === "monthly" && (
+              <div>
+                <Label>Tanggal setiap bulan (1–28)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={28}
+                  value={form.dayOfMonth}
+                  onChange={(e) => setForm((f) => ({ ...f, dayOfMonth: e.target.value }))}
+                />
+              </div>
+            )}
             <div>
               <Label>Estimasi Jumlah (Rp, opsional)</Label>
               <Input

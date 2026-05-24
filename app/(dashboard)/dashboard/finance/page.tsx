@@ -18,14 +18,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { financeApi, formatIDR, txnTypeColor, txnTypeLabel } from "@/lib/api/finance";
+import { financeApi, formatIDR, txnTypeColor, txnTypeFlow, txnTypeLabel } from "@/lib/api/finance";
 import { cn } from "@/lib/utils";
 import { AddTransactionSheet } from "@/components/finance/add-transaction-sheet";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/components/providers/auth-provider";
+import { canPerformOwnerActions } from "@/lib/api/auth";
+import { invalidateFinanceCaches } from "@/lib/finance/utils";
 
-const navCards = [
+const baseNavCards = [
   { href: "/dashboard/finance/transactions", label: "Transaksi", icon: BookOpen, desc: "Catat pemasukan & pengeluaran" },
   { href: "/dashboard/finance/wallets", label: "Dompet", icon: Wallet, desc: "Kas, bank, e-wallet" },
+  { href: "/dashboard/finance/transaction-types", label: "Jenis Transaksi", icon: BookOpen, desc: "Label Pemasukan, Pengeluaran, dll.", ownerOnly: true as const },
   { href: "/dashboard/finance/budget", label: "Anggaran", icon: BarChart3, desc: "Pantau batas pengeluaran" },
   { href: "/dashboard/finance/investment", label: "Investasi", icon: TrendingUp, desc: "Saham, kripto, emas" },
   { href: "/dashboard/finance/recurring", label: "Otomatis", icon: RefreshCw, desc: "Tagihan berulang" },
@@ -35,8 +40,18 @@ const navCards = [
 
 export default function FinancePage() {
   const [openAdd, setOpenAdd] = useState(false);
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const canManage = canPerformOwnerActions(user);
 
-  const { data: dashboard } = useQuery({
+  const navCards = baseNavCards.filter((n) => !("ownerOnly" in n && n.ownerOnly) || canManage);
+
+  const {
+    data: dashboard,
+    isLoading: dashboardLoading,
+    isError: dashboardError,
+    refetch: refetchDashboard,
+  } = useQuery({
     queryKey: ["finance-dashboard"],
     queryFn: () => financeApi.dashboard(),
   });
@@ -46,6 +61,12 @@ export default function FinancePage() {
     queryFn: () => financeApi.listTransactions({ pageSize: 5 }),
   });
 
+  const { data: txnTypesData } = useQuery({
+    queryKey: ["finance-transaction-types", "dashboard"],
+    queryFn: () => financeApi.listTransactionTypes({ pageSize: 100 }),
+  });
+  const txnTypes = txnTypesData?.items ?? [];
+
   const { data: checklist } = useQuery({
     queryKey: ["finance-checklist-today"],
     queryFn: () => financeApi.todayChecklist(),
@@ -53,6 +74,13 @@ export default function FinancePage() {
 
   const pendingChecklist = checklist?.pending ?? 0;
   const pendingApproval = dashboard?.pendingCount ?? 0;
+
+  const amountPrefix = (type: string) => {
+    const flow = txnTypeFlow(type, txnTypes);
+    if (flow === "income") return "+";
+    if (flow === "transfer") return "";
+    return "-";
+  };
 
   return (
     <>
@@ -67,12 +95,25 @@ export default function FinancePage() {
         }
       />
 
+      {dashboardError && (
+        <Card className="border-destructive">
+          <CardContent className="py-4 text-sm text-destructive">
+            Gagal memuat ringkasan keuangan.{" "}
+            <button type="button" className="underline" onClick={() => refetchDashboard()}>
+              Coba lagi
+            </button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary cards */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardContent className="p-5">
             <p className="text-xs text-muted-foreground">Total Saldo</p>
-            <p className="mt-1 text-2xl font-bold">{formatIDR(dashboard?.totalWallets ?? "0")}</p>
+            <p className="mt-1 text-2xl font-bold">
+              {dashboardLoading ? "…" : formatIDR(dashboard?.totalWallets ?? "0")}
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">Semua dompet aktif</p>
           </CardContent>
         </Card>
@@ -83,7 +124,7 @@ export default function FinancePage() {
               <p className="text-xs text-muted-foreground">Pemasukan</p>
             </div>
             <p className="mt-1 text-2xl font-bold text-green-600">
-              {formatIDR(dashboard?.totalIncome ?? "0")}
+              {dashboardLoading ? "…" : formatIDR(dashboard?.totalIncome ?? "0")}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">{dashboard?.period ?? "—"}</p>
           </CardContent>
@@ -95,7 +136,7 @@ export default function FinancePage() {
               <p className="text-xs text-muted-foreground">Pengeluaran</p>
             </div>
             <p className="mt-1 text-2xl font-bold text-red-600">
-              {formatIDR(dashboard?.totalExpense ?? "0")}
+              {dashboardLoading ? "…" : formatIDR(dashboard?.totalExpense ?? "0")}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">{dashboard?.period ?? "—"}</p>
           </CardContent>
@@ -109,7 +150,7 @@ export default function FinancePage() {
                 parseFloat(dashboard?.netBalance ?? "0") >= 0 ? "text-green-600" : "text-red-600",
               )}
             >
-              {formatIDR(dashboard?.netBalance ?? "0")}
+              {dashboardLoading ? "…" : formatIDR(dashboard?.netBalance ?? "0")}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">Pemasukan − Pengeluaran</p>
           </CardContent>
@@ -198,14 +239,14 @@ export default function FinancePage() {
             {recentData!.items.map((txn) => (
               <div key={txn.id} className="flex items-center justify-between rounded-md border px-3 py-2">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{txn.description ?? txnTypeLabel(txn.type)}</p>
+                  <p className="truncate text-sm font-medium">{txn.description ?? txnTypeLabel(txn.type, txnTypes)}</p>
                   <p className="text-xs text-muted-foreground">
                     {txn.categoryName ?? "—"} · {txn.transactionDate} · {txn.walletName}
                   </p>
                 </div>
                 <div className="ml-3 shrink-0 text-right">
-                  <p className={cn("text-sm font-semibold tabular-nums", txnTypeColor(txn.type))}>
-                    {["income","dividend","interest","cashback","investment_sell"].includes(txn.type) ? "+" : "-"}
+                  <p className={cn("text-sm font-semibold tabular-nums", txnTypeColor(txn.type, txnTypes))}>
+                    {amountPrefix(txn.type)}
                     {formatIDR(txn.amount)}
                   </p>
                   {txn.status !== "approved" && (
@@ -220,7 +261,11 @@ export default function FinancePage() {
         </Card>
       )}
 
-      <AddTransactionSheet open={openAdd} onOpenChange={setOpenAdd} />
+      <AddTransactionSheet
+        open={openAdd}
+        onOpenChange={setOpenAdd}
+        onCreated={() => invalidateFinanceCaches(qc)}
+      />
     </>
   );
 }

@@ -27,10 +27,14 @@ export default function ReportsPage() {
     queryFn: () => financeApi.categorySpending(period),
   });
 
-  const { data: jobs, refetch: refetchJobs } = useQuery({
+  const { data: jobs } = useQuery({
     queryKey: ["finance-report-jobs"],
     queryFn: () => financeApi.listReportJobs(),
-    refetchInterval: 5000, // poll every 5s for job status
+    refetchInterval: (query) => {
+      const items = query.state.data?.items ?? [];
+      const active = items.some((j) => j.status === "queued" || j.status === "processing");
+      return active ? 5000 : false;
+    },
   });
 
   const exportMut = useMutation({
@@ -158,7 +162,12 @@ export default function ReportsPage() {
                   >
                     {j.status === "queued" ? "Antri" : j.status === "done" ? "Selesai" : j.status === "failed" ? "Gagal" : j.status}
                   </Badge>
-                  {j.status === "done" && j.downloadUrl && !j.downloadUrl.startsWith("data:") && (
+                  {j.status === "failed" && j.errorMsg && (
+                    <p className="max-w-[200px] truncate text-xs text-destructive" title={j.errorMsg}>
+                      {j.errorMsg}
+                    </p>
+                  )}
+                  {j.status === "done" && j.downloadUrl && (
                     <Button variant="outline" size="sm" asChild>
                       <a href={j.downloadUrl} download>
                         <Download className="h-3.5 w-3.5" />
