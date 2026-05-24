@@ -35,19 +35,19 @@ Give UMKM owners and staff a **browser UI** to:
 ```mermaid
 flowchart TB
   subgraph browser [Browser]
-    RSC[Server Components optional]
-    CC[Client Components use client]
-    RQ[TanStack React Query cache]
-    SS[sessionStorage JWT]
+    RSC["Server Components optional"]
+    CC["Client Components use client"]
+    RQ["TanStack React Query cache"]
+    SS["sessionStorage JWT"]
   end
 
-  subgraph next [Next.js 16 :3000]
-    REW[Rewrite /api/v1/*]
-    PAGES[app/ App Router]
+  subgraph next ["Next.js 16 :3000"]
+    REW["Rewrite /api/v1/*"]
+    PAGES["app/ App Router"]
   end
 
-  subgraph api [api-go :4000]
-    API[/api/v1 REST + SSE]
+  subgraph api ["api-go :4000"]
+    API["/api/v1 REST + SSE"]
   end
 
   CC --> SS
