@@ -130,7 +130,7 @@ Detail + penjelasan React/Next: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUM
 
 **Dokumentasi batasan lengkap:** [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md) · api-go: [`../api-go/LIMITS_AND_QUOTAS.md`](../api-go/LIMITS_AND_QUOTAS.md).
 
-**Finance module:** komponen di `components/finance/`, API client di `lib/api/finance.ts`. Dokumentasi teknis: [`../api-go/docs/FINANCE_MODULE.md`](../api-go/docs/FINANCE_MODULE.md).
+**Finance module:** komponen di `components/finance/`, API di `lib/api/finance.ts`, helper `lib/finance/`. Panduan produk: [`docs/FINANCE_MODULE.md`](docs/FINANCE_MODULE.md); endpoint & schema: [`../api-go/docs/FINANCE_MODULE.md`](../api-go/docs/FINANCE_MODULE.md).
 
 `hooks/use-plan.ts` memuat `GET /api/v1/billing/overview` hanya jika user punya konteks tenant (`hasTenantDashboardAccess` — owner/staff atau super_admin setelah **Pantau**).
 

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetFooter,
@@ -27,7 +28,11 @@ import { financeApi, type TransactionType } from "@/lib/api/finance";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
-import { NO_WALLET } from "@/lib/finance/utils";
+import {
+  NO_WALLET,
+  filterCategoriesForGeneralLedger,
+  filterGeneralLedgerTxnTypes,
+} from "@/lib/finance/utils";
 
 interface Props {
   open: boolean;
@@ -38,14 +43,6 @@ interface Props {
 /** Radix Select forbids empty string as item value. */
 const NO_CATEGORY = "__none__";
 const MORE_TYPE_NONE = "__more_none__";
-
-function filterCategoriesForType(categories: Category[], kind: string) {
-  if (kind === "any") return categories;
-  if (kind === "income") return categories.filter((c) => c.type === "income" || c.type === "investment");
-  if (kind === "expense") return categories.filter((c) => c.type === "expense" || c.type === "any");
-  if (kind === "investment") return categories.filter((c) => c.type === "investment");
-  return categories;
-}
 
 /** Group sub-categories under one parent label (guards against duplicate DB rows). */
 function buildCategoryGroups(categories: Category[]) {
@@ -113,8 +110,11 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
   });
 
   const txnTypes = useMemo(() => {
-    const items = (typesData?.items ?? []).filter((t) => t.isActive && (!t.ownerOnly || canManage));
-    return [...items].sort((a, b) => a.displayOrder - b.displayOrder || a.label.localeCompare(b.label));
+    const items = (typesData?.items ?? [])
+      .filter((t) => t.isActive && (!t.ownerOnly || canManage));
+    return filterGeneralLedgerTxnTypes([...items]).sort(
+      (a, b) => a.displayOrder - b.displayOrder || a.label.localeCompare(b.label),
+    );
   }, [typesData, canManage]);
 
   const quickTypes = txnTypes.filter((t) => t.showInQuick);
@@ -125,7 +125,10 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
 
   const wallets = walletsData?.wallets ?? [];
   const categories = categoriesData?.categories ?? [];
-  const filteredCategories = filterCategoriesForType(categories, selectedType?.categoryKind ?? "any");
+  const filteredCategories = filterCategoriesForGeneralLedger(
+    categories,
+    selectedType?.categoryKind ?? "any",
+  );
   const categoryGroups = useMemo(
     () => buildCategoryGroups(filteredCategories),
     [filteredCategories],
@@ -189,6 +192,9 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Catat Transaksi</SheetTitle>
+          <SheetDescription>
+            Pemasukan, pengeluaran, dan transfer operasional. Beli/jual aset dan dividen dicatat di menu Investasi & Aset.
+          </SheetDescription>
         </SheetHeader>
 
         <div className="mt-4 space-y-4">

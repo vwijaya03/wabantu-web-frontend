@@ -2,7 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { PlusCircle, RefreshCw, ArrowDownCircle, ArrowUpCircle, Pencil, Trash2, Search, History } from "lucide-react";
+import {
+  PlusCircle,
+  RefreshCw,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Pencil,
+  Trash2,
+  Search,
+  History,
+  Coins,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -39,14 +49,20 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { invalidateFinanceCaches, NO_WALLET } from "@/lib/finance/utils";
+import {
+  CUSTOM_UNIT,
+  defaultUnitNameForType,
+  defaultUnitPreset,
+  findUnitPreset,
+  INVESTMENT_ASSET_UNIT_PRESETS,
+  resolveUnitConfig,
+  unitSelectValue,
+  type InvestmentAssetType,
+} from "@/lib/finance/investment-units";
 
 function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function defaultUnitMultiplier(type: string, unitName: string) {
-  return type === "stock" && unitName.toLowerCase() === "lot" ? 100 : 1;
 }
 
 function defaultFeePercent(side: "buy" | "sell", assetType: string) {
@@ -90,7 +106,7 @@ function assetFieldHints(type: string) {
       return {
         namePh: "mis. Emas Antam 1 gram",
         tickerPh: "mis. XAU / ANTAM",
-        hint: "Nama: deskripsi produk emas. Kode: opsional (mis. kode produk).",
+        hint: "Nama: deskripsi produk emas. Satuan umum: gram (harga Antam per gram).",
       };
     case "mutual_fund":
       return {
@@ -120,9 +136,23 @@ export default function InvestmentPage() {
   const [deleteAssetId, setDeleteAssetId] = useState<string | null>(null);
   const [openUpdatePrice, setOpenUpdatePrice] = useState<string | null>(null);
   const [recordTrade, setRecordTrade] = useState<{ assetId: string; side: "buy" | "sell" } | null>(null);
+  const [recordDividendAssetId, setRecordDividendAssetId] = useState<string | null>(null);
+  const [dividendForm, setDividendForm] = useState({
+    amount: "",
+    transactionDate: todayISO(),
+    description: "",
+  });
   const [tradeHistoryAssetId, setTradeHistoryAssetId] = useState<string | null>(null);
   const [deleteTradeTarget, setDeleteTradeTarget] = useState<{ assetId: string; txnId: string } | null>(null);
-  const [assetForm, setAssetForm] = useState({ name: "", ticker: "", type: "stock", unitName: "lot", walletId: "", notes: "" });
+  const [assetForm, setAssetForm] = useState({
+    name: "",
+    ticker: "",
+    type: "stock",
+    unitName: defaultUnitPreset("stock").value,
+    walletId: "",
+    notes: "",
+  });
+  const [customUnitMode, setCustomUnitMode] = useState(false);
   const [tradeForm, setTradeForm] = useState({
     quantity: "",
     pricePerUnit: "",
@@ -155,8 +185,17 @@ export default function InvestmentPage() {
     enabled: !!tradeHistoryAssetId,
   });
 
-  const resetAssetForm = () =>
-    setAssetForm({ name: "", ticker: "", type: "stock", unitName: "lot", walletId: "", notes: "" });
+  const resetAssetForm = () => {
+    setAssetForm({
+      name: "",
+      ticker: "",
+      type: "stock",
+      unitName: defaultUnitPreset("stock").value,
+      walletId: "",
+      notes: "",
+    });
+    setCustomUnitMode(false);
+  };
 
   const createAssetMut = useMutation({
     mutationFn: () =>
@@ -164,7 +203,7 @@ export default function InvestmentPage() {
         name: assetForm.name.trim(),
         ticker: assetForm.ticker.trim() || undefined,
         type: assetForm.type,
-        unitName: assetForm.unitName.trim() || "lot",
+        unitName: assetForm.unitName.trim() || defaultUnitNameForType(assetForm.type),
         walletId: assetForm.walletId,
         notes: assetForm.notes.trim() || undefined,
       }),
@@ -183,7 +222,7 @@ export default function InvestmentPage() {
         name: assetForm.name.trim(),
         ticker: assetForm.ticker.trim(),
         type: assetForm.type,
-        unitName: assetForm.unitName.trim() || "lot",
+        unitName: assetForm.unitName.trim() || defaultUnitNameForType(assetForm.type),
         walletId: assetForm.walletId || undefined,
         notes: assetForm.notes.trim(),
       }),
@@ -215,6 +254,31 @@ export default function InvestmentPage() {
       setOpenUpdatePrice(null);
       setNewPrice("");
     },
+  });
+
+  const recordDividendMut = useMutation({
+    mutationFn: () => {
+      if (!recordDividendAssetId) throw new Error("no asset");
+      const amount = parseDecimalInput(dividendForm.amount);
+      if (!Number.isFinite(amount) || amount <= 0) throw new Error("invalid");
+      return financeApi.recordAssetDividend(recordDividendAssetId, {
+        amount,
+        transactionDate: dividendForm.transactionDate,
+        description: dividendForm.description.trim() || undefined,
+      });
+    },
+    onSuccess: (data) => {
+      toast.success(
+        data.status === "pending_approval" ? "Dividen menunggu persetujuan" : "Dividen tercatat",
+      );
+      invalidateFinanceCaches(qc);
+      if (tradeHistoryAssetId) {
+        qc.invalidateQueries({ queryKey: ["finance-asset-trades", tradeHistoryAssetId] });
+      }
+      setRecordDividendAssetId(null);
+      setDividendForm({ amount: "", transactionDate: todayISO(), description: "" });
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Gagal mencatat dividen"),
   });
 
   const recordTradeMut = useMutation({
@@ -296,8 +360,17 @@ export default function InvestmentPage() {
   };
 
   const fieldHints = useMemo(() => assetFieldHints(assetForm.type), [assetForm.type]);
+  const unitPresets = INVESTMENT_ASSET_UNIT_PRESETS[assetForm.type as InvestmentAssetType] ?? INVESTMENT_ASSET_UNIT_PRESETS.other;
+  const unitConfig = useMemo(
+    () => resolveUnitConfig(assetForm.type, assetForm.unitName),
+    [assetForm.type, assetForm.unitName],
+  );
+  const unitUsesCustom = customUnitMode || unitSelectValue(assetForm.type, assetForm.unitName) === CUSTOM_UNIT;
 
   const tradeAsset = recordTrade ? assets.find((a) => a.id === recordTrade.assetId) : undefined;
+  const dividendAsset = recordDividendAssetId
+    ? assets.find((a) => a.id === recordDividendAssetId)
+    : undefined;
   const tradeQty = parseDecimalInput(tradeForm.quantity) || 0;
   const tradePrice = parseDecimalInput(tradeForm.pricePerUnit) || 0;
   const tradeMult = tradeAsset ? parseFloat(tradeAsset.unitMultiplier || "1") || 1 : 1;
@@ -322,6 +395,11 @@ export default function InvestmentPage() {
     });
   };
 
+  const openDividendDialog = (assetId: string) => {
+    setDividendForm({ amount: "", transactionDate: todayISO(), description: "" });
+    setRecordDividendAssetId(assetId);
+  };
+
   const openTradeDialog = (assetId: string, side: "buy" | "sell") => {
     const a = assets.find((x) => x.id === assetId);
     setRecordTrade({ assetId, side });
@@ -340,6 +418,23 @@ export default function InvestmentPage() {
       walletId: a.walletId,
       notes: a.notes ?? "",
     });
+    setCustomUnitMode(!findUnitPreset(a.type, a.unitName));
+  };
+
+  const onAssetTypeChange = (type: string) => {
+    const preset = defaultUnitPreset(type as InvestmentAssetType);
+    setAssetForm((f) => ({ ...f, type, unitName: preset.value }));
+    setCustomUnitMode(false);
+  };
+
+  const onUnitPresetChange = (value: string) => {
+    if (value === CUSTOM_UNIT) {
+      setCustomUnitMode(true);
+      return;
+    }
+    setCustomUnitMode(false);
+    const preset = findUnitPreset(assetForm.type, value);
+    if (preset) setAssetForm((f) => ({ ...f, unitName: preset.value }));
   };
 
   const assetDialogOpen = openAddAsset || !!editAssetId;
@@ -510,6 +605,9 @@ export default function InvestmentPage() {
                     >
                       <ArrowUpCircle className="mr-1 h-3.5 w-3.5" /> Catat Penjualan
                     </Button>
+                    <Button variant="outline" size="sm" onClick={() => openDividendDialog(a.id)}>
+                      <Coins className="mr-1 h-3.5 w-3.5" /> Catat Dividen
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => setOpenUpdatePrice(a.id)}>
                       <RefreshCw className="mr-1 h-3.5 w-3.5" /> Update Harga
                     </Button>
@@ -624,7 +722,7 @@ export default function InvestmentPage() {
                 <select
                   className="w-full rounded-md border px-3 py-2 text-sm"
                   value={assetForm.type}
-                  onChange={(e) => setAssetForm((f) => ({ ...f, type: e.target.value }))}
+                  onChange={(e) => onAssetTypeChange(e.target.value)}
                 >
                   <option value="stock">Saham</option>
                   <option value="crypto">Kripto</option>
@@ -634,14 +732,33 @@ export default function InvestmentPage() {
                 </select>
               </div>
               <div>
-                <Label>Satuan</Label>
-                <Input
-                  value={assetForm.unitName}
-                  onChange={(e) => setAssetForm((f) => ({ ...f, unitName: e.target.value }))}
-                  placeholder="lot, unit, gram"
-                />
-                {assetForm.type === "stock" && assetForm.unitName.toLowerCase() === "lot" && (
-                  <p className="mt-1 text-xs text-muted-foreground">Saham IDX: 1 lot = 100 lembar. Harga & pembelian per lembar.</p>
+                <Label>Satuan kepemilikan</Label>
+                <Select
+                  value={unitUsesCustom ? CUSTOM_UNIT : assetForm.unitName}
+                  onValueChange={onUnitPresetChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih satuan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unitPresets.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={CUSTOM_UNIT}>Lainnya…</SelectItem>
+                  </SelectContent>
+                </Select>
+                {unitUsesCustom && (
+                  <Input
+                    className="mt-2"
+                    value={assetForm.unitName}
+                    onChange={(e) => setAssetForm((f) => ({ ...f, unitName: e.target.value }))}
+                    placeholder="mis. bare, kontrak"
+                  />
+                )}
+                {unitConfig.hint && (
+                  <p className="mt-1 text-xs text-muted-foreground">{unitConfig.hint}</p>
                 )}
               </div>
             </div>
@@ -734,6 +851,65 @@ export default function InvestmentPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Record dividend */}
+      <Dialog open={!!recordDividendAssetId} onOpenChange={(open) => !open && setRecordDividendAssetId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Catat Dividen{dividendAsset ? ` — ${dividendAsset.name}` : ""}
+            </DialogTitle>
+            <DialogDescription>
+              Nominal masuk ke dompet{" "}
+              {dividendAsset
+                ? wallets?.wallets.find((w) => w.id === dividendAsset.walletId)?.name ?? "terhubung aset"
+                : "aset"}
+              , menambah Total Dividen, dan tidak mengubah qty kepemilikan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Jumlah dividen (Rp)</Label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={dividendForm.amount}
+                onChange={(e) => setDividendForm((f) => ({ ...f, amount: e.target.value }))}
+                placeholder="0"
+                className="text-lg font-semibold"
+                autoFocus
+              />
+            </div>
+            <div>
+              <Label>Tanggal</Label>
+              <Input
+                type="date"
+                value={dividendForm.transactionDate}
+                onChange={(e) => setDividendForm((f) => ({ ...f, transactionDate: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Keterangan (opsional)</Label>
+              <Input
+                value={dividendForm.description}
+                onChange={(e) => setDividendForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="mis. Dividen interim TOTL"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRecordDividendAssetId(null)}>
+              Batal
+            </Button>
+            <Button
+              onClick={() => recordDividendMut.mutate()}
+              disabled={recordDividendMut.isPending || !(parseDecimalInput(dividendForm.amount) > 0)}
+            >
+              {recordDividendMut.isPending ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Record buy/sell dialog */}
       <Dialog open={!!recordTrade} onOpenChange={(open) => !open && setRecordTrade(null)}>

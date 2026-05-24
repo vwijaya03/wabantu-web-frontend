@@ -12,7 +12,7 @@ Bukan software akuntansi — ini **buku kas digital** yang mudah dipakai UMKM.
 | Fitur | Halaman | Siapa bisa akses |
 |-------|---------|-----------------|
 | Dashboard ringkasan | `/dashboard/finance` | Owner + Staff |
-| Catat transaksi | Tombol "+ Catat" (mana saja) | Owner + Staff |
+| Catat transaksi | Tombol "+ Catat" (operasional saja) | Owner + Staff |
 | Dompet & saldo | `/dashboard/finance/wallets` | Owner (kelola) + Staff (lihat) |
 | Kategori | Saat input transaksi | Owner (kelola) + Staff (lihat) |
 | Anggaran bulanan | `/dashboard/finance/budget` | Owner (kelola) + semua (lihat) |
@@ -31,7 +31,7 @@ Bukan software akuntansi — ini **buku kas digital** yang mudah dipakai UMKM.
 
 1. **Buat dompet** di `/dashboard/finance/wallets` — minimal 1 dompet Kas Tunai (sudah ada secara default).
 2. **Isi saldo awal** yang benar saat membuat dompet.
-3. **Catat transaksi** — gunakan tombol "+" di pojok kanan atas (tersedia di semua halaman Finance).
+3. **Catat transaksi** — pemasukan, pengeluaran, transfer (bukan beli/jual/dividen investasi).
 4. **Set anggaran** di `/dashboard/finance/budget` untuk memantau pengeluaran per kategori.
 5. **Lihat laporan** di `/dashboard/finance/reports` untuk ringkasan bulan ini.
 
@@ -46,7 +46,7 @@ Bukan software akuntansi — ini **buku kas digital** yang mudah dipakai UMKM.
 | Transfer | Pindah antar dompet sendiri | - saldo asal, + saldo tujuan |
 | Beli Aset | Beli investasi | - saldo dompet |
 | Jual Aset | Jual investasi | + saldo dompet |
-| Dividen | Penerimaan dividen | + saldo dompet |
+| Dividen | Penerimaan dividen (hanya dari menu Investasi, terhubung ke aset) | + saldo dompet |
 | Bunga | Bunga tabungan | + saldo dompet |
 | Cashback | Cashback pembayaran | + saldo dompet |
 | Penyesuaian | Koreksi saldo (owner only) | + atau - |
@@ -74,11 +74,25 @@ Berguna untuk tutup buku akhir bulan.
 Alur yang benar:
 
 1. **Tambah Aset** — hanya mendaftarkan instrumen (nama, ticker, dompet).
-2. **Catat Pembelian / Catat Penjualan** — menambah/mengurangi lot dan modal (bukan dari menu Transaksi umum).
-3. **Update Harga** — harga pasar manual per lembar; P&L unrealized dihitung setelah ada kepemilikan.
+2. **Catat Pembelian / Catat Penjualan** — menambah/mengurangi kepemilikan dan modal (bukan dari menu Transaksi umum).
+3. **Catat Dividen** — penerimaan dividen terhubung ke aset (menambah Total Dividen + saldo dompet).
+4. **Update Harga** — harga pasar manual; P&L unrealized dihitung setelah ada kepemilikan.
+
+**Satuan default per tipe** (bisa diubah saat tambah aset):
+
+| Tipe | Satuan qty | Harga per |
+|------|------------|-----------|
+| Saham | Lot (IDX) atau lembar | lembar |
+| Emas | Gram (default), oz, kg | satuan yang dipilih |
+| Reksa dana | Unit | unit (NAV) |
+| Kripto | Koin | koin |
+| Lainnya | Unit / pcs | satuan yang dipilih |
 
 **Saham Indonesia:** 1 lot = 100 lembar. Harga diinput **per lembar** (mis. 1191,69).  
+**Emas retail:** umumnya **gram** (Antam/Pegadaian), bukan lot.  
 Biaya broker bisa **persen** (default beli 0,15% / jual 0,25% dari nilai transaksi) atau nominal.
+
+**Catat Dividen** hanya dari menu Investasi (terhubung ke aset), bukan Catat Transaksi.
 
 **Riwayat** pada kartu aset: hapus transaksi beli/jual yang salah sebelum menghapus aset.
 
@@ -93,9 +107,22 @@ Owner bisa **ubah** (deskripsi/tanggal; investasi: qty/harga lewat menu Investas
 
 ---
 
+## Catat Transaksi (sheet)
+
+Form **Catat Transaksi** hanya untuk keuangan operasional: pemasukan, pengeluaran, transfer, bunga, cashback, penyesuaian.
+
+- **Tidak menampilkan** Beli Aset, Jual Aset, atau Dividen (gunakan menu Investasi).
+- **Kategori** tanpa grup Investasi (menghindari duplikasi dengan alur investasi).
+
+---
+
 ## Dompet & rekening
 
+Owner dapat **tambah, ubah** (nama, tipe, ikon, warna, visibilitas), **cari**, dan **hapus** dompet.
+
 Dompet **tidak bisa dihapus** jika masih ada transaksi, aset investasi aktif, atau transaksi berulang yang memakai dompet tersebut.
+
+Dashboard Finance menampilkan ikon dompet (sama seperti kartu di halaman Dompet).
 
 ---
 
@@ -127,6 +154,8 @@ Export berjalan di background — status bisa dicek di halaman Laporan.
 - Dokumentasi endpoint lengkap: [`api-go/docs/FINANCE_MODULE.md`](../../api-go/docs/FINANCE_MODULE.md)
 - API client frontend: `lib/api/finance.ts`
 - Komponen input transaksi: `components/finance/add-transaction-sheet.tsx`
+- Satuan investasi (preset UI): `lib/finance/investment-units.ts`
+- Ikon dompet: `lib/finance/wallet-icons.tsx`
 - Cache invalidation: `lib/finance/utils.ts`
 - Kuota & limit: [`LIMITS_AND_QUOTAS.md`](../LIMITS_AND_QUOTAS.md)
 
@@ -137,3 +166,4 @@ Export berjalan di background — status bisa dicek di halaman Laporan.
 | Tanggal | Catatan |
 |---------|---------|
 | 2026-05-24 | Investasi: catat beli/jual, biaya %, lot/lembar, riwayat & hapus transaksi aset; Transaksi: search, edit, hapus, badge investasi; Dompet: guard hapus; Jenis transaksi: halaman CRUD; perbaikan Select & kategori duplikat |
+| 2026-05-25 | Dompet: ubah/hapus/cari/ikon; Investasi: catat dividen, preset satuan per tipe; Catat Transaksi: pisah dari investasi, tanpa kategori investasi; dashboard: ikon saldo dompet; a11y SheetDescription |

@@ -369,6 +369,16 @@ export const financeApi = {
         d
       )
       .then((r) => r.data),
+  recordAssetDividend: (
+    assetId: string,
+    d: { amount: number; transactionDate?: string; description?: string }
+  ) =>
+    api
+      .post<{ transactionId: string; amount: string; status: string }>(
+        `/finance/investments/assets/${assetId}/dividends`,
+        d
+      )
+      .then((r) => r.data),
   listAssetTrades: (assetId: string) =>
     api
       .get<{
@@ -517,4 +527,29 @@ export const WALLET_TYPES = [
   { value: "crypto", label: "Kripto" },
   { value: "investment", label: "Investasi" },
   { value: "other", label: "Lainnya" },
+] as const;
+
+/** Stored in fin_wallet.icon — mapped to Lucide on the wallets page. */
+export const WALLET_ICON_OPTIONS = [
+  { value: "wallet", label: "Dompet" },
+  { value: "banknote", label: "Uang tunai" },
+  { value: "landmark", label: "Bank" },
+  { value: "credit-card", label: "Kartu" },
+  { value: "smartphone", label: "E-wallet" },
+  { value: "bitcoin", label: "Kripto" },
+  { value: "trending-up", label: "Investasi" },
+  { value: "piggy-bank", label: "Tabungan" },
+  { value: "building-2", label: "Kantor" },
+  { value: "circle-dollar-sign", label: "Dollar" },
+] as const;
+
+export const WALLET_COLOR_PRESETS = [
+  "#16A34A",
+  "#2563EB",
+  "#7C3AED",
+  "#F59E0B",
+  "#0891B2",
+  "#DC2626",
+  "#6B7280",
+  "#DB2777",
 ] as const;

@@ -26,6 +26,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { invalidateFinanceCaches } from "@/lib/finance/utils";
+import { WalletIconBadge, resolveWalletAccent } from "@/lib/finance/wallet-icons";
 
 const baseNavCards = [
   { href: "/dashboard/finance/transactions", label: "Transaksi", icon: BookOpen, desc: "Catat pemasukan & pengeluaran" },
@@ -192,14 +193,23 @@ export default function FinancePage() {
         <div>
           <h3 className="mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">Saldo Dompet</h3>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {dashboard!.wallets.map((w) => (
-              <Card key={w.id} style={w.color ? { borderLeftColor: w.color, borderLeftWidth: 4 } : {}}>
-                <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground truncate">{w.name}</p>
-                  <p className="mt-1 text-lg font-bold">{formatIDR(w.balance)}</p>
-                </CardContent>
-              </Card>
-            ))}
+            {dashboard!.wallets.map((w) => {
+              const accent = resolveWalletAccent(w.color, w.type);
+              return (
+                <Card
+                  key={w.id}
+                  style={{ borderLeftColor: accent, borderLeftWidth: 4 }}
+                >
+                  <CardContent className="flex items-start gap-3 p-4">
+                    <WalletIconBadge icon={w.icon} type={w.type} color={w.color} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{w.name}</p>
+                      <p className="mt-1 text-lg font-bold">{formatIDR(w.balance)}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}
