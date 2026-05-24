@@ -78,7 +78,7 @@ Group `(marketing|auth|dashboard)` **tidak** muncul di URL — hanya mengorganis
 
 **401:** interceptor axios menghapus token dan redirect sekali (`authRedirectInFlight`) — hindari loop di halaman login.
 
-Diagram lengkap: [DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUMENTATION.md) §8.
+Diagram lengkap: [DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUMENTATION.md) bagian 8.
 
 ---
 
@@ -141,6 +141,14 @@ Checklist “lengkapi profil” / “≥5 FAQ” / kartu “AI status”: `lib/b
 | `/dashboard/billing` | `billing`, `usage`, `payment` | overview, kuota, QRIS |
 | `/dashboard/branches` | `lib/api/branches.ts` | cabang (Pro) |
 | `/dashboard/workflow` | `lib/api/workflow.ts` | aturan keyword — list, buat, **edit** (`PATCH`), **hapus** (`DELETE`); konfirmasi pakai `AlertDialog` |
+| `/dashboard/finance` | `lib/api/finance.ts` | dashboard keuangan — ringkasan saldo, alert pending |
+| `/dashboard/finance/transactions` | `lib/api/finance.ts` | list + filter + approve/reject transaksi |
+| `/dashboard/finance/wallets` | `lib/api/finance.ts` | CRUD dompet + saldo |
+| `/dashboard/finance/budget` | `lib/api/finance.ts` | anggaran per kategori + progress bar |
+| `/dashboard/finance/investment` | `lib/api/finance.ts` | portofolio aset, P&L, update harga manual |
+| `/dashboard/finance/recurring` | `lib/api/finance.ts` | transaksi berulang (auto/reminder) |
+| `/dashboard/finance/checklist` | `lib/api/finance.ts` | checklist harian + template |
+| `/dashboard/finance/reports` | `lib/api/finance.ts` | perbandingan bulanan + export CSV/PDF |
 | `/dashboard/admin/ai-activity` | `lib/api/ai-activity.ts` | log AI per tenant — **super_admin** only |
 | `/dashboard/admin` | `lib/api/admin.ts` | super admin only |
 
@@ -159,9 +167,15 @@ Nav: `components/dashboard/sidebar-nav.tsx` · Plan: `hooks/use-plan.ts`.
 
 Enforcement kuat di api-go (`entitlement` + kuota `usage`). Billing: checkout `pending` → QRIS → invoice `paid`.
 
-### Super admin (dev)
+### Super admin (operator platform)
 
-Register/login **`superadmin@gmail.com`** → role `super_admin` → `/dashboard/admin` (daftar tenant, impersonation).
+1. Akun internal via bootstrap API (`POST /api/v1/internal/platform-admin/bootstrap`) — lihat `api-go/README.md`.
+2. Login → default ke **Konsol Platform** (`/dashboard/admin`).
+3. **Pantau** tenant → banner kuning → menu tenant (Inbox, Workflow, Cabang, Finance, …) aktif.
+4. **Migrasi schema tenant** (tombol di admin) atau `encore exec ./cmd/migrate-tenant-schemas` di `api-go` setelah deploy modul baru (mis. Finance).
+5. Tanpa impersonate: Workflow/Cabang **tidak** di sidebar; URL tenant diarahkan ke admin dengan petunjuk `?needTenant=1`.
+
+> Pola lama `superadmin@gmail.com` saat register sudah tidak dipakai untuk akun tanpa toko.
 
 ---
 

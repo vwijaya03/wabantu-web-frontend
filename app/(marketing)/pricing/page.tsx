@@ -4,52 +4,54 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
+/**
+ * Selaras dengan api-go/billing/billing.go (PlanCatalog).
+ * Trial 7 hari saat register — tidak ditampilkan sebagai kartu harga di sini.
+ */
 const tiers = [
   {
     name: "Starter",
-    price: "Gratis",
-    period: "selama 14 hari",
-    description: "Cocok untuk warung & toko yang baru mau coba.",
-    cta: "Mulai Gratis",
+    price: "Rp 299.000",
+    period: "/ bulan",
+    description: "Inbox + AI untuk satu nomor WA — tanpa broadcast & workflow.",
+    cta: "Mulai",
     highlighted: false,
     features: [
-      "1 nomor WhatsApp",
-      "Sampai 500 percakapan / bulan",
-      "AI auto-reply dasar",
-      "Knowledge base manual",
-      "Inbox terpusat",
-    ],
-  },
-  {
-    name: "Growth",
-    price: "Rp 199rb",
-    period: "/ bulan",
-    description: "Buat UMKM yang sudah ramai dan butuh otomatisasi penuh.",
-    cta: "Pilih Growth",
-    highlighted: true,
-    features: [
-      "1 nomor WhatsApp",
-      "Sampai 5.000 percakapan / bulan",
-      "AI dengan knowledge base + PDF/Excel upload",
-      "Hand-off ke staff",
-      "Analitik dasar",
-      "Email support",
+      "1 nomor WhatsApp · 1 seat",
+      "1.500 percakapan AI / bulan",
+      "2 juta token AI / bulan (Haiku)",
+      "256 MB storage",
+      "Balasan AI dalam chat pelanggan (Meta: gratis di jendela 24 jam)",
     ],
   },
   {
     name: "Business",
-    price: "Rp 599rb",
+    price: "Rp 799.000",
     period: "/ bulan",
-    description: "Untuk bisnis multi-cabang atau brand dengan tim CS.",
-    cta: "Hubungi Sales",
+    description: "UMKM ramai: hybrid AI, broadcast, workflow, CRM.",
+    cta: "Pilih Business",
+    highlighted: true,
+    features: [
+      "2 nomor WhatsApp · 3 seat",
+      "6.000 percakapan AI / bulan · 8 juta token AI",
+      "Broadcast 500 kontak / bulan",
+      "500 eksekusi workflow / bulan · 2 GB storage",
+      "AI hybrid Haiku + Sonnet",
+    ],
+  },
+  {
+    name: "Pro",
+    price: "Rp 1.999.000",
+    period: "/ bulan",
+    description: "Multi cabang, banyak channel, kuota operasi tinggi.",
+    cta: "Pilih Pro",
     highlighted: false,
     features: [
-      "Sampai 3 nomor WhatsApp",
-      "Percakapan tak terbatas",
-      "Multi-staff dengan role",
-      "Analitik lengkap",
-      "API access (webhook)",
-      "Priority support",
+      "10 nomor WhatsApp · 10 seat",
+      "20.000 percakapan AI / bulan · 30 juta token AI",
+      "Broadcast 10.000 kontak / bulan",
+      "5.000 workflow / bulan · 10 GB storage",
+      "Prioritas Sonnet · multi cabang · API access",
     ],
   },
 ];
@@ -58,12 +60,14 @@ export default function PricingPage() {
   return (
     <div className="mx-auto max-w-6xl px-6 py-20">
       <div className="text-center">
-        <Badge variant="secondary" className="mb-4">Harga sederhana</Badge>
+        <Badge variant="secondary" className="mb-4">
+          Harga berlangganan
+        </Badge>
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Pilih paket yang sesuai
+          Paket dengan batas yang jelas
         </h1>
         <p className="mt-4 text-muted-foreground">
-          Bisa upgrade atau downgrade kapan saja. Tanpa kontrak panjang.
+          Trial 7 hari: semua fitur bisa dicoba, kuota kecil. Upgrade kapan saja lewat dashboard Billing.
         </p>
       </div>
 
@@ -77,11 +81,11 @@ export default function PricingPage() {
                 : "border-muted"
             }
           >
-            {tier.highlighted && (
+            {tier.highlighted ? (
               <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
                 Paling populer
               </Badge>
-            )}
+            ) : null}
             <CardContent className="space-y-6 p-8">
               <div>
                 <h3 className="text-xl font-semibold">{tier.name}</h3>
@@ -117,11 +121,24 @@ export default function PricingPage() {
         ))}
       </div>
 
-      <p className="mt-12 text-center text-sm text-muted-foreground">
-        Harga di atas belum termasuk biaya percakapan dari Meta. UMKM kecil
-        biasanya tidak akan tersentuh biaya tambahan karena Meta menggratiskan
-        1.000 percakapan service per bulan.
-      </p>
+      <div className="mt-12 space-y-3 rounded-lg border bg-muted/40 px-4 py-5 text-sm text-muted-foreground">
+        <p className="font-medium text-foreground">Biaya WhatsApp (Meta), terpisah dari langganan WABantu</p>
+        <ul className="list-inside list-disc space-y-1">
+          <li>
+            Balasan biasa &amp; AI auto-reply setelah pelanggan chat dulu (dalam jendela 24 jam):{" "}
+            <strong className="text-foreground">biasanya gratis</strong> dari Meta.
+          </li>
+          <li>
+            Broadcast promosi memakai <strong className="text-foreground">template marketing</strong> — Meta
+            menagih per pesan terkirim (Indonesia ~Rp 400–500/pesan, 2026). Kuota di atas = batas platform;
+            biaya Meta broadcast ditanggung tenant / kebijakan pass-through.
+          </li>
+          <li>
+            Model lama &quot;1.000 percakapan gratis semua jenis&quot; sudah tidak berlaku; yang umum adalah
+            layanan dalam jendela CS + aturan per kategori pesan. Detail: dokumentasi Meta WhatsApp Pricing.
+          </li>
+        </ul>
+      </div>
     </div>
   );
 }

@@ -13,15 +13,9 @@ import {
 import { PageHeader } from "@/components/dashboard/page-header";
 import { billingApi, type Invoice, type Plan } from "@/lib/api/billing";
 import { paymentApi } from "@/lib/api/payment";
-import { usageApi } from "@/lib/api/usage";
+import { UsageQuotaPanel } from "@/components/dashboard/usage-quota-panel";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
-
-function formatQuotaLimit(limit: number): string {
-  if (limit === 0) return "—";
-  if (limit < 0) return "∞";
-  return String(limit);
-}
 
 async function openQRISForInvoice(inv: Invoice, description: string) {
   const qris = await paymentApi.createQRIS({
@@ -40,10 +34,6 @@ export default function BillingPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["billing-overview"],
     queryFn: () => billingApi.overview(),
-  });
-  const { data: usage } = useQuery({
-    queryKey: ["usage-summary"],
-    queryFn: () => usageApi.summary(),
   });
   const sub = data?.subscription;
   const pending = data?.pendingCheckout ?? null;
@@ -85,11 +75,6 @@ export default function BillingPage() {
 
   const activePaidPlan =
     sub && !sub.isTrial ? sub.planCode : null;
-  const usagePlanLabel =
-    usage?.plan === "trial"
-      ? "Trial — semua fitur bisa dicoba, kuota ketat"
-      : usage?.plan ?? "—";
-
   return (
     <>
       <PageHeader
@@ -174,9 +159,30 @@ export default function BillingPage() {
                   <p className="text-xs text-muted-foreground">
                     Rp {plan.amountIdr.toLocaleString("id-ID")} / bulan
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {plan.limits.channels} channel · {plan.limits.seats} seat
-                  </p>
+                  <ul className="mt-2 space-y-0.5 text-[10px] text-muted-foreground">
+                    <li>
+                      {plan.limits.channels} channel · {plan.limits.seats} seat
+                    </li>
+                    <li>
+                      {plan.limits.aiConversations.toLocaleString("id-ID")} percakapan AI
+                    </li>
+                    <li>
+                      {(plan.limits.aiTokens / 1_000_000).toFixed(0)} jt token AI
+                    </li>
+                    <li>
+                      Broadcast:{" "}
+                      {plan.limits.broadcastContacts === 0
+                        ? "—"
+                        : plan.limits.broadcastContacts.toLocaleString("id-ID")}
+                      /bln
+                    </li>
+                    <li>
+                      {plan.limits.storageMb >= 1024
+                        ? `${(plan.limits.storageMb / 1024).toFixed(0)} GB`
+                        : `${plan.limits.storageMb} MB`}{" "}
+                      · {plan.limits.workflowExecs.toLocaleString("id-ID")} workflow
+                    </li>
+                  </ul>
                   {isPendingChoice ? (
                     <p className="mt-2 text-[10px] font-medium text-amber-700 dark:text-amber-400">
                       Menunggu pembayaran
@@ -192,25 +198,7 @@ export default function BillingPage() {
           </p>
         </CardContent>
       </Card>
-      {usage ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Pemakaian bulan ini ({usage.period})</CardTitle>
-            <CardDescription>Paket kuota: {usagePlanLabel}</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-2 sm:grid-cols-2">
-            {usage.quotas.map((q) => (
-              <div key={q.eventType} className="rounded border p-3 text-sm">
-                <p className="font-medium">{q.eventType}</p>
-                <p className="text-muted-foreground">
-                  {q.used} / {formatQuotaLimit(q.limit)} (sisa{" "}
-                  {q.limit === 0 ? "—" : q.remaining})
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      ) : null}
+      <UsageQuotaPanel />
       <Card>
         <CardHeader>
           <CardTitle>Riwayat invoice</CardTitle>

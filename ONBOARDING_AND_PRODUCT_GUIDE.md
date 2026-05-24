@@ -15,7 +15,7 @@
 4. [Alur bisnis besar (gambaran pelanggan)](#4-alur-bisnis-besar-gambaran-pelanggan)
 5. [Perjalanan pelanggan: dari daftar sampai AI jalan](#5-perjalanan-pelanggan-dari-daftar-sampai-ai-jalan)
 6. [Peta menu dashboard (semua fitur)](#6-peta-menu-dashboard-semua-fitur)
-7. [Alur detail per fitur](#7-alur-detail-per-fitur)
+7. [Alur detail per fitur](#7-alur-detail-per-fitur) — termasuk **7.13 Finance**
 8. [Peran pengguna (Owner, Staff, Admin internal)](#8-peran-pengguna-owner-staff-admin-internal)
 9. [Paket & batasan fitur](#9-paket--batasan-fitur) — detail angka: [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md)
 10. [Skrip demo untuk presentasi](#10-skrip-demo-untuk-presentasi)
@@ -148,6 +148,7 @@ Sidebar dashboard dibagi 4 kelompok. **Admin** hanya untuk tim internal WABantu,
 | **Broadcast** | `/dashboard/broadcast` | Kirim pesan massal *(trial: bisa coba, max ~20 kontak/bulan; Business+ lebih besar)* |
 | **Import CSV** | `/dashboard/import` | Upload CSV/Excel untuk isi katalog/FAQ massal |
 | **Analytics** | `/dashboard/analytics` | Statistik chat & performa AI |
+| **Finance** | `/dashboard/finance` | Keuangan bisnis — catat pemasukan/pengeluaran, saldo dompet, anggaran, investasi, laporan |
 | **Billing** | `/dashboard/billing` | Paket langganan & tagihan |
 | **Team** | `/dashboard/team` | Undang staff (hanya **Owner**) |
 
@@ -313,7 +314,7 @@ Customer mengisi (semakin lengkap, semakin bagus jawaban AI):
 
 **Bedanya dengan AI:** Workflow = aturan tetap (if keyword → text). AI = memahami konteks + FAQ.
 
-**Paket:** Trial bisa mencoba; Starter berbayar tidak punya menu aktif; Business / Pro penuh. Kuota trial ketat (lihat §9).
+**Paket:** Trial bisa mencoba; Starter berbayar tidak punya menu aktif; Business / Pro penuh. Kuota trial ketat (lihat [bagian 9](#9-paket--batasan-fitur)).
 
 ---
 
@@ -347,7 +348,7 @@ Customer mengisi (semakin lengkap, semakin bagus jawaban AI):
 - Buat kampanye: nama, isi pesan, daftar nomor (pisah baris/koma).
 - Kirim kampanye (antrian di backend).
 
-**Batasan:** Starter berbayar tidak bisa. **Trial** boleh coba (sekitar **20 kontak** per bulan). Business / Pro kuota lebih besar.  
+**Batasan:** Starter berbayar tidak bisa. **Trial** boleh coba (sekitar **20 kontak** per bulan). **Business: 500 kontak/bulan.** **Pro: 10.000 kontak/bulan** (bukan tanpa batas — lihat [bagian 9](#9-paket--batasan-fitur)).  
 **Penting untuk customer:** Harus patuh aturan WhatsApp (tidak spam, consent pelanggan).
 
 ---
@@ -380,7 +381,30 @@ Contoh metrik yang ditampilkan:
 
 ---
 
-### 7.13 Billing
+### 7.13 Finance
+
+**Tujuan:** Kelola keuangan bisnis secara sederhana.
+
+- **Dashboard Finance** (`/dashboard/finance`): ringkasan saldo semua dompet, total masuk/keluar bulan ini, alert transaksi menunggu persetujuan + checklist.
+- **Catat Transaksi:** tombol "+ Catat Transaksi" tersedia di semua halaman Finance — bottom sheet cepat (pilih jenis, isi jumlah, pilih dompet, kategori, tanggal).
+- **Dompet:** kas tunai, bank, e-wallet, kripto, investasi.
+- **Anggaran:** set batas pengeluaran per kategori — ada progress bar + peringatan saat hampir/melebihi.
+- **Investasi:** catat aset (saham, kripto, emas) + update harga manual → lihat P&L.
+- **Transaksi Berulang:** tagihan bulanan otomatis dicatat atau hanya pengingat.
+- **Checklist Harian:** pengingat tugas keuangan rutin (bayar listrik, setor kas, dll.).
+- **Laporan:** perbandingan 6 bulan + spending per kategori + export CSV/PDF.
+- **Approval:** owner bisa aktifkan workflow persetujuan — staff buat transaksi → owner approve/tolak.
+- **Kunci Periode:** setelah tutup buku, owner kunci bulan agar tidak ada yang bisa edit.
+
+**Siapa bisa akses apa:**
+- Staff: catat transaksi (→ persetujuan jika aktif), lihat dompet publik, checklist.
+- Owner: semua fitur + investasi + kunci periode + approval + laporan penuh.
+
+**Dokumen detail:** [docs/FINANCE_MODULE.md](./docs/FINANCE_MODULE.md).
+
+---
+
+### 7.14 Billing
 
 **Tujuan:** Kelola paket & trial.
 
@@ -420,7 +444,9 @@ Contoh metrik yang ditampilkan:
 
 - Tim WABantu login sebagai **platform admin**.
 - Lihat daftar semua bisnis (tenant) terdaftar.
-- **Pantau** inbox bisnis customer untuk support/debug (mode internal, dengan banner peringatan).
+- **Pantau** tenant dulu — baru menu operasional (Inbox, Workflow, Cabang, Finance, …) muncul.
+- Tombol **Migrasi schema tenant** setelah deploy fitur baru (mis. Finance) agar tabel `fin_*` ada di tenant lama.
+- Tanpa **Pantau**, menu Workflow/Cabang tidak ditampilkan; akses URL tenant diarahkan ke konsol dengan petunjuk.
 
 **Saat demo ke investor:** bisa disebut “ops dashboard” — terpisah dari produk UMKM.
 
@@ -455,11 +481,23 @@ Halaman marketing (`/pricing`) menampilkan 3 tier. Di sistem berlangganan: **Sta
 
 | Fitur | Starter | Business | Pro |
 |-------|---------|----------|-----|
-| Inbox + AI (Haiku utama) | ✓ | ✓ hybrid | ✓ hybrid prioritas |
-| Broadcast | ✗ | ✓ (500 kontak/bln) | ✓ (lebih besar) |
-| Workflow | ✗ | ✓ | ✓ |
+| Harga/bulan | Rp 299.000 | Rp 799.000 | Rp 1.999.000 |
+| Channel WA | 1 | 2 | **10** |
+| Seat staff | 1 | 3 | **10** |
+| Percakapan AI/bulan | 1.500 | 6.000 | **20.000** |
+| Token AI/bulan | 2 juta | 8 juta | **30 juta** |
+| Inbox + AI | Haiku saja | Hybrid Haiku/Sonnet | Hybrid **prioritas Sonnet** |
+| Broadcast | ✗ | **500 kontak/bulan** | **10.000 kontak/bulan** |
+| Workflow/bulan | 50 | 500 | **5.000** |
+| Storage | 256 MB | 2 GB | **10 GB** |
 | CRM / Contacts | ✗ | ✓ | ✓ |
-| Multi cabang | ✗ | ✗ | ✓ |
+| Multi cabang + API | ✗ | ✗ | ✓ |
+
+**Biaya Meta & AI (internal tim):** [api-go/docs/UNIT_ECONOMICS_AND_PRICING.md](../api-go/docs/UNIT_ECONOMICS_AND_PRICING.md) — balasan inbox dalam jendela 24 jam biasanya **gratis** di Meta; broadcast marketing **kena biaya per pesan** (~Rp 450/pesan ke Indonesia, 2026).
+
+**Skenario lengkap (CSW, follow-up, handoff, siapa bayar Meta vs WABantu):** [docs/META_WHATSAPP_MESSAGING_AND_BILLING.md](./docs/META_WHATSAPP_MESSAGING_AND_BILLING.md) · [api-go/docs/META_WHATSAPP_MESSAGING_AND_BILLING.md](../api-go/docs/META_WHATSAPP_MESSAGING_AND_BILLING.md).
+
+**Client lihat kuota di app:** Dashboard (owner) → kartu kuota; **Billing** → panel progress semua `event_type`.
 
 **Saat customer tanya “kenapa menu X kosong?”**  
 → Cek **Billing**: masih trial dengan kuota habis, atau paket Starter? Jelaskan upgrade / tunggu bulan depan, bukan “rusak”.
@@ -569,7 +607,7 @@ Ajarkan **Handoff** — itu fitur kunci untuk CS manusia.
 
 ## Perbarui dokumen ini
 
-Jika ada fitur baru di dashboard, update bagian **§6–§7** dan checklist **§5**.  
+Jika ada fitur baru di dashboard, update [bagian 6](#6-peta-menu-dashboard-semua-fitur)–[bagian 7](#7-alur-detail-per-fitur) dan checklist [bagian 5](#5-perjalanan-pelanggan-dari-daftar-sampai-ai-jalan).  
 Referensi teknis backend: `../api-go/APP_FLOW_GUIDE.md` · Developer: `../api-go/DEVELOPER_DOCUMENTATION.md`.
 
 *Terakhir disusun untuk stack web-frontend + api-go (dashboard Bearer auth, platform admin internal).*

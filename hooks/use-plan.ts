@@ -1,7 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/components/providers/auth-provider";
 import { billingApi } from "@/lib/api/billing";
+import { hasTenantDashboardAccess } from "@/lib/api/auth";
+import { tenantContextKey } from "@/lib/auth/tenant-context";
 
 /** Paid plans that include Business-tier features (not trial). */
 function isPaidBusinessTier(planCode: string) {
@@ -14,10 +17,14 @@ function isPaidProTier(planCode: string) {
 }
 
 export function usePlan() {
+  const { user } = useAuth();
+  const tenantReady = hasTenantDashboardAccess(user);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["billing-overview"],
+    queryKey: ["billing-overview", tenantContextKey(user)],
     queryFn: () => billingApi.overview(),
     staleTime: 60_000,
+    enabled: tenantReady,
   });
 
   const subscription = data?.subscription;
@@ -32,17 +39,20 @@ export function usePlan() {
     : data?.plans?.find((p) => p.code === planCode)?.limits;
 
   return {
-    isLoading,
+    isLoading: tenantReady && isLoading,
     isTrial,
     planCode: isTrial ? ("trial" as const) : planCode,
     subscription,
     limits,
     hasBroadcast:
-      hasAllTrialFeatures || isPaidBusinessTier(planCode) || isPaidProTier(planCode),
+      tenantReady &&
+      (hasAllTrialFeatures || isPaidBusinessTier(planCode) || isPaidProTier(planCode)),
     hasWorkflow:
-      hasAllTrialFeatures || isPaidBusinessTier(planCode) || isPaidProTier(planCode),
-    hasMultiBranch: hasAllTrialFeatures || isPaidProTier(planCode),
+      tenantReady &&
+      (hasAllTrialFeatures || isPaidBusinessTier(planCode) || isPaidProTier(planCode)),
+    hasMultiBranch: tenantReady && (hasAllTrialFeatures || isPaidProTier(planCode)),
     hasCRMLeads:
-      hasAllTrialFeatures || isPaidBusinessTier(planCode) || isPaidProTier(planCode),
+      tenantReady &&
+      (hasAllTrialFeatures || isPaidBusinessTier(planCode) || isPaidProTier(planCode)),
   };
 }

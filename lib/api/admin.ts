@@ -10,9 +10,21 @@ export interface AdminTenant {
   createdAt: string;
 }
 
+export interface MigrateTenantSchemasResult {
+  patched: number;
+  failed: number;
+  errors?: string[];
+}
+
 export const adminApi = {
   async listTenants(): Promise<{ tenants: AdminTenant[]; total: number }> {
     const res = await api.get("/admin/tenants");
+    return res.data;
+  },
+  async migrateTenantSchemas(): Promise<MigrateTenantSchemasResult> {
+    const res = await api.post<MigrateTenantSchemasResult>(
+      "/admin/migrate-tenant-schemas",
+    );
     return res.data;
   },
   async impersonate(tenantId: string): Promise<{ ok: boolean; tenant: AdminTenant }> {

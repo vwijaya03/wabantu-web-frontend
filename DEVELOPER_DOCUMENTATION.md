@@ -2,9 +2,9 @@
 
 > **Audience:** Full-stack developers who may be strong in backend (Go, Node, PHP) but **new to Next.js / React 19**.  
 > **Codebase:** `web-frontend/` — Next.js 16 App Router talking to **`api-go/`** only (`/api/v1`, port 4000).  
-> **Companion docs:** [README.md](./README.md) · [APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md) · [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md) · Backend: [../api-go/DEVELOPER_DOCUMENTATION.md](../api-go/DEVELOPER_DOCUMENTATION.md) · [../api-go/LIMITS_AND_QUOTAS.md](../api-go/LIMITS_AND_QUOTAS.md)
+> **Companion docs:** [README.md](./README.md) · [APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md) · [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md) · **Finance:** [docs/FINANCE_MODULE.md](./docs/FINANCE_MODULE.md) · Backend: [../api-go/DEVELOPER_DOCUMENTATION.md](../api-go/DEVELOPER_DOCUMENTATION.md) · [../api-go/LIMITS_AND_QUOTAS.md](../api-go/LIMITS_AND_QUOTAS.md) · [../api-go/docs/FINANCE_MODULE.md](../api-go/docs/FINANCE_MODULE.md)
 
-**Belum paham React/Next?** Langsung ke **[§19 React & Next.js untuk developer baru](#19-react--nextjs-guide-for-developers-new-to-this-stack)**.
+**Belum paham React/Next?** Langsung ke **[Bagian 19 — React & Next.js untuk developer baru](#19-react--nextjs-guide-for-developers-new-to-this-stack)**.
 
 Auth aktif: **Bearer JWT di `sessionStorage`** — selaras dengan [README.md](./README.md) dan [APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md).
 
@@ -539,7 +539,7 @@ api-go `AuthenticateHTTP` accepts this (see api-go auth docs).
 ## Role checks
 
 - **Owner-only** actions: buttons disabled or hidden via `user.role === "owner"` (from `useAuth()`).
-- **Super admin:** `/dashboard/admin` for `super_admin`.
+- **Super admin:** `/dashboard/admin` (konsol platform); tenant menu setelah **Pantau** (`hasTenantDashboardAccess`). `usePlan` tidak memanggil billing overview tanpa konteks tenant. `RequireTenantDashboard` + sidebar grup **Platform** vs menu tenant.
 
 **Note:** Real enforcement is on **api-go** (`tag:owner`); UI checks are UX only.
 
@@ -672,7 +672,7 @@ Frontend remains **Node process** (`next start`) or static+server — unlike api
 
 ## Read first
 
-1. This doc §19 (React/Next primer).
+1. Dokumen ini bagian 19 (React/Next primer).
 2. [APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md) — product flows.
 3. [../api-go/DEVELOPER_DOCUMENTATION.md](../api-go/DEVELOPER_DOCUMENTATION.md) — API contract.
 
@@ -766,7 +766,7 @@ flowchart LR
 
 # 17. Important Notes
 
-- **Source of truth for auth:** `lib/auth/session.ts` + `dashboard-auth-shell.tsx` (+ README §Auth).
+- **Source of truth for auth:** `lib/auth/session.ts` + `dashboard-auth-shell.tsx` (+ README bagian Auth).
 - **sessionStorage** means QA must test in same tab after login.
 - **SSE** requires api-go Redis + valid JWT; test Network → `inbox/stream` stays open.
 - **TypeScript** interfaces in `lib/api` may drift from api-go — fix types when API changes.

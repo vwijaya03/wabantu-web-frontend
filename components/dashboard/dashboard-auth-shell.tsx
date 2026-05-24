@@ -28,17 +28,19 @@ function applyPlatformRouteGuards(
   path: string,
   router: ReturnType<typeof useRouter>,
 ): boolean {
-  if (isPlatformOperatorHome(me) && !path.startsWith("/dashboard/admin")) {
-    router.replace("/dashboard/admin");
+  const isAdminConsole =
+    path === "/dashboard/admin" || path.startsWith("/dashboard/admin/");
+
+  if (isPlatformOperatorHome(me) && !isAdminConsole) {
+    router.replace("/dashboard/admin?needTenant=1");
     return true;
   }
   if (
     me.role === "super_admin" &&
     !hasTenantDashboardAccess(me) &&
-    path !== "/dashboard/admin" &&
-    !path.startsWith("/dashboard/admin")
+    !isAdminConsole
   ) {
-    router.replace("/dashboard/admin");
+    router.replace("/dashboard/admin?needTenant=1");
     return true;
   }
   return false;

@@ -19,6 +19,7 @@ import {
   Upload,
   Users,
   UsersRound,
+  Wallet,
   Workflow,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -27,7 +28,7 @@ import { INBOX_UNREAD_QUERY_KEY, inboxApi } from "@/lib/api/inbox";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
 import { cn } from "@/lib/utils";
 
-const groups: Array<{
+const tenantNavGroups: Array<{
   label: string;
   items: Array<{ href: string; label: string; icon: React.ElementType }>;
 }> = [
@@ -59,6 +60,7 @@ const groups: Array<{
       { href: "/dashboard/broadcast", label: "Broadcast", icon: Megaphone },
       { href: "/dashboard/import", label: "Import", icon: Upload },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+      { href: "/dashboard/finance", label: "Finance", icon: Wallet },
       { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
       { href: "/dashboard/team", label: "Team", icon: Users },
     ],
@@ -68,30 +70,31 @@ const groups: Array<{
     items: [
       { href: "/dashboard/branches", label: "Cabang", icon: Building2 },
       { href: "/dashboard/workflow", label: "Workflow", icon: Workflow },
-      { href: "/dashboard/admin", label: "Admin", icon: Shield },
-      {
-        href: "/dashboard/admin/ai-activity",
-        label: "AI Activity",
-        icon: Sparkles,
-      },
     ],
   },
 ];
 
-const superAdminOnlyHrefs = new Set([
-  "/dashboard/admin",
-  "/dashboard/admin/ai-activity",
-]);
-
-const platformOnlyGroups = ["Lanjutan"];
+const platformNavGroup = {
+  label: "Platform",
+  items: [
+    { href: "/dashboard/admin", label: "Admin", icon: Shield },
+    {
+      href: "/dashboard/admin/ai-activity",
+      label: "AI Activity",
+      icon: Sparkles,
+    },
+  ],
+};
 
 export function SidebarNav() {
   const pathname = usePathname();
   const { user } = useAuth();
   const tenantMode = hasTenantDashboardAccess(user);
-  const visibleGroups = tenantMode
-    ? groups
-    : groups.filter((g) => platformOnlyGroups.includes(g.label));
+  const isSuperAdmin = user?.role === "super_admin";
+  const visibleGroups = [
+    ...(tenantMode ? tenantNavGroups : []),
+    ...(isSuperAdmin ? [platformNavGroup] : []),
+  ];
 
   const tenantKey = tenantContextKey(user);
 
@@ -114,13 +117,7 @@ export function SidebarNav() {
             {g.label}
           </p>
           <ul className="space-y-1">
-            {g.items
-              .filter(
-                (item) =>
-                  !superAdminOnlyHrefs.has(item.href) ||
-                  user?.role === "super_admin",
-              )
-              .map((item) => {
+            {g.items.map((item) => {
               const active =
                 item.href === "/dashboard"
                   ? pathname === "/dashboard"

@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { UsageQuotaSummaryCard } from "@/components/dashboard/usage-quota-summary-card";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -167,6 +168,8 @@ export default function DashboardOverviewPage() {
           </Card>
         ))}
       </div>
+
+      {user?.role === "owner" ? <UsageQuotaSummaryCard /> : null}
 
       <Card>
         <CardHeader>

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,8 @@ import { toast } from "sonner";
 export default function AdminPage() {
   const { user, refresh } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const needTenantHint = searchParams.get("needTenant") === "1";
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["admin-tenants"],
@@ -31,6 +33,20 @@ export default function AdminPage() {
       resetTenantScopedQueries(qc);
       toast.success("Memantau tenant — mode internal aktif");
       router.replace("/dashboard");
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const migrateMut = useMutation({
+    mutationFn: () => adminApi.migrateTenantSchemas(),
+    onSuccess: (r) => {
+      if (r.failed > 0) {
+        toast.warning(
+          `Migrasi: ${r.patched} berhasil, ${r.failed} gagal. Cek log API.`,
+        );
+        return;
+      }
+      toast.success(`Migrasi schema selesai (${r.patched} tenant).`);
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -50,9 +66,28 @@ export default function AdminPage() {
         title="Konsol Platform"
         description="Internal WABantu — pantau tenant klien tanpa mendaftar toko."
       />
-      <div className="mb-4">
+      {needTenantHint && isPlatformOperatorHome(user) && (
+        <Card className="mb-4 border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Pilih tenant untuk melanjutkan</CardTitle>
+            <CardDescription>
+              Menu Workflow, Cabang, Inbox, dan fitur operasional lain membutuhkan
+              konteks tenant. Klik <strong>Pantau</strong> pada salah satu tenant di
+              bawah, lalu buka menu yang diinginkan.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+      <div className="mb-4 flex flex-wrap gap-2">
         <Button variant="outline" asChild>
           <Link href="/dashboard/admin/ai-activity">Log aktivitas AI →</Link>
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={migrateMut.isPending}
+          onClick={() => migrateMut.mutate()}
+        >
+          {migrateMut.isPending ? "Memigrasi schema…" : "Migrasi schema tenant"}
         </Button>
       </div>
       {isPlatformOperatorHome(user) && (

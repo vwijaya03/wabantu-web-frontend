@@ -4,7 +4,7 @@ Next.js 16 (App Router) + Tailwind v4 + shadcn/ui-style components.
 
 Backend aktif: **[`../api-go/`](../api-go/)** (Encore, port **4000**, prefix **`/api/v1`**). Stack Nest **`../api/`** (port 3001) **tidak** dipakai oleh frontend ini.
 
-Alur lengkap: **[APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md)** · Backend: **[../api-go/README.md](../api-go/README.md)** · Dokumentasi teknis: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUMENTATION.md)** · **Kuota & limit:** **[LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md)**.
+Alur lengkap: **[APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md)** · Backend: **[../api-go/README.md](../api-go/README.md)** · Dokumentasi teknis: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUMENTATION.md)** · **Kuota & limit:** **[LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md)** · **WhatsApp/Meta untuk client:** **[docs/META_WHATSAPP_MESSAGING_AND_BILLING.md](./docs/META_WHATSAPP_MESSAGING_AND_BILLING.md)**.
 
 **Tim onboarding / sales / pitching:** **[ONBOARDING_AND_PRODUCT_GUIDE.md](./ONBOARDING_AND_PRODUCT_GUIDE.md)** — penjelasan fitur untuk customer & trainee (bahasa awam, alur bisnis, skrip demo).
 
@@ -93,6 +93,15 @@ app/
         ├── import/              # Import CSV/XLSX
         ├── branches/            # Multi cabang (Pro)
         ├── workflow/            # Rule automation — CRUD + PATCH/DELETE (trial kuota / Business+)
+        ├── finance/             # Modul keuangan (wallet, transaksi, anggaran, investasi, recurring, checklist, laporan)
+        │   ├── page.tsx         # Dashboard Finance — ringkasan, alert, navigasi sub-menu
+        │   ├── transactions/    # Daftar + filter + approve/reject transaksi
+        │   ├── wallets/         # CRUD dompet + saldo
+        │   ├── budget/          # Anggaran per kategori + progress bar
+        │   ├── investment/      # Portofolio + P&L + update harga manual
+        │   ├── recurring/       # Transaksi berulang
+        │   ├── checklist/       # Checklist harian + template
+        │   └── reports/         # Export CSV/PDF + perbandingan bulanan
         └── admin/               # Super admin (+ ai-activity log)
 ```
 
@@ -111,7 +120,7 @@ layout, providers, and auth gate.
 - **`proxy.ts`** (Next.js 16, dulu `middleware.ts`): terdaftar untuk `/dashboard`, `/login`, `/register` tetapi **pass-through** — auth tidak dicek di edge.
 - Logout: `POST /auth/logout` + hapus token; redirect ke `/login` meskipun API gagal.
 
-Detail + penjelasan React/Next: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUMENTATION.md)** §8 dan §19.
+Detail + penjelasan React/Next: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUMENTATION.md)** bagian 8 dan bagian 19.
 
 ## Legal & support URLs
 
@@ -121,7 +130,9 @@ Detail + penjelasan React/Next: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUM
 
 **Dokumentasi batasan lengkap:** [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md) · api-go: [`../api-go/LIMITS_AND_QUOTAS.md`](../api-go/LIMITS_AND_QUOTAS.md).
 
-`hooks/use-plan.ts` memuat `GET /api/v1/billing/overview`:
+**Finance module:** komponen di `components/finance/`, API client di `lib/api/finance.ts`. Dokumentasi teknis: [`../api-go/docs/FINANCE_MODULE.md`](../api-go/docs/FINANCE_MODULE.md).
+
+`hooks/use-plan.ts` memuat `GET /api/v1/billing/overview` hanya jika user punya konteks tenant (`hasTenantDashboardAccess` — owner/staff atau super_admin setelah **Pantau**).
 
 | Kondisi | Broadcast & workflow | Multi cabang | CRM leads |
 |---------|----------------------|--------------|-----------|
@@ -130,7 +141,7 @@ Detail + penjelasan React/Next: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUM
 | `business` | ✅ | ❌ | ✅ |
 | `pro` | ✅ | ✅ | ✅ |
 
-Halaman tetap bisa diakses manual lewat URL; enforcement utama di API (`entitlement` + `usage.CheckQuota`).
+**Super admin (platform):** sidebar hanya grup **Platform** (Admin, AI Activity) sampai impersonate. Setelah **Pantau**, menu tenant + Finance aktif. Komponen: `require-tenant-dashboard.tsx`, `components/ui/sheet.tsx` (quick-add transaksi).
 
 ---
 

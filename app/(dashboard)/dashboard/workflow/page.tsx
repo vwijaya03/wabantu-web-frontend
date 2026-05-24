@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { QueryListState } from "@/components/dashboard/query-list-state";
 import {
   workflowApi,
@@ -156,18 +157,16 @@ export default function WorkflowPage() {
     setDraft(ruleToDraft(r));
   };
 
-  if (!hasWorkflow) {
-    return (
+  const saving = createMut.isPending || updateMut.isPending;
+
+  return (
+    <RequireTenantDashboard title="Workflow">
+    {!hasWorkflow ? (
       <PageHeader
         title="Workflow"
         description="Upgrade ke paket Business atau Pro untuk automasi kata kunci (rule-based)."
       />
-    );
-  }
-
-  const saving = createMut.isPending || updateMut.isPending;
-
-  return (
+    ) : (
     <>
       <PageHeader
         title="Workflow"
@@ -410,5 +409,7 @@ export default function WorkflowPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
+    )}
+    </RequireTenantDashboard>
   );
 }

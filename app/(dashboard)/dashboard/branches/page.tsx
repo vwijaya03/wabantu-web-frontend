@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { branchesApi } from "@/lib/api/branches";
 import { usePlan } from "@/hooks/use-plan";
 import { toApiError } from "@/lib/api/client";
@@ -22,8 +23,11 @@ export default function BranchesPage() {
     onSuccess: () => { toast.success("Cabang dibuat"); setName(""); setSlug(""); void qc.invalidateQueries({ queryKey: ["branches"] }); },
     onError: (e) => toast.error(toApiError(e).message),
   });
-  if (!hasMultiBranch) return <PageHeader title="Multi Cabang" description="Tersedia di paket Pro." />;
   return (
+    <RequireTenantDashboard title="Multi Cabang">
+  {!hasMultiBranch ? (
+    <PageHeader title="Multi Cabang" description="Tersedia di paket Pro." />
+  ) : (
     <>
       <PageHeader title="Multi Cabang" description="Nomor WA dan tim per cabang." />
       <div className="grid gap-6 lg:grid-cols-2">
@@ -43,5 +47,7 @@ export default function BranchesPage() {
         </Card>
       </div>
     </>
+  )}
+    </RequireTenantDashboard>
   );
 }

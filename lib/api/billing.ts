@@ -11,11 +11,21 @@ export interface Subscription {
   providerRef: string | null;
 }
 
+export interface PlanLimits {
+  channels: number;
+  seats: number;
+  aiConversations: number;
+  aiTokens: number;
+  broadcastContacts: number;
+  storageMb: number;
+  workflowExecs: number;
+}
+
 export interface Plan {
   code: "starter" | "business" | "pro";
   name: string;
   amountIdr: number;
-  limits: { channels: number; seats: number };
+  limits: PlanLimits;
 }
 
 export interface Invoice {
