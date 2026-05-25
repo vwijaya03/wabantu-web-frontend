@@ -25,8 +25,9 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
-import { invalidateFinanceCaches } from "@/lib/finance/utils";
+import { formatFinanceDate, invalidateFinanceCaches } from "@/lib/finance/utils";
 import { WalletIconBadge, resolveWalletAccent } from "@/lib/finance/wallet-icons";
+import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 
 const baseNavCards = [
   { href: "/dashboard/finance/transactions", label: "Transaksi", icon: BookOpen, desc: "Catat pemasukan & pengeluaran" },
@@ -44,6 +45,7 @@ export default function FinancePage() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const canManage = canPerformOwnerActions(user);
+  const reportingTimezone = useReportingTimezone();
 
   const navCards = baseNavCards.filter((n) => !("ownerOnly" in n && n.ownerOnly) || canManage);
 
@@ -251,7 +253,7 @@ export default function FinancePage() {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{txn.description ?? txnTypeLabel(txn.type, txnTypes)}</p>
                   <p className="text-xs text-muted-foreground">
-                    {txn.categoryName ?? "—"} · {txn.transactionDate} · {txn.walletName}
+                    {txn.categoryName ?? "—"} · {formatFinanceDate(txn.transactionDate, reportingTimezone)} · {txn.walletName}
                   </p>
                 </div>
                 <div className="ml-3 shrink-0 text-right">

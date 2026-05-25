@@ -241,10 +241,12 @@ export interface ChecklistItem {
 export interface ReportJob {
   id: string;
   type: string;
+  format?: "pdf" | "csv" | string;
   status: "queued" | "processing" | "done" | "failed";
   downloadUrl?: string;
   errorMsg?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface ApprovalSetting {
@@ -464,8 +466,9 @@ export const financeApi = {
 // ---- HELPERS ----
 
 export function formatIDR(value: string | number): string {
-  const num = typeof value === "string" ? parseFloat(value) : value;
+  let num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return "Rp 0";
+  if (Math.abs(num) < 0.5) num = 0;
   return "Rp " + num.toLocaleString("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
@@ -484,8 +487,9 @@ export function parseDecimalInput(raw: string): number {
 
 /** IDR for unit prices (avg buy, market price) — keeps fractional rupiah when present. */
 export function formatIDRPrice(value: string | number): string {
-  const num = typeof value === "string" ? parseFloat(value) : value;
+  let num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return "Rp 0";
+  if (Math.abs(num) < 1e-9) num = 0;
   const hasFrac = Math.abs(num - Math.round(num)) > 1e-9;
   return (
     "Rp " +

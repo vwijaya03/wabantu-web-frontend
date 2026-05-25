@@ -51,8 +51,14 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
-import { currentFinancePeriod, invalidateFinanceCaches } from "@/lib/finance/utils";
+import {
+  currentFinancePeriod,
+  financeMonthOptions,
+  formatFinanceDate,
+  invalidateFinanceCaches,
+} from "@/lib/finance/utils";
 import { AddTransactionSheet } from "@/components/finance/add-transaction-sheet";
+import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 
 const FILTER_ALL = "__all__";
 const pageSize = 30;
@@ -75,6 +81,9 @@ export default function TransactionsPage() {
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const searchParams = useSearchParams();
+  const reportingTimezone = useReportingTimezone();
+  const currentPeriod = currentFinancePeriod(reportingTimezone);
+  const monthOptions = financeMonthOptions(reportingTimezone);
   const [openAdd, setOpenAdd] = useState(false);
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
@@ -92,9 +101,10 @@ export default function TransactionsPage() {
   const [filters, setFilters] = useState({
     type: "",
     status: searchParams.get("status") ?? "",
-    period: currentFinancePeriod(),
+    period: "",
     page: 1,
   });
+  const effectivePeriod = filters.period || currentPeriod;
 
   const { data: txnTypesData } = useQuery({
     queryKey: ["finance-transaction-types", "filter"],
@@ -108,12 +118,12 @@ export default function TransactionsPage() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["finance-transactions", filters, search],
+    queryKey: ["finance-transactions", filters, effectivePeriod, search],
     queryFn: () =>
       financeApi.listTransactions({
         type: filters.type || undefined,
         status: filters.status || undefined,
-        period: filters.period || undefined,
+        period: effectivePeriod,
         search: search || undefined,
         page: filters.page,
         pageSize,
@@ -241,21 +251,16 @@ export default function TransactionsPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Select value={filters.period} onValueChange={(v) => setFilter("period", v)}>
+        <Select value={effectivePeriod} onValueChange={(v) => setFilter("period", v)}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Periode" />
           </SelectTrigger>
           <SelectContent>
-            {Array.from({ length: 24 }, (_, i) => {
-              const d = new Date();
-              d.setMonth(d.getMonth() - i);
-              const v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-              return (
-                <SelectItem key={v} value={v}>
-                  {d.toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
-                </SelectItem>
-              );
-            })}
+            {monthOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -325,6 +330,7 @@ export default function TransactionsPage() {
               txnTypes={txnTypes}
               isOwner={isOwner}
               isIncome={isIncome(txn.type)}
+              reportingTimezone={reportingTimezone}
               onEdit={() => openEdit(txn)}
               onDelete={() => setDeleteTxnId(txn.id)}
               onApprove={() => approveMut.mutate({ id: txn.id, action: "approve" })}
@@ -498,6 +504,7 @@ function TransactionRow({
   txnTypes,
   isOwner,
   isIncome,
+  reportingTimezone,
   onEdit,
   onDelete,
   onApprove,
@@ -507,6 +514,7 @@ function TransactionRow({
   txnTypes: TransactionType[];
   isOwner: boolean;
   isIncome: boolean;
+  reportingTimezone: string;
   onEdit: () => void;
   onDelete: () => void;
   onApprove: () => void;
@@ -542,7 +550,7 @@ function TransactionRow({
               {txn.assetPricePerUnit && <> @ {formatIDRPrice(txn.assetPricePerUnit)}</>}
             </p>
           )}
-          <p className="text-xs text-muted-foreground">{txn.transactionDate}</p>
+          <p className="text-xs text-muted-foreground">{formatFinanceDate(txn.transactionDate, reportingTimezone)}</p>
         </div>
         <div className="shrink-0 text-right">
           <p className={cn("font-semibold tabular-nums", txnTypeColor(txn.type, txnTypes))}>

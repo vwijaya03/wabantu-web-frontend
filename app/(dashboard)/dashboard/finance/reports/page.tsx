@@ -2,20 +2,38 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Download, FileText, PlusCircle } from "lucide-react";
+import { Download, FileText, PlusCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { financeApi, formatIDR, type MonthlyComparisonItem } from "@/lib/api/finance";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  currentFinancePeriod,
+  financeMonthOptions,
+  formatFinanceDateTime,
+  todayISOInTimezone,
+} from "@/lib/finance/utils";
+import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
+
+type ReportRange = "monthly" | "custom" | "all_time";
 
 export default function ReportsPage() {
   const qc = useQueryClient();
-  const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7));
+  const reportingTimezone = useReportingTimezone();
+  const currentPeriod = currentFinancePeriod(reportingTimezone);
+  const monthOptions = financeMonthOptions(reportingTimezone, 12);
+  const [period, setPeriod] = useState("");
+  const effectivePeriod = period || currentPeriod;
   const [format, setFormat] = useState<"pdf" | "csv">("csv");
+  const [reportRange, setReportRange] = useState<ReportRange>("monthly");
+  const [customStartDate, setCustomStartDate] = useState(() => `${currentPeriod}-01`);
+  const [customEndDate, setCustomEndDate] = useState(() => todayISOInTimezone(reportingTimezone));
 
   const { data: comparison } = useQuery({
     queryKey: ["finance-monthly-comparison"],
@@ -23,34 +41,39 @@ export default function ReportsPage() {
   });
 
   const { data: categorySpending } = useQuery({
-    queryKey: ["finance-category-spending", period],
-    queryFn: () => financeApi.categorySpending(period),
+    queryKey: ["finance-category-spending", effectivePeriod],
+    queryFn: () => financeApi.categorySpending(effectivePeriod),
   });
 
-  const { data: jobs } = useQuery({
+  const { data: jobs, refetch: refetchJobs, isFetching: isFetchingJobs } = useQuery({
     queryKey: ["finance-report-jobs"],
     queryFn: () => financeApi.listReportJobs(),
-    refetchInterval: (query) => {
-      const items = query.state.data?.items ?? [];
-      const active = items.some((j) => j.status === "queued" || j.status === "processing");
-      return active ? 5000 : false;
-    },
   });
 
   const exportMut = useMutation({
-    mutationFn: () =>
-      financeApi.createReportJob({
-        type: "monthly",
-        period,
-        startDate: "",
-        endDate: "",
+    mutationFn: () => {
+      if (reportRange === "custom") {
+        if (!customStartDate || !customEndDate) {
+          throw new Error("Tanggal mulai dan selesai wajib diisi");
+        }
+        if (customEndDate < customStartDate) {
+          throw new Error("Tanggal selesai tidak boleh sebelum tanggal mulai");
+        }
+      }
+
+      return financeApi.createReportJob({
+        type: reportRange,
+        period: reportRange === "monthly" ? effectivePeriod : "",
+        startDate: reportRange === "custom" ? customStartDate : "",
+        endDate: reportRange === "custom" ? customEndDate : "",
         format,
-      }),
+      });
+    },
     onSuccess: () => {
-      toast.success("Export dimulai — tunggu sebentar");
+      toast.success("Export dimulai — klik refresh untuk cek hasil");
       qc.invalidateQueries({ queryKey: ["finance-report-jobs"] });
     },
-    onError: () => toast.error("Gagal membuat export"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Gagal membuat export"),
   });
 
   const months = comparison?.items ?? [];
@@ -61,10 +84,78 @@ export default function ReportsPage() {
       <PageHeader
         title="Laporan Keuangan"
         description="Ringkasan dan export laporan bisnis."
-        actions={
-          <div className="flex gap-2">
+      />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Export Laporan</CardTitle>
+          <CardDescription>
+            Pilih bulanan, rentang custom, atau sepanjang waktu. CSV untuk olah data, PDF untuk laporan siap baca.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-5">
+          <div className="space-y-2">
+            <Label>Cakupan</Label>
+            <Select value={reportRange} onValueChange={(v) => setReportRange(v as ReportRange)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="monthly">Bulanan</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+                <SelectItem value="all_time">Sepanjang waktu</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {reportRange === "monthly" ? (
+            <div className="space-y-2">
+              <Label>Periode</Label>
+              <Select value={effectivePeriod} onValueChange={setPeriod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : reportRange === "custom" ? (
+            <>
+              <div className="space-y-2">
+                <Label>Tanggal Mulai</Label>
+                <Input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tanggal Selesai</Label>
+                <Input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2 md:col-span-2">
+              <Label>Periode</Label>
+              <div className="flex h-10 items-center rounded-md border px-3 text-sm text-muted-foreground">
+                Semua transaksi approved sejak awal penggunaan finance.
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label>Format</Label>
             <Select value={format} onValueChange={(v) => setFormat(v as "pdf" | "csv")}>
-              <SelectTrigger className="w-24">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -72,31 +163,32 @@ export default function ReportsPage() {
                 <SelectItem value="pdf">PDF</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={() => exportMut.mutate()} disabled={exportMut.isPending}>
+          </div>
+
+          <div className="flex items-end">
+            <Button className="w-full" onClick={() => exportMut.mutate()} disabled={exportMut.isPending}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              {exportMut.isPending ? "Memproses..." : "Export Laporan"}
+              {exportMut.isPending ? "Memproses..." : "Export"}
             </Button>
           </div>
-        }
-      />
+        </CardContent>
+      </Card>
 
-      <Select value={period} onValueChange={setPeriod}>
-        <SelectTrigger className="w-44">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {Array.from({ length: 12 }, (_, i) => {
-            const d = new Date();
-            d.setMonth(d.getMonth() - i);
-            const v = d.toISOString().slice(0, 7);
-            return (
-              <SelectItem key={v} value={v}>
-                {d.toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Insight bulan:</span>
+        <Select value={effectivePeriod} onValueChange={setPeriod}>
+          <SelectTrigger className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {monthOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
               </SelectItem>
-            );
-          })}
-        </SelectContent>
-      </Select>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* Monthly comparison bar chart */}
       {months.length > 0 && (
@@ -120,7 +212,7 @@ export default function ReportsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Pengeluaran per Kategori</CardTitle>
-            <CardDescription>{period}</CardDescription>
+            <CardDescription>{effectivePeriod}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -142,7 +234,18 @@ export default function ReportsPage() {
       {(jobs?.items?.length ?? 0) > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Riwayat Export</CardTitle>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="text-base">Riwayat Export</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetchJobs()}
+                disabled={isFetchingJobs}
+              >
+                <RefreshCw className={cn("mr-2 h-3.5 w-3.5", isFetchingJobs && "animate-spin")} />
+                Refresh
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-2">
             {jobs!.items.map((j) => (
@@ -150,26 +253,35 @@ export default function ReportsPage() {
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium capitalize">{j.type}</p>
+                    <p className="text-sm font-medium">{reportTypeLabel(j.type)}</p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(j.createdAt).toLocaleDateString("id-ID")}
+                      {formatFinanceDateTime(j.createdAt, reportingTimezone)}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="uppercase">
+                    {reportFormatLabel(j)}
+                  </Badge>
                   <Badge
                     variant={j.status === "done" ? "default" : j.status === "failed" ? "destructive" : "secondary"}
                   >
-                    {j.status === "queued" ? "Antri" : j.status === "done" ? "Selesai" : j.status === "failed" ? "Gagal" : j.status}
+                    {reportStatusLabel(j.status)}
                   </Badge>
-                  {j.status === "failed" && j.errorMsg && (
-                    <p className="max-w-[200px] truncate text-xs text-destructive" title={j.errorMsg}>
+                  {j.errorMsg && j.status !== "done" && (
+                    <p
+                      className={cn(
+                        "max-w-[260px] truncate text-xs",
+                        j.status === "failed" ? "text-destructive" : "text-muted-foreground",
+                      )}
+                      title={j.errorMsg}
+                    >
                       {j.errorMsg}
                     </p>
                   )}
                   {j.status === "done" && j.downloadUrl && (
                     <Button variant="outline" size="sm" asChild>
-                      <a href={j.downloadUrl} download>
+                      <a href={j.downloadUrl} download={reportFileName(j)}>
                         <Download className="h-3.5 w-3.5" />
                       </a>
                     </Button>
@@ -184,6 +296,56 @@ export default function ReportsPage() {
   );
 }
 
+function formatMonthLabel(period: string) {
+  const [year, month] = period.split("-").map(Number);
+  const d = new Date(Date.UTC(year || 1970, (month || 1) - 1, 1, 12));
+  return new Intl.DateTimeFormat("id-ID", {
+    month: "short",
+    year: "2-digit",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+function reportFileName(job: { downloadUrl?: string; type: string; id: string; createdAt?: string; format?: string }) {
+  const ext = reportFormatLabel(job).toLowerCase();
+  const date = job.createdAt?.slice(0, 10) || new Date().toISOString().slice(0, 10);
+  return `wabantu-${job.type}-${date}-${job.id.slice(0, 8)}.${ext}`;
+}
+
+function reportFormatLabel(job: { downloadUrl?: string; format?: string }) {
+  const format = job.format?.toLowerCase();
+  if (format === "pdf" || job.downloadUrl?.startsWith("data:application/pdf")) return "PDF";
+  return "CSV";
+}
+
+function reportStatusLabel(status: string) {
+  switch (status) {
+    case "queued":
+      return "Antri";
+    case "processing":
+      return "Diproses";
+    case "done":
+      return "Selesai";
+    case "failed":
+      return "Gagal";
+    default:
+      return status;
+  }
+}
+
+function reportTypeLabel(type: string) {
+  switch (type) {
+    case "monthly":
+      return "Bulanan";
+    case "custom":
+      return "Custom";
+    case "all_time":
+      return "Sepanjang waktu";
+    default:
+      return type;
+  }
+}
+
 function MonthBar({ item, maxExpense }: { item: MonthlyComparisonItem; maxExpense: number }) {
   const expPct = Math.min((parseFloat(item.expense) / maxExpense) * 100, 100);
   const incPct = Math.min((parseFloat(item.income) / maxExpense) * 100, 100);
@@ -193,7 +355,7 @@ function MonthBar({ item, maxExpense }: { item: MonthlyComparisonItem; maxExpens
     <div>
       <div className="mb-1 flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          {new Date(item.period + "-01").toLocaleDateString("id-ID", { month: "short", year: "2-digit" })}
+          {formatMonthLabel(item.period)}
         </p>
         <p className={cn("text-xs font-medium tabular-nums", net >= 0 ? "text-green-600" : "text-red-600")}>
           {net >= 0 ? "+" : ""}{formatIDR(item.net)}

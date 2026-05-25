@@ -33,7 +33,9 @@ import {
   NO_WALLET,
   filterCategoriesForGeneralLedger,
   filterGeneralLedgerTxnTypes,
+  todayISOInTimezone,
 } from "@/lib/finance/utils";
+import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 
 interface Props {
   open: boolean;
@@ -80,6 +82,7 @@ function buildCategoryGroups(categories: Category[]) {
 export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
+  const reportingTimezone = useReportingTimezone();
 
   const [form, setForm] = useState({
     type: "expense",
@@ -88,7 +91,7 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
     toWalletId: "",
     categoryId: "",
     description: "",
-    transactionDate: new Date().toISOString().slice(0, 10),
+    transactionDate: todayISOInTimezone(reportingTimezone),
   });
   const [loading, setLoading] = useState(false);
 
@@ -146,8 +149,16 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
       toWalletId: "",
       categoryId: "",
       description: "",
-      transactionDate: new Date().toISOString().slice(0, 10),
+      transactionDate: todayISOInTimezone(reportingTimezone),
     });
+  };
+
+  const handleOpenChange = (v: boolean) => {
+    if (v) {
+      setForm((f) => ({ ...f, transactionDate: todayISOInTimezone(reportingTimezone) }));
+    }
+    onOpenChange(v);
+    if (!v) reset();
   };
 
   const handleSubmit = async () => {
@@ -184,7 +195,7 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
   };
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) reset(); }}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Catat Transaksi</SheetTitle>

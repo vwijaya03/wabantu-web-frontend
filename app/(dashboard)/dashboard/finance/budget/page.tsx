@@ -16,7 +16,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
-import { currentFinancePeriod } from "@/lib/finance/utils";
+import { currentFinancePeriod, financeMonthOptions } from "@/lib/finance/utils";
+import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 
 const NO_CATEGORY = "__no_category__";
 
@@ -24,14 +25,18 @@ export default function BudgetPage() {
   const { user } = useAuth();
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
+  const reportingTimezone = useReportingTimezone();
+  const currentPeriod = currentFinancePeriod(reportingTimezone);
+  const monthOptions = financeMonthOptions(reportingTimezone, 12);
 
-  const [period, setPeriod] = useState(currentFinancePeriod);
+  const [period, setPeriod] = useState("");
+  const effectivePeriod = period || currentPeriod;
   const [openCreate, setOpenCreate] = useState(false);
   const [form, setForm] = useState({ categoryId: "", amount: "" });
 
   const { data: budgetData, isLoading } = useQuery({
-    queryKey: ["finance-budgets", period],
-    queryFn: () => financeApi.listBudgets(period),
+    queryKey: ["finance-budgets", effectivePeriod],
+    queryFn: () => financeApi.listBudgets(effectivePeriod),
   });
 
   const { data: categories } = useQuery({
@@ -40,15 +45,15 @@ export default function BudgetPage() {
   });
 
   const { data: summary } = useQuery({
-    queryKey: ["finance-budget-summary", period],
-    queryFn: () => financeApi.budgetSummary(period),
+    queryKey: ["finance-budget-summary", effectivePeriod],
+    queryFn: () => financeApi.budgetSummary(effectivePeriod),
   });
 
   const upsertMut = useMutation({
     mutationFn: () =>
       financeApi.upsertBudget({
         categoryId: form.categoryId,
-        period,
+        period: effectivePeriod,
         amount: parseFloat(form.amount),
       }),
     onSuccess: () => {
@@ -90,21 +95,16 @@ export default function BudgetPage() {
       />
 
       {/* Period selector */}
-      <Select value={period} onValueChange={setPeriod}>
+      <Select value={effectivePeriod} onValueChange={setPeriod}>
         <SelectTrigger className="w-44">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {Array.from({ length: 12 }, (_, i) => {
-            const d = new Date();
-            d.setMonth(d.getMonth() - i);
-            const v = d.toISOString().slice(0, 7);
-            return (
-              <SelectItem key={v} value={v}>
-                {d.toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
-              </SelectItem>
-            );
-          })}
+          {monthOptions.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 

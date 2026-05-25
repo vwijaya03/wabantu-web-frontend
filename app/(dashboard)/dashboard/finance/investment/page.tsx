@@ -49,7 +49,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
-import { invalidateFinanceCaches, NO_WALLET } from "@/lib/finance/utils";
+import { formatFinanceDate, invalidateFinanceCaches, NO_WALLET, todayISOInTimezone } from "@/lib/finance/utils";
+import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 import {
   CUSTOM_UNIT,
   defaultUnitNameForType,
@@ -60,11 +61,6 @@ import {
   unitSelectValue,
   type InvestmentAssetType,
 } from "@/lib/finance/investment-units";
-
-function todayISO() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 function defaultFeePercent(side: "buy" | "sell", assetType: string) {
   if (assetType === "stock") return side === "buy" ? "0.15" : "0.25";
@@ -128,6 +124,8 @@ export default function InvestmentPage() {
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const qc = useQueryClient();
+  const reportingTimezone = useReportingTimezone();
+  const todayISO = () => todayISOInTimezone(reportingTimezone);
   const pageSize = 10;
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
@@ -1072,7 +1070,7 @@ export default function InvestmentPage() {
                 <li key={t.id} className="flex items-start justify-between gap-2 rounded-md border p-3 text-sm">
                   <div className="min-w-0">
                     <p className="font-medium">{tradeTypeLabel(t.type)}</p>
-                    <p className="text-xs text-muted-foreground">{t.transactionDate}</p>
+                    <p className="text-xs text-muted-foreground">{formatFinanceDate(t.transactionDate, reportingTimezone)}</p>
                     {t.type !== "dividend" && (
                       <p className="text-xs mt-1">
                         {parseFloat(t.quantity).toLocaleString("id-ID")} {historyAsset?.unitName ?? "unit"}

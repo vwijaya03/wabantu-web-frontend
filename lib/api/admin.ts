@@ -44,7 +44,7 @@ export const adminApi = {
     confirmSchemaName: string,
   ): Promise<{ ok: boolean; tenantId: string; schemaName: string }> {
     const res = await api.delete(`/admin/tenant/${tenantId}`, {
-      data: { confirmSchemaName },
+      params: { confirmSchemaName },
     });
     return res.data;
   },

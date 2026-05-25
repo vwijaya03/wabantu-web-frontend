@@ -16,7 +16,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
-import { NO_WALLET } from "@/lib/finance/utils";
+import { formatFinanceDate, NO_WALLET, todayISOInTimezone } from "@/lib/finance/utils";
+import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 
 type RecurringFrequency = Recurring["frequency"];
 type RecurringMode = Recurring["mode"];
@@ -25,12 +26,14 @@ export default function RecurringPage() {
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const qc = useQueryClient();
+  const reportingTimezone = useReportingTimezone();
+  const todayISO = () => todayISOInTimezone(reportingTimezone);
   const [openCreate, setOpenCreate] = useState(false);
   const [form, setForm] = useState({
     title: "", type: "expense", amount: "", walletId: "",
     frequency: "monthly" as RecurringFrequency,
     mode: "auto" as RecurringMode,
-    startDate: new Date().toISOString().slice(0, 10),
+    startDate: todayISO(),
   });
 
   const { data, isLoading } = useQuery({
@@ -57,7 +60,7 @@ export default function RecurringPage() {
       toast.success("Transaksi berulang berhasil dibuat");
       qc.invalidateQueries({ queryKey: ["finance-recurring"] });
       setOpenCreate(false);
-      setForm({ title: "", type: "expense", amount: "", walletId: "", frequency: "monthly", mode: "auto", startDate: new Date().toISOString().slice(0, 10) });
+      setForm({ title: "", type: "expense", amount: "", walletId: "", frequency: "monthly", mode: "auto", startDate: todayISO() });
     },
     onError: (e: unknown) => toast.error(toApiError(e).message),
   });
@@ -83,7 +86,12 @@ export default function RecurringPage() {
         title="Transaksi Otomatis"
         description="Kelola tagihan dan transaksi berulang."
         actions={
-          <Button onClick={() => setOpenCreate(true)}>
+          <Button
+            onClick={() => {
+              setForm((f) => ({ ...f, startDate: todayISO() }));
+              setOpenCreate(true);
+            }}
+          >
             <PlusCircle className="mr-2 h-4 w-4" /> Tambah Berulang
           </Button>
         }
@@ -105,7 +113,7 @@ export default function RecurringPage() {
                 <div>
                   <p className="font-medium">{r.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {freqLabel(r)} · Berikutnya: {r.nextRunDate}
+                    {freqLabel(r)} · Berikutnya: {formatFinanceDate(r.nextRunDate, reportingTimezone)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {r.mode === "auto" ? "Otomatis dicatat" : "Hanya pengingat"} · {r.occurrencesDone}× sudah berjalan

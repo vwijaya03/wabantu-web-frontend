@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
+import { formatFinanceDate } from "@/lib/finance/utils";
+import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 
 type ChecklistFrequency = "daily" | "monthly";
 
@@ -22,6 +24,7 @@ export default function ChecklistPage() {
   const { user } = useAuth();
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
+  const reportingTimezone = useReportingTimezone();
   const [tab, setTab] = useState<"today" | "templates">("today");
   const [openCreate, setOpenCreate] = useState(false);
   const [form, setForm] = useState({
@@ -83,7 +86,7 @@ export default function ChecklistPage() {
     <>
       <PageHeader
         title="Checklist Keuangan"
-        description={today?.date ? `Tugas hari ini · ${today.date}` : "Tugas keuangan harian"}
+        description={today?.date ? `Tugas hari ini · ${formatFinanceDate(today.date, reportingTimezone)}` : "Tugas keuangan harian"}
         actions={
           isOwner ? (
             <Button onClick={() => setOpenCreate(true)}>
