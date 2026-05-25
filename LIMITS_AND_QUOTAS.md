@@ -36,6 +36,7 @@ Ringkasan untuk tim UI/UX & onboarding. **Detail lengkap & angka kuota:** [`../a
 - **Riwayat invoice** hanya setelah **lunas** (`paid`).
 - Banner kuning jika ada `pendingCheckout` di overview.
 - **Kuota bulan ini:** `/dashboard/billing` → `UsageQuotaPanel` (progress bar per `event_type`); ringkas di `/dashboard` (owner).
+- **AI Top-up:** owner bisa beli top-up 20rb/30rb untuk `ai_token` + `ai_conversation`; aktif setelah QRIS lunas, berlaku hanya bulan berjalan, dan tidak menambah broadcast/storage/seat.
 - **WhatsApp Meta (bukan kuota WABantu):** [docs/META_WHATSAPP_MESSAGING_AND_BILLING.md](./docs/META_WHATSAPP_MESSAGING_AND_BILLING.md) · api-go: [../api-go/docs/META_WHATSAPP_MESSAGING_AND_BILLING.md](../api-go/docs/META_WHATSAPP_MESSAGING_AND_BILLING.md).
 
 ## Rate limit (HTTP 429)

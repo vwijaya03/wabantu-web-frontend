@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { WabantuLogo } from "@/components/brand/wabantu-logo";
 import { InboxActivityBridge } from "@/components/dashboard/inbox-activity-bridge";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
@@ -49,6 +49,7 @@ function applyPlatformRouteGuards(
 export function DashboardAuthShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const initialNextPathRef = useRef(pathname || "/dashboard");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [ready, setReady] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
@@ -60,7 +61,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
     let cancelled = false;
 
     async function load() {
-      const nextPath = pathname || "/dashboard";
+      const nextPath = initialNextPathRef.current;
       if (!hasAccessToken()) {
         router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
         return;

@@ -444,6 +444,8 @@ Contoh metrik yang ditampilkan:
 
 - Tim WABantu login sebagai **platform admin**.
 - Lihat daftar semua bisnis (tenant) terdaftar.
+- Cari tenant, pindah halaman list, dan override paket jika ada kebutuhan support/sales internal.
+- Hapus tenant permanen hanya untuk kasus operasional yang jelas; UI meminta konfirmasi nama schema karena backend melakukan drop schema.
 - **Pantau** tenant dulu — baru menu operasional (Inbox, Workflow, Cabang, Finance, …) muncul.
 - Tombol **Migrasi schema tenant** setelah deploy fitur baru (mis. Finance) agar tabel `fin_*` ada di tenant lama.
 - Tanpa **Pantau**, menu Workflow/Cabang tidak ditampilkan; akses URL tenant diarahkan ke konsol dengan petunjuk.
@@ -476,6 +478,7 @@ Halaman marketing (`/pricing`) menampilkan 3 tier. Di sistem berlangganan: **Sta
 | **Bukan paket Starter berbayar** | Limit AI & broadcast **jauh lebih kecil** daripada setelah bayar |
 | Contoh limit trial | ~60 percakapan AI/bulan, ~100rb token AI, ~20 kontak broadcast, ~8 workflow |
 | Setelah trial | Pilih paket di Billing → bayar QRIS → kuota naik sesuai paket |
+| Kuota AI habis tapi belum mau upgrade | Owner bisa beli AI Top-up 20rb/30rb di Billing; berlaku bulan berjalan dan tidak menambah broadcast/storage/seat |
 
 ### Paket berbayar (ringkas)
 
@@ -497,7 +500,7 @@ Halaman marketing (`/pricing`) menampilkan 3 tier. Di sistem berlangganan: **Sta
 
 **Skenario lengkap (CSW, follow-up, handoff, siapa bayar Meta vs WABantu):** [docs/META_WHATSAPP_MESSAGING_AND_BILLING.md](./docs/META_WHATSAPP_MESSAGING_AND_BILLING.md) · [api-go/docs/META_WHATSAPP_MESSAGING_AND_BILLING.md](../api-go/docs/META_WHATSAPP_MESSAGING_AND_BILLING.md).
 
-**Client lihat kuota di app:** Dashboard (owner) → kartu kuota; **Billing** → panel progress semua `event_type`.
+**Client lihat kuota di app:** Dashboard (owner) → kartu kuota; **Billing** → panel progress semua `event_type` + opsi AI Top-up.
 
 **Saat customer tanya “kenapa menu X kosong?”**  
 → Cek **Billing**: masih trial dengan kuota habis, atau paket Starter? Jelaskan upgrade / tunggu bulan depan, bukan “rusak”.

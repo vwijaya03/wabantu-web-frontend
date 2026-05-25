@@ -407,9 +407,9 @@ export const inboxApi = {
 | `catalogImage.ts` | `/business/catalog/import-image/preview` (multipart `files`), `import-image-limits`, `import-image/draft/:jobId/commit` |
 | `catalog-image-limits.ts` | Konstanta validasi client (5 MB/file, 5 file, 20 MB total, JPG/PNG/WEBP); jangan set header `Content-Type` manual pada FormData (biarkan axios set boundary) |
 | `whatsapp.ts` | `/whatsapp/channels`, `/whatsapp/meta/connect/*` |
-| `billing.ts`, `usage.ts`, `payment.ts` | Billing & payments |
+| `billing.ts`, `usage.ts`, `payment.ts` | Billing, usage quotas, AI top-up, payments |
 | `workflow.ts` | `/workflows` — `list`, `create`, `update` (PATCH), `remove` (DELETE) |
-| `admin.ts` | `/admin/tenants`, impersonation |
+| `admin.ts` | `/admin/tenants` search/pagination, impersonation, plan override, tenant delete |
 | `ai-activity.ts` | `/admin/tenant/:id/ai-activity` (+ summary) — super_admin only |
 
 Types are **TypeScript interfaces** mirroring api-go JSON (camelCase).
@@ -539,7 +539,7 @@ api-go `AuthenticateHTTP` accepts this (see api-go auth docs).
 ## Role checks
 
 - **Owner-only** actions: buttons disabled or hidden via `user.role === "owner"` (from `useAuth()`).
-- **Super admin:** `/dashboard/admin` (konsol platform); tenant menu setelah **Pantau** (`hasTenantDashboardAccess`). `usePlan` tidak memanggil billing overview tanpa konteks tenant. `RequireTenantDashboard` + sidebar grup **Platform** vs menu tenant.
+- **Super admin:** `/dashboard/admin` (konsol platform); tenant menu setelah **Pantau** (`hasTenantDashboardAccess`). Konsol admin mendukung search/pagination tenant, override paket, dan delete tenant permanen dengan konfirmasi schema. `usePlan` tidak memanggil billing overview tanpa konteks tenant. `RequireTenantDashboard` + sidebar grup **Platform** vs menu tenant.
 
 **Note:** Real enforcement is on **api-go** (`tag:owner`); UI checks are UX only.
 

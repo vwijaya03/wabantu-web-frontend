@@ -1,12 +1,6 @@
 import { api } from "./client";
 import { DEFAULT_REPORTING_TIMEZONE_UI } from "@/lib/reporting-timezones";
 
-function normalizeReportingTimezone(raw: unknown): string {
-  if (typeof raw !== "string") return DEFAULT_REPORTING_TIMEZONE_UI;
-  const t = raw.trim();
-  return t.length > 0 ? t : DEFAULT_REPORTING_TIMEZONE_UI;
-}
-
 /** Accept camelCase or snake_case; prefer first non-empty (avoid `"" ?? snake` ignoring snake). */
 function pickReportingTimezonePayload(data: unknown): string {
   if (!data || typeof data !== "object") return DEFAULT_REPORTING_TIMEZONE_UI;

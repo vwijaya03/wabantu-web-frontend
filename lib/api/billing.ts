@@ -31,7 +31,7 @@ export interface Plan {
 export interface Invoice {
   id: string;
   invoiceNo: string;
-  planCode: "starter" | "basic" | "business" | "pro";
+  planCode: "starter" | "basic" | "business" | "pro" | string;
   planName: string;
   amountIdr: number;
   status: "pending" | "issued" | "paid" | "void";
@@ -39,15 +39,30 @@ export interface Invoice {
   paidAt: string | null;
 }
 
+export interface TopUpOption {
+  code: string;
+  name: string;
+  amountIdr: number;
+  aiTokens: number;
+  aiConversations: number;
+  validForPeriod: string;
+}
+
 export interface BillingOverview {
   subscription: Subscription;
   plans: Plan[];
+  topUpOptions: TopUpOption[];
   invoices: Invoice[];
   pendingCheckout?: Invoice | null;
 }
 
 export interface SelectPlanResult {
   subscription: Subscription;
+  pendingInvoice?: Invoice;
+}
+
+export interface CreateTopUpResult {
+  topUp: TopUpOption;
   pendingInvoice?: Invoice;
 }
 
@@ -64,6 +79,10 @@ export const billingApi = {
       ...input,
       provider: input.provider ?? "midtrans",
     });
+    return res.data;
+  },
+  async createTopUp(code: string): Promise<CreateTopUpResult> {
+    const res = await api.post<CreateTopUpResult>("/billing/top-up", { code });
     return res.data;
   },
 };

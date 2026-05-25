@@ -287,7 +287,7 @@ export default function WalletsPage() {
       toast.error(e?.response?.data?.message ?? "Gagal menghapus dompet"),
   });
 
-  const wallets = data?.wallets ?? [];
+  const wallets = useMemo(() => data?.wallets ?? [], [data?.wallets]);
   const filteredWallets = useMemo(() => {
     const s = search.trim().toLowerCase();
     if (!s) return wallets;

@@ -29,6 +29,7 @@ import { invalidateFinanceCaches } from "@/lib/finance/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
+import { toApiError } from "@/lib/api/client";
 
 const FLOWS: { value: TransactionType["flow"]; label: string }[] = [
   { value: "income", label: "Pemasukan (saldo +)" },
@@ -86,7 +87,7 @@ export default function TransactionTypesPage() {
       setOpenCreate(false);
       setForm(emptyForm);
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Gagal menyimpan"),
+    onError: (e: unknown) => toast.error(toApiError(e).message),
   });
 
   const updateMut = useMutation({
@@ -103,7 +104,7 @@ export default function TransactionTypesPage() {
       invalidate();
       setEditItem(null);
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Gagal memperbarui"),
+    onError: (e: unknown) => toast.error(toApiError(e).message),
   });
 
   const toggleActiveMut = useMutation({
@@ -113,7 +114,7 @@ export default function TransactionTypesPage() {
       toast.success("Status diperbarui");
       invalidate();
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Gagal memperbarui"),
+    onError: (e: unknown) => toast.error(toApiError(e).message),
   });
 
   const deleteMut = useMutation({
@@ -122,7 +123,7 @@ export default function TransactionTypesPage() {
       toast.success("Jenis transaksi dihapus");
       invalidate();
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Gagal menghapus"),
+    onError: (e: unknown) => toast.error(toApiError(e).message),
   });
 
   const items = data?.items ?? [];

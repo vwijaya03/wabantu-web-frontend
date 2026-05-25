@@ -70,6 +70,20 @@ export interface Transaction {
   createdAt: string;
 }
 
+export type CreateTransactionInput = {
+  type: string;
+  amount: number;
+  currency?: string;
+  walletId: string;
+  toWalletId?: string;
+  categoryId?: string;
+  description?: string;
+  notes?: string;
+  referenceNo?: string;
+  transactionDate: string;
+  tags?: string[];
+};
+
 export interface DashboardSummary {
   period: string;
   totalIncome: string;
@@ -178,6 +192,23 @@ export interface Recurring {
   nextRunDate: string;
   isActive: boolean;
 }
+
+export type CreateRecurringInput = {
+  title: string;
+  type: string;
+  amount: number;
+  walletId: string;
+  toWalletId?: string;
+  categoryId?: string;
+  description?: string;
+  frequency: Recurring["frequency"];
+  frequencyValue?: number;
+  dayOfMonth?: number;
+  mode: Recurring["mode"];
+  startDate: string;
+  endDate?: string;
+  maxOccurrences?: number;
+};
 
 export interface ChecklistTemplate {
   id: string;
@@ -292,7 +323,7 @@ export const financeApi = {
   // Transactions
   listTransactions: (params?: Record<string, string | number>) =>
     api.get<{ items: Transaction[]; total: number }>("/finance/transactions", { params }).then((r) => r.data),
-  createTransaction: (d: Partial<Transaction>) =>
+  createTransaction: (d: CreateTransactionInput) =>
     api.post<Transaction>("/finance/transactions", d).then((r) => r.data),
   updateTransaction: (id: string, d: Partial<Transaction>) =>
     api.put<Transaction>(`/finance/transactions/${id}`, d).then((r) => r.data),
@@ -402,7 +433,7 @@ export const financeApi = {
 
   // Recurring
   listRecurring: () => api.get<{ items: Recurring[] }>("/finance/recurring").then((r) => r.data),
-  createRecurring: (d: Partial<Recurring>) =>
+  createRecurring: (d: CreateRecurringInput) =>
     api.post<Recurring>("/finance/recurring", d).then((r) => r.data),
   deleteRecurring: (id: string) =>
     api.delete<{ ok: boolean }>(`/finance/recurring/${id}`).then((r) => r.data),

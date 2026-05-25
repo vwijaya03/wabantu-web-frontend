@@ -73,6 +73,27 @@ export default function BillingPage() {
     onError: (e) => toast.error(toApiError(e).message),
   });
 
+  const topUpMut = useMutation({
+    mutationFn: async (code: string) => {
+      const result = await billingApi.createTopUp(code);
+      const inv = result.pendingInvoice;
+      if (!inv) {
+        throw new Error("Checkout top-up gagal — invoice tidak dibuat");
+      }
+      await openQRISForInvoice(inv, result.topUp.name);
+      return result;
+    },
+    onSuccess: () => {
+      toast.message("Menunggu pembayaran top-up", {
+        description:
+          "Kuota tambahan aktif setelah QRIS lunas dan berlaku untuk bulan berjalan.",
+      });
+      void qc.invalidateQueries({ queryKey: ["billing-overview"] });
+      void qc.invalidateQueries({ queryKey: ["usage-summary"] });
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
   const activePaidPlan =
     sub && !sub.isTrial ? sub.planCode : null;
   return (
@@ -199,6 +220,41 @@ export default function BillingPage() {
         </CardContent>
       </Card>
       <UsageQuotaPanel />
+      <Card>
+        <CardHeader>
+          <CardTitle>Top-up kuota AI</CardTitle>
+          <CardDescription>
+            Untuk tenant yang kuota AI-nya habis sebelum akhir bulan. Top-up tidak
+            mengganti paket dan hanya berlaku pada periode bulan berjalan.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-2 sm:grid-cols-2">
+          {(data?.topUpOptions ?? []).map((opt) => (
+            <button
+              key={opt.code}
+              type="button"
+              disabled={topUpMut.isPending || !!pending}
+              onClick={() => topUpMut.mutate(opt.code)}
+              className="rounded-lg border p-4 text-left transition hover:border-primary disabled:opacity-60"
+            >
+              <p className="font-semibold">{opt.name}</p>
+              <p className="text-sm text-muted-foreground">
+                Rp {opt.amountIdr.toLocaleString("id-ID")}
+              </p>
+              <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                <li>+{opt.aiTokens.toLocaleString("id-ID")} token AI</li>
+                <li>+{opt.aiConversations.toLocaleString("id-ID")} percakapan AI</li>
+                <li>Berlaku periode {opt.validForPeriod}</li>
+              </ul>
+            </button>
+          ))}
+          {pending ? (
+            <p className="sm:col-span-2 text-xs text-muted-foreground">
+              Selesaikan invoice pending terlebih dahulu sebelum membuat top-up baru.
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>Riwayat invoice</CardTitle>

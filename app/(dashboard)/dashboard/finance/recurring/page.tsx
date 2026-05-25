@@ -15,7 +15,11 @@ import { financeApi, formatIDR, type Recurring } from "@/lib/api/finance";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
+import { toApiError } from "@/lib/api/client";
 import { NO_WALLET } from "@/lib/finance/utils";
+
+type RecurringFrequency = Recurring["frequency"];
+type RecurringMode = Recurring["mode"];
 
 export default function RecurringPage() {
   const { user } = useAuth();
@@ -24,7 +28,9 @@ export default function RecurringPage() {
   const [openCreate, setOpenCreate] = useState(false);
   const [form, setForm] = useState({
     title: "", type: "expense", amount: "", walletId: "",
-    frequency: "monthly", mode: "auto", startDate: new Date().toISOString().slice(0, 10),
+    frequency: "monthly" as RecurringFrequency,
+    mode: "auto" as RecurringMode,
+    startDate: new Date().toISOString().slice(0, 10),
   });
 
   const { data, isLoading } = useQuery({
@@ -46,14 +52,14 @@ export default function RecurringPage() {
   );
 
   const createMut = useMutation({
-    mutationFn: () => financeApi.createRecurring({ ...form, amount: parseFloat(form.amount) as any } as any),
+    mutationFn: () => financeApi.createRecurring({ ...form, amount: parseFloat(form.amount) }),
     onSuccess: () => {
       toast.success("Transaksi berulang berhasil dibuat");
       qc.invalidateQueries({ queryKey: ["finance-recurring"] });
       setOpenCreate(false);
       setForm({ title: "", type: "expense", amount: "", walletId: "", frequency: "monthly", mode: "auto", startDate: new Date().toISOString().slice(0, 10) });
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Gagal menyimpan"),
+    onError: (e: unknown) => toast.error(toApiError(e).message),
   });
 
   const deleteMut = useMutation({
@@ -177,7 +183,12 @@ export default function RecurringPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Frekuensi</Label>
-                <Select value={form.frequency} onValueChange={(v) => setForm((f) => ({ ...f, frequency: v }))}>
+                <Select
+                  value={form.frequency}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, frequency: v as RecurringFrequency }))
+                  }
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="daily">Harian</SelectItem>
@@ -189,7 +200,10 @@ export default function RecurringPage() {
               </div>
               <div>
                 <Label>Mode</Label>
-                <Select value={form.mode} onValueChange={(v) => setForm((f) => ({ ...f, mode: v }))}>
+                <Select
+                  value={form.mode}
+                  onValueChange={(v) => setForm((f) => ({ ...f, mode: v as RecurringMode }))}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="auto">Otomatis dicatat</SelectItem>

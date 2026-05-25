@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
-  type UIEvent,
 } from "react";
 import {
   useInfiniteQuery,
@@ -61,10 +60,12 @@ export default function InboxPage() {
   const [unreadOnly, setUnreadOnly] = useState(false);
 
   useEffect(() => {
-    setSelectedId(null);
-    setSearch("");
-    setDraft("");
-    setUnreadOnly(false);
+    queueMicrotask(() => {
+      setSelectedId(null);
+      setSearch("");
+      setDraft("");
+      setUnreadOnly(false);
+    });
   }, [tenantKey]);
 
   const unreadSummaryQuery = useQuery({
@@ -102,12 +103,16 @@ export default function InboxPage() {
 
   const [isEditingContactName, setIsEditingContactName] = useState(false);
   const [contactNameDraft, setContactNameDraft] = useState("");
+  const selectedContactId = selectedConversation?.contact.id;
+  const selectedContactDisplayName = selectedConversation?.contact.displayName ?? "";
 
   useEffect(() => {
-    if (!selectedConversation) return;
-    setContactNameDraft(selectedConversation.contact.displayName ?? "");
-    setIsEditingContactName(false);
-  }, [selectedConversation?.contact.id]);
+    if (!selectedContactId) return;
+    queueMicrotask(() => {
+      setContactNameDraft(selectedContactDisplayName);
+      setIsEditingContactName(false);
+    });
+  }, [selectedContactId, selectedContactDisplayName]);
 
   const updateContactMut = useMutation({
     mutationFn: ({ contactId, displayName }: { contactId: string; displayName: string }) =>
@@ -158,9 +163,12 @@ export default function InboxPage() {
   const lastScrolledConvoRef = useRef<string | null>(null);
   const lastScrollLoadOlderAt = useRef(0);
   const messagesInfiniteRef = useRef(messagesInfinite);
-  messagesInfiniteRef.current = messagesInfinite;
   /** Drop piled-up message pages when leaving a thread so returning starts at MSG_PAGE again. */
   const prevMessagesConvoIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    messagesInfiniteRef.current = messagesInfinite;
+  }, [messagesInfinite]);
 
   useEffect(() => {
     lastScrolledConvoRef.current = null;
@@ -174,7 +182,7 @@ export default function InboxPage() {
         queryKey: ["inbox-messages", tenantKey, prev, MSG_PAGE],
       });
     }
-  }, [selectedId, qc]);
+  }, [selectedId, qc, tenantKey]);
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -220,7 +228,7 @@ export default function InboxPage() {
   );
 
   const onMessagesScroll = useCallback(
-    (_e: UIEvent<HTMLDivElement>) => {
+    () => {
       tryLoadOlderMessages("scroll");
     },
     [tryLoadOlderMessages],
@@ -244,14 +252,17 @@ export default function InboxPage() {
     const root = convoScrollRef.current;
     const target = convoSentinelRef.current;
     if (!root || !target) return;
+    const hasNextPage = convosInfinite.hasNextPage;
+    const isFetchingNextPage = convosInfinite.isFetchingNextPage;
+    const fetchNextPage = convosInfinite.fetchNextPage;
     const obs = new IntersectionObserver(
       (entries) => {
         if (
           entries[0]?.isIntersecting &&
-          convosInfinite.hasNextPage &&
-          !convosInfinite.isFetchingNextPage
+          hasNextPage &&
+          !isFetchingNextPage
         ) {
-          void convosInfinite.fetchNextPage();
+          void fetchNextPage();
         }
       },
       { root, rootMargin: "80px", threshold: 0 },
@@ -259,9 +270,7 @@ export default function InboxPage() {
     obs.observe(target);
     return () => obs.disconnect();
   }, [
-    convosInfinite.fetchNextPage,
-    convosInfinite.hasNextPage,
-    convosInfinite.isFetchingNextPage,
+    convosInfinite,
     conversations.length,
   ]);
 
@@ -300,7 +309,7 @@ export default function InboxPage() {
       void qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
       void qc.invalidateQueries({ queryKey: INBOX_UNREAD_QUERY_KEY });
     });
-  }, [qc, selectedId, selectedConversation?.id, selectedConversation?.unreadCount]);
+  }, [qc, selectedId, selectedConversation, selectedConversation?.id, selectedConversation?.unreadCount]);
 
   const onSelectConversation = (c: InboxConversation) => {
     setSelectedId(c.id);

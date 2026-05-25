@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link2 } from "lucide-react";
@@ -54,12 +54,12 @@ export default function WhatsappOnboardingPage() {
   });
   const connectedCount = channels.filter((c) => c.status === "connected").length;
   const {
+    control,
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<OauthFormValues>({ resolver: zodResolver(oauthSchema) });
-  const hasFacebookAccount = watch("hasFacebookAccount");
+  const hasFacebookAccount = useWatch({ control, name: "hasFacebookAccount" });
   const isProcessingOauthRef = useRef(false);
 
   const initOauthMut = useMutation({

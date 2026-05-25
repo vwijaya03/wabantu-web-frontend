@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Wallet,
@@ -61,6 +62,32 @@ export function resolveWalletIconComponent(icon?: string, type?: string): Lucide
   return WALLET_ICON_MAP[key] ?? WALLET_ICON_MAP[defaultWalletIconKey(type ?? "cash")] ?? Wallet;
 }
 
+function renderWalletIcon(icon: string | undefined, type: string, className: string, style: CSSProperties): ReactNode {
+  const key = icon || defaultWalletIconKey(type);
+  switch (key) {
+    case "banknote":
+      return <Banknote className={className} style={style} />;
+    case "landmark":
+      return <Landmark className={className} style={style} />;
+    case "credit-card":
+      return <CreditCard className={className} style={style} />;
+    case "smartphone":
+      return <Smartphone className={className} style={style} />;
+    case "bitcoin":
+      return <Bitcoin className={className} style={style} />;
+    case "trending-up":
+      return <TrendingUp className={className} style={style} />;
+    case "piggy-bank":
+      return <PiggyBank className={className} style={style} />;
+    case "building-2":
+      return <Building2 className={className} style={style} />;
+    case "circle-dollar-sign":
+      return <CircleDollarSign className={className} style={style} />;
+    default:
+      return <Wallet className={className} style={style} />;
+  }
+}
+
 type WalletIconBadgeProps = {
   icon?: string;
   type: string;
@@ -71,7 +98,6 @@ type WalletIconBadgeProps = {
 
 export function WalletIconBadge({ icon, type, color, size = "md", className }: WalletIconBadgeProps) {
   const accent = resolveWalletAccent(color, type);
-  const IconComp = resolveWalletIconComponent(icon, type);
   const box = size === "sm" ? "h-8 w-8 rounded-md" : "h-10 w-10 rounded-lg";
   const iconSize = size === "sm" ? "h-4 w-4" : "h-5 w-5";
 
@@ -80,7 +106,7 @@ export function WalletIconBadge({ icon, type, color, size = "md", className }: W
       className={cn("flex shrink-0 items-center justify-center", box, className)}
       style={{ backgroundColor: `${accent}22` }}
     >
-      <IconComp className={iconSize} style={{ color: accent }} />
+      {renderWalletIcon(icon, type, iconSize, { color: accent })}
     </div>
   );
 }

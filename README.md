@@ -141,7 +141,9 @@ Detail + penjelasan React/Next: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUM
 | `business` | ✅ | ❌ | ✅ |
 | `pro` | ✅ | ✅ | ✅ |
 
-**Super admin (platform):** sidebar hanya grup **Platform** (Admin, AI Activity) sampai impersonate. Setelah **Pantau**, menu tenant + Finance aktif. Komponen: `require-tenant-dashboard.tsx`, `components/ui/sheet.tsx` (quick-add transaksi).
+**Super admin (platform):** sidebar hanya grup **Platform** (Admin, AI Activity) sampai impersonate. Setelah **Pantau**, menu tenant + Finance aktif. Halaman Admin mendukung search/pagination tenant, override paket, dan delete tenant permanen (drop schema dengan konfirmasi). Komponen: `require-tenant-dashboard.tsx`, `components/ui/sheet.tsx` (quick-add transaksi).
+
+**Top-up kuota AI:** halaman Billing menyediakan AI Top-up 20rb/30rb. Kuota tambahan berlaku bulan berjalan dan dihitung dari `api-go/docs/UNIT_ECONOMICS_AND_PRICING.md`.
 
 ---
 

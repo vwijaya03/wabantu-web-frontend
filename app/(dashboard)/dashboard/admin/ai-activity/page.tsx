@@ -45,7 +45,7 @@ export default function AdminAIActivityPage() {
     enabled: user?.role === "super_admin",
   });
 
-  const tenants = tenantsData?.tenants ?? [];
+  const tenants = useMemo(() => tenantsData?.tenants ?? [], [tenantsData?.tenants]);
   const effectiveTenantId =
     tenantId || user?.tenant?.id || tenants[0]?.id || "";
 

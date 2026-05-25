@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Circle, SkipForward, PlusCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -16,13 +16,20 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 
+type ChecklistFrequency = "daily" | "monthly";
+
 export default function ChecklistPage() {
   const { user } = useAuth();
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const [tab, setTab] = useState<"today" | "templates">("today");
   const [openCreate, setOpenCreate] = useState(false);
-  const [form, setForm] = useState({ title: "", frequency: "daily", amountHint: "", dayOfMonth: "1" });
+  const [form, setForm] = useState({
+    title: "",
+    frequency: "daily" as ChecklistFrequency,
+    amountHint: "",
+    dayOfMonth: "1",
+  });
 
   const { data: today, isLoading } = useQuery({
     queryKey: ["finance-checklist-today"],
@@ -48,10 +55,10 @@ export default function ChecklistPage() {
     mutationFn: () =>
       financeApi.createChecklistTemplate({
         title: form.title,
-        frequency: form.frequency as any,
+        frequency: form.frequency,
         amountHint: form.amountHint ? parseFloat(form.amountHint) : undefined,
         dayOfMonth: form.frequency === "monthly" ? parseInt(form.dayOfMonth, 10) : undefined,
-      } as any),
+      }),
     onSuccess: () => {
       toast.success("Template ditambahkan");
       qc.invalidateQueries({ queryKey: ["finance-checklist-templates"] });
@@ -221,7 +228,9 @@ export default function ChecklistPage() {
               <select
                 className="w-full rounded-md border px-3 py-2 text-sm"
                 value={form.frequency}
-                onChange={(e) => setForm((f) => ({ ...f, frequency: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, frequency: e.target.value as ChecklistFrequency }))
+                }
               >
                 <option value="daily">Setiap hari</option>
                 <option value="monthly">Bulanan (tanggal tertentu)</option>

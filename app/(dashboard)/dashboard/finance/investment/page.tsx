@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   PlusCircle,
@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
+import { toApiError } from "@/lib/api/client";
 import { invalidateFinanceCaches, NO_WALLET } from "@/lib/finance/utils";
 import {
   CUSTOM_UNIT,
@@ -213,7 +214,7 @@ export default function InvestmentPage() {
       setOpenAddAsset(false);
       resetAssetForm();
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Gagal menyimpan"),
+    onError: (e: unknown) => toast.error(toApiError(e).message),
   });
 
   const updateAssetMut = useMutation({
@@ -232,7 +233,7 @@ export default function InvestmentPage() {
       setEditAssetId(null);
       resetAssetForm();
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Gagal memperbarui"),
+    onError: (e: unknown) => toast.error(toApiError(e).message),
   });
 
   const deleteAssetMut = useMutation({
@@ -242,7 +243,7 @@ export default function InvestmentPage() {
       invalidateFinanceCaches(qc);
       setDeleteAssetId(null);
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Gagal menghapus"),
+    onError: (e: unknown) => toast.error(toApiError(e).message),
   });
 
   const updatePriceMut = useMutation({
@@ -278,7 +279,7 @@ export default function InvestmentPage() {
       setRecordDividendAssetId(null);
       setDividendForm({ amount: "", transactionDate: todayISO(), description: "" });
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Gagal mencatat dividen"),
+    onError: (e: unknown) => toast.error(toApiError(e).message),
   });
 
   const recordTradeMut = useMutation({
@@ -319,7 +320,7 @@ export default function InvestmentPage() {
       setRecordTrade(null);
       resetTradeForm(side, assetType);
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Gagal mencatat transaksi"),
+    onError: (e: unknown) => toast.error(toApiError(e).message),
   });
 
   const deleteTradeMut = useMutation({
@@ -333,7 +334,7 @@ export default function InvestmentPage() {
       }
       setDeleteTradeTarget(null);
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Gagal menghapus transaksi"),
+    onError: (e: unknown) => toast.error(toApiError(e).message),
   });
 
   const assets = portfolio?.assets ?? [];
@@ -343,13 +344,6 @@ export default function InvestmentPage() {
   const activeWallets = wallets?.wallets.filter((w) => w.isActive) ?? [];
   const preferredWallets = activeWallets.filter((w) => w.type === "investment" || w.type === "other");
   const walletOptions = preferredWallets.length > 0 ? preferredWallets : activeWallets;
-
-  useEffect(() => {
-    if (!openAddAsset || walletOptions.length === 0) return;
-    if (!walletOptions.some((w) => w.id === assetForm.walletId)) {
-      setAssetForm((f) => ({ ...f, walletId: walletOptions[0].id }));
-    }
-  }, [openAddAsset, walletOptions, assetForm.walletId]);
 
   const pnlColor = (val: string | undefined) => {
     if (!val) return "";
@@ -421,6 +415,16 @@ export default function InvestmentPage() {
     setCustomUnitMode(!findUnitPreset(a.type, a.unitName));
   };
 
+  const openCreateAssetDialog = () => {
+    setAssetForm((f) => ({
+      ...f,
+      walletId: walletOptions.some((w) => w.id === f.walletId)
+        ? f.walletId
+        : walletOptions[0]?.id ?? "",
+    }));
+    setOpenAddAsset(true);
+  };
+
   const onAssetTypeChange = (type: string) => {
     const preset = defaultUnitPreset(type as InvestmentAssetType);
     setAssetForm((f) => ({ ...f, type, unitName: preset.value }));
@@ -451,7 +455,7 @@ export default function InvestmentPage() {
         description="Pantau portofolio investasi Anda."
         actions={
           canManage ? (
-            <Button onClick={() => setOpenAddAsset(true)}>
+            <Button onClick={openCreateAssetDialog}>
               <PlusCircle className="mr-2 h-4 w-4" /> Tambah Aset
             </Button>
           ) : null

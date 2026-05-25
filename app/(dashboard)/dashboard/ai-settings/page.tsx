@@ -2,7 +2,7 @@
 
 import { useLayoutEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -108,7 +108,6 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
     control,
     handleSubmit,
     setValue,
-    watch,
     reset,
     formState: { errors },
   } = useForm<FormValues>({
@@ -129,8 +128,8 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
     onError: (err) => toast.error(toApiError(err).message),
   });
 
-  const aiEnabled = watch("aiEnabled");
-  const tone = watch("tone");
+  const aiEnabled = useWatch({ control, name: "aiEnabled" });
+  const tone = useWatch({ control, name: "tone" });
 
   return (
     <>

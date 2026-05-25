@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Sheet,
@@ -28,6 +28,7 @@ import { financeApi, type TransactionType } from "@/lib/api/finance";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
+import { toApiError } from "@/lib/api/client";
 import {
   NO_WALLET,
   filterCategoriesForGeneralLedger,
@@ -120,7 +121,10 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
   const quickTypes = txnTypes.filter((t) => t.showInQuick);
   const moreTypes = txnTypes.filter((t) => !t.showInQuick);
 
-  const selectedType: TransactionType | undefined = txnTypes.find((t) => t.code === form.type);
+  const effectiveTypeCode = txnTypes.some((t) => t.code === form.type)
+    ? form.type
+    : quickTypes[0]?.code ?? txnTypes[0]?.code ?? "expense";
+  const selectedType: TransactionType | undefined = txnTypes.find((t) => t.code === effectiveTypeCode);
   const isTransfer = selectedType?.flow === "transfer";
 
   const wallets = walletsData?.wallets ?? [];
@@ -133,14 +137,6 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
     () => buildCategoryGroups(filteredCategories),
     [filteredCategories],
   );
-
-  useEffect(() => {
-    if (!open || txnTypes.length === 0) return;
-    if (!txnTypes.some((t) => t.code === form.type)) {
-      const next = quickTypes[0]?.code ?? txnTypes[0]?.code ?? "expense";
-      setForm((f) => ({ ...f, type: next, categoryId: "", toWalletId: "" }));
-    }
-  }, [open, txnTypes, quickTypes, form.type]);
 
   const reset = () => {
     setForm({
@@ -166,8 +162,8 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
     setLoading(true);
     try {
       await financeApi.createTransaction({
-        type: form.type,
-        amount: parseFloat(form.amount) as any,
+        type: effectiveTypeCode,
+        amount: parseFloat(form.amount),
         walletId: form.walletId,
         toWalletId: isTransfer ? form.toWalletId : undefined,
         categoryId: form.categoryId || undefined,
@@ -175,13 +171,13 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
         transactionDate: form.transactionDate,
         currency: "IDR",
         tags: [],
-      } as any);
+      });
       toast.success("Transaksi berhasil dicatat");
       onCreated?.();
       onOpenChange(false);
       reset();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Gagal menyimpan transaksi");
+    } catch (e: unknown) {
+      toast.error(toApiError(e).message);
     } finally {
       setLoading(false);
     }
@@ -204,7 +200,7 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
                 key={t.code}
                 type="button"
                 className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                  form.type === t.code
+                  effectiveTypeCode === t.code
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
@@ -215,7 +211,7 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
             ))}
             {moreTypes.length > 0 && (
               <Select
-                value={moreTypes.some((t) => t.code === form.type) ? form.type : MORE_TYPE_NONE}
+                value={moreTypes.some((t) => t.code === effectiveTypeCode) ? effectiveTypeCode : MORE_TYPE_NONE}
                 onValueChange={(v) => {
                   if (v === MORE_TYPE_NONE) return;
                   setForm((f) => ({ ...f, type: v, categoryId: "" }));

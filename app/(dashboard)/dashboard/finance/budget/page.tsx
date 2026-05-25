@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PlusCircle, Trash2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
+import { toApiError } from "@/lib/api/client";
 import { currentFinancePeriod } from "@/lib/finance/utils";
 
 const NO_CATEGORY = "__no_category__";
@@ -58,7 +58,7 @@ export default function BudgetPage() {
       setOpenCreate(false);
       setForm({ categoryId: "", amount: "" });
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Gagal menyimpan"),
+    onError: (e: unknown) => toast.error(toApiError(e).message ?? "Gagal menyimpan"),
   });
 
   const deleteMut = useMutation({

@@ -10,6 +10,12 @@ export interface AdminTenant {
   createdAt: string;
 }
 
+export interface AdminTenantListParams {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 export interface MigrateTenantSchemasResult {
   patched: number;
   failed: number;
@@ -17,8 +23,29 @@ export interface MigrateTenantSchemasResult {
 }
 
 export const adminApi = {
-  async listTenants(): Promise<{ tenants: AdminTenant[]; total: number }> {
-    const res = await api.get("/admin/tenants");
+  async listTenants(params?: AdminTenantListParams): Promise<{
+    tenants: AdminTenant[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
+    const res = await api.get("/admin/tenants", { params });
+    return res.data;
+  },
+  async updateTenantPlan(
+    tenantId: string,
+    planCode: "starter" | "business" | "pro",
+  ): Promise<{ tenant: AdminTenant }> {
+    const res = await api.put(`/admin/tenant/${tenantId}/plan`, { planCode });
+    return res.data;
+  },
+  async deleteTenant(
+    tenantId: string,
+    confirmSchemaName: string,
+  ): Promise<{ ok: boolean; tenantId: string; schemaName: string }> {
+    const res = await api.delete(`/admin/tenant/${tenantId}`, {
+      data: { confirmSchemaName },
+    });
     return res.data;
   },
   async migrateTenantSchemas(): Promise<MigrateTenantSchemasResult> {

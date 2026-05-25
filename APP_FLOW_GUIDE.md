@@ -138,7 +138,7 @@ Checklist “lengkapi profil” / “≥5 FAQ” / kartu “AI status”: `lib/b
 | `/dashboard/orders` | `lib/api/orders.ts` | pesanan |
 | `/dashboard/broadcast` | `lib/api/broadcast.ts` | broadcast (Business+ berbayar; trial dengan kuota) |
 | `/dashboard/import` | `lib/api/import.ts` | preview → `jobId` → execute |
-| `/dashboard/billing` | `billing`, `usage`, `payment` | overview, kuota, QRIS |
+| `/dashboard/billing` | `billing`, `usage`, `payment` | overview, kuota, QRIS, AI top-up 20rb/30rb |
 | `/dashboard/branches` | `lib/api/branches.ts` | cabang (Pro) |
 | `/dashboard/workflow` | `lib/api/workflow.ts` | aturan keyword — list, buat, **edit** (`PATCH`), **hapus** (`DELETE`); konfirmasi pakai `AlertDialog` |
 | `/dashboard/finance` | `lib/api/finance.ts` | dashboard keuangan — ringkasan saldo, alert pending |
@@ -150,7 +150,7 @@ Checklist “lengkapi profil” / “≥5 FAQ” / kartu “AI status”: `lib/b
 | `/dashboard/finance/checklist` | `lib/api/finance.ts` | checklist harian + template |
 | `/dashboard/finance/reports` | `lib/api/finance.ts` | perbandingan bulanan + export CSV/PDF |
 | `/dashboard/admin/ai-activity` | `lib/api/ai-activity.ts` | log AI per tenant — **super_admin** only |
-| `/dashboard/admin` | `lib/api/admin.ts` | super admin only |
+| `/dashboard/admin` | `lib/api/admin.ts` | super admin only — search/pagination tenant, pantau, override paket, delete tenant |
 
 Nav: `components/dashboard/sidebar-nav.tsx` · Plan: `hooks/use-plan.ts`.
 
@@ -172,8 +172,9 @@ Enforcement kuat di api-go (`entitlement` + kuota `usage`). Billing: checkout `p
 1. Akun internal via bootstrap API (`POST /api/v1/internal/platform-admin/bootstrap`) — lihat `api-go/README.md`.
 2. Login → default ke **Konsol Platform** (`/dashboard/admin`).
 3. **Pantau** tenant → banner kuning → menu tenant (Inbox, Workflow, Cabang, Finance, …) aktif.
-4. **Migrasi schema tenant** (tombol di admin) atau `encore exec ./cmd/migrate-tenant-schemas` di `api-go` setelah deploy modul baru (mis. Finance).
-5. Tanpa impersonate: Workflow/Cabang **tidak** di sidebar; URL tenant diarahkan ke admin dengan petunjuk `?needTenant=1`.
+4. Admin bisa search/pagination daftar tenant, override paket (`starter`/`business`/`pro`), atau delete tenant permanen dengan konfirmasi nama schema.
+5. **Migrasi schema tenant** (tombol di admin) atau `encore exec ./cmd/migrate-tenant-schemas` di `api-go` setelah deploy modul baru (mis. Finance).
+6. Tanpa impersonate: Workflow/Cabang **tidak** di sidebar; URL tenant diarahkan ke admin dengan petunjuk `?needTenant=1`.
 
 > Pola lama `superadmin@gmail.com` saat register sudah tidak dipakai untuk akun tanpa toko.
 
