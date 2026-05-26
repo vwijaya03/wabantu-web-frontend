@@ -414,6 +414,7 @@ export const inboxApi = {
 | `billing.ts`, `usage.ts`, `payment.ts` | Billing, usage quotas, AI top-up, payments |
 | `workflow.ts` | `/workflows` — `list`, `create`, `update` (PATCH), `remove` (DELETE) |
 | `orders.ts` | `/orders?q=&status=&page=&pageSize=` + POST/PATCH/DELETE + `/order-status/batch` + `/order-delete/batch`; create/edit order memakai modal step-by-step, contact opsional, pagination selector contact/katalog, multi-item dari katalog, status/pengiriman, dan total harga+ongkir |
+| `import.ts` | `/import/preview`, `/import/execute`; halaman import menyediakan template CSV/XLSX produk dan execute selalu mengirim `targetTable=business_catalog_item` untuk import katalog produk |
 | `admin.ts` | `/admin/tenants` search/pagination, impersonation, plan override, tenant delete |
 | `ai-activity.ts` | `/admin/tenant/:id/ai-activity` (+ summary) — super_admin only |
 

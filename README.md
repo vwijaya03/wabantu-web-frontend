@@ -92,7 +92,7 @@ app/
         │   └── import-image/    # Import screenshot → AI vision → konfirmasi → simpan
         ├── orders/              # Pesanan — modal step-by-step, pagination contact/katalog, status/pengiriman, total harga+ongkir, batch status/delete
         ├── broadcast/           # Broadcast WA (trial kuota / Business+)
-        ├── import/              # Import CSV/XLSX
+        ├── import/              # Import CSV/XLSX produk — template CSV/XLSX + preview mapping ke katalog
         ├── branches/            # Multi cabang (Pro)
         ├── workflow/            # Rule automation — CRUD + PATCH/DELETE (trial kuota / Business+)
         ├── finance/             # Modul keuangan (wallet, transaksi, anggaran, investasi, recurring, checklist, laporan)

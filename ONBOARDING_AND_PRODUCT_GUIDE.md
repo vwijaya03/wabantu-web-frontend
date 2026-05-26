@@ -363,11 +363,12 @@ Customer mengisi (semakin lengkap, semakin bagus jawaban AI):
 
 **Tujuan:** Isi banyak data sekaligus tanpa ketik satu per satu.
 
-1. Upload file.
-2. **Preview** — sistem tunjukkan kolom & contoh baris.
-3. **Execute** — data masuk (mis. ke katalog).
+1. Download sample **CSV** atau **XLSX** di halaman Import agar format kolomnya jelas.
+2. Upload file produk/katalog.
+3. **Preview** — sistem tunjukkan kolom, contoh baris, dan mapping otomatis ke kolom katalog.
+4. **Execute** — data masuk ke Katalog Produk.
 
-**Use case:** Migrasi dari Excel price list lama.
+**Use case:** Migrasi dari Excel price list lama. Sistem tahu ini import produk karena halaman mengirim target `business_catalog_item`.
 
 ---
 

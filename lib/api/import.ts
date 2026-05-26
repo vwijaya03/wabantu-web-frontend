@@ -2,11 +2,14 @@ import { api } from "./client";
 
 export interface ImportPreview {
   jobId: string;
+  targetTable?: string;
   headers: string[];
   sampleRows: string[][];
   suggestions: Record<string, string>;
   totalRows: number;
 }
+
+export type ImportTargetTable = "business_catalog_item";
 
 export interface ImportResult {
   jobId: string;
@@ -17,9 +20,10 @@ export interface ImportResult {
 }
 
 export const importApi = {
-  async preview(file: File): Promise<ImportPreview> {
+  async preview(file: File, targetTable: ImportTargetTable = "business_catalog_item"): Promise<ImportPreview> {
     const form = new FormData();
     form.append("file", file);
+    form.append("targetTable", targetTable);
     const res = await api.post("/import/preview", form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
@@ -27,7 +31,7 @@ export const importApi = {
   },
   async execute(input: {
     jobId: string;
-    targetTable?: string;
+    targetTable?: ImportTargetTable;
     columnMapping: Record<string, string>;
   }): Promise<{ jobId: string }> {
     const res = await api.post("/import/execute", input);
