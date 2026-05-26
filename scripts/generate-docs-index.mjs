@@ -8,9 +8,14 @@ const webRoot = path.resolve(path.dirname(__filename), "..");
 const repoRoot = path.resolve(webRoot, "..");
 const outputDir = path.join(webRoot, "public", "generated-docs");
 const outputFile = path.join(outputDir, "docs-index.json");
+const apiGoDocsRootInput = process.env.API_GO_DOCS_ROOT?.trim() || "../api-go";
+const apiGoDocsRoot = process.env.API_GO_DOCS_ROOT
+  ? path.resolve(webRoot, apiGoDocsRootInput)
+  : path.join(repoRoot, "api-go");
+const apiGoDocsIndexUrl = process.env.API_GO_DOCS_INDEX_URL?.trim();
 
 const sources = [
-  { key: "api-go", root: path.join(repoRoot, "api-go") },
+  { key: "api-go", root: apiGoDocsRoot },
   { key: "web-frontend", root: webRoot },
 ];
 
@@ -141,16 +146,22 @@ function createDoc(source, filePath) {
   };
 }
 
-const docs = sources.flatMap((source) => {
+const localDocs = sources.flatMap((source) => {
   if (!statExists(source.root)) return [];
   return listMarkdownFiles(source.root).map((filePath) => createDoc(source, filePath));
 });
+const remoteDocs = await fetchRemoteDocs(apiGoDocsIndexUrl);
+const docs = mergeDocs(localDocs, remoteDocs);
 
 const payload = {
   generatedAt: new Date(Math.max(...docs.map((d) => d.modifiedAtMs), 0)).toISOString(),
-  sources: sources.map((s) => s.key),
+  sources: Array.from(new Set(docs.map((d) => d.source))).sort(),
   totalDocs: docs.length,
   docs: docs.map(({ modifiedAtMs: _, ...doc }) => doc),
+  config: {
+    apiGoDocsRoot: apiGoDocsRootInput,
+    apiGoDocsIndexUrl: apiGoDocsIndexUrl || "",
+  },
 };
 
 mkdirSync(outputDir, { recursive: true });
@@ -164,4 +175,35 @@ function statExists(target) {
   } catch {
     return false;
   }
+}
+
+async function fetchRemoteDocs(url) {
+  if (!url) return [];
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn(`Skipping remote docs index ${url}: HTTP ${res.status}`);
+      return [];
+    }
+    const payload = await res.json();
+    if (!Array.isArray(payload.docs)) return [];
+    return payload.docs.map((doc) => ({
+      ...doc,
+      id: doc.id || createHash("sha1").update(`${doc.source}:${doc.path}`).digest("hex").slice(0, 12),
+      modifiedAtMs: Date.parse(payload.generatedAt || doc.updatedAt || "") || 0,
+    }));
+  } catch (err) {
+    console.warn(`Skipping remote docs index ${url}: ${err.message}`);
+    return [];
+  }
+}
+
+function mergeDocs(localDocs, remoteDocs) {
+  const byKey = new Map();
+  for (const doc of [...localDocs, ...remoteDocs]) {
+    byKey.set(`${doc.source}:${doc.path}`, doc);
+  }
+  return Array.from(byKey.values()).sort((a, b) =>
+    `${a.source}/${a.path}`.localeCompare(`${b.source}/${b.path}`),
+  );
 }

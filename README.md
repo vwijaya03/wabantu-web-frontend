@@ -222,6 +222,15 @@ npm run lint     # Next ESLint config
 
 `npm run dev` dan `npm run build` menjalankan `docs:generate` otomatis lewat `predev`/`prebuild`, jadi Docs Hub ikut update setiap kali file `.md` berubah.
 
+Docs generator support split repo/server:
+
+```bash
+API_GO_DOCS_ROOT="../api-go" npm run docs:generate
+API_GO_DOCS_INDEX_URL="https://api.example.com/docs-index.json" npm run docs:generate
+```
+
+Untuk runtime, superadmin bisa buka `/dashboard/docs` → **Sumber Dokumentasi** lalu isi URL remote `docs-index.json`. Frontend akan fetch URL itu via `/api/docs/remote-index` dan merge dengan index lokal, sehingga `api-go` tetap bisa pindah repo/server tanpa memindahkan semua file `.md` ke `web-frontend`.
+
 ## Troubleshooting
 
 | Gejala | Penyebab | Solusi |

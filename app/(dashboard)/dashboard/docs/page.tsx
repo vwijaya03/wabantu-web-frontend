@@ -5,6 +5,7 @@ import { BookOpen, FileText, Search } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,6 +15,10 @@ type DocsPayload = {
   generatedAt: string;
   totalDocs: number;
   docs: DocsDoc[];
+  config?: {
+    apiGoDocsRoot?: string;
+    apiGoDocsIndexUrl?: string;
+  };
 };
 
 type DocsDoc = {
@@ -52,15 +57,34 @@ type SectionMatch = {
 
 const ALL = "__all__";
 const EMPTY_DOCS: DocsDoc[] = [];
+const DOCS_REMOTE_URL_KEY = "wabantu_docs_remote_index_url";
+const DOCS_API_ROOT_KEY = "wabantu_docs_api_root_hint";
 
 export default function DocsPage() {
   const { user } = useAuth();
-  const [payload, setPayload] = useState<DocsPayload | null>(null);
+  const [localPayload, setLocalPayload] = useState<DocsPayload | null>(null);
+  const [remotePayload, setRemotePayload] = useState<DocsPayload | null>(null);
   const [loadError, setLoadError] = useState("");
+  const [remoteError, setRemoteError] = useState("");
+  const [remoteStatus, setRemoteStatus] = useState(() =>
+    typeof window !== "undefined" && window.localStorage.getItem(DOCS_REMOTE_URL_KEY)
+      ? "Memuat remote docs..."
+      : "",
+  );
   const [query, setQuery] = useState("");
   const [source, setSource] = useState(ALL);
   const [category, setCategory] = useState(ALL);
   const [selectedId, setSelectedId] = useState<string>("");
+  const [remoteIndexUrl, setRemoteIndexUrl] = useState(() =>
+    typeof window === "undefined" ? "" : window.localStorage.getItem(DOCS_REMOTE_URL_KEY) ?? "",
+  );
+  const [apiDocsRoot, setApiDocsRoot] = useState(() =>
+    typeof window === "undefined" ? "../api-go" : window.localStorage.getItem(DOCS_API_ROOT_KEY) ?? "../api-go",
+  );
+  const [activeRemoteIndexUrl, setActiveRemoteIndexUrl] = useState(() =>
+    typeof window === "undefined" ? "" : window.localStorage.getItem(DOCS_REMOTE_URL_KEY) ?? "",
+  );
+  const [remoteReloadKey, setRemoteReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -71,7 +95,7 @@ export default function DocsPage() {
       })
       .then((data) => {
         if (!active) return;
-        setPayload(data);
+        setLocalPayload(data);
         setSelectedId(data.docs[0]?.id ?? "");
       })
       .catch(() => {
@@ -82,6 +106,36 @@ export default function DocsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!activeRemoteIndexUrl) {
+      return;
+    }
+
+    let active = true;
+    fetch(`/api/docs/remote-index?url=${encodeURIComponent(activeRemoteIndexUrl)}`)
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message ?? "Gagal memuat remote docs index");
+        return data as DocsPayload;
+      })
+      .then((data) => {
+        if (!active) return;
+        setRemotePayload(data);
+        setRemoteStatus(`Remote aktif: ${data.totalDocs ?? data.docs.length} dokumen`);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setRemotePayload(null);
+        setRemoteStatus("");
+        setRemoteError(err instanceof Error ? err.message : "Gagal memuat remote docs index");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [activeRemoteIndexUrl, remoteReloadKey]);
+
+  const payload = useMemo(() => mergePayloads(localPayload, remotePayload), [localPayload, remotePayload]);
   const docs = useMemo(() => payload?.docs ?? EMPTY_DOCS, [payload?.docs]);
   const sources = useMemo(() => unique(docs.map((d) => d.source)), [docs]);
   const categories = useMemo(() => unique(docs.map((d) => d.category)), [docs]);
@@ -104,6 +158,24 @@ export default function DocsPage() {
     return results.find((r) => r.doc.id === selectedDoc.id);
   }, [results, selectedDoc]);
   const selectedSections = selectedResult?.sections ?? [];
+  const docsGenerateCommand = `API_GO_DOCS_ROOT="${apiDocsRoot || "../api-go"}" npm run docs:generate`;
+
+  const saveDocsSourceSettings = () => {
+    window.localStorage.setItem(DOCS_API_ROOT_KEY, apiDocsRoot || "../api-go");
+    if (remoteIndexUrl.trim()) {
+      window.localStorage.setItem(DOCS_REMOTE_URL_KEY, remoteIndexUrl.trim());
+      setRemoteStatus("Memuat remote docs...");
+      setRemoteError("");
+      setActiveRemoteIndexUrl(remoteIndexUrl.trim());
+      setRemoteReloadKey((value) => value + 1);
+    } else {
+      window.localStorage.removeItem(DOCS_REMOTE_URL_KEY);
+      setRemotePayload(null);
+      setRemoteError("");
+      setRemoteStatus("");
+      setActiveRemoteIndexUrl("");
+    }
+  };
 
   if (user?.role !== "super_admin") {
     return (
@@ -171,6 +243,54 @@ export default function DocsPage() {
               ))}
             </SelectContent>
           </Select>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Sumber Dokumentasi</CardTitle>
+          <CardDescription>
+            Monorepo memakai index lokal. Jika `api-go` pindah repo/server, isi URL remote `docs-index.json` dari service/CDN lalu simpan.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">API_GO_DOCS_ROOT untuk generator lokal</label>
+            <Input
+              value={apiDocsRoot}
+              onChange={(e) => setApiDocsRoot(e.target.value)}
+              placeholder="../api-go"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Browser tidak bisa membaca folder lokal. Root ini dipakai saat menjalankan generator/build.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">API_GO_DOCS_INDEX_URL remote</label>
+            <Input
+              value={remoteIndexUrl}
+              onChange={(e) => setRemoteIndexUrl(e.target.value)}
+              placeholder="https://api.example.com/docs-index.json"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Remote index akan di-fetch via API route frontend agar tidak tergantung CORS.
+            </p>
+          </div>
+          <div className="flex items-end">
+            <Button type="button" onClick={saveDocsSourceSettings}>
+              Simpan Source
+            </Button>
+          </div>
+          <div className="lg:col-span-3">
+            <code className="block overflow-x-auto rounded-md bg-muted px-3 py-2 text-xs">
+              {docsGenerateCommand}
+            </code>
+            {(remoteStatus || remoteError) && (
+              <p className={cn("mt-2 text-xs", remoteError ? "text-destructive" : "text-muted-foreground")}>
+                {remoteError || remoteStatus}
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -323,6 +443,36 @@ export default function DocsPage() {
 
 function unique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+}
+
+function mergePayloads(localPayload: DocsPayload | null, remotePayload: DocsPayload | null): DocsPayload | null {
+  if (!localPayload && !remotePayload) return null;
+
+  const merged = new Map<string, DocsDoc>();
+  for (const doc of localPayload?.docs ?? []) {
+    merged.set(`${doc.source}:${doc.path}`, doc);
+  }
+  for (const doc of remotePayload?.docs ?? []) {
+    merged.set(`${doc.source}:${doc.path}`, doc);
+  }
+
+  const docs = Array.from(merged.values()).sort((a, b) =>
+    `${a.source}/${a.path}`.localeCompare(`${b.source}/${b.path}`),
+  );
+  const generatedAt = [localPayload?.generatedAt, remotePayload?.generatedAt]
+    .filter(Boolean)
+    .sort()
+    .at(-1) ?? new Date(0).toISOString();
+
+  return {
+    generatedAt,
+    totalDocs: docs.length,
+    docs,
+    config: {
+      ...localPayload?.config,
+      ...remotePayload?.config,
+    },
+  };
 }
 
 function normalize(value: string) {

@@ -185,6 +185,7 @@ Enforcement kuat di api-go (`entitlement` + kuota `usage`). Billing: checkout `p
 2. Output: `public/generated-docs/docs-index.json`.
 3. `predev` dan `prebuild` menjalankan generator otomatis, sehingga perubahan README/docs ikut muncul tanpa input DB.
 4. `/dashboard/docs` hanya untuk `super_admin`; UI menyediakan fuzzy search, highlight kata kunci, dan “Poin Relevan” yang bisa diklik untuk lompat ke heading terkait.
+5. Jika `api-go` dipisah repo/server, generator bisa pakai `API_GO_DOCS_INDEX_URL=https://.../docs-index.json`, atau superadmin mengisi remote URL langsung di panel **Sumber Dokumentasi** pada UI. URL remote di-fetch via `/api/docs/remote-index` lalu di-merge dengan docs lokal.
 
 ---
 

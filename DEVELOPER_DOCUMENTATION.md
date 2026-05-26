@@ -433,6 +433,20 @@ npm run docs:generate
 
 Script `scripts/generate-docs-index.mjs` menghasilkan `public/generated-docs/docs-index.json` berisi metadata dokumen, heading, anchor, excerpt, dan `searchText`. `predev` dan `prebuild` otomatis menjalankan generator agar Docs Hub ikut update setiap kali README/file `.md` berubah.
 
+Build-time configuration:
+
+| Env | Fungsi |
+|-----|--------|
+| `API_GO_DOCS_ROOT` | Override path lokal `api-go` saat monorepo path berubah; default `../api-go` |
+| `API_GO_DOCS_INDEX_URL` | Ambil remote `docs-index.json` saat `api-go` sudah beda repo/server |
+
+Runtime configuration:
+
+- `/dashboard/docs` punya panel **Sumber Dokumentasi**.
+- Superadmin bisa input remote `API_GO_DOCS_INDEX_URL`; nilai disimpan di `localStorage` browser.
+- Frontend fetch remote index melalui `/api/docs/remote-index?url=...`, lalu merge dengan local generated index.
+- Input `API_GO_DOCS_ROOT` di UI adalah build hint/copy command; browser tidak membaca filesystem lokal karena alasan security.
+
 Fitur UI:
 
 - fuzzy search yang toleran typo ringan dan urutan kata bebas,
