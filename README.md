@@ -80,7 +80,7 @@ app/
     └── dashboard/
         ├── page.tsx           # Overview
         ├── inbox/
-        ├── contacts/
+        ├── contacts/            # CRUD kontak + status + batch action + search/pagination server-side
         ├── ai-settings/       # Business profile form
         ├── knowledge-base/    # FAQ CRUD
         ├── whatsapp/          # Channel management
@@ -88,9 +88,9 @@ app/
         ├── analytics/
         ├── billing/
         ├── team/
-        ├── catalog/             # Katalog produk
+        ├── catalog/             # Katalog produk — CRUD + search/pagination server-side
         │   └── import-image/    # Import screenshot → AI vision → konfirmasi → simpan
-        ├── orders/              # Pesanan
+        ├── orders/              # Pesanan — modal step-by-step, pagination contact/katalog, status/pengiriman, total harga+ongkir, batch status/delete
         ├── broadcast/           # Broadcast WA (trial kuota / Business+)
         ├── import/              # Import CSV/XLSX
         ├── branches/            # Multi cabang (Pro)

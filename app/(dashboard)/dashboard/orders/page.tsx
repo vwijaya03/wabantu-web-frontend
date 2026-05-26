@@ -1,25 +1,1242 @@
 "use client";
-import { useQuery } from "@tanstack/react-query";
+
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, PlusCircle, Search, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { ordersApi } from "@/lib/api/orders";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/components/providers/auth-provider";
+import { canPerformOwnerActions } from "@/lib/api/auth";
+import { toApiError } from "@/lib/api/client";
+import { catalogApi, type CatalogItem, type ListCatalogResponse } from "@/lib/api/catalog";
+import { contactsApi, type ListContactsResponse } from "@/lib/api/contacts";
+import { ordersApi, type Order } from "@/lib/api/orders";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+const ALL = "__all__";
+const pageSize = 25;
+const selectorPageSize = 5;
+
+const ORDER_STATUSES = [
+  { value: "draft", label: "Draft" },
+  { value: "processing", label: "Sedang diproses" },
+  { value: "shipped", label: "Dalam pengiriman" },
+  { value: "completed", label: "Selesai" },
+  { value: "cancelled", label: "Dibatalkan" },
+];
+
+const ORDER_FORM_STEPS = [
+  { value: "contact", label: "1. Contact" },
+  { value: "items", label: "2. Produk" },
+  { value: "details", label: "3. Pengiriman" },
+] as const;
+
+type OrderFormStep = (typeof ORDER_FORM_STEPS)[number]["value"];
+
+type CreateForm = {
+  contactId: string;
+  contactSearch: string;
+  catalogSearch: string;
+  items: OrderItemForm[];
+  quickExternalCode: string;
+  quickName: string;
+  quickPrice: string;
+  quickUnit: string;
+  notes: string;
+  status: string;
+  trackingNumber: string;
+  courier: string;
+  shippingCost: string;
+};
+
+type OrderItemForm = {
+  catalogItemId: string;
+  externalCode: string;
+  name: string;
+  qty: string;
+  unitPrice: string;
+  sellUnit: string;
+};
+
+type EditForm = {
+  contactId: string;
+  contactSearch: string;
+  catalogSearch: string;
+  items: OrderItemForm[];
+  notes: string;
+  quickExternalCode: string;
+  quickName: string;
+  quickPrice: string;
+  quickUnit: string;
+  status: string;
+  trackingNumber: string;
+  courier: string;
+  shippingCost: string;
+};
+
+const emptyCreateForm: CreateForm = {
+  contactId: "",
+  contactSearch: "",
+  catalogSearch: "",
+  items: [],
+  quickExternalCode: "",
+  quickName: "",
+  quickPrice: "",
+  quickUnit: "pcs",
+  notes: "",
+  status: "draft",
+  trackingNumber: "",
+  courier: "",
+  shippingCost: "",
+};
 
 export default function OrdersPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["orders"], queryFn: () => ordersApi.list() });
+  const { user } = useAuth();
+  const canManage = canPerformOwnerActions(user);
+  const qc = useQueryClient();
+  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState(ALL);
+  const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchStatus, setBatchStatus] = useState("processing");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm);
+  const [createContactPage, setCreateContactPage] = useState(1);
+  const [createCatalogPage, setCreateCatalogPage] = useState(1);
+  const [editOrder, setEditOrder] = useState<Order | null>(null);
+  const [editContactPage, setEditContactPage] = useState(1);
+  const [editCatalogPage, setEditCatalogPage] = useState(1);
+  const [editForm, setEditForm] = useState<EditForm>({
+    contactId: "",
+    contactSearch: "",
+    catalogSearch: "",
+    items: [],
+    notes: "",
+    quickExternalCode: "",
+    quickName: "",
+    quickPrice: "",
+    quickUnit: "pcs",
+    status: "processing",
+    trackingNumber: "",
+    courier: "",
+    shippingCost: "",
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["orders", search, status, page, pageSize],
+    queryFn: () =>
+      ordersApi.list({
+        q: search || undefined,
+        status: status === ALL ? undefined : status,
+        page,
+        pageSize,
+      }),
+  });
+  const { data: contactOptions } = useQuery({
+    queryKey: ["order-contact-options", createForm.contactSearch, createContactPage, selectorPageSize],
+    queryFn: () =>
+      contactsApi.list({
+        q: createForm.contactSearch || undefined,
+        page: createContactPage,
+        pageSize: selectorPageSize,
+      }),
+    enabled: createOpen,
+  });
+  const { data: editContactOptions } = useQuery({
+    queryKey: ["order-edit-contact-options", editForm.contactSearch, editContactPage, selectorPageSize],
+    queryFn: () =>
+      contactsApi.list({
+        q: editForm.contactSearch || undefined,
+        page: editContactPage,
+        pageSize: selectorPageSize,
+      }),
+    enabled: Boolean(editOrder),
+  });
+  const { data: catalogOptions } = useQuery({
+    queryKey: ["order-catalog-options", createForm.catalogSearch, createCatalogPage, selectorPageSize],
+    queryFn: () =>
+      catalogApi.list({
+        q: createForm.catalogSearch || undefined,
+        page: createCatalogPage,
+        pageSize: selectorPageSize,
+        activeOnly: true,
+      }),
+    enabled: createOpen,
+  });
+  const { data: editCatalogOptions } = useQuery({
+    queryKey: ["order-edit-catalog-options", editForm.catalogSearch, editCatalogPage, selectorPageSize],
+    queryFn: () =>
+      catalogApi.list({
+        q: editForm.catalogSearch || undefined,
+        page: editCatalogPage,
+        pageSize: selectorPageSize,
+        activeOnly: true,
+      }),
+    enabled: Boolean(editOrder),
+  });
+
+  const orders = data?.orders ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total]);
+  const visibleIds = orders.map((order) => order.id);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+
+  const invalidateOrders = () => {
+    void qc.invalidateQueries({ queryKey: ["orders"] });
+  };
+
+  const createMut = useMutation({
+    mutationFn: () =>
+      ordersApi.create({
+        items: [
+          ...createForm.items.map((item) => ({
+            catalogItemId: item.catalogItemId,
+            externalCode: item.externalCode,
+            name: item.name,
+            qty: Number(item.qty || 1),
+            unitPrice: Number(item.unitPrice || 0),
+            sellUnit: item.sellUnit || undefined,
+          })),
+        ],
+        contactId: optionalString(createForm.contactId),
+        notes: optionalString(createForm.notes),
+        status: createForm.status,
+        trackingNumber: optionalString(createForm.trackingNumber),
+        courier: optionalString(createForm.courier),
+        shippingCost: optionalNumber(createForm.shippingCost),
+      }),
+    onSuccess: () => {
+      toast.success("Pesanan ditambahkan");
+      setCreateForm(emptyCreateForm);
+      setCreateOpen(false);
+      setPage(1);
+      invalidateOrders();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+  const quickCreateCatalogMut = useMutation({
+    mutationFn: () =>
+      catalogApi.create({
+        externalCode: createForm.quickExternalCode.trim() || `MANUAL-${Date.now()}`,
+        name: createForm.quickName.trim(),
+        sellPrice: optionalNumber(createForm.quickPrice),
+        sellUnit: optionalString(createForm.quickUnit),
+        isActive: true,
+      }),
+    onSuccess: (item) => {
+      toast.success("Produk katalog dibuat dan ditambahkan ke pesanan");
+      addCatalogItem(item);
+      setCreateForm((form) => ({
+        ...form,
+        quickExternalCode: "",
+        quickName: "",
+        quickPrice: "",
+        quickUnit: "pcs",
+      }));
+      void qc.invalidateQueries({ queryKey: ["catalog"] });
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+  const quickCreateEditCatalogMut = useMutation({
+    mutationFn: () =>
+      catalogApi.create({
+        externalCode: editForm.quickExternalCode.trim() || `MANUAL-${Date.now()}`,
+        name: editForm.quickName.trim(),
+        sellPrice: optionalNumber(editForm.quickPrice),
+        sellUnit: optionalString(editForm.quickUnit),
+        isActive: true,
+      }),
+    onSuccess: (item) => {
+      toast.success("Produk katalog dibuat dan ditambahkan ke pesanan");
+      addCatalogItemToEdit(item);
+      setEditForm((form) => ({
+        ...form,
+        quickExternalCode: "",
+        quickName: "",
+        quickPrice: "",
+        quickUnit: "pcs",
+      }));
+      void qc.invalidateQueries({ queryKey: ["catalog"] });
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const updateMut = useMutation({
+    mutationFn: () =>
+      ordersApi.update(editOrder!.id, {
+        contactId: editForm.contactId.trim(),
+        notes: editForm.notes.trim(),
+        items: editForm.items.map((item) => ({
+          catalogItemId: item.catalogItemId,
+          externalCode: item.externalCode,
+          name: item.name,
+          qty: Number(item.qty || 1),
+          unitPrice: Number(item.unitPrice || 0),
+          sellUnit: item.sellUnit || undefined,
+        })),
+        status: editForm.status,
+        trackingNumber: optionalString(editForm.trackingNumber),
+        courier: optionalString(editForm.courier),
+        shippingCost: optionalNumber(editForm.shippingCost),
+      }),
+    onSuccess: () => {
+      toast.success("Pesanan diperbarui");
+      setEditOrder(null);
+      invalidateOrders();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const batchMut = useMutation({
+    mutationFn: () =>
+      ordersApi.batchUpdateStatus({
+        ids: Array.from(selectedIds),
+        status: batchStatus,
+      }),
+    onSuccess: (res) => {
+      toast.success(`${res.updated} pesanan diperbarui`);
+      setSelectedIds(new Set());
+      invalidateOrders();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => ordersApi.remove(id),
+    onSuccess: () => {
+      toast.success("Pesanan dihapus");
+      setSelectedIds(new Set());
+      invalidateOrders();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+  const batchDeleteMut = useMutation({
+    mutationFn: () => ordersApi.batchDelete(Array.from(selectedIds)),
+    onSuccess: (res) => {
+      toast.success(`${res.deleted} pesanan dihapus`);
+      setSelectedIds(new Set());
+      invalidateOrders();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const runSearch = () => {
+    setSearch(q.trim());
+    setPage(1);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectVisible = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) {
+        visibleIds.forEach((id) => next.delete(id));
+      } else {
+        visibleIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const openEdit = (order: Order) => {
+    setEditOrder(order);
+    setEditContactPage(1);
+    setEditCatalogPage(1);
+    setEditForm({
+      contactId: order.contactId ?? "",
+      contactSearch: "",
+      catalogSearch: "",
+      items: order.items.map((item) => ({
+        catalogItemId: item.catalogItemId ?? "",
+        externalCode: item.externalCode ?? "",
+        name: item.name,
+        qty: String(item.qty || 1),
+        unitPrice: String(item.unitPrice || 0),
+        sellUnit: item.sellUnit ?? "",
+      })),
+      notes: order.notes ?? "",
+      quickExternalCode: "",
+      quickName: "",
+      quickPrice: "",
+      quickUnit: "pcs",
+      status: normalizeEditableStatus(order.status),
+      trackingNumber: order.trackingNumber ?? "",
+      courier: order.courier ?? "",
+      shippingCost: order.shippingCost ? String(order.shippingCost) : "",
+    });
+  };
+
+  const addCatalogItem = (item: CatalogItem) => {
+    setCreateForm((form) => {
+      if (form.items.some((row) => row.catalogItemId === item.id)) return form;
+      return {
+        ...form,
+        items: [
+          ...form.items,
+          {
+            catalogItemId: item.id,
+            externalCode: item.externalCode,
+            name: item.name,
+            qty: "1",
+            unitPrice: item.sellPrice == null ? "0" : String(item.sellPrice),
+            sellUnit: item.sellUnit ?? "",
+          },
+        ],
+      };
+    });
+  };
+
+  const addCatalogItemToEdit = (item: CatalogItem) => {
+    setEditForm((form) => {
+      if (form.items.some((row) => row.catalogItemId === item.id)) return form;
+      return {
+        ...form,
+        items: [
+          ...form.items,
+          {
+            catalogItemId: item.id,
+            externalCode: item.externalCode,
+            name: item.name,
+            qty: "1",
+            unitPrice: item.sellPrice == null ? "0" : String(item.sellPrice),
+            sellUnit: item.sellUnit ?? "",
+          },
+        ],
+      };
+    });
+  };
+
+  const updateOrderItem = (index: number, patch: Partial<OrderItemForm>) => {
+    setCreateForm((form) => ({
+      ...form,
+      items: form.items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+    }));
+  };
+
+  const removeOrderItem = (index: number) => {
+    setCreateForm((form) => ({
+      ...form,
+      items: form.items.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateEditOrderItem = (index: number, patch: Partial<OrderItemForm>) => {
+    setEditForm((form) => ({
+      ...form,
+      items: form.items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+    }));
+  };
+
+  const removeEditOrderItem = (index: number) => {
+    setEditForm((form) => ({
+      ...form,
+      items: form.items.filter((_, i) => i !== index),
+    }));
+  };
+
   return (
     <>
-      <PageHeader title="Pesanan" description="Pesanan dari percakapan WhatsApp." />
+      <PageHeader
+        title="Pesanan"
+        description="Kelola pesanan dari WhatsApp atau input manual, termasuk update status satuan dan batch."
+        actions={
+          <Button
+            onClick={() => {
+              setCreateContactPage(1);
+              setCreateCatalogPage(1);
+              setCreateOpen(true);
+            }}
+            disabled={!canManage}
+          >
+            <PlusCircle className="h-4 w-4" /> Tambah Pesanan
+          </Button>
+        }
+      />
+
       <Card>
-        <CardHeader><CardTitle>Daftar pesanan</CardTitle></CardHeader>
-        <CardContent className="space-y-2">
-          {isLoading ? <p className="text-sm text-muted-foreground">Memuat...</p> : (data?.orders ?? []).map((o) => (
-            <div key={o.id} className="rounded border p-3 text-sm">
-              <p className="font-medium">#{o.id.slice(0, 8)} · {o.status}</p>
-              <p className="text-muted-foreground">Total Rp {o.total.toLocaleString("id-ID")}</p>
+        <CardHeader>
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <CardTitle>Daftar pesanan ({total})</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Search dan pagination berjalan dari server agar aman untuk data besar.
+              </p>
             </div>
-          ))}
+            <div className="flex flex-col gap-2 lg:flex-row">
+              <div className="relative min-w-0 lg:w-80">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") runSearch();
+                  }}
+                  placeholder="Cari produk, nama kontak, no resi..."
+                />
+              </div>
+              <Select
+                value={status}
+                onValueChange={(value) => {
+                  setStatus(value);
+                  setPage(1);
+                  setSelectedIds(new Set());
+                }}
+              >
+                <SelectTrigger className="lg:w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Semua status</SelectItem>
+                  {ORDER_STATUSES.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="secondary" onClick={runSearch}>
+                Cari
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {selectedIds.size > 0 && (
+            <div className="mb-4 flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <span>{selectedIds.size} pesanan dipilih</span>
+              <div className="flex gap-2">
+                <Select value={batchStatus} onValueChange={setBatchStatus}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ORDER_STATUSES.filter((option) => option.value !== "draft").map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button disabled={!canManage || batchMut.isPending} onClick={() => batchMut.mutate()}>
+                  Update Batch
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={!canManage || batchDeleteMut.isPending}
+                  onClick={() => {
+                    if (confirm(`Hapus ${selectedIds.size} pesanan terpilih?`)) batchDeleteMut.mutate();
+                  }}
+                >
+                  Hapus Batch
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Memuat...</p>
+          ) : orders.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+              Belum ada pesanan yang cocok.
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-lg border">
+              <div className="grid grid-cols-[40px_minmax(220px,1fr)_150px_160px_120px] gap-3 border-b bg-muted/60 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground max-lg:hidden">
+                <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectVisible} aria-label="Pilih semua pesanan" />
+                <span>Pesanan</span>
+                <span>Status</span>
+                <span>Total</span>
+                <span className="text-right">Aksi</span>
+              </div>
+              <div className="max-h-[640px] divide-y overflow-auto">
+                {orders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[40px_minmax(220px,1fr)_150px_160px_120px] lg:items-center"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-1 lg:mt-0"
+                      checked={selectedIds.has(order.id)}
+                      onChange={() => toggleSelected(order.id)}
+                      aria-label={`Pilih pesanan ${order.id}`}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">
+                        #{order.id.slice(0, 8)} · {order.items.map((item) => item.name).join(", ") || "Tanpa item"}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {order.trackingNumber ? `Resi ${order.trackingNumber}` : "Belum ada resi"}
+                        {order.courier ? ` · ${order.courier}` : ""}
+                      </p>
+                    </div>
+                    <Badge variant={statusBadgeVariant(order.status)}>{statusLabel(order.status)}</Badge>
+                    <div>
+                      <p>{formatRupiah(order.total)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(order.createdAt).toLocaleString("id-ID")}
+                      </p>
+                    </div>
+                    <div className="flex justify-start gap-1 lg:justify-end">
+                      <Button variant="outline" size="sm" disabled={!canManage} onClick={() => openEdit(order)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={!canManage}
+                        className="text-destructive"
+                        onClick={() => {
+                          if (confirm(`Hapus pesanan #${order.id.slice(0, 8)}?`)) deleteMut.mutate(order.id);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-muted-foreground">
+              {total === 0
+                ? "0 pesanan"
+                : `Menampilkan ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, total)} dari ${total} pesanan`}
+            </span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                Sebelumnya
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Berikutnya
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[92vh] max-w-6xl overflow-hidden p-0">
+          <DialogHeader className="border-b px-6 pb-4 pt-6">
+            <DialogTitle>Tambah Pesanan</DialogTitle>
+            <DialogDescription>
+              Pilih contact jika ada, lalu tambah satu atau beberapa item dari Katalog Produk.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[calc(92vh-180px)] overflow-y-auto px-6 py-4">
+            <OrderCreateForm
+              form={createForm}
+              setForm={setCreateForm}
+              showOperationalFields
+              contactOptions={contactOptions}
+              contactPage={createContactPage}
+              setContactPage={setCreateContactPage}
+              catalogOptions={catalogOptions}
+              catalogPage={createCatalogPage}
+              setCatalogPage={setCreateCatalogPage}
+              addCatalogItem={addCatalogItem}
+              updateOrderItem={updateOrderItem}
+              removeOrderItem={removeOrderItem}
+              quickCreateCatalog={() => quickCreateCatalogMut.mutate()}
+              quickCreatePending={quickCreateCatalogMut.isPending}
+            />
+          </div>
+          <DialogFooter className="border-t px-6 py-4">
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              onClick={() => createMut.mutate()}
+              disabled={createForm.items.length === 0 || createMut.isPending}
+            >
+              Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editOrder} onOpenChange={(open) => !open && setEditOrder(null)}>
+        <DialogContent className="max-h-[92vh] max-w-6xl overflow-hidden p-0">
+          <DialogHeader className="border-b px-6 pb-4 pt-6">
+            <DialogTitle>Edit Pesanan</DialogTitle>
+            <DialogDescription>Update contact, item katalog, status, kurir, nomor resi, ongkir, dan catatan.</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[calc(92vh-180px)] overflow-y-auto px-6 py-4">
+            <OrderEditForm
+              form={editForm}
+              setForm={setEditForm}
+              contactOptions={editContactOptions}
+              contactPage={editContactPage}
+              setContactPage={setEditContactPage}
+              catalogOptions={editCatalogOptions}
+              catalogPage={editCatalogPage}
+              setCatalogPage={setEditCatalogPage}
+              addCatalogItem={addCatalogItemToEdit}
+              updateOrderItem={updateEditOrderItem}
+              removeOrderItem={removeEditOrderItem}
+              quickCreateCatalog={() => quickCreateEditCatalogMut.mutate()}
+              quickCreatePending={quickCreateEditCatalogMut.isPending}
+            />
+          </div>
+          <DialogFooter className="border-t px-6 py-4">
+            <Button variant="outline" onClick={() => setEditOrder(null)}>
+              Batal
+            </Button>
+            <Button onClick={() => updateMut.mutate()} disabled={editForm.items.length === 0 || updateMut.isPending}>
+              Simpan Perubahan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
+}
+
+function OrderCreateForm({
+  form,
+  setForm,
+  showOperationalFields = false,
+  contactOptions,
+  contactPage,
+  setContactPage,
+  catalogOptions,
+  catalogPage,
+  setCatalogPage,
+  addCatalogItem,
+  updateOrderItem,
+  removeOrderItem,
+  quickCreateCatalog,
+  quickCreatePending,
+}: {
+  form: CreateForm;
+  setForm: (form: CreateForm) => void;
+  showOperationalFields?: boolean;
+  contactOptions?: ListContactsResponse;
+  contactPage: number;
+  setContactPage: (page: number) => void;
+  catalogOptions?: ListCatalogResponse;
+  catalogPage: number;
+  setCatalogPage: (page: number) => void;
+  addCatalogItem: (item: CatalogItem) => void;
+  updateOrderItem: (index: number, patch: Partial<OrderItemForm>) => void;
+  removeOrderItem: (index: number) => void;
+  quickCreateCatalog: () => void;
+  quickCreatePending: boolean;
+}) {
+  const update = (patch: Partial<CreateForm>) => setForm({ ...form, ...patch });
+  const subtotal = calculateItemsSubtotal(form.items);
+  const shippingCost = optionalNumber(form.shippingCost) ?? 0;
+  const total = subtotal + shippingCost;
+  const [activeStep, setActiveStep] = useState<OrderFormStep>("contact");
+  const contacts = contactOptions?.items ?? [];
+  const catalogItems = catalogOptions?.items ?? [];
+  const contactTotalPages = Math.max(1, Math.ceil((contactOptions?.total ?? 0) / selectorPageSize));
+  const catalogTotalPages = Math.max(1, Math.ceil((catalogOptions?.total ?? 0) / selectorPageSize));
+  const selectedContact = contacts.find((contact) => contact.id === form.contactId);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-2 rounded-xl bg-muted/40 p-2 sm:grid-cols-3">
+        {ORDER_FORM_STEPS.map((step) => (
+          <button
+            key={step.value}
+            type="button"
+            onClick={() => setActiveStep(step.value)}
+            className={cn(
+              "rounded-lg px-3 py-2 text-left text-sm font-medium transition",
+              activeStep === step.value ? "bg-background shadow-sm" : "text-muted-foreground hover:bg-background/60",
+            )}
+          >
+            {step.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="min-w-0 space-y-4">
+          {activeStep === "contact" && (
+            <div className="rounded-lg border p-4">
+              <div className="mb-3">
+                <h3 className="font-medium">Pilih contact</h3>
+                <p className="text-sm text-muted-foreground">Boleh pilih contact yang sudah ada, atau lanjut tanpa contact.</p>
+              </div>
+              <Input
+                value={form.contactSearch}
+                onChange={(e) => {
+                  update({ contactSearch: e.target.value });
+                  setContactPage(1);
+                }}
+                placeholder="Cari nama atau nomor..."
+              />
+              <div className="mt-3 grid gap-2">
+                <button
+                  type="button"
+                  onClick={() => update({ contactId: "" })}
+                  className={cn(
+                    "rounded-md border px-3 py-3 text-left text-sm",
+                    form.contactId === "" && "border-primary bg-primary/5",
+                  )}
+                >
+                  Tanpa contact
+                  <span className="block text-xs text-muted-foreground">Pesanan tetap bisa dibuat manual.</span>
+                </button>
+                {contacts.map((contact) => (
+                  <button
+                    key={contact.id}
+                    type="button"
+                    onClick={() => update({ contactId: contact.id })}
+                    className={cn(
+                      "rounded-md border px-3 py-3 text-left text-sm hover:bg-muted/60",
+                      form.contactId === contact.id && "border-primary bg-primary/5",
+                    )}
+                  >
+                    <span className="font-medium">{contact.displayName || contact.phoneNumber}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{contact.phoneNumber}</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">{contact.status}</span>
+                  </button>
+                ))}
+              </div>
+              <SelectorPagination
+                className="mt-3"
+                page={contactPage}
+                total={contactOptions?.total ?? 0}
+                totalPages={contactTotalPages}
+                onPageChange={setContactPage}
+              />
+            </div>
+          )}
+
+          {activeStep === "items" && (
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
+              <div className="rounded-lg border p-4">
+                <div className="mb-3">
+                  <h3 className="font-medium">Pilih item katalog</h3>
+                  <p className="text-sm text-muted-foreground">Cari produk, tambah ke pesanan, lalu atur qty dan harga.</p>
+                </div>
+                <Input
+                  value={form.catalogSearch}
+                  onChange={(e) => {
+                    update({ catalogSearch: e.target.value });
+                    setCatalogPage(1);
+                  }}
+                  placeholder="Cari nama produk / SKU..."
+                />
+                <div className="mt-3 space-y-2">
+                  {catalogItems.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => addCatalogItem(item)}
+                      className="flex w-full min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-3 text-left text-sm hover:bg-muted/60"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{item.name}</span>
+                        <span className="text-xs text-muted-foreground">{item.externalCode}</span>
+                      </span>
+                      <span className="shrink-0 text-xs">{item.sellPrice == null ? "-" : formatRupiah(item.sellPrice)}</span>
+                    </button>
+                  ))}
+                  {catalogItems.length === 0 && (
+                    <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                      Produk tidak ditemukan di halaman ini.
+                    </p>
+                  )}
+                </div>
+                <SelectorPagination
+                  className="mt-3"
+                  page={catalogPage}
+                  total={catalogOptions?.total ?? 0}
+                  totalPages={catalogTotalPages}
+                  onPageChange={setCatalogPage}
+                />
+
+                <div className="mt-4 rounded-md bg-muted/40 p-3">
+                  <p className="mb-2 text-sm font-medium">Produk belum ada? Buat cepat di katalog</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Input
+                      value={form.quickExternalCode}
+                      onChange={(e) => update({ quickExternalCode: e.target.value })}
+                      placeholder="SKU opsional"
+                    />
+                    <Input
+                      value={form.quickName}
+                      onChange={(e) => update({ quickName: e.target.value })}
+                      placeholder="Nama produk"
+                    />
+                    <Input
+                      value={form.quickPrice}
+                      onChange={(e) => update({ quickPrice: e.target.value })}
+                      type="number"
+                      min="0"
+                      placeholder="Harga"
+                    />
+                    <Input
+                      value={form.quickUnit}
+                      onChange={(e) => update({ quickUnit: e.target.value })}
+                      placeholder="Satuan"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    className="mt-2"
+                    variant="secondary"
+                    disabled={!form.quickName.trim() || quickCreatePending}
+                    onClick={quickCreateCatalog}
+                  >
+                    Buat Produk & Tambahkan
+                  </Button>
+                </div>
+              </div>
+
+              <SelectedItemsPanel
+                items={form.items}
+                subtotal={subtotal}
+                updateOrderItem={updateOrderItem}
+                removeOrderItem={removeOrderItem}
+              />
+            </div>
+          )}
+
+          {activeStep === "details" && (
+            <div className="space-y-4">
+              {showOperationalFields && (
+                <div className="rounded-lg border p-4">
+                  <h3 className="mb-3 font-medium">Status & pengiriman</h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <Label>Status</Label>
+                      <Select value={form.status} onValueChange={(value) => update({ status: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ORDER_STATUSES.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Ongkir</Label>
+                      <Input
+                        value={form.shippingCost}
+                        onChange={(e) => update({ shippingCost: e.target.value })}
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <Label>Kurir</Label>
+                      <Input value={form.courier} onChange={(e) => update({ courier: e.target.value })} placeholder="JNE / J&T" />
+                    </div>
+                    <div>
+                      <Label>No. resi</Label>
+                      <Input value={form.trackingNumber} onChange={(e) => update({ trackingNumber: e.target.value })} />
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="rounded-lg border p-4">
+                <Label>Catatan</Label>
+                <Textarea value={form.notes} onChange={(e) => update({ notes: e.target.value })} rows={4} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <OrderSummary
+          contactLabel={selectedContact ? selectedContact.displayName || selectedContact.phoneNumber : form.contactId ? "Contact terpilih" : "Tanpa contact"}
+          itemCount={form.items.length}
+          subtotal={subtotal}
+          shippingCost={shippingCost}
+          total={total}
+          onStepChange={setActiveStep}
+        />
+      </div>
+    </div>
+  );
+}
+
+function OrderEditForm({
+  form,
+  setForm,
+  contactOptions,
+  contactPage,
+  setContactPage,
+  catalogOptions,
+  catalogPage,
+  setCatalogPage,
+  addCatalogItem,
+  updateOrderItem,
+  removeOrderItem,
+  quickCreateCatalog,
+  quickCreatePending,
+}: {
+  form: EditForm;
+  setForm: (form: EditForm) => void;
+  contactOptions?: ListContactsResponse;
+  contactPage: number;
+  setContactPage: (page: number) => void;
+  catalogOptions?: ListCatalogResponse;
+  catalogPage: number;
+  setCatalogPage: (page: number) => void;
+  addCatalogItem: (item: CatalogItem) => void;
+  updateOrderItem: (index: number, patch: Partial<OrderItemForm>) => void;
+  removeOrderItem: (index: number) => void;
+  quickCreateCatalog: () => void;
+  quickCreatePending: boolean;
+}) {
+  return (
+    <OrderCreateForm
+      form={form}
+      setForm={(nextForm) => setForm({ ...form, ...nextForm })}
+      showOperationalFields
+      contactOptions={contactOptions}
+      contactPage={contactPage}
+      setContactPage={setContactPage}
+      catalogOptions={catalogOptions}
+      catalogPage={catalogPage}
+      setCatalogPage={setCatalogPage}
+      addCatalogItem={addCatalogItem}
+      updateOrderItem={updateOrderItem}
+      removeOrderItem={removeOrderItem}
+      quickCreateCatalog={quickCreateCatalog}
+      quickCreatePending={quickCreatePending}
+    />
+  );
+}
+
+function SelectorPagination({
+  page,
+  total,
+  totalPages,
+  onPageChange,
+  className,
+}: {
+  page: number;
+  total: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between", className)}>
+      <span>
+        {total === 0 ? "0 data" : `Halaman ${page} dari ${totalPages} · ${total} data`}
+      </span>
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={page <= 1}
+          onClick={() => onPageChange(Math.max(1, page - 1))}
+        >
+          Sebelumnya
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+        >
+          Berikutnya
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SelectedItemsPanel({
+  items,
+  subtotal,
+  updateOrderItem,
+  removeOrderItem,
+}: {
+  items: OrderItemForm[];
+  subtotal: number;
+  updateOrderItem: (index: number, patch: Partial<OrderItemForm>) => void;
+  removeOrderItem: (index: number) => void;
+}) {
+  return (
+    <div className="rounded-lg border p-4">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="font-medium">Item pesanan</h3>
+          <p className="text-sm text-muted-foreground">Review item yang sudah dipilih sebelum simpan.</p>
+        </div>
+        <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">Subtotal: </span>
+          <span className="font-medium">{formatRupiah(subtotal)}</span>
+        </div>
+      </div>
+      {items.length === 0 ? (
+        <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+          Belum ada item. Pilih produk dari katalog di sebelah kiri.
+        </p>
+      ) : (
+        <div className="max-h-[440px] space-y-2 overflow-auto pr-1">
+          {items.map((item, index) => (
+            <div key={`${item.catalogItemId}-${index}`} className="rounded-md border p-3">
+              <div className="mb-2 min-w-0">
+                <p className="truncate text-sm font-medium">{item.name}</p>
+                <p className="text-xs text-muted-foreground">{item.externalCode || "Tanpa SKU"}</p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-[88px_1fr_auto] sm:items-center">
+                <Input
+                  value={item.qty}
+                  onChange={(e) => updateOrderItem(index, { qty: e.target.value })}
+                  type="number"
+                  min="1"
+                  placeholder="Qty"
+                />
+                <Input
+                  value={item.unitPrice}
+                  onChange={(e) => updateOrderItem(index, { unitPrice: e.target.value })}
+                  type="number"
+                  min="0"
+                  placeholder="Harga"
+                />
+                <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => removeOrderItem(index)}>
+                  Hapus
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrderSummary({
+  contactLabel,
+  itemCount,
+  subtotal,
+  shippingCost,
+  total,
+  onStepChange,
+}: {
+  contactLabel: string;
+  itemCount: number;
+  subtotal: number;
+  shippingCost: number;
+  total: number;
+  onStepChange: (step: OrderFormStep) => void;
+}) {
+  return (
+    <aside className="h-fit rounded-lg border bg-background p-4 lg:sticky lg:top-0">
+      <div className="mb-3">
+        <h3 className="font-medium">Ringkasan pesanan</h3>
+        <p className="text-sm text-muted-foreground">Tetap terlihat saat mengisi form.</p>
+      </div>
+      <div className="space-y-3 text-sm">
+        <button type="button" className="w-full rounded-md bg-muted/40 p-3 text-left" onClick={() => onStepChange("contact")}>
+          <span className="block text-xs text-muted-foreground">Contact</span>
+          <span className="font-medium">{contactLabel}</span>
+        </button>
+        <button type="button" className="w-full rounded-md bg-muted/40 p-3 text-left" onClick={() => onStepChange("items")}>
+          <span className="block text-xs text-muted-foreground">Item</span>
+          <span className="font-medium">{itemCount} item dipilih</span>
+        </button>
+        <div className="rounded-md bg-muted/40 p-3">
+          <div className="flex justify-between">
+            <span>Total harga item</span>
+            <span>{formatRupiah(subtotal)}</span>
+          </div>
+          <div className="mt-2 flex justify-between">
+            <span>Total ongkir</span>
+            <span>{formatRupiah(shippingCost)}</span>
+          </div>
+          <div className="mt-3 flex justify-between border-t pt-3 text-base font-bold">
+            <span>Total pesanan</span>
+            <span>{formatRupiah(total)}</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function normalizeEditableStatus(status: string) {
+  if (status === "confirmed" || status === "paid") return "processing";
+  if (status === "shipped") return "shipped";
+  if (ORDER_STATUSES.some((option) => option.value === status)) return status;
+  return "processing";
+}
+
+function statusLabel(status: string) {
+  if (status === "confirmed" || status === "paid") return "Sedang diproses";
+  return ORDER_STATUSES.find((option) => option.value === status)?.label ?? status;
+}
+
+function statusBadgeVariant(status: string) {
+  if (status === "completed") return "success";
+  if (status === "cancelled") return "destructive";
+  if (status === "shipped") return "warning";
+  return "secondary";
+}
+
+function optionalString(value: string) {
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}
+
+function optionalNumber(value: string) {
+  if (value.trim() === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function calculateItemsSubtotal(items: OrderItemForm[]) {
+  return items.reduce((sum, item) => {
+    const qty = optionalNumber(item.qty) ?? 0;
+    const unitPrice = optionalNumber(item.unitPrice) ?? 0;
+    return sum + qty * unitPrice;
+  }, 0);
+}
+
+function formatRupiah(value: number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(value);
 }

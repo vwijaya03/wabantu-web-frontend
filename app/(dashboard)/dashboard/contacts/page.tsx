@@ -1,96 +1,451 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, PlusCircle, Search, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { leadsApi, type Lead } from "@/lib/api/leads";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { contactsApi, type Contact } from "@/lib/api/contacts";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 
-const STATUS_OPTIONS: Lead["status"][] = [
-  "new",
-  "contacted",
-  "qualified",
-  "won",
-  "lost",
+const pageSize = 25;
+
+const CONTACT_STATUSES = [
+  { value: "active", label: "Aktif" },
+  { value: "inactive", label: "Nonaktif" },
 ];
+
+type ContactForm = {
+  phoneNumber: string;
+  displayName: string;
+  notes: string;
+  status: string;
+  tags: string;
+};
+
+const emptyForm: ContactForm = {
+  phoneNumber: "",
+  displayName: "",
+  notes: "",
+  status: "active",
+  tags: "",
+};
 
 export default function ContactsPage() {
   const qc = useQueryClient();
-  const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["leads"],
-    queryFn: () => leadsApi.list(),
-    refetchInterval: 60000,
+  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState<ContactForm>(emptyForm);
+  const [editContact, setEditContact] = useState<Contact | null>(null);
+  const [editForm, setEditForm] = useState<ContactForm>(emptyForm);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchStatus, setBatchStatus] = useState("active");
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["contacts", search, page, pageSize],
+    queryFn: () => contactsApi.list({ q: search || undefined, page, pageSize }),
   });
-  const updateMut = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: Lead["status"] }) =>
-      leadsApi.update(id, { status }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["leads"] }),
+
+  const contacts = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total]);
+
+  const invalidateContacts = () => {
+    void qc.invalidateQueries({ queryKey: ["contacts"] });
+  };
+
+  const createMut = useMutation({
+    mutationFn: () => contactsApi.create(toCreatePayload(createForm)),
+    onSuccess: () => {
+      toast.success("Kontak ditambahkan");
+      setCreateForm(emptyForm);
+      setCreateOpen(false);
+      setPage(1);
+      invalidateContacts();
+    },
     onError: (e) => toast.error(toApiError(e).message),
   });
+
+  const updateMut = useMutation({
+    mutationFn: () => contactsApi.update(editContact!.id, toUpdatePayload(editForm)),
+    onSuccess: () => {
+      toast.success("Kontak diperbarui");
+      setEditContact(null);
+      invalidateContacts();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => contactsApi.remove(id),
+    onSuccess: () => {
+      toast.success("Kontak dihapus");
+      invalidateContacts();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+  const batchStatusMut = useMutation({
+    mutationFn: () => contactsApi.batchUpdateStatus({ ids: Array.from(selectedIds), status: batchStatus }),
+    onSuccess: (res) => {
+      toast.success(`${res.updated} kontak diperbarui`);
+      setSelectedIds(new Set());
+      invalidateContacts();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+  const batchDeleteMut = useMutation({
+    mutationFn: () => contactsApi.batchDelete(Array.from(selectedIds)),
+    onSuccess: (res) => {
+      toast.success(`${res.deleted} kontak dihapus`);
+      setSelectedIds(new Set());
+      invalidateContacts();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const runSearch = () => {
+    setSearch(q.trim());
+    setPage(1);
+    setSelectedIds(new Set());
+  };
+
+  const visibleIds = contacts.map((contact) => contact.id);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectVisible = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) {
+        visibleIds.forEach((id) => next.delete(id));
+      } else {
+        visibleIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const openEdit = (contact: Contact) => {
+    setEditContact(contact);
+    setEditForm({
+      phoneNumber: contact.phoneNumber,
+      displayName: contact.displayName ?? "",
+      notes: contact.notes ?? "",
+      status: contact.status || "active",
+      tags: contact.tags.join(", "),
+    });
+  };
 
   return (
     <>
       <PageHeader
         title="Contacts"
-        description="Leads otomatis dari percakapan WhatsApp customer."
+        description="Kelola kontak customer WhatsApp dengan search dan pagination."
+        actions={
+          <Button onClick={() => setCreateOpen(true)}>
+            <PlusCircle className="h-4 w-4" /> Tambah Kontak
+          </Button>
+        }
       />
       <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
-              Memuat leads...
+        <CardHeader>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <CardTitle>Daftar kontak ({total})</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Data dibatasi {pageSize} kontak per halaman agar tidak memanjang saat data besar.
+              </p>
             </div>
-          ) : leads.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
-              Belum ada lead. Data akan otomatis muncul setelah ada chat masuk
-              yang terdeteksi sebagai minat beli.
+            <div className="flex gap-2">
+              <div className="relative min-w-0 lg:w-80">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") runSearch();
+                  }}
+                  placeholder="Cari nama, nomor, tag..."
+                />
+              </div>
+              <Button variant="secondary" onClick={runSearch}>
+                Cari
+              </Button>
             </div>
-          ) : (
-            <div className="divide-y">
-              {leads.map((lead) => (
-                <div key={lead.id} className="grid gap-3 p-4 md:grid-cols-[2fr_1fr_1fr_1fr]">
-                  <div>
-                    <p className="text-sm font-semibold">{lead.name || "Tanpa nama"}</p>
-                    <p className="text-xs text-muted-foreground">{lead.phoneNumber}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Minat: {lead.productInterest || "-"} · Budget: {lead.budget || "-"} ·
-                      Lokasi: {lead.location || "-"}
-                    </p>
-                  </div>
-                  <div className="flex items-center">
-                    <Badge variant={lead.status === "won" ? "success" : "secondary"}>
-                      {lead.status}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center">
-                    <select
-                      className="h-8 rounded-md border bg-background px-2 text-xs"
-                      value={lead.status}
-                      onChange={(e) =>
-                        updateMut.mutate({
-                          id: lead.id,
-                          status: e.target.value as Lead["status"],
-                        })
-                      }
-                    >
-                      {STATUS_OPTIONS.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    {new Date(lead.createdAt).toLocaleString("id-ID")}
-                  </div>
-                </div>
-              ))}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {selectedIds.size > 0 && (
+            <div className="mb-4 flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <span>{selectedIds.size} kontak dipilih</span>
+              <div className="flex gap-2">
+                <Select value={batchStatus} onValueChange={setBatchStatus}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONTACT_STATUSES.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button disabled={batchStatusMut.isPending} onClick={() => batchStatusMut.mutate()}>
+                  Update Status
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={batchDeleteMut.isPending}
+                  onClick={() => {
+                    if (confirm(`Hapus ${selectedIds.size} kontak terpilih?`)) batchDeleteMut.mutate();
+                  }}
+                >
+                  Hapus Batch
+                </Button>
+              </div>
             </div>
           )}
+
+          {isLoading ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              Memuat contacts...
+            </div>
+          ) : contacts.length === 0 ? (
+            <div className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
+              Belum ada kontak yang cocok.
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-lg border">
+              <div className="grid grid-cols-[40px_minmax(220px,1fr)_120px_180px_160px_120px] gap-3 border-b bg-muted/60 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground max-lg:hidden">
+                <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectVisible} aria-label="Pilih semua kontak" />
+                <span>Kontak</span>
+                <span>Status</span>
+                <span>Catatan</span>
+                <span>Tag</span>
+                <span className="text-right">Aksi</span>
+              </div>
+              <div className="max-h-[640px] divide-y overflow-auto">
+                {contacts.map((contact) => (
+                  <div
+                    key={contact.id}
+                    className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[40px_minmax(220px,1fr)_120px_180px_160px_120px] lg:items-center"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-1 lg:mt-0"
+                      checked={selectedIds.has(contact.id)}
+                      onChange={() => toggleSelected(contact.id)}
+                      aria-label={`Pilih kontak ${contact.phoneNumber}`}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{contact.displayName || "Tanpa nama"}</p>
+                      <p className="text-xs text-muted-foreground">{contact.phoneNumber}</p>
+                    </div>
+                    <Badge variant={contact.status === "active" ? "success" : "destructive"}>
+                      {contact.status === "active" ? "Aktif" : "Nonaktif"}
+                    </Badge>
+                    <p className="line-clamp-2 text-xs text-muted-foreground">{contact.notes || "-"}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {contact.tags.length === 0 ? (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      ) : (
+                        contact.tags.slice(0, 3).map((tag) => (
+                          <Badge key={tag} variant="outline">
+                            {tag}
+                          </Badge>
+                        ))
+                      )}
+                    </div>
+                    <div className="flex justify-start gap-1 lg:justify-end">
+                      <Button variant="outline" size="sm" onClick={() => openEdit(contact)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() => {
+                          if (confirm(`Hapus kontak ${contact.displayName || contact.phoneNumber}?`)) {
+                            deleteMut.mutate(contact.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-muted-foreground">
+              {total === 0
+                ? "0 kontak"
+                : `Menampilkan ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, total)} dari ${total} kontak`}
+            </span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                Sebelumnya
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Berikutnya
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Kontak</DialogTitle>
+            <DialogDescription>Kontak juga otomatis dibuat saat customer chat ke WhatsApp.</DialogDescription>
+          </DialogHeader>
+          <ContactFormFields form={createForm} setForm={setCreateForm} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={() => createMut.mutate()} disabled={!createForm.phoneNumber.trim() || createMut.isPending}>
+              Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editContact} onOpenChange={(open) => !open && setEditContact(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Kontak</DialogTitle>
+            <DialogDescription>Ubah nama, catatan, dan tag kontak.</DialogDescription>
+          </DialogHeader>
+          <ContactFormFields form={editForm} setForm={setEditForm} isEdit />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditContact(null)}>
+              Batal
+            </Button>
+            <Button onClick={() => updateMut.mutate()} disabled={updateMut.isPending}>
+              Simpan Perubahan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
+}
+
+function ContactFormFields({
+  form,
+  setForm,
+  isEdit,
+}: {
+  form: ContactForm;
+  setForm: (form: ContactForm) => void;
+  isEdit?: boolean;
+}) {
+  const update = (patch: Partial<ContactForm>) => setForm({ ...form, ...patch });
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label>Nomor WhatsApp</Label>
+        <Input
+          value={form.phoneNumber}
+          onChange={(e) => update({ phoneNumber: e.target.value })}
+          disabled={isEdit}
+          placeholder="62812..."
+        />
+      </div>
+      <div>
+        <Label>Nama</Label>
+        <Input value={form.displayName} onChange={(e) => update({ displayName: e.target.value })} />
+      </div>
+      <div>
+        <Label>Status</Label>
+        <Select value={form.status} onValueChange={(status) => update({ status })}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CONTACT_STATUSES.map((status) => (
+              <SelectItem key={status.value} value={status.value}>
+                {status.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label>Tag</Label>
+        <Input value={form.tags} onChange={(e) => update({ tags: e.target.value })} placeholder="vip, repeat buyer" />
+        <p className="mt-1 text-xs text-muted-foreground">Pisahkan beberapa tag dengan koma.</p>
+      </div>
+      <div>
+        <Label>Catatan</Label>
+        <Textarea value={form.notes} onChange={(e) => update({ notes: e.target.value })} rows={3} />
+      </div>
+    </div>
+  );
+}
+
+function toCreatePayload(form: ContactForm) {
+  return {
+    phoneNumber: form.phoneNumber.trim(),
+    displayName: optionalString(form.displayName),
+    notes: optionalString(form.notes),
+    status: form.status,
+    tags: parseTags(form.tags),
+  };
+}
+
+function toUpdatePayload(form: ContactForm) {
+  return {
+    displayName: optionalString(form.displayName),
+    notes: optionalString(form.notes),
+    status: form.status,
+    tags: parseTags(form.tags),
+  };
+}
+
+function optionalString(value: string) {
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}
+
+function parseTags(value: string) {
+  return value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }

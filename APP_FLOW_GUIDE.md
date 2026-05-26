@@ -130,12 +130,12 @@ Checklist “lengkapi profil” / “≥5 FAQ” / kartu “AI status”: `lib/b
 | Halaman | Client | Endpoint utama |
 |---------|--------|----------------|
 | `/dashboard/inbox` | `lib/api/inbox.ts` | conversations, messages, handoff, SSE |
-| `/dashboard/contacts` | `lib/api/leads.ts` | leads / contacts |
+| `/dashboard/contacts` | `lib/api/contacts.ts` | contacts CRUD — search server-side, pagination 25 item/halaman, status aktif/nonaktif, batch status/delete |
 | `/dashboard/knowledge-base` | `lib/api/knowledge-base.ts` | FAQ CRUD |
 | `/dashboard/team` | `lib/api/team.ts` | `GET/POST/DELETE /api/v1/team/members` |
-| `/dashboard/catalog` | `lib/api/catalog.ts` | katalog produk (CRUD manual) |
+| `/dashboard/catalog` | `lib/api/catalog.ts` | katalog produk — CRUD manual, search server-side, pagination 25 item/halaman agar aman untuk katalog besar |
 | `/dashboard/catalog/import-image` | `lib/api/catalogImage.ts`, `lib/catalog-image-limits.ts` | Multi-screenshot (≤ **5** file, **5 MB**/file, **20 MB** total) → AI (Haiku) → pratinjau editable → commit; pakai kuota `ai_token` di preview saja. Backend: [api-go/docs/CATALOG_IMAGE_IMPORT.md](../api-go/docs/CATALOG_IMAGE_IMPORT.md) |
-| `/dashboard/orders` | `lib/api/orders.ts` | pesanan |
+| `/dashboard/orders` | `lib/api/orders.ts`, `lib/api/catalog.ts`, `lib/api/contacts.ts` | pesanan CRUD, pilih contact opsional, multi item dari katalog, quick-create produk katalog, search/filter status, pagination, batch status/delete |
 | `/dashboard/broadcast` | `lib/api/broadcast.ts` | broadcast (Business+ berbayar; trial dengan kuota) |
 | `/dashboard/import` | `lib/api/import.ts` | preview → `jobId` → execute |
 | `/dashboard/billing` | `billing`, `usage`, `payment` | overview, kuota, QRIS, AI top-up 20rb/30rb |

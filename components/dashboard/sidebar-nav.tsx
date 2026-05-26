@@ -14,6 +14,7 @@ import {
   Megaphone,
   MessageSquare,
   Package,
+  ShoppingCart,
   Plug,
   Shield,
   Sparkles,
@@ -57,7 +58,7 @@ const tenantNavGroups: Array<{
     label: "Bisnis",
     items: [
       { href: "/dashboard/catalog", label: "Katalog", icon: Package },
-      { href: "/dashboard/orders", label: "Pesanan", icon: Package },
+      { href: "/dashboard/orders", label: "Pesanan", icon: ShoppingCart },
       { href: "/dashboard/broadcast", label: "Broadcast", icon: Megaphone },
       { href: "/dashboard/import", label: "Import", icon: Upload },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },

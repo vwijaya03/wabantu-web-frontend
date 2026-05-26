@@ -14,32 +14,42 @@ export interface CatalogItem {
   updatedAt: string;
 }
 
+export interface ListCatalogParams {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+  activeOnly?: boolean;
+}
+
+export interface ListCatalogResponse {
+  items: CatalogItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface CatalogInput {
+  externalCode: string;
+  name: string;
+  description?: string;
+  sellPrice?: number;
+  sellUnit?: string;
+  isActive?: boolean;
+  barcode?: string;
+}
+
+export type CatalogUpdateInput = Partial<Omit<CatalogInput, "externalCode">>;
+
 export const catalogApi = {
-  async list(): Promise<{ items: CatalogItem[]; total: number }> {
-    const res = await api.get("/business/catalog");
+  async list(params: ListCatalogParams = {}): Promise<ListCatalogResponse> {
+    const res = await api.get("/business/catalog", { params });
     return res.data;
   },
-  async create(input: {
-    externalCode: string;
-    name: string;
-    description?: string;
-    sellPrice?: number;
-    sellUnit?: string;
-    isActive?: boolean;
-  }): Promise<CatalogItem> {
+  async create(input: CatalogInput): Promise<CatalogItem> {
     const res = await api.post("/business/catalog", input);
     return res.data;
   },
-  async update(
-    id: string,
-    input: Partial<{
-      name: string;
-      description: string;
-      sellPrice: number;
-      sellUnit: string;
-      isActive: boolean;
-    }>,
-  ): Promise<CatalogItem> {
+  async update(id: string, input: CatalogUpdateInput): Promise<CatalogItem> {
     const res = await api.patch(`/business/catalog/${id}`, input);
     return res.data;
   },

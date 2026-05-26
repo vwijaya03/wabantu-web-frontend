@@ -257,7 +257,8 @@ Customer mengisi (semakin lengkap, semakin bagus jawaban AI):
 
 **Tujuan:** AI dan tim bisa menyebut produk dengan nama & harga yang benar.
 
-- Tambah produk: kode, nama, harga, satuan.
+- Tambah/edit/hapus produk: kode SKU, nama, harga, satuan, barcode, deskripsi, dan status aktif.
+- Search dan pagination membantu tenant dengan katalog besar; UI hanya menampilkan satu halaman data sehingga tidak memanjang walau SKU sangat banyak.
 - Bisa juga **Import** CSV/Excel (menu Import) untuk banyak produk sekaligus.
 
 **Use case:** Toko fashion, catering, reseller dengan banyak SKU.
@@ -318,13 +319,14 @@ Customer mengisi (semakin lengkap, semakin bagus jawaban AI):
 
 ---
 
-### 7.8 Contacts (Leads)
+### 7.8 Contacts
 
-**Tujuan:** Melacak calon pembeli yang muncul dari chat.
+**Tujuan:** Mengelola daftar kontak customer yang pernah chat atau diinput manual.
 
-- Sistem bisa mencatat **lead** dari percakapan.
-- Status: baru → dihubungi → qualified → menang / kalah.
-- Tim sales bisa update status di tabel Contacts.
+- Tambah, edit, dan hapus kontak manual.
+- Search nama/nomor/tag dan pagination membantu saat kontak sudah banyak.
+- Status kontak bisa `Aktif` atau `Nonaktif`, dan tim bisa update status/hapus beberapa kontak sekaligus.
+- Lead otomatis dari percakapan tetap dicatat oleh sistem, tetapi menu Contacts fokus ke data kontak customer.
 
 **Pitching:** *“Tidak cuma balas chat — Anda punya daftar prospek yang pernah chat.”*
 
@@ -334,7 +336,11 @@ Customer mengisi (semakin lengkap, semakin bagus jawaban AI):
 
 **Tujuan:** Mencatat order yang lahir dari percakapan (ringkasan status & total).
 
-- Daftar pesanan dengan status (draft, dibayar, dikirim, dll. tergantung implementasi).
+- Daftar pesanan dengan search, filter status, dan pagination.
+- Saat membuat pesanan, contact boleh dipilih atau dikosongkan.
+- Pesanan bisa berisi beberapa item, dan item harus berasal dari Katalog Produk. Jika produk belum ada, buat cepat dari form pesanan agar otomatis masuk katalog.
+- Status operasional: draft, sedang diproses, dalam pengiriman, selesai, dibatalkan.
+- Owner bisa update status satu per satu atau pilih banyak pesanan lalu update/hapus batch.
 - Berguna untuk UMKM yang sudah jualan lewat WA dan mau satu tempat lihat order.
 
 **Catatan onboarding:** Jelaskan bahwa ini melengkapi chat — bukan pengganti marketplace lengkap.

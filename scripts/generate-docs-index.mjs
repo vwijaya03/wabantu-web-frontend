@@ -157,7 +157,7 @@ const payload = {
   generatedAt: new Date(Math.max(...docs.map((d) => d.modifiedAtMs), 0)).toISOString(),
   sources: Array.from(new Set(docs.map((d) => d.source))).sort(),
   totalDocs: docs.length,
-  docs: docs.map(({ modifiedAtMs: _, ...doc }) => doc),
+  docs: docs.map(stripInternalFields),
   config: {
     apiGoDocsRoot: apiGoDocsRootInput,
     apiGoDocsIndexUrl: apiGoDocsIndexUrl || "",
@@ -175,6 +175,12 @@ function statExists(target) {
   } catch {
     return false;
   }
+}
+
+function stripInternalFields(doc) {
+  const clean = { ...doc };
+  delete clean.modifiedAtMs;
+  return clean;
 }
 
 async function fetchRemoteDocs(url) {
