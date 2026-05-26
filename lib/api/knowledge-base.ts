@@ -18,7 +18,7 @@ interface ListResponse {
 }
 
 export const knowledgeBaseApi = {
-  async list(params: { search?: string; page?: number } = {}): Promise<ListResponse> {
+  async list(params: { search?: string; page?: number; pageSize?: number } = {}): Promise<ListResponse> {
     const res = await api.get<ListResponse>("/knowledge-base", { params });
     return res.data;
   },

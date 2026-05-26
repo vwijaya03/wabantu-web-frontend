@@ -149,6 +149,7 @@ Checklist “lengkapi profil” / “≥5 FAQ” / kartu “AI status”: `lib/b
 | `/dashboard/finance/recurring` | `lib/api/finance.ts` | transaksi berulang (auto/reminder) |
 | `/dashboard/finance/checklist` | `lib/api/finance.ts` | checklist harian + template |
 | `/dashboard/finance/reports` | `lib/api/finance.ts` | perbandingan bulanan + export CSV/PDF |
+| `/dashboard/docs` | static `public/generated-docs/docs-index.json` | Docs Hub internal — fuzzy search README/.md dari `api-go` + `web-frontend` |
 | `/dashboard/admin/ai-activity` | `lib/api/ai-activity.ts` | log AI per tenant — **super_admin** only |
 | `/dashboard/admin` | `lib/api/admin.ts` | super admin only — search/pagination tenant, pantau, override paket, delete tenant |
 
@@ -177,6 +178,13 @@ Enforcement kuat di api-go (`entitlement` + kuota `usage`). Billing: checkout `p
 6. Tanpa impersonate: Workflow/Cabang **tidak** di sidebar; URL tenant diarahkan ke admin dengan petunjuk `?needTenant=1`.
 
 > Pola lama `superadmin@gmail.com` saat register sudah tidak dipakai untuk akun tanpa toko.
+
+### Docs Hub internal
+
+1. `npm run docs:generate` membaca semua `.md` dari `../api-go` dan `./web-frontend`.
+2. Output: `public/generated-docs/docs-index.json`.
+3. `predev` dan `prebuild` menjalankan generator otomatis, sehingga perubahan README/docs ikut muncul tanpa input DB.
+4. `/dashboard/docs` hanya untuk `super_admin`; UI menyediakan fuzzy search, highlight kata kunci, dan “Poin Relevan” yang bisa diklik untuk lompat ke heading terkait.
 
 ---
 

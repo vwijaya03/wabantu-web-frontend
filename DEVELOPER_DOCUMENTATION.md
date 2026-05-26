@@ -162,12 +162,14 @@ sequenceDiagram
 
 | Path | Role |
 |------|------|
-| `package.json` | Dependencies, scripts (`dev`, `build`, `start`) |
+| `package.json` | Dependencies, scripts (`dev`, `docs:generate`, `build`, `start`) |
 | `next.config.ts` | Rewrites, `standalone` output, ngrok `allowedDevOrigins` |
 | `proxy.ts` | Next 16 edge hook (no-op auth) |
 | `tsconfig.json` | `@/*` path alias → project root |
 | `app/globals.css` | Tailwind v4 import + design tokens |
 | `.env.example` | Env template |
+| `scripts/generate-docs-index.mjs` | Generate Docs Hub index dari semua `.md` di `api-go/` + `web-frontend/` |
+| `public/generated-docs/docs-index.json` | Static docs index yang dibaca `/dashboard/docs` |
 
 **No `middleware.ts`** — Next 16 uses `proxy.ts` in this project.
 
@@ -414,7 +416,33 @@ export const inboxApi = {
 
 Types are **TypeScript interfaces** mirroring api-go JSON (camelCase).
 
-## 5.3 React Query key conventions
+## 5.3 Docs Hub internal
+
+Route: **`/dashboard/docs`** (menu Platform → Dokumentasi, `super_admin` only).
+
+Source of truth tetap file markdown di repo:
+
+- `../api-go/**/*.md`
+- `web-frontend/**/*.md`
+
+Generator:
+
+```bash
+npm run docs:generate
+```
+
+Script `scripts/generate-docs-index.mjs` menghasilkan `public/generated-docs/docs-index.json` berisi metadata dokumen, heading, anchor, excerpt, dan `searchText`. `predev` dan `prebuild` otomatis menjalankan generator agar Docs Hub ikut update setiap kali README/file `.md` berubah.
+
+Fitur UI:
+
+- fuzzy search yang toleran typo ringan dan urutan kata bebas,
+- highlight kata pencarian di hasil dan viewer,
+- “Poin Relevan” dari heading/section terdekat,
+- klik heading/poin untuk lompat ke bagian dokumen.
+
+Karena index ini static JSON, tidak perlu DB/migrasi. Jika nanti butuh AI semantic search, gunakan JSON chunk ini sebagai input retrieval atau vector indexing.
+
+## 5.4 React Query key conventions
 
 | Query key | Purpose |
 |-----------|---------|

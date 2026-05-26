@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
   Bot,
+  BookOpen,
   Building2,
   CreditCard,
   Inbox,
@@ -83,6 +84,7 @@ const platformNavGroup = {
       label: "AI Activity",
       icon: Sparkles,
     },
+    { href: "/dashboard/docs", label: "Dokumentasi", icon: BookOpen },
   ],
 };
 

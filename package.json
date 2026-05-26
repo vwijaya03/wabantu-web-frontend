@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "docs:generate": "node scripts/generate-docs-index.mjs",
+    "predev": "npm run docs:generate",
     "dev": "next dev",
+    "prebuild": "npm run docs:generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

@@ -19,6 +19,21 @@ export interface Wallet {
   createdAt: string;
 }
 
+export type CreateWalletInput = {
+  name?: string;
+  type?: Wallet["type"];
+  institution?: string;
+  accountNoMask?: string;
+  currency?: string;
+  initialBalance: number;
+  color?: string;
+  icon?: string;
+  visibility?: Wallet["visibility"];
+  displayOrder?: number;
+};
+
+export type UpdateWalletInput = Partial<Omit<CreateWalletInput, "initialBalance">>;
+
 export interface Category {
   id: string;
   name: string;
@@ -223,6 +238,17 @@ export interface ChecklistTemplate {
   order: number;
 }
 
+export type CreateChecklistTemplateInput = {
+  title?: string;
+  description?: string;
+  amountHint?: number;
+  categoryId?: string;
+  walletId?: string;
+  frequency?: string;
+  dayOfMonth?: number;
+  order?: number;
+};
+
 export interface ChecklistItem {
   id: string;
   templateId: string;
@@ -276,9 +302,9 @@ export const financeApi = {
 
   // Wallets
   listWallets: () => api.get<{ wallets: Wallet[] }>("/finance/wallets").then((r) => r.data),
-  createWallet: (d: Partial<Wallet> & { initialBalance: number }) =>
+  createWallet: (d: CreateWalletInput) =>
     api.post<Wallet>("/finance/wallets", d).then((r) => r.data),
-  updateWallet: (id: string, d: Partial<Wallet>) =>
+  updateWallet: (id: string, d: UpdateWalletInput) =>
     api.put<Wallet>(`/finance/wallets/${id}`, d).then((r) => r.data),
   deleteWallet: (id: string) =>
     api.delete<{ ok: boolean }>(`/finance/wallets/${id}`).then((r) => r.data),
@@ -323,7 +349,7 @@ export const financeApi = {
     api.delete<{ ok: boolean }>(`/finance/transaction-types/${id}`).then((r) => r.data),
 
   // Transactions
-  listTransactions: (params?: Record<string, string | number>) =>
+  listTransactions: (params?: Record<string, string | number | undefined>) =>
     api.get<{ items: Transaction[]; total: number }>("/finance/transactions", { params }).then((r) => r.data),
   createTransaction: (d: CreateTransactionInput) =>
     api.post<Transaction>("/finance/transactions", d).then((r) => r.data),
@@ -443,7 +469,7 @@ export const financeApi = {
   // Checklist
   listChecklistTemplates: () =>
     api.get<{ templates: ChecklistTemplate[] }>("/finance/checklist/templates").then((r) => r.data),
-  createChecklistTemplate: (d: Partial<ChecklistTemplate>) =>
+  createChecklistTemplate: (d: CreateChecklistTemplateInput) =>
     api.post<ChecklistTemplate>("/finance/checklist/templates", d).then((r) => r.data),
   deleteChecklistTemplate: (id: string) =>
     api.delete<{ ok: boolean }>(`/finance/checklist/templates/${id}`).then((r) => r.data),

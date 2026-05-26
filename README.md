@@ -8,6 +8,8 @@ Alur lengkap: **[APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md)** · Backend: **[../api
 
 **Tim onboarding / sales / pitching:** **[ONBOARDING_AND_PRODUCT_GUIDE.md](./ONBOARDING_AND_PRODUCT_GUIDE.md)** — penjelasan fitur untuk customer & trainee (bahasa awam, alur bisnis, skrip demo).
 
+**Docs Hub internal:** login sebagai `super_admin` → **Platform → Dokumentasi** (`/dashboard/docs`). Halaman ini menggabungkan semua file `.md` dari `web-frontend/` dan `api-go/`, dengan fuzzy search, highlight kata kunci, poin/heading relevan yang bisa diklik, dan viewer markdown internal.
+
 ---
 
 ## Untuk developer baru — checklist sebelum `npm run dev`
@@ -102,6 +104,7 @@ app/
         │   ├── recurring/       # Transaksi berulang
         │   ├── checklist/       # Checklist harian + template
         │   └── reports/         # Export CSV/PDF + perbandingan bulanan
+        ├── docs/                # Docs Hub internal — search README/.md api-go + web-frontend
         └── admin/               # Super admin (+ ai-activity log)
 ```
 
@@ -211,10 +214,13 @@ emerald.
 
 ```bash
 npm run dev      # Dev server :3000 (butuh api-go :4000)
+npm run docs:generate # Generate public/generated-docs/docs-index.json dari api-go + web-frontend .md
 npm run build    # Production build — butuh Node 18+
 npm run start    # Serve the built output
 npm run lint     # Next ESLint config
 ```
+
+`npm run dev` dan `npm run build` menjalankan `docs:generate` otomatis lewat `predev`/`prebuild`, jadi Docs Hub ikut update setiap kali file `.md` berubah.
 
 ## Troubleshooting
 

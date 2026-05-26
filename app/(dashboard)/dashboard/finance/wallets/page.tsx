@@ -62,7 +62,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-function emptyForm() {
+type WalletFormState = {
+  name: string;
+  type: WalletType["type"];
+  institution: string;
+  currency: string;
+  initialBalance: string;
+  color: string;
+  icon: string;
+  visibility: WalletType["visibility"];
+};
+
+function emptyForm(): WalletFormState {
   return {
     name: "",
     type: "cash",
@@ -80,8 +91,8 @@ function WalletFormFields({
   setForm,
   isEdit,
 }: {
-  form: ReturnType<typeof emptyForm>;
-  setForm: React.Dispatch<React.SetStateAction<ReturnType<typeof emptyForm>>>;
+  form: WalletFormState;
+  setForm: React.Dispatch<React.SetStateAction<WalletFormState>>;
   isEdit: boolean;
 }) {
   const IconPreview = WALLET_ICON_MAP[form.icon] ?? Wallet;
@@ -103,11 +114,11 @@ function WalletFormFields({
           onValueChange={(v) =>
             setForm((f) => ({
               ...f,
-              type: v,
-              icon: f.icon === defaultWalletIconKey(f.type) ? defaultWalletIconKey(v) : f.icon,
+              type: v as WalletType["type"],
+              icon: f.icon === defaultWalletIconKey(f.type) ? defaultWalletIconKey(v as WalletType["type"]) : f.icon,
               color:
                 f.color === WALLET_TYPE_COLORS[f.type]
-                  ? WALLET_TYPE_COLORS[v] ?? WALLET_TYPE_COLORS.other
+                  ? WALLET_TYPE_COLORS[v as WalletType["type"]] ?? WALLET_TYPE_COLORS.other
                   : f.color,
             }))
           }

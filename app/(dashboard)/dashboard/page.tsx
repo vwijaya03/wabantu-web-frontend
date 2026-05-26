@@ -149,7 +149,7 @@ export default function DashboardOverviewPage() {
     <>
       <PageHeader
         title={`Halo, ${user?.name?.split(" ")[0] || "Owner"} 👋`}
-        description={`Berikut ringkasan ${user?.tenant.name ?? "bisnis Anda"} hari ini.`}
+        description={`Berikut ringkasan ${user?.tenant?.name ?? "bisnis Anda"} hari ini.`}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
