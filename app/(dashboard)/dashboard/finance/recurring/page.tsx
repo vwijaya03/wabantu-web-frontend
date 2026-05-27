@@ -6,7 +6,7 @@ import { PlusCircle, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { FinanceSubPageHeader } from "@/components/finance/finance-sub-page-header";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,7 +82,7 @@ export default function RecurringPage() {
 
   return (
     <>
-      <PageHeader
+      <FinanceSubPageHeader
         title="Transaksi Otomatis"
         description="Kelola tagihan dan transaksi berulang."
         actions={

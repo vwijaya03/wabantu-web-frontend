@@ -115,6 +115,14 @@ export const inboxApi = {
     await api.post(`/inbox/conversations/${conversationId}/ai-resume`);
   },
 
+  async handoffBatch(ids: string[], reason?: string): Promise<void> {
+    await api.post(`/inbox/conversations-batch/handoff`, { ids, reason });
+  },
+
+  async resumeAiBatch(ids: string[]): Promise<void> {
+    await api.post(`/inbox/conversations-batch/ai-resume`, { ids });
+  },
+
   async sendMessage(conversationId: string, body: string): Promise<void> {
     await api.post(`/inbox/conversations/${conversationId}/messages`, { body });
   },

@@ -405,15 +405,16 @@ export const inboxApi = {
 |--------|------------|
 | `auth.ts` | `/auth/register`, `/login`, `/logout`, `/me` |
 | `inbox.ts` | `/inbox/conversations`, `.../messages`, `/inbox/stream` (SSE built in hook) |
-| `contacts.ts` | `/inbox/contacts?q=&page=&pageSize=` + POST/PATCH/DELETE + batch status/delete; UI contacts harus server-side search/pagination |
+| `contacts.ts` | `/inbox/contacts` + `priceTypeId`; dropdown tipe harga hanya dari API (tanpa opsi default sintetis) |
+| `price-types.ts` | `/business/price-types` — CRUD master tipe harga |
 | `business.ts` | `/business/profile` |
-| `catalog.ts` | `/business/catalog?q=&page=&pageSize=` + POST/PATCH/DELETE; UI katalog harus server-side search/pagination, bukan load semua SKU |
+| `catalog.ts` | `/business/catalog` (+ `contactId`, `prices[]`, `effectiveSellPrice`); form multi-harga per tipe |
 | `catalogImage.ts` | `/business/catalog/import-image/preview` (multipart `files`), `import-image-limits`, `import-image/draft/:jobId/commit` |
 | `catalog-image-limits.ts` | Konstanta validasi client (5 MB/file, 5 file, 20 MB total, JPG/PNG/WEBP); jangan set header `Content-Type` manual pada FormData (biarkan axios set boundary) |
 | `whatsapp.ts` | `/whatsapp/channels`, `/whatsapp/meta/connect/*` |
 | `billing.ts`, `usage.ts`, `payment.ts` | Billing, usage quotas, AI top-up, payments |
 | `workflow.ts` | `/workflows` — `list`, `create`, `update` (PATCH), `remove` (DELETE) |
-| `orders.ts` | `/orders?q=&status=&page=&pageSize=` + POST/PATCH/DELETE + `/order-status/batch` + `/order-delete/batch`; create/edit order memakai modal step-by-step, contact opsional, pagination selector contact/katalog, multi-item dari katalog, status/pengiriman, dan total harga+ongkir |
+| `orders.ts` | `/orders` + batch; katalog list dengan `contactId`; harga item dari `effectiveSellPrice`; pesanan selesai/batal tersinkron ke finance (backend) |
 | `import.ts` | `/import/preview`, `/import/execute`; halaman import menyediakan template CSV/XLSX produk dan execute selalu mengirim `targetTable=business_catalog_item` untuk import katalog produk |
 | `admin.ts` | `/admin/tenants` search/pagination, impersonation, plan override, tenant delete |
 | `ai-activity.ts` | `/admin/tenant/:id/ai-activity` (+ summary) — super_admin only |

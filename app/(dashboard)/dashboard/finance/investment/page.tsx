@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { FinanceSubPageHeader } from "@/components/finance/finance-sub-page-header";
 import {
   Dialog,
   DialogContent,
@@ -448,7 +448,7 @@ export default function InvestmentPage() {
 
   return (
     <>
-      <PageHeader
+      <FinanceSubPageHeader
         title="Investasi & Aset"
         description="Pantau portofolio investasi Anda."
         actions={

@@ -20,6 +20,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { contactsApi, type Contact } from "@/lib/api/contacts";
+import { priceTypesApi } from "@/lib/api/price-types";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 
@@ -35,6 +36,7 @@ type ContactForm = {
   displayName: string;
   notes: string;
   status: string;
+  priceTypeId: string;
   tags: string;
 };
 
@@ -43,6 +45,7 @@ const emptyForm: ContactForm = {
   displayName: "",
   notes: "",
   status: "active",
+  priceTypeId: "",
   tags: "",
 };
 
@@ -62,6 +65,19 @@ export default function ContactsPage() {
     queryKey: ["contacts", search, page, pageSize],
     queryFn: () => contactsApi.list({ q: search || undefined, page, pageSize }),
   });
+  const { data: priceTypesData } = useQuery({
+    queryKey: ["price-types", "contacts-form"],
+    queryFn: () => priceTypesApi.list({ pageSize: 50 }),
+  });
+  const priceTypes = (priceTypesData?.items ?? []).filter((pt) => pt.isActive);
+  const defaultPriceType = useMemo(
+    () => priceTypes.find((pt) => pt.isDefault) ?? priceTypes[0],
+    [priceTypes],
+  );
+  const priceTypeLabelById = useMemo(
+    () => new Map(priceTypes.map((pt) => [pt.id, pt.label])),
+    [priceTypes],
+  );
 
   const contacts = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -155,6 +171,7 @@ export default function ContactsPage() {
       displayName: contact.displayName ?? "",
       notes: contact.notes ?? "",
       status: contact.status || "active",
+      priceTypeId: contact.priceTypeId ?? "",
       tags: contact.tags.join(", "),
     });
   };
@@ -241,10 +258,11 @@ export default function ContactsPage() {
             </div>
           ) : (
             <div className="overflow-hidden rounded-lg border">
-              <div className="grid grid-cols-[40px_minmax(220px,1fr)_120px_180px_160px_120px] gap-3 border-b bg-muted/60 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground max-lg:hidden">
+              <div className="grid grid-cols-[40px_minmax(220px,1fr)_120px_140px_180px_160px_120px] gap-3 border-b bg-muted/60 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground max-lg:hidden">
                 <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectVisible} aria-label="Pilih semua kontak" />
                 <span>Kontak</span>
                 <span>Status</span>
+                <span>Tipe harga</span>
                 <span>Catatan</span>
                 <span>Tag</span>
                 <span className="text-right">Aksi</span>
@@ -253,7 +271,7 @@ export default function ContactsPage() {
                 {contacts.map((contact) => (
                   <div
                     key={contact.id}
-                    className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[40px_minmax(220px,1fr)_120px_180px_160px_120px] lg:items-center"
+                    className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[40px_minmax(220px,1fr)_120px_140px_180px_160px_120px] lg:items-center"
                   >
                     <input
                       type="checkbox"
@@ -269,6 +287,11 @@ export default function ContactsPage() {
                     <Badge variant={contact.status === "active" ? "success" : "destructive"}>
                       {contact.status === "active" ? "Aktif" : "Nonaktif"}
                     </Badge>
+                    <p className="text-xs text-muted-foreground">
+                      {contact.priceTypeId
+                        ? priceTypeLabelById.get(contact.priceTypeId) ?? "Kustom"
+                        : defaultPriceType?.label ?? "Harga umum"}
+                    </p>
                     <p className="line-clamp-2 text-xs text-muted-foreground">{contact.notes || "-"}</p>
                     <div className="flex flex-wrap gap-1">
                       {contact.tags.length === 0 ? (
@@ -333,7 +356,12 @@ export default function ContactsPage() {
             <DialogTitle>Tambah Kontak</DialogTitle>
             <DialogDescription>Kontak juga otomatis dibuat saat customer chat ke WhatsApp.</DialogDescription>
           </DialogHeader>
-          <ContactFormFields form={createForm} setForm={setCreateForm} />
+          <ContactFormFields
+            form={createForm}
+            setForm={setCreateForm}
+            priceTypes={priceTypes}
+            defaultPriceTypeId={defaultPriceType?.id}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
               Batal
@@ -351,7 +379,13 @@ export default function ContactsPage() {
             <DialogTitle>Edit Kontak</DialogTitle>
             <DialogDescription>Ubah nama, catatan, dan tag kontak.</DialogDescription>
           </DialogHeader>
-          <ContactFormFields form={editForm} setForm={setEditForm} isEdit />
+          <ContactFormFields
+            form={editForm}
+            setForm={setEditForm}
+            isEdit
+            priceTypes={priceTypes}
+            defaultPriceTypeId={defaultPriceType?.id}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditContact(null)}>
               Batal
@@ -370,12 +404,17 @@ function ContactFormFields({
   form,
   setForm,
   isEdit,
+  priceTypes,
+  defaultPriceTypeId,
 }: {
   form: ContactForm;
   setForm: (form: ContactForm) => void;
   isEdit?: boolean;
+  priceTypes: Array<{ id: string; label: string; isDefault: boolean }>;
+  defaultPriceTypeId?: string;
 }) {
   const update = (patch: Partial<ContactForm>) => setForm({ ...form, ...patch });
+  const selectValue = form.priceTypeId || defaultPriceTypeId || "";
   return (
     <div className="space-y-3">
       <div>
@@ -390,6 +429,33 @@ function ContactFormFields({
       <div>
         <Label>Nama</Label>
         <Input value={form.displayName} onChange={(e) => update({ displayName: e.target.value })} />
+      </div>
+      <div>
+        <Label>Tipe harga</Label>
+        <Select
+          value={selectValue}
+          onValueChange={(value) =>
+            update({
+              priceTypeId: defaultPriceTypeId && value === defaultPriceTypeId ? "" : value,
+            })
+          }
+          disabled={priceTypes.length === 0}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={priceTypes.length === 0 ? "Muat tipe harga…" : "Pilih tipe harga"} />
+          </SelectTrigger>
+          <SelectContent>
+            {priceTypes.map((pt) => (
+              <SelectItem key={pt.id} value={pt.id}>
+                {pt.label}
+                {pt.isDefault ? " (default)" : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Dipakai saat membuat pesanan untuk kontak ini (mis. reseller).
+        </p>
       </div>
       <div>
         <Label>Status</Label>
@@ -425,6 +491,7 @@ function toCreatePayload(form: ContactForm) {
     displayName: optionalString(form.displayName),
     notes: optionalString(form.notes),
     status: form.status,
+    priceTypeId: optionalString(form.priceTypeId),
     tags: parseTags(form.tags),
   };
 }
@@ -434,6 +501,7 @@ function toUpdatePayload(form: ContactForm) {
     displayName: optionalString(form.displayName),
     notes: optionalString(form.notes),
     status: form.status,
+    priceTypeId: form.priceTypeId.trim() === "" ? null : form.priceTypeId.trim(),
     tags: parseTags(form.tags),
   };
 }

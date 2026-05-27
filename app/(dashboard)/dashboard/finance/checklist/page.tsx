@@ -6,7 +6,7 @@ import { CheckCircle2, Circle, SkipForward, PlusCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { FinanceSubPageHeader } from "@/components/finance/finance-sub-page-header";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,7 +84,7 @@ export default function ChecklistPage() {
 
   return (
     <>
-      <PageHeader
+      <FinanceSubPageHeader
         title="Checklist Keuangan"
         description={today?.date ? `Tugas hari ini · ${formatFinanceDate(today.date, reportingTimezone)}` : "Tugas keuangan harian"}
         actions={

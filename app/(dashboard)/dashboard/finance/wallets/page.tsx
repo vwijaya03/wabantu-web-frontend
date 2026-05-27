@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { FinanceSubPageHeader } from "@/components/finance/finance-sub-page-header";
 import {
   financeApi,
   formatIDR,
@@ -343,7 +343,7 @@ export default function WalletsPage() {
 
   return (
     <>
-      <PageHeader
+      <FinanceSubPageHeader
         title="Dompet & Rekening"
         description="Kelola semua sumber dana bisnis Anda."
         actions={

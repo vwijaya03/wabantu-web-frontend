@@ -27,6 +27,12 @@ Bukan software akuntansi — ini **buku kas digital** yang mudah dipakai UMKM.
 
 ---
 
+## Pemasukan dari pesanan selesai
+
+Jika pesanan di **Pesanan** diset status **Selesai** (`completed`), sistem otomatis mencatat **pemasukan** di Catat Transaksi (kategori Penjualan Produk, dompet default). Jika status dikembalikan ke **Draft** atau **Dibatalkan**, transaksi pemasukan terkait dihapus.
+
+---
+
 ## Cara mulai (untuk owner baru)
 
 1. **Buat dompet** di `/dashboard/finance/wallets` — minimal 1 dompet Kas Tunai (sudah ada secara default).

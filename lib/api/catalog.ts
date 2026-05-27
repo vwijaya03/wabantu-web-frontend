@@ -1,11 +1,20 @@
 import { api } from "./client";
 
+export interface CatalogItemPrice {
+  priceTypeId: string;
+  priceTypeCode?: string;
+  priceTypeLabel?: string;
+  price: number;
+}
+
 export interface CatalogItem {
   id: string;
   externalCode: string;
   name: string;
   description?: string;
   sellPrice?: number;
+  effectiveSellPrice?: number;
+  prices?: CatalogItemPrice[];
   sellUnit?: string;
   isActive: boolean;
   barcode?: string;
@@ -19,6 +28,7 @@ export interface ListCatalogParams {
   page?: number;
   pageSize?: number;
   activeOnly?: boolean;
+  contactId?: string;
 }
 
 export interface ListCatalogResponse {
@@ -33,6 +43,7 @@ export interface CatalogInput {
   name: string;
   description?: string;
   sellPrice?: number;
+  prices?: CatalogItemPrice[];
   sellUnit?: string;
   isActive?: boolean;
   barcode?: string;

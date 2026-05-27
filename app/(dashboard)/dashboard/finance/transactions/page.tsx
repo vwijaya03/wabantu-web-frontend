@@ -7,7 +7,7 @@ import { CheckCircle2, Clock, Pencil, PlusCircle, Search, Trash2, X } from "luci
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { FinanceSubPageHeader } from "@/components/finance/finance-sub-page-header";
 import {
   Select,
   SelectContent,
@@ -199,7 +199,7 @@ export default function TransactionsPage() {
 
   return (
     <>
-      <PageHeader
+      <FinanceSubPageHeader
         title="Transaksi"
         description={`${total} transaksi ditemukan`}
         actions={

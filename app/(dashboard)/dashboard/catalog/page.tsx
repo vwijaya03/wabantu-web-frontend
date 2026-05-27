@@ -22,7 +22,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
-import { catalogApi, type CatalogItem } from "@/lib/api/catalog";
+import { catalogApi, type CatalogItem, type CatalogItemPrice } from "@/lib/api/catalog";
+import { priceTypesApi, type PriceType } from "@/lib/api/price-types";
 import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -34,6 +35,7 @@ type CatalogForm = {
   name: string;
   description: string;
   sellPrice: string;
+  priceByType: Record<string, string>;
   sellUnit: string;
   barcode: string;
   isActive: boolean;
@@ -44,6 +46,7 @@ const emptyForm: CatalogForm = {
   name: "",
   description: "",
   sellPrice: "",
+  priceByType: {},
   sellUnit: "",
   barcode: "",
   isActive: true,
@@ -64,6 +67,11 @@ export default function CatalogPage() {
     queryKey: ["catalog", search, page, pageSize],
     queryFn: () => catalogApi.list({ q: search || undefined, page, pageSize }),
   });
+  const { data: priceTypesData } = useQuery({
+    queryKey: ["price-types", "catalog-form"],
+    queryFn: () => priceTypesApi.list({ pageSize: 50 }),
+  });
+  const priceTypes = (priceTypesData?.items ?? []).filter((pt) => pt.isActive);
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -77,7 +85,7 @@ export default function CatalogPage() {
 
   const createMut = useMutation({
     mutationFn: () =>
-      catalogApi.create(toCreatePayload(createForm)),
+      catalogApi.create(toCreatePayload(createForm, priceTypes)),
     onSuccess: () => {
       toast.success("Produk ditambahkan");
       setCreateForm(emptyForm);
@@ -88,7 +96,7 @@ export default function CatalogPage() {
   });
 
   const updateMut = useMutation({
-    mutationFn: () => catalogApi.update(editItem!.id, toUpdatePayload(editForm)),
+    mutationFn: () => catalogApi.update(editItem!.id, toUpdatePayload(editForm, priceTypes)),
     onSuccess: () => {
       toast.success("Produk diperbarui");
       setEditItem(null);
@@ -121,12 +129,21 @@ export default function CatalogPage() {
   };
 
   const openEdit = (item: CatalogItem) => {
+    const priceByType: Record<string, string> = {};
+    for (const row of item.prices ?? []) {
+      priceByType[row.priceTypeId] = String(row.price);
+    }
+    const defaultType = priceTypes.find((pt) => pt.isDefault) ?? priceTypes[0];
+    if (defaultType && priceByType[defaultType.id] == null && item.sellPrice != null) {
+      priceByType[defaultType.id] = String(item.sellPrice);
+    }
     setEditItem(item);
     setEditForm({
       externalCode: item.externalCode,
       name: item.name,
       description: item.description ?? "",
       sellPrice: item.sellPrice == null ? "" : String(item.sellPrice),
+      priceByType,
       sellUnit: item.sellUnit ?? "",
       barcode: item.barcode ?? "",
       isActive: item.isActive,
@@ -144,6 +161,13 @@ export default function CatalogPage() {
           Import dari screenshot (AI)
         </Link>
         <span className="text-muted-foreground"> — untuk seller tanpa export CSV; memakai kuota token AI.</span>
+        {" · "}
+        <Link
+          href="/dashboard/catalog/price-types"
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          Kelola tipe harga
+        </Link>
       </p>
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
         <Card className="self-start">
@@ -151,7 +175,7 @@ export default function CatalogPage() {
             <CardTitle>Tambah produk</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <CatalogFormFields form={createForm} setForm={setCreateForm} />
+            <CatalogFormFields form={createForm} setForm={setCreateForm} priceTypes={priceTypes} />
             <Button
               onClick={() => createMut.mutate()}
               disabled={!canManage || !createForm.externalCode.trim() || !createForm.name.trim() || createMut.isPending}
@@ -294,7 +318,7 @@ export default function CatalogPage() {
             <DialogTitle>Edit produk</DialogTitle>
             <DialogDescription>Ubah nama, harga, barcode, deskripsi, dan status produk.</DialogDescription>
           </DialogHeader>
-          <CatalogFormFields form={editForm} setForm={setEditForm} isEdit />
+          <CatalogFormFields form={editForm} setForm={setEditForm} isEdit priceTypes={priceTypes} />
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditItem(null)}>
               Batal
@@ -328,12 +352,23 @@ function CatalogFormFields({
   form,
   setForm,
   isEdit,
+  priceTypes,
 }: {
   form: CatalogForm;
   setForm: (form: CatalogForm) => void;
   isEdit?: boolean;
+  priceTypes: PriceType[];
 }) {
   const update = (patch: Partial<CatalogForm>) => setForm({ ...form, ...patch });
+  const updatePrice = (priceTypeId: string, value: string) => {
+    const next = { ...form.priceByType, [priceTypeId]: value };
+    const defaultType = priceTypes.find((pt) => pt.isDefault);
+    const patch: Partial<CatalogForm> = { priceByType: next };
+    if (defaultType && priceTypeId === defaultType.id) {
+      patch.sellPrice = value;
+    }
+    setForm({ ...form, ...patch });
+  };
   return (
     <div className="space-y-3">
       <div>
@@ -349,7 +384,26 @@ function CatalogFormFields({
         <Label>Nama</Label>
         <Input value={form.name} onChange={(e) => update({ name: e.target.value })} placeholder="Nama produk" />
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      {priceTypes.length > 0 ? (
+        <div className="space-y-2 rounded-md border p-3">
+          <p className="text-sm font-medium">Harga per tipe</p>
+          {priceTypes.map((pt) => (
+            <div key={pt.id}>
+              <Label>
+                {pt.label}
+                {pt.isDefault ? " (default)" : ""}
+              </Label>
+              <Input
+                value={form.priceByType[pt.id] ?? ""}
+                onChange={(e) => updatePrice(pt.id, e.target.value)}
+                type="number"
+                min="0"
+                placeholder="25000"
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
         <div>
           <Label>Harga (IDR)</Label>
           <Input
@@ -360,10 +414,10 @@ function CatalogFormFields({
             placeholder="25000"
           />
         </div>
-        <div>
-          <Label>Satuan</Label>
-          <Input value={form.sellUnit} onChange={(e) => update({ sellUnit: e.target.value })} placeholder="pcs" />
-        </div>
+      )}
+      <div>
+        <Label>Satuan</Label>
+        <Input value={form.sellUnit} onChange={(e) => update({ sellUnit: e.target.value })} placeholder="pcs" />
       </div>
       <div>
         <Label>Barcode</Label>
@@ -392,27 +446,53 @@ function CatalogFormFields({
   );
 }
 
-function toCreatePayload(form: CatalogForm) {
+function toCreatePayload(form: CatalogForm, priceTypes: PriceType[]) {
+  const prices = buildPricesPayload(form, priceTypes);
+  const defaultType = priceTypes.find((pt) => pt.isDefault);
+  const defaultPrice =
+    defaultType && form.priceByType[defaultType.id]
+      ? optionalNumber(form.priceByType[defaultType.id])
+      : optionalNumber(form.sellPrice);
   return {
     externalCode: form.externalCode.trim(),
     name: form.name.trim(),
     description: optionalString(form.description),
-    sellPrice: optionalNumber(form.sellPrice),
+    sellPrice: defaultPrice,
+    prices: prices.length > 0 ? prices : undefined,
     sellUnit: optionalString(form.sellUnit),
     barcode: optionalString(form.barcode),
     isActive: form.isActive,
   };
 }
 
-function toUpdatePayload(form: CatalogForm) {
+function toUpdatePayload(form: CatalogForm, priceTypes: PriceType[]) {
+  const prices = buildPricesPayload(form, priceTypes);
+  const defaultType = priceTypes.find((pt) => pt.isDefault);
+  const defaultPrice =
+    defaultType && form.priceByType[defaultType.id]
+      ? optionalNumber(form.priceByType[defaultType.id])
+      : optionalNumber(form.sellPrice);
   return {
     name: form.name.trim(),
     description: optionalString(form.description),
-    sellPrice: optionalNumber(form.sellPrice),
+    sellPrice: defaultPrice,
+    prices: prices.length > 0 ? prices : undefined,
     sellUnit: optionalString(form.sellUnit),
     barcode: optionalString(form.barcode),
     isActive: form.isActive,
   };
+}
+
+function buildPricesPayload(form: CatalogForm, priceTypes: PriceType[]): CatalogItemPrice[] {
+  return priceTypes
+    .map((pt) => {
+      const raw = form.priceByType[pt.id];
+      if (raw == null || raw.trim() === "") return null;
+      const price = Number(raw);
+      if (!Number.isFinite(price) || price < 0) return null;
+      return { priceTypeId: pt.id, price };
+    })
+    .filter((row): row is CatalogItemPrice => row != null);
 }
 
 function optionalString(value: string) {

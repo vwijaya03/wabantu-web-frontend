@@ -54,6 +54,7 @@ export default function InboxPage() {
   const { user } = useAuth();
   const tenantKey = tenantContextKey(user);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
   const [draft, setDraft] = useState("");
@@ -62,6 +63,7 @@ export default function InboxPage() {
   useEffect(() => {
     queueMicrotask(() => {
       setSelectedId(null);
+      setSelectedConversationIds(new Set());
       setSearch("");
       setDraft("");
       setUnreadOnly(false);
@@ -95,6 +97,9 @@ export default function InboxPage() {
     () => convosInfinite.data?.pages.flatMap((p) => p.items) ?? [],
     [convosInfinite.data],
   );
+
+  const visibleIds = useMemo(() => conversations.map((c) => c.id), [conversations]);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedConversationIds.has(id));
 
   const selectedConversation = useMemo(
     () => conversations.find((c) => c.id === selectedId) ?? null,
@@ -291,6 +296,52 @@ export default function InboxPage() {
     onError: (e) => toast.error(toApiError(e).message),
   });
 
+  const handoffBatchMut = useMutation({
+    mutationFn: async () => {
+      const ids = Array.from(selectedConversationIds);
+      if (ids.length === 0) return;
+      await inboxApi.handoffBatch(ids, "Takeover manual dari inbox");
+    },
+    onSuccess: () => {
+      toast.success("Percakapan dipindah ke handoff");
+      setSelectedConversationIds(new Set());
+      void invalidateAll();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const resumeAiBatchMut = useMutation({
+    mutationFn: async () => {
+      const ids = Array.from(selectedConversationIds);
+      if (ids.length === 0) return;
+      await inboxApi.resumeAiBatch(ids);
+    },
+    onSuccess: () => {
+      toast.success("AI diaktifkan kembali");
+      setSelectedConversationIds(new Set());
+      void invalidateAll();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const toggleSelected = (id: string) => {
+    setSelectedConversationIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectVisible = () => {
+    setSelectedConversationIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) visibleIds.forEach((id) => next.delete(id));
+      else visibleIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
   const sendMut = useMutation({
     mutationFn: async () => {
       if (!selectedConversation || !draft.trim()) return;
@@ -345,12 +396,46 @@ export default function InboxPage() {
       <Card className="overflow-hidden">
         <div className="grid h-[600px] grid-cols-1 lg:grid-cols-[300px_1fr]">
           <div className="flex min-h-0 flex-col border-r bg-muted/30">
-            <div className="border-b p-3">
+            <div className="space-y-2 border-b p-3">
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Cari nama, nomor, isi chat..."
               />
+              {selectedConversationIds.size > 0 ? (
+                <div className="space-y-2 rounded-md border bg-background p-2">
+                  <label className="flex cursor-pointer items-center gap-2 text-xs font-medium">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 shrink-0 rounded border"
+                      checked={allVisibleSelected}
+                      onChange={() => toggleSelectVisible()}
+                    />
+                    <span className="truncate">
+                      {selectedConversationIds.size} dipilih
+                    </span>
+                  </label>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-full justify-center px-2 text-xs"
+                      disabled={handoffBatchMut.isPending}
+                      onClick={() => handoffBatchMut.mutate()}
+                    >
+                      Handoff
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-8 w-full justify-center px-2 text-xs"
+                      disabled={resumeAiBatchMut.isPending}
+                      onClick={() => resumeAiBatchMut.mutate()}
+                    >
+                      Aktifkan AI
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </div>
             <div
               ref={convoScrollRef}
@@ -382,6 +467,13 @@ export default function InboxPage() {
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex min-w-0 flex-1 items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedConversationIds.has(item.id)}
+                              onChange={() => toggleSelected(item.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              aria-label={`Pilih percakapan ${item.contact.displayName || item.contact.phoneNumber}`}
+                            />
                             {unread ? (
                               <Circle
                                 className="h-2 w-2 shrink-0 fill-primary text-primary"
@@ -400,9 +492,17 @@ export default function InboxPage() {
                             </Badge>
                           ) : null}
                         </div>
-                        <p className="mt-1 line-clamp-1 pl-4 text-xs text-muted-foreground">
-                          {item.lastMessagePreview || "Belum ada pesan"}
-                        </p>
+                        <div className="mt-1 space-y-1 pl-6">
+                          <Badge
+                            variant={item.aiHandled ? "success" : "warning"}
+                            className="w-fit text-[10px]"
+                          >
+                            {item.aiHandled ? "AI agent" : "Handoff"}
+                          </Badge>
+                          <p className="line-clamp-2 text-xs text-muted-foreground">
+                            {item.lastMessagePreview || "Belum ada pesan"}
+                          </p>
+                        </div>
                       </button>
                     );
                   })}
@@ -427,11 +527,19 @@ export default function InboxPage() {
           ) : (
             <div className="flex min-h-0 flex-col">
               <div className="flex flex-col gap-2 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-col">
-                  <p className="text-sm font-semibold">
-                    {selectedConversation.contact.displayName ||
-                      selectedConversation.contact.phoneNumber}
-                  </p>
+                <div className="flex flex-col gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold">
+                      {selectedConversation.contact.displayName ||
+                        selectedConversation.contact.phoneNumber}
+                    </p>
+                    <Badge
+                      variant={selectedConversation.aiHandled ? "success" : "warning"}
+                      className="text-[10px]"
+                    >
+                      {selectedConversation.aiHandled ? "AI agent" : "Handoff"}
+                    </Badge>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {selectedConversation.contact.phoneNumber}
                   </p>
@@ -475,9 +583,7 @@ export default function InboxPage() {
                     onClick={() => handoffMut.mutate()}
                     disabled={handoffMut.isPending}
                   >
-                    {selectedConversation.aiHandled
-                      ? "Take over manual"
-                      : "Lanjut AI"}
+                    {selectedConversation.aiHandled ? "Handoff" : "Aktifkan AI"}
                   </Button>
                 </div>
               </div>

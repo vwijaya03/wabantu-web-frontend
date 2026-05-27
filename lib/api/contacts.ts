@@ -6,6 +6,7 @@ export interface Contact {
   displayName?: string | null;
   notes?: string | null;
   status: "active" | "inactive" | string;
+  priceTypeId?: string | null;
   tags: string[];
 }
 
@@ -27,10 +28,13 @@ export interface ContactInput {
   displayName?: string;
   notes?: string;
   status?: string;
+  priceTypeId?: string;
   tags?: string[];
 }
 
-export type ContactUpdateInput = Partial<Omit<ContactInput, "phoneNumber">>;
+export type ContactUpdateInput = Partial<Omit<ContactInput, "phoneNumber" | "priceTypeId">> & {
+  priceTypeId?: string | null;
+};
 
 export const contactsApi = {
   async list(params: ListContactsParams = {}): Promise<ListContactsResponse> {

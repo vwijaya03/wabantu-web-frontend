@@ -24,6 +24,7 @@ import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
 import { catalogApi, type CatalogItem, type ListCatalogResponse } from "@/lib/api/catalog";
 import { contactsApi, type ListContactsResponse } from "@/lib/api/contacts";
+import { priceTypesApi } from "@/lib/api/price-types";
 import { ordersApi, type Order } from "@/lib/api/orders";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -169,27 +170,38 @@ export default function OrdersPage() {
     enabled: Boolean(editOrder),
   });
   const { data: catalogOptions } = useQuery({
-    queryKey: ["order-catalog-options", createForm.catalogSearch, createCatalogPage, selectorPageSize],
+    queryKey: ["order-catalog-options", createForm.catalogSearch, createForm.contactId, createCatalogPage, selectorPageSize],
     queryFn: () =>
       catalogApi.list({
         q: createForm.catalogSearch || undefined,
         page: createCatalogPage,
         pageSize: selectorPageSize,
         activeOnly: true,
+        contactId: optionalString(createForm.contactId),
       }),
     enabled: createOpen,
   });
   const { data: editCatalogOptions } = useQuery({
-    queryKey: ["order-edit-catalog-options", editForm.catalogSearch, editCatalogPage, selectorPageSize],
+    queryKey: ["order-edit-catalog-options", editForm.catalogSearch, editForm.contactId, editCatalogPage, selectorPageSize],
     queryFn: () =>
       catalogApi.list({
         q: editForm.catalogSearch || undefined,
         page: editCatalogPage,
         pageSize: selectorPageSize,
         activeOnly: true,
+        contactId: optionalString(editForm.contactId),
       }),
     enabled: Boolean(editOrder),
   });
+  const { data: priceTypesData } = useQuery({
+    queryKey: ["price-types", "orders"],
+    queryFn: () => priceTypesApi.list({ pageSize: 50 }),
+    enabled: createOpen || Boolean(editOrder),
+  });
+  const priceTypeLabelById = useMemo(
+    () => new Map((priceTypesData?.items ?? []).map((pt) => [pt.id, pt.label])),
+    [priceTypesData],
+  );
 
   const orders = data?.orders ?? [];
   const total = data?.total ?? 0;
@@ -391,6 +403,52 @@ export default function OrdersPage() {
     });
   };
 
+  const repriceCreateItems = async (contactId: string) => {
+    const hasCatalogItems = createForm.items.some((item) => item.catalogItemId);
+    if (!hasCatalogItems) {
+      setCreateForm((form) => ({ ...form, contactId }));
+      return;
+    }
+    const res = await catalogApi.list({
+      contactId: optionalString(contactId),
+      pageSize: 100,
+      activeOnly: true,
+    });
+    const priceMap = new Map(res.items.map((item) => [item.id, catalogDisplayPrice(item)]));
+    setCreateForm((form) => ({
+      ...form,
+      contactId,
+      items: form.items.map((item) => {
+        if (!item.catalogItemId) return item;
+        const price = priceMap.get(item.catalogItemId);
+        return price == null ? item : { ...item, unitPrice: String(price) };
+      }),
+    }));
+  };
+
+  const repriceEditItems = async (contactId: string) => {
+    const catalogIds = editForm.items.map((item) => item.catalogItemId).filter(Boolean);
+    if (catalogIds.length === 0) {
+      setEditForm((form) => ({ ...form, contactId }));
+      return;
+    }
+    const res = await catalogApi.list({
+      contactId: optionalString(contactId),
+      pageSize: 100,
+      activeOnly: true,
+    });
+    const priceMap = new Map(res.items.map((item) => [item.id, catalogDisplayPrice(item)]));
+    setEditForm((form) => ({
+      ...form,
+      contactId,
+      items: form.items.map((item) => {
+        if (!item.catalogItemId) return item;
+        const price = priceMap.get(item.catalogItemId);
+        return price == null ? item : { ...item, unitPrice: String(price) };
+      }),
+    }));
+  };
+
   const addCatalogItem = (item: CatalogItem) => {
     setCreateForm((form) => {
       if (form.items.some((row) => row.catalogItemId === item.id)) return form;
@@ -403,7 +461,7 @@ export default function OrdersPage() {
             externalCode: item.externalCode,
             name: item.name,
             qty: "1",
-            unitPrice: item.sellPrice == null ? "0" : String(item.sellPrice),
+            unitPrice: String(catalogDisplayPrice(item)),
             sellUnit: item.sellUnit ?? "",
           },
         ],
@@ -423,7 +481,7 @@ export default function OrdersPage() {
             externalCode: item.externalCode,
             name: item.name,
             qty: "1",
-            unitPrice: item.sellPrice == null ? "0" : String(item.sellPrice),
+            unitPrice: String(catalogDisplayPrice(item)),
             sellUnit: item.sellUnit ?? "",
           },
         ],
@@ -672,6 +730,10 @@ export default function OrdersPage() {
               removeOrderItem={removeOrderItem}
               quickCreateCatalog={() => quickCreateCatalogMut.mutate()}
               quickCreatePending={quickCreateCatalogMut.isPending}
+              priceTypeLabelById={priceTypeLabelById}
+              onContactSelect={(contactId) => {
+                void repriceCreateItems(contactId);
+              }}
             />
           </div>
           <DialogFooter className="border-t px-6 py-4">
@@ -709,6 +771,10 @@ export default function OrdersPage() {
               removeOrderItem={removeEditOrderItem}
               quickCreateCatalog={() => quickCreateEditCatalogMut.mutate()}
               quickCreatePending={quickCreateEditCatalogMut.isPending}
+              priceTypeLabelById={priceTypeLabelById}
+              onContactSelect={(contactId) => {
+                void repriceEditItems(contactId);
+              }}
             />
           </div>
           <DialogFooter className="border-t px-6 py-4">
@@ -740,6 +806,8 @@ function OrderCreateForm({
   removeOrderItem,
   quickCreateCatalog,
   quickCreatePending,
+  priceTypeLabelById,
+  onContactSelect,
 }: {
   form: CreateForm;
   setForm: (form: CreateForm) => void;
@@ -755,6 +823,8 @@ function OrderCreateForm({
   removeOrderItem: (index: number) => void;
   quickCreateCatalog: () => void;
   quickCreatePending: boolean;
+  priceTypeLabelById: Map<string, string>;
+  onContactSelect: (contactId: string) => void;
 }) {
   const update = (patch: Partial<CreateForm>) => setForm({ ...form, ...patch });
   const subtotal = calculateItemsSubtotal(form.items);
@@ -766,6 +836,15 @@ function OrderCreateForm({
   const contactTotalPages = Math.max(1, Math.ceil((contactOptions?.total ?? 0) / selectorPageSize));
   const catalogTotalPages = Math.max(1, Math.ceil((catalogOptions?.total ?? 0) / selectorPageSize));
   const selectedContact = contacts.find((contact) => contact.id === form.contactId);
+  const selectedPriceTypeLabel = selectedContact?.priceTypeId
+    ? priceTypeLabelById.get(selectedContact.priceTypeId) ?? "Kustom"
+    : "Harga umum (default)";
+
+  const contactSummaryLabel = selectedContact
+    ? `${selectedContact.displayName || selectedContact.phoneNumber} · ${selectedPriceTypeLabel}`
+    : form.contactId
+      ? "Contact terpilih"
+      : "Tanpa contact";
 
   return (
     <div className="space-y-4">
@@ -804,20 +883,24 @@ function OrderCreateForm({
               <div className="mt-3 grid gap-2">
                 <button
                   type="button"
-                  onClick={() => update({ contactId: "" })}
+                  onClick={() => onContactSelect("")}
                   className={cn(
                     "rounded-md border px-3 py-3 text-left text-sm",
                     form.contactId === "" && "border-primary bg-primary/5",
                   )}
                 >
                   Tanpa contact
-                  <span className="block text-xs text-muted-foreground">Pesanan tetap bisa dibuat manual.</span>
+                  <span className="block text-xs text-muted-foreground">Pakai harga umum (default).</span>
                 </button>
-                {contacts.map((contact) => (
+                {contacts.map((contact) => {
+                  const priceLabel = contact.priceTypeId
+                    ? priceTypeLabelById.get(contact.priceTypeId) ?? "Kustom"
+                    : "Harga umum";
+                  return (
                   <button
                     key={contact.id}
                     type="button"
-                    onClick={() => update({ contactId: contact.id })}
+                    onClick={() => onContactSelect(contact.id)}
                     className={cn(
                       "rounded-md border px-3 py-3 text-left text-sm hover:bg-muted/60",
                       form.contactId === contact.id && "border-primary bg-primary/5",
@@ -825,9 +908,12 @@ function OrderCreateForm({
                   >
                     <span className="font-medium">{contact.displayName || contact.phoneNumber}</span>
                     <span className="ml-2 text-xs text-muted-foreground">{contact.phoneNumber}</span>
-                    <span className="mt-1 block text-xs text-muted-foreground">{contact.status}</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {contact.status} · {priceLabel}
+                    </span>
                   </button>
-                ))}
+                  );
+                })}
               </div>
               <SelectorPagination
                 className="mt-3"
@@ -844,7 +930,9 @@ function OrderCreateForm({
               <div className="rounded-lg border p-4">
                 <div className="mb-3">
                   <h3 className="font-medium">Pilih item katalog</h3>
-                  <p className="text-sm text-muted-foreground">Cari produk, tambah ke pesanan, lalu atur qty dan harga.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Harga produk mengikuti tipe harga contact: <span className="font-medium text-foreground">{selectedPriceTypeLabel}</span>
+                  </p>
                 </div>
                 <Input
                   value={form.catalogSearch}
@@ -866,7 +954,7 @@ function OrderCreateForm({
                         <span className="block truncate font-medium">{item.name}</span>
                         <span className="text-xs text-muted-foreground">{item.externalCode}</span>
                       </span>
-                      <span className="shrink-0 text-xs">{item.sellPrice == null ? "-" : formatRupiah(item.sellPrice)}</span>
+                      <span className="shrink-0 text-xs">{formatRupiah(catalogDisplayPrice(item))}</span>
                     </button>
                   ))}
                   {catalogItems.length === 0 && (
@@ -981,7 +1069,7 @@ function OrderCreateForm({
         </div>
 
         <OrderSummary
-          contactLabel={selectedContact ? selectedContact.displayName || selectedContact.phoneNumber : form.contactId ? "Contact terpilih" : "Tanpa contact"}
+          contactLabel={contactSummaryLabel}
           itemCount={form.items.length}
           subtotal={subtotal}
           shippingCost={shippingCost}
@@ -1007,6 +1095,8 @@ function OrderEditForm({
   removeOrderItem,
   quickCreateCatalog,
   quickCreatePending,
+  priceTypeLabelById,
+  onContactSelect,
 }: {
   form: EditForm;
   setForm: (form: EditForm) => void;
@@ -1021,6 +1111,8 @@ function OrderEditForm({
   removeOrderItem: (index: number) => void;
   quickCreateCatalog: () => void;
   quickCreatePending: boolean;
+  priceTypeLabelById: Map<string, string>;
+  onContactSelect: (contactId: string) => void;
 }) {
   return (
     <OrderCreateForm
@@ -1038,6 +1130,8 @@ function OrderEditForm({
       removeOrderItem={removeOrderItem}
       quickCreateCatalog={quickCreateCatalog}
       quickCreatePending={quickCreatePending}
+      priceTypeLabelById={priceTypeLabelById}
+      onContactSelect={onContactSelect}
     />
   );
 }
@@ -1231,6 +1325,12 @@ function calculateItemsSubtotal(items: OrderItemForm[]) {
     const unitPrice = optionalNumber(item.unitPrice) ?? 0;
     return sum + qty * unitPrice;
   }, 0);
+}
+
+function catalogDisplayPrice(item: CatalogItem) {
+  if (item.effectiveSellPrice != null) return item.effectiveSellPrice;
+  if (item.sellPrice != null) return item.sellPrice;
+  return 0;
 }
 
 function formatRupiah(value: number) {

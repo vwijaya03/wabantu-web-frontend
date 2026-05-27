@@ -6,7 +6,7 @@ import { PlusCircle, Pencil, Trash2, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { FinanceSubPageHeader } from "@/components/finance/finance-sub-page-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -149,7 +149,7 @@ export default function TransactionTypesPage() {
         : "Hanya owner yang dapat mengelola jenis transaksi.";
     return (
       <>
-        <PageHeader title="Jenis Transaksi" description={description} />
+        <FinanceSubPageHeader title="Jenis Transaksi" description={description} />
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
             Anda tidak memiliki akses ke halaman ini.
@@ -161,11 +161,16 @@ export default function TransactionTypesPage() {
 
   return (
     <>
-      <PageHeader
+      <FinanceSubPageHeader
         title="Jenis Transaksi"
         description="Label tombol Pemasukan, Pengeluaran, dan lainnya di form Catat Transaksi."
         actions={
-          <Button onClick={() => { setForm(emptyForm); setOpenCreate(true); }}>
+          <Button
+            onClick={() => {
+              setForm(emptyForm);
+              setOpenCreate(true);
+            }}
+          >
             <PlusCircle className="mr-2 h-4 w-4" /> Tambah Jenis
           </Button>
         }

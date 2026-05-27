@@ -14,6 +14,7 @@ import {
   Megaphone,
   MessageSquare,
   Package,
+  Tags,
   ShoppingCart,
   Plug,
   Shield,
@@ -58,6 +59,7 @@ const tenantNavGroups: Array<{
     label: "Bisnis",
     items: [
       { href: "/dashboard/catalog", label: "Katalog", icon: Package },
+      { href: "/dashboard/catalog/price-types", label: "Tipe Harga", icon: Tags },
       { href: "/dashboard/orders", label: "Pesanan", icon: ShoppingCart },
       { href: "/dashboard/broadcast", label: "Broadcast", icon: Megaphone },
       { href: "/dashboard/import", label: "Import", icon: Upload },
