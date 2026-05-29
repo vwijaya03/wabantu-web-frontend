@@ -1,10 +1,21 @@
-import axios, { AxiosError, type AxiosInstance } from "axios";
+import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from "axios";
 import { toApiError } from "@/lib/api/errors";
 import { isRateLimitError, notifyRateLimitOnce } from "@/lib/api/rate-limit";
 import { clearClientSession, getAccessToken } from "@/lib/auth/session";
+import { clearProfileHint } from "@/lib/auth/profile-hint";
+import { requestSessionReauth } from "@/lib/auth/session-reauth";
 import { env } from "@/lib/env";
 
 export { toApiError, type ApiError } from "@/lib/api/errors";
+
+export type ApiRequestConfig = InternalAxiosRequestConfig & {
+  /** Skip 401 re-auth modal (login, reauth, register). */
+  skipSessionReauth?: boolean;
+  /** Do not attach Authorization (reauth sends token in body). */
+  skipAuthHeader?: boolean;
+  /** Internal: prevent infinite retry loop. */
+  _reauthRetried?: boolean;
+};
 
 /**
  * Browser API client — Bearer token only (no HttpOnly cookie).
@@ -16,22 +27,41 @@ export const api: AxiosInstance = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = getAccessToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const cfg = config as ApiRequestConfig;
+  if (!cfg.skipAuthHeader) {
+    const token = getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
 
 let authRedirectInFlight = false;
 
-function shouldRedirectOn401(requestUrl?: string): boolean {
+function shouldHandleSessionExpired(requestUrl?: string, config?: ApiRequestConfig): boolean {
   if (typeof window === "undefined") return false;
+  if (config?.skipSessionReauth) return false;
   const path = window.location.pathname;
   if (path.startsWith("/login") || path.startsWith("/register")) return false;
   const url = requestUrl ?? "";
-  if (url.includes("/auth/login") || url.includes("/auth/register")) return false;
+  if (
+    url.includes("/auth/login") ||
+    url.includes("/auth/register") ||
+    url.includes("/auth/reauth")
+  ) {
+    return false;
+  }
   return true;
+}
+
+function redirectToLogin(): void {
+  if (authRedirectInFlight) return;
+  authRedirectInFlight = true;
+  clearProfileHint();
+  clearClientSession();
+  const path = window.location.pathname;
+  window.location.replace(`/login?next=${encodeURIComponent(path)}`);
 }
 
 api.interceptors.response.use(
@@ -48,16 +78,39 @@ api.interceptors.response.use(
     if (isRateLimitError(error)) {
       notifyRateLimitOnce(toApiError(error).message);
     }
+
+    const config = error.config as ApiRequestConfig | undefined;
+    const status = error.response?.status;
+
     if (
-      error.response?.status === 401 &&
-      shouldRedirectOn401(error.config?.url) &&
-      !authRedirectInFlight
+      status === 401 &&
+      shouldHandleSessionExpired(config?.url, config) &&
+      getAccessToken()
     ) {
-      authRedirectInFlight = true;
-      clearClientSession();
-      const path = window.location.pathname;
-      window.location.replace(`/login?next=${encodeURIComponent(path)}`);
+      if (!config?._reauthRetried) {
+        const ok = await requestSessionReauth();
+        if (ok && config) {
+          const retryConfig: ApiRequestConfig = {
+            ...config,
+            _reauthRetried: true,
+            headers: config.headers ?? {},
+          };
+          retryConfig.headers.Authorization = `Bearer ${getAccessToken()}`;
+          return api.request(retryConfig);
+        }
+      }
+      redirectToLogin();
+      return Promise.reject(error);
     }
+
+    if (
+      status === 401 &&
+      shouldHandleSessionExpired(config?.url, config) &&
+      !getAccessToken()
+    ) {
+      redirectToLogin();
+    }
+
     return Promise.reject(error);
   },
 );

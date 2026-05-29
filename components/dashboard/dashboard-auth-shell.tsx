@@ -20,7 +20,10 @@ import { rateLimitTitle, RATE_LIMIT_USER_MESSAGE } from "@/lib/api/rate-limit";
 import { hasAccessToken } from "@/lib/auth/session";
 import { AUTH_SESSION_UPDATED } from "@/lib/auth/session-sync";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
+import { SessionReauthDialog } from "@/components/auth/session-reauth-dialog";
 import { DashboardRateLimitNotice } from "@/components/dashboard/dashboard-rate-limit-notice";
+import { setProfileHint } from "@/lib/auth/profile-hint";
+import { requestSessionReauth } from "@/lib/auth/session-reauth";
 import { useSyncQueriesOnTenantChange } from "@/hooks/use-sync-queries-on-tenant-change";
 
 function applyPlatformRouteGuards(
@@ -69,6 +72,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
       try {
         const me = await authApi.me();
         if (cancelled) return;
+        setProfileHint({ email: me.email, name: me.name });
         setUser(me);
         setRateLimited(false);
         // Always mark ready after /auth/me — route guards may redirect (e.g. super_admin
@@ -81,6 +85,24 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
         if (apiErr.status === 429) {
           setRateLimited(true);
           return;
+        }
+        if (apiErr.status === 401 && hasAccessToken()) {
+          const ok = await requestSessionReauth();
+          if (cancelled) return;
+          if (ok) {
+            try {
+              const me = await authApi.me();
+              if (cancelled) return;
+              setProfileHint({ email: me.email, name: me.name });
+              setUser(me);
+              setRateLimited(false);
+              setReady(true);
+              applyPlatformRouteGuards(me, nextPath, router);
+              return;
+            } catch {
+              /* fall through to login */
+            }
+          }
         }
         router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
       }
@@ -115,6 +137,8 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
 
   if (rateLimited && !ready) {
     return (
+      <>
+        <SessionReauthDialog />
       <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-muted/20 px-6 text-center">
         <div className="max-w-md space-y-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-5 py-4">
           <p className="text-sm font-medium text-amber-950 dark:text-amber-50">
@@ -132,21 +156,27 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
           Muat ulang halaman
         </button>
       </div>
+      </>
     );
   }
 
   if (!ready || !user) {
     return (
-      <div className="flex min-h-svh items-center justify-center bg-muted/20">
-        <p className="text-sm text-muted-foreground">Memuat dashboard…</p>
-      </div>
+      <>
+        <SessionReauthDialog />
+        <div className="flex min-h-svh items-center justify-center bg-muted/20">
+          <p className="text-sm text-muted-foreground">Memuat dashboard…</p>
+        </div>
+      </>
     );
   }
 
   const authProviderKey = tenantContextKey(user);
 
   return (
-    <AuthProvider key={authProviderKey} initialUser={user}>
+    <>
+      <SessionReauthDialog />
+      <AuthProvider key={authProviderKey} initialUser={user}>
       {hasTenantDashboardAccess(user) ? <InboxActivityBridge /> : null}
       <div className="grid min-h-svh grid-cols-1 lg:grid-cols-[260px_1fr]">
         <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:flex lg:flex-col">
@@ -175,6 +205,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
           </main>
         </div>
       </div>
-    </AuthProvider>
+      </AuthProvider>
+    </>
   );
 }

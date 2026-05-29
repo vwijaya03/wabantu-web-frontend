@@ -36,7 +36,7 @@ const baseNavCards = [
   { href: "/dashboard/finance/budget", label: "Anggaran", icon: BarChart3, desc: "Pantau batas pengeluaran" },
   { href: "/dashboard/finance/investment", label: "Investasi", icon: TrendingUp, desc: "Saham, kripto, emas" },
   { href: "/dashboard/finance/recurring", label: "Otomatis", icon: RefreshCw, desc: "Tagihan berulang" },
-  { href: "/dashboard/finance/checklist", label: "Checklist", icon: CheckSquare, desc: "Tugas keuangan harian" },
+  { href: "/dashboard/finance/checklist", label: "Tagihan Bulanan", icon: CheckSquare, desc: "Checklist tagihan & catat transaksi" },
   { href: "/dashboard/finance/reports", label: "Laporan", icon: BarChart3, desc: "Export PDF & CSV" },
 ];
 

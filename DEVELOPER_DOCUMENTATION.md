@@ -382,11 +382,11 @@ api-go sometimes returns:
 
 Interceptor replaces `res.data` with inner `data` when `success === true`.
 
-### 401 interceptor
+### 401 interceptor & re-auth
 
-- Clears session.
-- `window.location.replace('/login?next=' + currentPath)`.
-- `authRedirectInFlight` prevents redirect loops.
+- Jika masih ada token (biasanya JWT kedaluwarsa, sesi Redis masih aktif): buka **`SessionReauthDialog`** → `POST /auth/reauth` dengan password → retry request yang gagal.
+- Jika re-auth gagal atau tidak ada token: clear session → `/login?next=…`.
+- `components/auth/session-reauth-dialog.tsx`, `lib/auth/session-reauth.ts`, `lib/auth/profile-hint.ts` (email untuk label modal).
 
 ## 5.2 Domain modules (`lib/api/*.ts`)
 

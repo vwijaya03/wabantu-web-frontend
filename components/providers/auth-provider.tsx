@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useState } from "react";
 import { authApi, type AuthUser } from "@/lib/api/auth";
+import { setProfileHint } from "@/lib/auth/profile-hint";
 import { dispatchAuthSessionUpdated } from "@/lib/auth/session-sync";
 
 interface AuthContextValue {
@@ -30,6 +31,7 @@ export function AuthProvider({
   const refresh = useCallback(async () => {
     try {
       const me = await authApi.me();
+      setProfileHint({ email: me.email, name: me.name });
       setUser(me);
       dispatchAuthSessionUpdated(me);
     } catch {

@@ -1,5 +1,6 @@
-import { clearClientSession, setAccessToken } from "@/lib/auth/session";
-import { api } from "./client";
+import { setProfileHint, clearProfileHint } from "@/lib/auth/profile-hint";
+import { clearClientSession, getAccessToken, setAccessToken } from "@/lib/auth/session";
+import { api, type ApiRequestConfig } from "./client";
 
 export interface TenantInfo {
   id: string;
@@ -40,8 +41,9 @@ type AuthSessionPayload = {
   expiresInSeconds?: number;
 };
 
-function persistAccessToken(accessToken: string): void {
+function persistSession(accessToken: string, user: AuthUser): void {
   setAccessToken(accessToken);
+  setProfileHint({ email: user.email, name: user.name });
 }
 
 /** True when super_admin can use tenant-scoped dashboard pages. */
@@ -66,19 +68,34 @@ export function isPlatformOperatorHome(user: AuthUser | null): boolean {
 
 export const authApi = {
   async register(p: RegisterPayload): Promise<AuthUser> {
-    const res = await api.post<AuthSessionPayload>("/auth/register", p);
-    persistAccessToken(res.data.accessToken);
+    const res = await api.post<AuthSessionPayload>("/auth/register", p, {
+      skipSessionReauth: true,
+    } as ApiRequestConfig);
+    persistSession(res.data.accessToken, res.data.user);
     return res.data.user;
   },
   async login(p: LoginPayload): Promise<AuthUser> {
-    const res = await api.post<AuthSessionPayload>("/auth/login", p);
-    persistAccessToken(res.data.accessToken);
+    const res = await api.post<AuthSessionPayload>("/auth/login", p, {
+      skipSessionReauth: true,
+    } as ApiRequestConfig);
+    persistSession(res.data.accessToken, res.data.user);
+    return res.data.user;
+  },
+  /** Renew JWT for existing Redis session (expired access token OK). */
+  async reauth(password: string): Promise<AuthUser> {
+    const res = await api.post<AuthSessionPayload>(
+      "/auth/reauth",
+      { password, accessToken: getAccessToken() ?? "" },
+      { skipSessionReauth: true, skipAuthHeader: true } as ApiRequestConfig,
+    );
+    persistSession(res.data.accessToken, res.data.user);
     return res.data.user;
   },
   async logout(): Promise<void> {
     try {
       await api.post("/auth/logout");
     } finally {
+      clearProfileHint();
       clearClientSession();
     }
   },

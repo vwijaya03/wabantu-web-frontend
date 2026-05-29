@@ -103,7 +103,7 @@ app/
         │   ├── budget/          # Anggaran per kategori + progress bar
         │   ├── investment/      # Portofolio + P&L + update harga manual
         │   ├── recurring/       # Transaksi berulang
-        │   ├── checklist/       # Checklist harian + template
+        │   ├── checklist/       # Tagihan bulanan (checklist + auto transaksi)
         │   └── reports/         # Export CSV/PDF + perbandingan bulanan
         ├── docs/                # Docs Hub internal — search README/.md api-go + web-frontend
         └── admin/               # Super admin (+ ai-activity log)
@@ -118,7 +118,7 @@ layout, providers, and auth gate.
 - Login/register: api-go returns **`accessToken`** in JSON (no HttpOnly cookie required by the SPA).
 - Token disimpan di **`sessionStorage`** (`lib/auth/session.ts`, key `wabantu_access_token`).
 - **`lib/api/client.ts`**: setiap request memakai header **`Authorization: Bearer <token>`** (bukan `withCredentials` / cookie).
-- **`DashboardAuthShell`** (`components/dashboard/dashboard-auth-shell.tsx`): jika tidak ada token atau `GET /auth/me` gagal → redirect `/login?next=…`; jika sukses → seed **`AuthProvider`**.
+- **`DashboardAuthShell`** + **`SessionReauthDialog`**: jika JWT kedaluwarsa tetapi sesi server masih ada → modal shadcn minta password (`POST /auth/reauth`), lalu refresh data di halaman yang sama; redirect login hanya jika re-auth gagal atau sesi Redis habis.
 - **`LoginSessionGate`**: jika sudah punya token valid → redirect ke dashboard (hindari form login saat session masih hidup).
 - Setelah login sukses: **`window.location.assign`** (full navigation) agar state bersih.
 - **`proxy.ts`** (Next.js 16, dulu `middleware.ts`): terdaftar untuk `/dashboard`, `/login`, `/register` tetapi **pass-through** — auth tidak dicek di edge.

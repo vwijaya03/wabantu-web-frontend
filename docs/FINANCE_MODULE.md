@@ -19,7 +19,7 @@ Bukan software akuntansi — ini **buku kas digital** yang mudah dipakai UMKM.
 | Investasi & aset | `/dashboard/finance/investment` | Owner saja |
 | Jenis transaksi | `/dashboard/finance/transaction-types` | Owner saja |
 | Transaksi berulang | `/dashboard/finance/recurring` | Owner saja |
-| Checklist harian | `/dashboard/finance/checklist` | Owner + Staff |
+| Tagihan bulanan (checklist) | `/dashboard/finance/checklist` | Owner (kelola daftar) + Staff (centang & bayar) |
 | Laporan & export | `/dashboard/finance/reports` | Owner + Staff |
 | Persetujuan transaksi | Tab "Menunggu" di Transaksi | Owner (approve/reject) |
 | Kunci periode | Di halaman Transaksi | Owner saja |
@@ -72,6 +72,19 @@ Bisa diaktifkan di Settings Finance:
 
 Owner bisa mengunci bulan yang sudah selesai agar tidak ada yang bisa edit/hapus transaksi di bulan itu.  
 Berguna untuk tutup buku akhir bulan.
+
+---
+
+## Tagihan bulanan (checklist)
+
+Di `/dashboard/finance/checklist`:
+
+1. **Owner** mengisi **Kelola Daftar Tagihan** (listrik, internet, sewa, dll.) — judul, nominal, **tanggal jatuh tempo** (picker), dompet/kategori opsional. Hari pada tanggal itu berlaku setiap bulan (mis. pilih 28 Mei → tiap bulan jatuh tempo tgl 28).
+2. Setiap bulan, pilih **periode** (bulan/tahun) lalu **centang** tagihan yang sudah dibayar.
+3. Jika **semua** tagihan periode itu tercentang, sistem otomatis membuat transaksi **pengeluaran** di Catat Transaksi (satu baris per tagihan).
+4. Batalkan centang kapan saja — transaksi terkait ikut dihapus dari daftar Transaksi.
+
+Staff bisa centang checklist; hanya owner yang mengelola daftar tagihan.
 
 ---
 

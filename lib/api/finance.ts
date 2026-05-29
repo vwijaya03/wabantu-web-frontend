@@ -234,6 +234,7 @@ export interface ChecklistTemplate {
   walletId?: string;
   frequency: string;
   dayOfMonth?: number;
+  dueAnchorDate?: string;
   isActive: boolean;
   order: number;
 }
@@ -246,8 +247,37 @@ export type CreateChecklistTemplateInput = {
   walletId?: string;
   frequency?: string;
   dayOfMonth?: number;
+  dueDate?: string;
   order?: number;
 };
+
+export type UpdateChecklistTemplateInput = {
+  title?: string;
+  description?: string;
+  amountHint?: number;
+  categoryId?: string;
+  walletId?: string;
+  frequency?: string;
+  dayOfMonth?: number;
+  dueDate?: string;
+  order?: number;
+  isActive?: boolean;
+};
+
+export interface MonthlyBillingResponse {
+  period: string;
+  items: ChecklistItem[];
+  total: number;
+  checked: number;
+  allChecked: boolean;
+  allPosted: boolean;
+  postedCount: number;
+}
+
+export interface ToggleMonthlyBillingResponse {
+  item: ChecklistItem;
+  billing: MonthlyBillingResponse;
+}
 
 export interface ChecklistItem {
   id: string;
@@ -466,13 +496,33 @@ export const financeApi = {
   deleteRecurring: (id: string) =>
     api.delete<{ ok: boolean }>(`/finance/recurring/${id}`).then((r) => r.data),
 
-  // Checklist
+  // Checklist (tagihan bulanan + template)
   listChecklistTemplates: () =>
     api.get<{ templates: ChecklistTemplate[] }>("/finance/checklist/templates").then((r) => r.data),
+  listChecklistTemplatesPaginated: (params?: {
+    q?: string;
+    page?: number;
+    pageSize?: number;
+    frequency?: string;
+    activeOnly?: boolean;
+  }) =>
+    api
+      .get<{ items: ChecklistTemplate[]; total: number }>("/finance/checklist/templates/manage", { params })
+      .then((r) => r.data),
   createChecklistTemplate: (d: CreateChecklistTemplateInput) =>
     api.post<ChecklistTemplate>("/finance/checklist/templates", d).then((r) => r.data),
+  updateChecklistTemplate: (id: string, d: UpdateChecklistTemplateInput) =>
+    api.patch<ChecklistTemplate>(`/finance/checklist/templates/${id}`, d).then((r) => r.data),
   deleteChecklistTemplate: (id: string) =>
     api.delete<{ ok: boolean }>(`/finance/checklist/templates/${id}`).then((r) => r.data),
+  getMonthlyBilling: (period: string) =>
+    api
+      .get<MonthlyBillingResponse>("/finance/checklist/monthly", { params: { period } })
+      .then((r) => r.data),
+  toggleMonthlyBillingItem: (itemId: string, checked: boolean) =>
+    api
+      .post<ToggleMonthlyBillingResponse>("/finance/checklist/monthly/toggle", { itemId, checked })
+      .then((r) => r.data),
   todayChecklist: () =>
     api.get<{ items: ChecklistItem[]; date: string; pending: number }>("/finance/checklist/today").then((r) => r.data),
   checklistAction: (itemId: string, action: "done" | "skip", note?: string, transactionId?: string) =>
