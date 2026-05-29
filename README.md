@@ -98,7 +98,7 @@ app/
         ├── workflow/            # Rule automation — CRUD + PATCH/DELETE (trial kuota / Business+)
         ├── finance/             # Modul keuangan (wallet, transaksi, anggaran, investasi, recurring, checklist, laporan)
         │   ├── page.tsx         # Dashboard Finance — ringkasan, alert, navigasi sub-menu
-        │   ├── transactions/    # Daftar + filter + approve/reject transaksi
+        │   ├── transactions/    # Daftar + filter + approve/reject; import-image/ = screenshot → AI → konfirmasi
         │   ├── wallets/         # CRUD dompet + saldo
         │   ├── budget/          # Anggaran per kategori + progress bar
         │   ├── investment/      # Portofolio + P&L + update harga manual
@@ -116,7 +116,7 @@ layout, providers, and auth gate.
 ## Auth
 
 - Login/register: api-go returns **`accessToken`** in JSON (no HttpOnly cookie required by the SPA).
-- Token disimpan di **`sessionStorage`** (`lib/auth/session.ts`, key `wabantu_access_token`).
+- Token disimpan di **`localStorage`** (`lib/auth/session.ts`, key `wabantu_access_token`) — **satu origin, semua tab** (bukan `sessionStorage` per tab).
 - **`lib/api/client.ts`**: setiap request memakai header **`Authorization: Bearer <token>`** (bukan `withCredentials` / cookie).
 - **`DashboardAuthShell`** + **`SessionReauthDialog`**: jika JWT kedaluwarsa tetapi sesi server masih ada → modal shadcn minta password (`POST /auth/reauth`), lalu refresh data di halaman yang sama; redirect login hanya jika re-auth gagal atau sesi Redis habis.
 - **`LoginSessionGate`**: jika sudah punya token valid → redirect ke dashboard (hindari form login saat session masih hidup).
@@ -237,7 +237,8 @@ Untuk runtime, superadmin bisa buka `/dashboard/docs` → **Sumber Dokumentasi**
 | Gejala | Penyebab | Solusi |
 |--------|----------|--------|
 | API 404 / network error | `encore run` belum jalan | Jalankan `api-go` dulu |
-| Login loop / ketendang | Token hilang / 401 berulang | Cek Redis api-go; `sessionStorage` tab sama; lihat interceptor `client.ts` |
+| Login loop / ketendang | Token hilang / 401 berulang | Cek Redis api-go; login ulang satu tab; lihat interceptor `client.ts` |
+| Tab baru langsung login | Dulu pakai `sessionStorage` | Sudah `localStorage` — refresh / login ulang sekali untuk migrasi |
 | Dashboard “Memuat…” lama | `GET /auth/me` gagal | Pastikan api-go + JWT secret; network tab |
 | Inbox tidak real-time | SSE via rewrite | Dev: otomatis ke `:4000` di `lib/env.ts`, atau set `NEXT_PUBLIC_SSE_API_URL=http://localhost:4000` |
 | `npm run build` syntax error | Node 14 | `nvm use 20` atau 22 |

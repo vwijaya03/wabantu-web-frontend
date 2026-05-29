@@ -45,7 +45,7 @@ Semua klien memakai path **`/api/v1/...`** (sama dengan Nest). Perbedaannya hany
 | Lapisan | File | Base URL |
 |---------|------|----------|
 | Browser REST | `lib/api/client.ts` | `env.apiUrl` → `/api/v1` + Bearer header |
-| Token | `lib/auth/session.ts` | `sessionStorage` key `wabantu_access_token` |
+| Token | `lib/auth/session.ts` | `localStorage` key `wabantu_access_token` (shared antar tab) |
 | Rewrite | `next.config.ts` | `/api/v1/:path*` → `${API_BACKEND_URL}/api/v1/:path*` |
 | SSE inbox | `hooks/use-inbox-activity-stream.ts` | `env.sseApiUrl` atau same-origin `/api/v1/inbox/stream` |
 | Auth gate UI | `components/dashboard/dashboard-auth-shell.tsx` | `GET /auth/me` setelah token ada |
@@ -143,12 +143,13 @@ Checklist “lengkapi profil” / “≥5 FAQ” / kartu “AI status”: `lib/b
 | `/dashboard/branches` | `lib/api/branches.ts` | cabang (Pro) |
 | `/dashboard/workflow` | `lib/api/workflow.ts` | aturan keyword — list, buat, **edit** (`PATCH`), **hapus** (`DELETE`); konfirmasi pakai `AlertDialog` |
 | `/dashboard/finance` | `lib/api/finance.ts` | dashboard keuangan — ringkasan saldo, alert pending |
-| `/dashboard/finance/transactions` | `lib/api/finance.ts` | list + filter + approve/reject transaksi |
+| `/dashboard/finance/transactions` | `lib/api/finance.ts` | list + filter + approve/reject transaksi; owner: **Import dari gambar** |
+| `/dashboard/finance/transactions/import-image` | `lib/api/transactionImage.ts`, `lib/catalog-image-limits.ts` | Screenshot daftar transaksi → AI (Haiku) → pratinjau (jenis masuk/keluar, dompet, kategori) → commit; kuota `ai_token` di preview. Backend: [api-go/docs/TRANSACTION_IMAGE_IMPORT.md](../api-go/docs/TRANSACTION_IMAGE_IMPORT.md) |
 | `/dashboard/finance/wallets` | `lib/api/finance.ts` | CRUD dompet + saldo |
 | `/dashboard/finance/budget` | `lib/api/finance.ts` | anggaran per kategori + progress bar |
 | `/dashboard/finance/investment` | `lib/api/finance.ts` | portofolio aset, P&L, update harga manual |
-| `/dashboard/finance/recurring` | `lib/api/finance.ts` | transaksi berulang (auto/reminder) |
-| `/dashboard/finance/checklist` | `lib/api/finance.ts` | checklist harian + template |
+| `/dashboard/finance/recurring` | `lib/api/finance.ts` | transaksi berulang; owner: clone ke tagihan bulanan (checkbox) |
+| `/dashboard/finance/checklist` | `lib/api/finance.ts` | tagihan bulanan per periode; centang → auto-post pengeluaran per item |
 | `/dashboard/finance/reports` | `lib/api/finance.ts` | perbandingan bulanan + export CSV/PDF |
 | `/dashboard/docs` | static `public/generated-docs/docs-index.json` | Docs Hub internal — fuzzy search README/.md dari `api-go` + `web-frontend` |
 | `/dashboard/admin/ai-activity` | `lib/api/ai-activity.ts` | log AI per tenant — **super_admin** only |

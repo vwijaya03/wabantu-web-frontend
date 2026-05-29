@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, Clock, Pencil, PlusCircle, Search, Trash2, X } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, Clock, ImageUp, Pencil, PlusCircle, Search, Trash2, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -203,9 +204,23 @@ export default function TransactionsPage() {
         title="Transaksi"
         description={`${total} transaksi ditemukan`}
         actions={
-          <Button onClick={() => setOpenAdd(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Catat Transaksi
-          </Button>
+          isOwner ? (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" asChild>
+                <Link href="/dashboard/finance/transactions/import-image">
+                  <ImageUp className="mr-2 h-4 w-4" />
+                  Import dari gambar
+                </Link>
+              </Button>
+              <Button onClick={() => setOpenAdd(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Catat Transaksi
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={() => setOpenAdd(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Catat Transaksi
+            </Button>
+          )
         }
       />
 

@@ -18,7 +18,7 @@ Bukan software akuntansi — ini **buku kas digital** yang mudah dipakai UMKM.
 | Anggaran bulanan | `/dashboard/finance/budget` | Owner (kelola) + semua (lihat) |
 | Investasi & aset | `/dashboard/finance/investment` | Owner saja |
 | Jenis transaksi | `/dashboard/finance/transaction-types` | Owner saja |
-| Transaksi berulang | `/dashboard/finance/recurring` | Owner saja |
+| Transaksi berulang | `/dashboard/finance/recurring` | Owner saja — bisa **clone** ke tagihan bulanan (checkbox) |
 | Tagihan bulanan (checklist) | `/dashboard/finance/checklist` | Owner (kelola daftar) + Staff (centang & bayar) |
 | Laporan & export | `/dashboard/finance/reports` | Owner + Staff |
 | Persetujuan transaksi | Tab "Menunggu" di Transaksi | Owner (approve/reject) |
@@ -81,7 +81,7 @@ Di `/dashboard/finance/checklist`:
 
 1. **Owner** mengisi **Kelola Daftar Tagihan** (listrik, internet, sewa, dll.) — judul, nominal, **tanggal jatuh tempo** (picker), dompet/kategori opsional. Hari pada tanggal itu berlaku setiap bulan (mis. pilih 28 Mei → tiap bulan jatuh tempo tgl 28).
 2. Setiap bulan, pilih **periode** (bulan/tahun) lalu **centang** tagihan yang sudah dibayar.
-3. Jika **semua** tagihan periode itu tercentang, sistem otomatis membuat transaksi **pengeluaran** di Catat Transaksi (satu baris per tagihan).
+3. Setiap tagihan yang **dicentang** (sudah dibayar) otomatis membuat satu transaksi **pengeluaran** di Catat Transaksi (tidak perlu menunggu semua tagihan tercentang dulu).
 4. Batalkan centang kapan saja — transaksi terkait ikut dihapus dari daftar Transaksi.
 
 Staff bisa centang checklist; hanya owner yang mengelola daftar tagihan.
@@ -121,7 +121,15 @@ WABantu **tidak** mengambil harga pasar otomatis dari bursa.
 
 ## Transaksi (daftar)
 
-Semua transaksi termasuk **Beli/Jual Aset** muncul di `/dashboard/finance/transactions` dengan filter periode, jenis, status, dan **pencarian**.  
+Semua transaksi termasuk **Beli/Jual Aset** muncul di `/dashboard/finance/transactions` dengan filter periode, jenis, status, dan **pencarian**.
+
+### Import dari gambar (owner)
+
+1. Di halaman Transaksi, klik **Import dari gambar** (atau `/dashboard/finance/transactions/import-image`).
+2. Upload screenshot daftar transaksi (mis. layar Transaksi WABantu) — hingga 5 gambar.
+3. **Proses dengan AI** — sistem membaca deskripsi, tanggal, nominal, dan membedakan **pemasukan** (hijau/+) vs **pengeluaran** (merah/−).
+4. **Konfirmasi** — edit dompet, kategori, tanggal; centang baris yang benar.
+5. **Simpan** — transaksi masuk ke daftar (memakai kuota AI hanya pada langkah proses, bukan saat simpan).  
 Owner bisa **ubah** (deskripsi/tanggal; investasi: qty/harga lewat menu Investasi) dan **hapus**.
 
 ---

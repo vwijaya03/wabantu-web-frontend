@@ -27,6 +27,7 @@ Checklist ini untuk memastikan UI `dashboard/inbox` konsisten dengan pipeline AI
 ## Catalog import (dashboard, bukan inbox)
 
 - `/dashboard/catalog/import-image`: file > 5 MB, > 5 file, atau total > 20 MB ditolak di UI sebelum upload API.
+- `/dashboard/finance/transactions/import-image`: batas upload sama (reuse `catalog-image-limits.ts`); owner only; pratinjau wajib sebelum commit.
 - Banner peringatan: fitur AI mengurangi kuota `ai_token`.
 - Alur: upload → proses AI → edit tabel → simpan (commit tanpa AI tambahan).
 

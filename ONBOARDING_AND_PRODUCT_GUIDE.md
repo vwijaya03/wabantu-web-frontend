@@ -144,6 +144,7 @@ Sidebar dashboard dibagi 4 kelompok. **Admin** hanya untuk tim internal WABantu,
 |------|------|-----------|
 | **Katalog** | `/dashboard/catalog` | Daftar produk/jasa + harga (manual) |
 | **Import katalog (gambar)** | `/dashboard/catalog/import-image` | Screenshot Shopee/dll. → AI baca → **konfirmasi** → simpan; **mengurangi kuota token AI** |
+| **Import transaksi (gambar)** | `/dashboard/finance/transactions/import-image` | Screenshot daftar transaksi → AI bedakan pemasukan/pengeluaran → **konfirmasi** → simpan massal; kuota AI di preview |
 | **Pesanan** | `/dashboard/orders` | Order yang tercatat dari alur chat (jika dipakai) |
 | **Broadcast** | `/dashboard/broadcast` | Kirim pesan massal *(trial: bisa coba, max ~20 kontak/bulan; Business+ lebih besar)* |
 | **Import CSV** | `/dashboard/import` | Upload CSV/Excel untuk isi katalog/FAQ massal |

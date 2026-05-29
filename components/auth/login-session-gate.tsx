@@ -9,7 +9,7 @@ type SessionPhase = "pending" | "checking" | "guest";
 
 /**
  * If a valid Bearer session exists, send user to dashboard (no cookie check).
- * First paint always matches SSR (children); sessionStorage is read only in useEffect.
+ * First paint always matches SSR (children); token in localStorage is read only in useEffect.
  */
 export function LoginSessionGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();

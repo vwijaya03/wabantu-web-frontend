@@ -496,6 +496,14 @@ export const financeApi = {
   deleteRecurring: (id: string) =>
     api.delete<{ ok: boolean }>(`/finance/recurring/${id}`).then((r) => r.data),
 
+  cloneRecurringToBilling: (recurringIds: string[]) =>
+    api
+      .post<{
+        created: ChecklistTemplate[];
+        skipped: { recurringId: string; title: string; reason: string }[];
+      }>("/finance/checklist/clone-from-recurring", { recurringIds })
+      .then((r) => r.data),
+
   // Checklist (tagihan bulanan + template)
   listChecklistTemplates: () =>
     api.get<{ templates: ChecklistTemplate[] }>("/finance/checklist/templates").then((r) => r.data),

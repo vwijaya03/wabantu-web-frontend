@@ -1,18 +1,48 @@
 const TOKEN_KEY = "wabantu_access_token";
+/** Bumped on logout so other tabs can react via `storage` event. */
+export const AUTH_LOGOUT_SIGNAL_KEY = "wabantu_auth_logout_at";
 
-/** Persist JWT for axios + SSE (tab-scoped; cleared on logout / 401). */
+let migratedFromSessionStorage = false;
+
+function migrateLegacySessionStorageToken(): void {
+  if (typeof window === "undefined" || migratedFromSessionStorage) return;
+  migratedFromSessionStorage = true;
+  try {
+    const legacy = sessionStorage.getItem(TOKEN_KEY);
+    if (legacy && !localStorage.getItem(TOKEN_KEY)) {
+      localStorage.setItem(TOKEN_KEY, legacy);
+    }
+    sessionStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* private mode / blocked storage */
+  }
+}
+
+/** Persist JWT for axios + SSE (shared across tabs; cleared on logout / 401). */
 export function setAccessToken(token: string | null): void {
   if (typeof window === "undefined") return;
-  if (!token) {
-    sessionStorage.removeItem(TOKEN_KEY);
-    return;
+  migrateLegacySessionStorageToken();
+  try {
+    if (!token) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.setItem(AUTH_LOGOUT_SIGNAL_KEY, String(Date.now()));
+      return;
+    }
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.removeItem(AUTH_LOGOUT_SIGNAL_KEY);
+  } catch {
+    /* ignore */
   }
-  sessionStorage.setItem(TOKEN_KEY, token);
 }
 
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
-  return sessionStorage.getItem(TOKEN_KEY);
+  migrateLegacySessionStorageToken();
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export function hasAccessToken(): boolean {

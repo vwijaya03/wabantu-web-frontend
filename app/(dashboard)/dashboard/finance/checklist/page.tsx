@@ -140,8 +140,10 @@ export default function ChecklistPage() {
       invalidateFinanceCaches(qc);
       if (!checked && res.item.transactionId == null) {
         toast.success("Centang dibatalkan — transaksi terkait dihapus");
-      } else if (res.billing.allPosted && res.billing.total > 0) {
-        toast.success("Semua tagihan selesai — transaksi pengeluaran telah dicatat");
+      } else if (checked && res.item.transactionId) {
+        toast.success("Tagihan dicatat sebagai transaksi pengeluaran");
+      } else if (checked) {
+        toast.warning("Tagihan dicentang, tetapi transaksi belum tercatat — cek nominal atau periode terkunci");
       }
     },
     onError: (e: unknown) => toast.error(toApiError(e).message),
@@ -163,13 +165,15 @@ export default function ChecklistPage() {
       }
       return financeApi.createChecklistTemplate(payload);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(editItem ? "Tagihan diperbarui" : "Tagihan ditambahkan");
-      qc.invalidateQueries({ queryKey: ["finance-checklist-templates-manage"] });
-      qc.invalidateQueries({ queryKey: ["finance-monthly-billing", period] });
       setOpenCreate(false);
       setEditItem(null);
       setForm(emptyForm);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["finance-monthly-billing", period] }),
+        qc.invalidateQueries({ queryKey: ["finance-checklist-templates-manage"] }),
+      ]);
     },
     onError: (e: unknown) => toast.error(toApiError(e).message),
   });
@@ -288,7 +292,7 @@ export default function ChecklistPage() {
     <>
       <FinanceSubPageHeader
         title="Tagihan Bulanan"
-        description="Centang setiap tagihan yang sudah dibayar. Jika semua tercentang, sistem mencatat pengeluaran di Transaksi."
+        description="Centang tagihan yang sudah dibayar — setiap centang langsung dicatat sebagai pengeluaran di Transaksi."
         actions={
           isOwner ? (
             <Button

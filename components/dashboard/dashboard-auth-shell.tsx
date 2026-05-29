@@ -17,7 +17,8 @@ import {
 } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/errors";
 import { rateLimitTitle, RATE_LIMIT_USER_MESSAGE } from "@/lib/api/rate-limit";
-import { hasAccessToken } from "@/lib/auth/session";
+import { clearClientSession, hasAccessToken } from "@/lib/auth/session";
+import { installAuthCrossTabSync } from "@/lib/auth/session-cross-tab";
 import { AUTH_SESSION_UPDATED } from "@/lib/auth/session-sync";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
 import { SessionReauthDialog } from "@/components/auth/session-reauth-dialog";
@@ -58,6 +59,8 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
   const [rateLimited, setRateLimited] = useState(false);
 
   useSyncQueriesOnTenantChange(user);
+
+  const reloadSessionRef = useRef<(() => void) | null>(null);
 
   // Fetch /auth/me once per dashboard session — not on every client-side navigation.
   useEffect(() => {
@@ -108,11 +111,29 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
       }
     }
 
+    reloadSessionRef.current = () => {
+      void load();
+    };
     void load();
     return () => {
       cancelled = true;
+      reloadSessionRef.current = null;
     };
   }, [router]);
+
+  // Logout / login / reauth in another tab
+  useEffect(() => {
+    return installAuthCrossTabSync({
+      onLogout: () => {
+        clearClientSession();
+        const path = window.location.pathname;
+        window.location.replace(`/login?next=${encodeURIComponent(path)}`);
+      },
+      onTokenUpdated: () => {
+        reloadSessionRef.current?.();
+      },
+    });
+  }, []);
 
   // Keep shell session in sync after impersonate / stop (AuthProvider.refresh updates context only).
   useEffect(() => {

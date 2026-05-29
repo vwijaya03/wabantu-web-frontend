@@ -38,7 +38,7 @@ flowchart TB
     RSC["Server Components optional"]
     CC["Client Components use client"]
     RQ["TanStack React Query cache"]
-    SS["sessionStorage JWT"]
+    SS["localStorage JWT"]
   end
 
   subgraph next ["Next.js 16 :3000"]
@@ -137,7 +137,7 @@ sequenceDiagram
 
 | Concern | Implementation |
 |---------|----------------|
-| Token storage | `sessionStorage` key `wabantu_access_token` |
+| Token storage | `localStorage` key `wabantu_access_token` (shared across tabs) |
 | Attach to API | Axios request interceptor → `Authorization: Bearer` |
 | Gate dashboard | `DashboardAuthShell` → `authApi.me()` |
 | Gate login page | `LoginSessionGate` → redirect if already logged in |
@@ -410,6 +410,7 @@ export const inboxApi = {
 | `business.ts` | `/business/profile` |
 | `catalog.ts` | `/business/catalog` (+ `contactId`, `prices[]`, `effectiveSellPrice`); form multi-harga per tipe |
 | `catalogImage.ts` | `/business/catalog/import-image/preview` (multipart `files`), `import-image-limits`, `import-image/draft/:jobId/commit` |
+| `transactionImage.ts` | `/finance/transactions/import-image/preview`, `import-image/draft/:jobId/commit`; helper `matchWalletId` / `matchCategoryId` |
 | `catalog-image-limits.ts` | Konstanta validasi client (5 MB/file, 5 file, 20 MB total, JPG/PNG/WEBP); jangan set header `Content-Type` manual pada FormData (biarkan axios set boundary) |
 | `whatsapp.ts` | `/whatsapp/channels`, `/whatsapp/meta/connect/*` |
 | `billing.ts`, `usage.ts`, `payment.ts` | Billing, usage quotas, AI top-up, payments |
@@ -563,12 +564,12 @@ const conversations = useMemo(
 
 ```ts
 const TOKEN_KEY = "wabantu_access_token";
-sessionStorage.setItem(TOKEN_KEY, token);
+localStorage.setItem(TOKEN_KEY, token);
 ```
 
 | Property | Implication |
 |----------|-------------|
-| Tab-scoped | New tab = not logged in |
+| Shared across tabs | Buka menu baru di tab lain tetap login (same origin) |
 | Survives refresh | Same tab OK |
 | XSS risk | If attacker runs JS, token readable — mitigate with CSP, sanitize HTML |
 | Not HttpOnly | Unlike cookie model — **JS can read token** (required for Axios header) |
@@ -1176,8 +1177,8 @@ es.onmessage = (ev) => {
 
 | Storage | Scope | Used here? |
 |---------|-------|------------|
-| `sessionStorage` | Per tab | **Yes** — JWT |
-| `localStorage` | Persistent all tabs | No |
+| `localStorage` | Same origin, all tabs | **Yes** — JWT + profile hint |
+| `sessionStorage` | Per tab | Legacy migrate only (dibaca sekali lalu dipindah) |
 | HttpOnly cookie | JS cannot read | Removed from FE auth |
 
 ---
