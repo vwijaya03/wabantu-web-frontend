@@ -132,6 +132,8 @@ Semua transaksi termasuk **Beli/Jual Aset** muncul di `/dashboard/finance/transa
 5. **Simpan** — transaksi masuk ke daftar (memakai kuota AI hanya pada langkah proses, bukan saat simpan).  
 Owner bisa **ubah** (deskripsi/tanggal; investasi: qty/harga lewat menu Investasi) dan **hapus**.
 
+**Prasyarat backend:** secret Encore `AnthropicAPIKey` harus terisi (sama dengan import katalog dari gambar). Setelah `encore secret set`, **restart** `encore run`. Jika API mengembalikan pesan kunci Anthropic belum dikonfigurasi, lihat [api-go/docs/TRANSACTION_IMAGE_IMPORT.md](../../api-go/docs/TRANSACTION_IMAGE_IMPORT.md) bagian Troubleshooting.
+
 ---
 
 ## Catat Transaksi (sheet)
@@ -167,6 +169,9 @@ Export berjalan di background — status bisa dicek di halaman Laporan.
 
 **Q: Transaksi bisa dihapus/diedit?**  
 → Owner bisa menghapus/mengedit selama periode belum dikunci. Staff hanya bisa edit draft milik sendiri.
+
+**Q: Import transaksi dari gambar gagal “AI gagal membaca” / kunci Anthropic?**  
+→ Pastikan `api-go` sudah di-deploy dengan perbaikan secret (`var secrets` di service `finance`), `AnthropicAPIKey` di-set, lalu restart `encore run`. Import katalog dan import transaksi memakai secret yang sama.
 
 **Q: Investasi di sini = invest pakai uang WABantu?**  
 → Tidak. Ini hanya **pencatatan** investasi yang dimiliki bisnis — tidak ada koneksi ke broker/aplikasi investasi.
