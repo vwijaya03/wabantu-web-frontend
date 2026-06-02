@@ -34,6 +34,7 @@ const CONTACT_STATUSES = [
 type ContactForm = {
   phoneNumber: string;
   displayName: string;
+  birthDate: string;
   notes: string;
   status: string;
   priceTypeId: string;
@@ -43,6 +44,7 @@ type ContactForm = {
 const emptyForm: ContactForm = {
   phoneNumber: "",
   displayName: "",
+  birthDate: "",
   notes: "",
   status: "active",
   priceTypeId: "",
@@ -169,6 +171,7 @@ export default function ContactsPage() {
     setEditForm({
       phoneNumber: contact.phoneNumber,
       displayName: contact.displayName ?? "",
+      birthDate: contact.birthDate?.slice(0, 10) ?? "",
       notes: contact.notes ?? "",
       status: contact.status || "active",
       priceTypeId: contact.priceTypeId ?? "",
@@ -431,6 +434,11 @@ function ContactFormFields({
         <Input value={form.displayName} onChange={(e) => update({ displayName: e.target.value })} />
       </div>
       <div>
+        <Label>Tanggal lahir</Label>
+        <Input type="date" value={form.birthDate} onChange={(e) => update({ birthDate: e.target.value })} />
+        <p className="mt-1 text-xs text-muted-foreground">Dipakai saat mendaftarkan pasien acara dari kontak ini.</p>
+      </div>
+      <div>
         <Label>Tipe harga</Label>
         <Select
           value={selectValue}
@@ -489,6 +497,7 @@ function toCreatePayload(form: ContactForm) {
   return {
     phoneNumber: form.phoneNumber.trim(),
     displayName: optionalString(form.displayName),
+    birthDate: optionalString(form.birthDate),
     notes: optionalString(form.notes),
     status: form.status,
     priceTypeId: optionalString(form.priceTypeId),
@@ -499,6 +508,7 @@ function toCreatePayload(form: ContactForm) {
 function toUpdatePayload(form: ContactForm) {
   return {
     displayName: optionalString(form.displayName),
+    birthDate: optionalString(form.birthDate),
     notes: optionalString(form.notes),
     status: form.status,
     priceTypeId: form.priceTypeId.trim() === "" ? null : form.priceTypeId.trim(),

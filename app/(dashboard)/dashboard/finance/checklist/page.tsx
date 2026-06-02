@@ -127,11 +127,6 @@ export default function ChecklistPage() {
     [categories]
   );
 
-  const invalidateBilling = () => {
-    qc.invalidateQueries({ queryKey: ["finance-monthly-billing", period] });
-    invalidateFinanceCaches(qc);
-  };
-
   const toggleMut = useMutation({
     mutationFn: ({ itemId, checked }: { itemId: string; checked: boolean }) =>
       financeApi.toggleMonthlyBillingItem(itemId, checked),

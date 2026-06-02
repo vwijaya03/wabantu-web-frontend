@@ -136,6 +136,8 @@ Detail + penjelasan React/Next: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUM
 
 **Finance module:** komponen di `components/finance/`, API di `lib/api/finance.ts`, helper `lib/finance/`. Panduan produk: [`docs/FINANCE_MODULE.md`](docs/FINANCE_MODULE.md); endpoint & schema: [`../api-go/docs/FINANCE_MODULE.md`](../api-go/docs/FINANCE_MODULE.md).
 
+**Events module (acara & terapi):** halaman `/dashboard/events`, komponen `components/events/`, API `lib/api/events.ts`. Panduan penggunaan: [`docs/EVENTS_MODULE.md`](docs/EVENTS_MODULE.md); teknis: [`../api-go/docs/EVENTS_MODULE.md`](../api-go/docs/EVENTS_MODULE.md).
+
 `hooks/use-plan.ts` memuat `GET /api/v1/billing/overview` hanya jika user punya konteks tenant (`hasTenantDashboardAccess` — owner/staff atau super_admin setelah **Pantau**).
 
 | Kondisi | Broadcast & workflow | Multi cabang | CRM leads |

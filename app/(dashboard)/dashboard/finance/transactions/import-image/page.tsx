@@ -90,8 +90,6 @@ export default function TransactionImportImagePage() {
     [usage],
   );
 
-  const totalBytes = useMemo(() => files.reduce((s, f) => s + f.size, 0), [files]);
-
   const quotaBanner =
     preview?.quotaNotice ??
     (tokenQuota

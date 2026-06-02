@@ -4,6 +4,7 @@ export interface Contact {
   id: string;
   phoneNumber: string;
   displayName?: string | null;
+  birthDate?: string | null;
   notes?: string | null;
   status: "active" | "inactive" | string;
   priceTypeId?: string | null;
@@ -26,6 +27,7 @@ export interface ListContactsResponse {
 export interface ContactInput {
   phoneNumber: string;
   displayName?: string;
+  birthDate?: string;
   notes?: string;
   status?: string;
   priceTypeId?: string;

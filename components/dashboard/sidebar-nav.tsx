@@ -24,6 +24,7 @@ import {
   UsersRound,
   Wallet,
   Workflow,
+  CalendarHeart,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { hasTenantDashboardAccess } from "@/lib/api/auth";
@@ -64,6 +65,7 @@ const tenantNavGroups: Array<{
       { href: "/dashboard/broadcast", label: "Broadcast", icon: Megaphone },
       { href: "/dashboard/import", label: "Import", icon: Upload },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+      { href: "/dashboard/events", label: "Acara & Terapi", icon: CalendarHeart },
       { href: "/dashboard/finance", label: "Finance", icon: Wallet },
       { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
       { href: "/dashboard/team", label: "Team", icon: Users },

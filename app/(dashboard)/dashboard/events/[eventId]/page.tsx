@@ -1,0 +1,657 @@
+"use client";
+
+import Link from "next/link";
+import { use, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Copy, Pencil, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { EventAssignmentsTab } from "@/components/events/event-assignments-tab";
+import { EventPatientsTab } from "@/components/events/event-patients-tab";
+import { EventStaffTab } from "@/components/events/event-staff-tab";
+import { EventTherapySettingsTab } from "@/components/events/event-therapy-settings-tab";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { eventsApi, type EventRow } from "@/lib/api/events";
+import { useAuth } from "@/components/providers/auth-provider";
+import { canPerformOwnerActions } from "@/lib/api/auth";
+import { toast } from "sonner";
+
+const STATUSES = ["DRAFT", "PUBLISHED", "CLOSED", "CANCELLED", "ARCHIVED"] as const;
+
+function formatSlotTime(t?: string) {
+  if (!t) return "";
+  return t.length >= 5 ? t.slice(0, 5) : t;
+}
+
+function EventPublicRegistrationCard({
+  tenantSlug,
+  eventSlug,
+  status,
+}: {
+  tenantSlug?: string;
+  eventSlug: string;
+  status: string;
+}) {
+  const path = tenantSlug ? `/register/${tenantSlug}/${eventSlug}` : "";
+  const published = status === "PUBLISHED";
+
+  const copyLink = async () => {
+    if (!path) return;
+    const url = `${window.location.origin}${path}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link pendaftaran disalin");
+    } catch {
+      toast.error("Gagal menyalin link");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Link pendaftaran pasien (publik)</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm">
+        {!tenantSlug ? (
+          <p className="text-amber-800 dark:text-amber-200">
+            Slug toko tidak terdeteksi. Pastikan Anda login sebagai owner toko (bukan hanya konsol
+            platform tanpa impersonate).
+          </p>
+        ) : null}
+        {tenantSlug && !published ? (
+          <p className="text-amber-800 dark:text-amber-200">
+            Acara masih berstatus <strong>{status}</strong>. Ubah ke <strong>PUBLISHED</strong> lewat
+            &quot;Edit acara&quot; agar pasien bisa mendaftar lewat link ini.
+          </p>
+        ) : null}
+        {path ? (
+          <>
+            <p className="text-xs text-muted-foreground">
+              Bagikan link ini (domain + path di bawah):
+            </p>
+            <code className="block break-all rounded-md bg-muted px-3 py-2 text-xs">{path}</code>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button type="button" size="sm" variant="outline" onClick={() => void copyLink()}>
+                Salin link lengkap
+              </Button>
+              {published ? (
+                <Button size="sm" variant="secondary" asChild>
+                  <Link href={path} target="_blank" rel="noopener noreferrer">
+                    Buka halaman pendaftaran
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+          </>
+        ) : null}
+        <p className="text-xs text-muted-foreground">
+          Format: <span className="font-mono">/register/{"{slug-toko}"}/{"{slug-acara}"}</span> · slug
+          acara ini: <strong>{eventSlug}</strong>
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function EventDetailPage({ params }: { params: Promise<{ eventId: string }> }) {
+  const { eventId } = use(params);
+  const router = useRouter();
+  const { user } = useAuth();
+  const isOwner = canPerformOwnerActions(user);
+  const qc = useQueryClient();
+  const [tab, setTab] = useState("dashboard");
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<EventRow>>({});
+
+  const [scheduleTherapy, setScheduleTherapy] = useState("");
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
+
+  const { data: event } = useQuery({
+    queryKey: ["event", eventId],
+    queryFn: () => eventsApi.getEvent(eventId),
+  });
+  const { data: dashboard } = useQuery({
+    queryKey: ["event-dashboard", eventId],
+    queryFn: () => eventsApi.getDashboard(eventId),
+  });
+
+  const { data: schedule } = useQuery({
+    queryKey: ["event-schedule", eventId, scheduleTherapy, scheduleDate],
+    queryFn: () =>
+      eventsApi.getSchedule(eventId, {
+        therapyId: scheduleTherapy || undefined,
+        date: scheduleDate || undefined,
+      }),
+  });
+  const { data: therapySettings } = useQuery({
+    queryKey: ["event-therapy-settings", eventId],
+    queryFn: () => eventsApi.listEventTherapySettings(eventId),
+  });
+  const { data: therapies } = useQuery({
+    queryKey: ["event-therapies-master"],
+    queryFn: () => eventsApi.listTherapies({ activeOnly: true, pageSize: 100 }),
+  });
+  const { data: roles } = useQuery({
+    queryKey: ["event-roles-master"],
+    queryFn: () => eventsApi.listVolunteerRoles({ pageSize: 100 }),
+  });
+
+  const archived = event?.status === "ARCHIVED";
+
+  const genSlotsMut = useMutation({
+    mutationFn: (therapyId: string) => eventsApi.generateSlots(eventId, therapyId),
+    onSuccess: (r) => {
+      toast.success(`${r.created} slot dibuat`);
+      void qc.invalidateQueries({ queryKey: ["event-schedule", eventId] });
+    },
+    onError: () => toast.error("Gagal generate slot"),
+  });
+  const deleteSlotMut = useMutation({
+    mutationFn: (slotId: string) => eventsApi.deleteSlot(eventId, slotId),
+    onSuccess: () => {
+      toast.success("Slot dihapus");
+      void qc.invalidateQueries({ queryKey: ["event-schedule", eventId] });
+    },
+    onError: (e: { response?: { data?: { message?: string } } }) =>
+      toast.error(e?.response?.data?.message ?? "Gagal menghapus slot"),
+  });
+  const deleteSlotsBulkMut = useMutation({
+    mutationFn: (slotIds: string[]) => eventsApi.deleteSlotsBulk(eventId, slotIds),
+    onSuccess: (res) => {
+      toast.success(`${res.deleted} slot dihapus${res.blocked ? `, ${res.blocked} gagal` : ""}`);
+      if (res.errors?.length) {
+        toast.error(res.errors.slice(0, 2).join(" | "));
+      }
+      setSelectedSlotIds([]);
+      void qc.invalidateQueries({ queryKey: ["event-schedule", eventId] });
+    },
+    onError: (e: { response?: { data?: { message?: string } } }) =>
+      toast.error(e?.response?.data?.message ?? "Gagal hapus slot terpilih"),
+  });
+
+  const updateEventMut = useMutation({
+    mutationFn: () => eventsApi.updateEvent(eventId, editForm as EventRow),
+    onSuccess: () => {
+      toast.success("Acara diperbarui");
+      void qc.invalidateQueries({ queryKey: ["event", eventId] });
+      void qc.invalidateQueries({ queryKey: ["events"] });
+      setEditOpen(false);
+    },
+    onError: (e: { response?: { data?: { message?: string } } }) =>
+      toast.error(e?.response?.data?.message ?? "Gagal"),
+  });
+
+  const deleteEventMut = useMutation({
+    mutationFn: () => eventsApi.deleteEvent(eventId),
+    onSuccess: () => {
+      toast.success("Acara dihapus");
+      window.location.href = "/dashboard/events";
+    },
+    onError: () => toast.error("Gagal menghapus"),
+  });
+
+  const duplicateMut = useMutation({
+    mutationFn: () => eventsApi.duplicateEvent(eventId),
+    onSuccess: (res) => {
+      toast.success(
+        `Acara disalin: ${res.peopleCopied} staf, ${res.patientsCopied} pasien, ${res.therapySettingsCopied} pengaturan terapi`,
+      );
+      router.push(`/dashboard/events/${res.event.id}`);
+    },
+    onError: (e: { response?: { data?: { message?: string } } }) =>
+      toast.error(e?.response?.data?.message ?? "Gagal menduplikasi acara"),
+  });
+
+  const tenantSlug = user?.tenant?.slug ?? user?.impersonation?.tenant?.slug;
+  const visibleSlotIds = new Set((schedule?.slots ?? []).map((s) => s.id));
+  const visibleSelectedSlotIds = selectedSlotIds.filter((id) => visibleSlotIds.has(id));
+
+  if (!event) {
+    return <p className="p-6 text-muted-foreground">Memuat acara...</p>;
+  }
+
+  const openEdit = () => {
+    setEditForm({ ...event });
+    setEditOpen(true);
+  };
+
+  return (
+    <div className="space-y-4 p-1">
+      <p className="text-sm">
+        <Link href="/dashboard/events" className="text-primary underline-offset-4 hover:underline">
+          ← Daftar acara
+        </Link>
+      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold">{event.eventName}</h1>
+          <p className="text-sm text-muted-foreground">
+            {event.startDate} — {event.endDate} · Status: {event.status}
+            {archived ? " · Hanya baca" : ""}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {tenantSlug && event.status === "PUBLISHED" ? (
+            <Button variant="outline" asChild>
+              <Link href={`/register/${tenantSlug}/${event.eventSlug}`} target="_blank">
+                Buka pendaftaran publik
+              </Link>
+            </Button>
+          ) : null}
+          {isOwner ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={duplicateMut.isPending}
+                onClick={() => duplicateMut.mutate()}
+              >
+                <Copy className="mr-1 h-4 w-4" /> Duplikat
+              </Button>
+              {!archived ? (
+                <Button variant="outline" size="sm" onClick={openEdit}>
+                  <Pencil className="mr-1 h-4 w-4" /> Edit acara
+                </Button>
+              ) : null}
+              <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
+                <Trash2 className="mr-1 h-4 w-4" /> Hapus
+              </Button>
+            </>
+          ) : null}
+        </div>
+      </div>
+
+      {isOwner ? (
+        <EventPublicRegistrationCard
+          tenantSlug={tenantSlug}
+          eventSlug={event.eventSlug}
+          status={event.status}
+        />
+      ) : null}
+
+      <div className="flex flex-wrap gap-2 border-b pb-2">
+        {[
+          ["dashboard", "Dashboard"],
+          [
+            "patients",
+            `Pasien${dashboard?.patientsRegistered != null ? ` (${dashboard.patientsRegistered})` : ""}`,
+          ],
+          [
+            "people",
+            `Staf${dashboard?.uniquePeopleCount != null ? ` (${dashboard.uniquePeopleCount})` : ""}`,
+          ],
+          ["assignments", "Penugasan"],
+          ["therapy", "Pengaturan Terapi"],
+          ["schedule", "Jadwal"],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            className={cn(
+              "rounded-md px-3 py-1.5 text-sm",
+              tab === id ? "bg-primary text-primary-foreground" : "bg-muted",
+            )}
+            onClick={() => setTab(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "dashboard" ? (
+        <div className="mt-4">
+          {!dashboard && (
+            <p className="mb-2 text-sm text-muted-foreground">Memuat ringkasan...</p>
+          )}
+          {dashboard ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Terdaftar</CardTitle>
+                </CardHeader>
+                <CardContent className="text-2xl font-bold">{dashboard.patientsRegistered}</CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Selesai</CardTitle>
+                </CardHeader>
+                <CardContent className="text-2xl font-bold">{dashboard.patientsCompleted}</CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Unik (konsumsi)</CardTitle>
+                </CardHeader>
+                <CardContent className="text-2xl font-bold">{dashboard.mealConsumptionCount}</CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Terapis</CardTitle>
+                </CardHeader>
+                <CardContent className="text-2xl font-bold">
+                  {(dashboard.peopleByType.THERAPIST ?? 0) +
+                    (dashboard.peopleByType.SHIJIE ?? 0) +
+                    (dashboard.peopleByType.DAOSHI ?? 0) +
+                    (dashboard.peopleByType.FASHI ?? 0)}
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
+          <p className="mt-2 text-xs text-muted-foreground">
+            Kelola daftar lengkap di tab <button type="button" className="underline" onClick={() => setTab("people")}>Staf</button>.
+          </p>
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>Kapasitas terapi</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(dashboard?.therapyCapacity ?? []).map((t) => (
+                <div key={t.therapyId} className="flex justify-between text-sm">
+                  <span>{t.therapyName}</span>
+                  <span>
+                    {t.current} / {t.max}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
+      {tab === "patients" ? (
+        <EventPatientsTab
+          eventId={eventId}
+          canEdit={isOwner && !archived}
+          therapies={therapies?.items ?? []}
+        />
+      ) : null}
+
+      {tab === "people" ? (
+        <EventStaffTab
+          eventId={eventId}
+          canEdit={isOwner && !archived}
+          therapies={therapies?.items ?? []}
+          roles={roles?.items ?? []}
+        />
+      ) : null}
+
+      {tab === "assignments" ? (
+        <EventAssignmentsTab eventId={eventId} canEdit={isOwner && !archived} />
+      ) : null}
+
+      {tab === "therapy" ? (
+        <EventTherapySettingsTab
+          eventId={eventId}
+          canEdit={isOwner && !archived}
+          settings={therapySettings?.items ?? []}
+          onSaved={() => {
+            void qc.invalidateQueries({ queryKey: ["event-therapy-settings", eventId] });
+          }}
+        />
+      ) : null}
+
+      {tab === "schedule" ? (
+        <div className="mt-4 space-y-4">
+          <Card>
+            <CardContent className="grid gap-2 pt-4 md:grid-cols-3">
+              <div>
+                <Label>Filter terapi</Label>
+                <Select
+                  value={scheduleTherapy || "__all"}
+                  onValueChange={(v) => setScheduleTherapy(v === "__all" ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all">Semua</SelectItem>
+                    {(therapies?.items ?? []).map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.therapyName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Tanggal</Label>
+                <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} />
+              </div>
+            </CardContent>
+          </Card>
+          {isOwner && !archived ? (
+            <div className="flex flex-wrap gap-2">
+              {(therapies?.items ?? []).map((t) => (
+                <Button
+                  key={t.id}
+                  size="sm"
+                  variant="outline"
+                  disabled={genSlotsMut.isPending}
+                  onClick={() => genSlotsMut.mutate(t.id)}
+                >
+                  Generate slot: {t.therapyName}
+                </Button>
+              ))}
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={deleteSlotsBulkMut.isPending || visibleSelectedSlotIds.length === 0}
+                onClick={() => deleteSlotsBulkMut.mutate(visibleSelectedSlotIds)}
+              >
+                Hapus terpilih ({visibleSelectedSlotIds.length})
+              </Button>
+            </div>
+          ) : null}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Slot waktu</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1 text-sm">
+              {isOwner && !archived && (schedule?.slots?.length ?? 0) > 0 ? (
+                <label className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={
+                      (schedule?.slots ?? []).length > 0 &&
+                      visibleSelectedSlotIds.length === (schedule?.slots ?? []).length
+                    }
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedSlotIds((schedule?.slots ?? []).map((s) => s.id));
+                      } else {
+                        setSelectedSlotIds([]);
+                      }
+                    }}
+                  />
+                  Pilih semua slot
+                </label>
+              ) : null}
+              {(schedule?.slots ?? []).map((s) => (
+                <div key={s.id} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    {isOwner && !archived ? (
+                      <input
+                        type="checkbox"
+                        checked={selectedSlotIds.includes(s.id)}
+                        onChange={(e) =>
+                          setSelectedSlotIds((prev) =>
+                            e.target.checked
+                              ? prev.includes(s.id)
+                                ? prev
+                                : [...prev, s.id]
+                              : prev.filter((id) => id !== s.id),
+                          )
+                        }
+                      />
+                    ) : null}
+                    <span>
+                    {s.slotDate} {formatSlotTime(s.startTime)}–{formatSlotTime(s.endTime)} ({s.therapyName}) ·{" "}
+                    {s.bookedCount}/{s.capacity} pasien
+                    </span>
+                  </div>
+                  {isOwner && !archived ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      disabled={deleteSlotMut.isPending || deleteSlotsBulkMut.isPending}
+                      onClick={() => deleteSlotMut.mutate(s.id)}
+                    >
+                      <Trash2 className="mr-1 h-4 w-4" />
+                      Hapus
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Pasien terjadwal</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1 text-sm">
+              {(schedule?.patients ?? []).map((p) => (
+                <div key={p.id}>
+                  {p.fullName} — {p.therapyName} {p.slotLabel ? `(${p.slotLabel})` : ""}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit acara</DialogTitle>
+            <DialogDescription>Ubah nama, tanggal, jam, dan status acara.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <div>
+              <Label>Nama</Label>
+              <Input
+                value={editForm.eventName ?? ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, eventName: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Lokasi</Label>
+              <Input
+                value={editForm.location ?? ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label>Mulai</Label>
+                <Input
+                  type="date"
+                  value={editForm.startDate ?? ""}
+                  onChange={(e) => setEditForm((f) => ({ ...f, startDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>Selesai</Label>
+                <Input
+                  type="date"
+                  value={editForm.endDate ?? ""}
+                  onChange={(e) => setEditForm((f) => ({ ...f, endDate: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label>Jam mulai</Label>
+                <Input
+                  type="time"
+                  value={editForm.startTime?.slice(0, 5) ?? ""}
+                  onChange={(e) => setEditForm((f) => ({ ...f, startTime: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>Jam selesai</Label>
+                <Input
+                  type="time"
+                  value={editForm.endTime?.slice(0, 5) ?? ""}
+                  onChange={(e) => setEditForm((f) => ({ ...f, endTime: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Status</Label>
+              <Select
+                value={editForm.status ?? "DRAFT"}
+                onValueChange={(v) => setEditForm((f) => ({ ...f, status: v as EventRow["status"] }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={() => updateEventMut.mutate()} disabled={updateEventMut.isPending}>
+              Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus acara?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Acara &quot;{event.eventName}&quot; akan dihapus (soft delete). Tindakan ini tidak dapat dibatalkan dari
+              UI.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteEventMut.mutate()}>Hapus</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

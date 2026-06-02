@@ -124,7 +124,7 @@ export default function RecurringPage() {
     onError: (e: unknown) => toast.error(toApiError(e).message),
   });
 
-  const items = data?.items ?? [];
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
 
   const cloneableItems = useMemo(() => items.filter(canCloneToBilling), [items]);
 
