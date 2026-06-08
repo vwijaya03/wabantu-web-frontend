@@ -379,14 +379,15 @@ export function EventStaffTab({
     onError: (e) => toast.error(toApiError(e).message),
   });
 
-  const exportMut = useMutation({
-    mutationFn: () => eventsApi.createExportJob(eventId, { kind: "staff_sheet", format: "xlsx" }),
-    onSuccess: () => {
-      toast.success("Export dimulai — lihat Riwayat export di bawah, lalu unduh saat selesai");
-      void qc.invalidateQueries({ queryKey: ["event-export-jobs", eventId] });
-    },
-    onError: (e) => toast.error(toApiError(e).message),
-  });
+  const startExport = (kind: "staff_sheet" | "staff_list") => {
+    void eventsApi
+      .createExportJob(eventId, { kind, format: "xlsx" })
+      .then(() => {
+        toast.success("Export masuk antrian — lihat Riwayat export di bawah");
+        void qc.invalidateQueries({ queryKey: ["event-export-jobs", eventId] });
+      })
+      .catch((e) => toast.error(toApiError(e).message));
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -439,14 +440,13 @@ export function EventStaffTab({
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
           <CardTitle className="text-base">Daftar staf</CardTitle>
           <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={exportMut.isPending}
-              onClick={() => exportMut.mutate()}
-            >
+            <Button size="sm" variant="outline" onClick={() => startExport("staff_list")}>
               <Download className="mr-1 h-4 w-4" />
-              {exportMut.isPending ? "Memulai…" : "Export Excel"}
+              Daftar staf (Excel)
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => startExport("staff_sheet")}>
+              <Download className="mr-1 h-4 w-4" />
+              Lembar operasional
             </Button>
             {canEdit ? (
               <Button size="sm" onClick={openCreate}>
@@ -548,7 +548,7 @@ export function EventStaffTab({
         </CardContent>
       </Card>
 
-      <EventExportJobsPanel eventId={eventId} kinds={["staff_sheet"]} />
+      <EventExportJobsPanel eventId={eventId} kinds={["staff_sheet", "staff_list"]} />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">

@@ -46,6 +46,7 @@ import { ContactPicker } from "@/components/events/contact-picker";
 import type { Contact } from "@/lib/api/contacts";
 import { EventExportJobsPanel } from "@/components/events/event-export-jobs-panel";
 import { eventsApi, EVENTS_MAX_PATIENT_EXPORT_ROWS, type Patient } from "@/lib/api/events";
+import { formatEventDateId, formatPatientSlotLabel } from "@/lib/events-format";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 
@@ -103,6 +104,7 @@ export function EventPatientsTab({
   const [form, setForm] = useState<PatientForm>(emptyPatientForm());
   const [contactId, setContactId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Patient | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const filters = {
     q: search || undefined,
@@ -165,22 +167,56 @@ export function EventPatientsTab({
     onError: (e) => toast.error(toApiError(e).message),
   });
 
-  const exportMut = useMutation({
-    mutationFn: () =>
-      eventsApi.createExportJob(eventId, {
-        kind: "patients_pdf",
-        format: "pdf",
-        filters,
-      }),
-    onSuccess: () => {
-      toast.success("Export dimulai — lihat Riwayat export di bawah, lalu unduh saat selesai");
-      void qc.invalidateQueries({ queryKey: ["event-export-jobs", eventId] });
+  const deleteBulkMut = useMutation({
+    mutationFn: (ids: string[]) => eventsApi.deletePatientsBulk(eventId, ids),
+    onSuccess: (res) => {
+      const msg =
+        res.failed > 0
+          ? `${res.deleted} pasien dihapus, ${res.failed} gagal`
+          : `${res.deleted} pasien dihapus`;
+      toast.success(msg);
+      setSelectedIds(new Set());
+      invalidate();
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
 
+  const startExport = (kind: "patients_pdf" | "patients_xlsx") => {
+    void eventsApi
+      .createExportJob(eventId, { kind, format: kind === "patients_xlsx" ? "xlsx" : "pdf", filters })
+      .then(() => {
+        toast.success("Export masuk antrian — lihat Riwayat export di bawah");
+        void qc.invalidateQueries({ queryKey: ["event-export-jobs", eventId] });
+      })
+      .catch((e) => toast.error(toApiError(e).message));
+  };
+
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
+  const visibleIds = items.map((p) => p.id);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+
+  const toggleSelectVisible = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) {
+        visibleIds.forEach((id) => next.delete(id));
+      } else {
+        visibleIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   return (
     <div className="mt-4 space-y-4">
@@ -201,11 +237,20 @@ export function EventPatientsTab({
             <Button
               size="sm"
               variant="outline"
-              disabled={exportMut.isPending || exportTooMany}
-              onClick={() => exportMut.mutate()}
+              disabled={exportTooMany}
+              onClick={() => startExport("patients_pdf")}
             >
               <Download className="mr-1 h-4 w-4" />
-              {exportMut.isPending ? "Memulai…" : "Export PDF"}
+              Export PDF
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={exportTooMany}
+              onClick={() => startExport("patients_xlsx")}
+            >
+              <Download className="mr-1 h-4 w-4" />
+              Export Excel
             </Button>
             {canEdit ? (
               <Button
@@ -277,6 +322,24 @@ export function EventPatientsTab({
             </p>
           ) : null}
 
+          {canEdit && selectedIds.size > 0 ? (
+            <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <span>{selectedIds.size} pasien dipilih</span>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={deleteBulkMut.isPending}
+                onClick={() => {
+                  if (confirm(`Hapus ${selectedIds.size} pasien terpilih?`)) {
+                    deleteBulkMut.mutate(Array.from(selectedIds));
+                  }
+                }}
+              >
+                Hapus terpilih
+              </Button>
+            </div>
+          ) : null}
+
           {isError ? (
             <p className="text-sm text-destructive">{toApiError(error).message}</p>
           ) : isLoading ? (
@@ -286,6 +349,16 @@ export function EventPatientsTab({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {canEdit ? (
+                      <TableHead className="w-10">
+                        <input
+                          type="checkbox"
+                          checked={allVisibleSelected}
+                          onChange={toggleSelectVisible}
+                          aria-label="Pilih semua pasien di halaman ini"
+                        />
+                      </TableHead>
+                    ) : null}
                     <TableHead>Nama</TableHead>
                     <TableHead>Tgl lahir</TableHead>
                     <TableHead>Terapi</TableHead>
@@ -298,18 +371,30 @@ export function EventPatientsTab({
                 <TableBody>
                   {items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={canEdit ? 7 : 6} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={canEdit ? 8 : 6} className="h-24 text-center text-muted-foreground">
                         Tidak ada pasien.
                       </TableCell>
                     </TableRow>
                   ) : (
                     items.map((p) => (
                       <TableRow key={p.id}>
+                        {canEdit ? (
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(p.id)}
+                              onChange={() => toggleSelected(p.id)}
+                              aria-label={`Pilih pasien ${p.fullName}`}
+                            />
+                          </TableCell>
+                        ) : null}
                         <TableCell className="font-medium">{p.fullName}</TableCell>
-                        <TableCell>{p.birthDate}</TableCell>
+                        <TableCell>{formatEventDateId(p.birthDate)}</TableCell>
                         <TableCell>{p.therapyName ?? "—"}</TableCell>
                         <TableCell>{p.reservationStatus}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{p.slotLabel || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {formatPatientSlotLabel(p.slotLabel) || "—"}
+                        </TableCell>
                         <TableCell className="max-w-[160px] truncate text-muted-foreground">{p.complaint || "—"}</TableCell>
                         {canEdit ? (
                           <TableCell className="text-right">
@@ -332,7 +417,7 @@ export function EventPatientsTab({
         </CardContent>
       </Card>
 
-      <EventExportJobsPanel eventId={eventId} kinds={["patients_pdf"]} />
+      <EventExportJobsPanel eventId={eventId} kinds={["patients_pdf", "patients_xlsx"]} />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>

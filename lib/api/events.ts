@@ -134,6 +134,12 @@ export interface DeleteSlotsResult {
   errors?: string[];
 }
 
+export interface DeletePatientsResult {
+  deleted: number;
+  failed: number;
+  errors?: string[];
+}
+
 export interface TherapySlotTemplate {
   id?: string;
   startTime: string;
@@ -156,7 +162,7 @@ export interface EventTherapySetting {
   slotTemplates?: TherapySlotTemplate[];
 }
 
-export type EventExportKind = "patients_pdf" | "staff_sheet";
+export type EventExportKind = "patients_pdf" | "patients_xlsx" | "staff_sheet" | "staff_list";
 
 export interface EventExportJob {
   id: string;
@@ -193,6 +199,21 @@ export interface PublicEventInfo {
   registrationOpen: boolean;
   message?: string;
   therapies: Therapy[];
+  closed: boolean;
+  cancelled: boolean;
+}
+
+export interface PublicStaffEventInfo {
+  eventName: string;
+  eventDescription?: string;
+  location?: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  registrationOpen: boolean;
+  message?: string;
+  therapies: Therapy[];
+  volunteerRoles: VolunteerRole[];
   closed: boolean;
   cancelled: boolean;
 }
@@ -360,12 +381,18 @@ export const eventsApi = {
 
   importStaffRoster: (eventId: string) =>
     api
-      .post<{ added: number; skipped: number }>(`/events/detail/${eventId}/people/import-roster`)
+      .post<{ added: number; skipped: number }>(
+        `/events/detail/${eventId}/people/import-roster`,
+        undefined,
+        { timeout: 120_000 },
+      )
       .then((r) => r.data),
 
   syncStaffRosterFromEvent: (eventId: string) =>
     api
-      .post<{ upserted: number }>(`/events/staff-roster/sync-from-event/${eventId}`)
+      .post<{ upserted: number }>(`/events/staff-roster/sync-from-event/${eventId}`, undefined, {
+        timeout: 120_000,
+      })
       .then((r) => r.data),
 
   updatePatient: (
@@ -383,6 +410,11 @@ export const eventsApi = {
 
   deletePatient: (eventId: string, patientId: string) =>
     api.delete(`/events/detail/${eventId}/patients/${patientId}`),
+
+  deletePatientsBulk: (eventId: string, patientIds: string[]) =>
+    api
+      .post<DeletePatientsResult>(`/events/detail/${eventId}/patients/delete-bulk`, { patientIds })
+      .then((r) => r.data),
 
   updatePatientStatus: (eventId: string, patientId: string, reservationStatus: string) =>
     api.patch(`/events/detail/${eventId}/patients/${patientId}`, { reservationStatus }),
@@ -424,6 +456,30 @@ export const eventsApi = {
   getPublicRegistration: (tenantSlug: string, eventSlug: string) =>
     api
       .get<PublicEventInfo>(`/public/events/${tenantSlug}/register/${eventSlug}`)
+      .then((r) => r.data),
+
+  getPublicStaffRegistration: (tenantSlug: string, eventSlug: string) =>
+    api
+      .get<PublicStaffEventInfo>(`/public/events/${tenantSlug}/register/${eventSlug}/staff`)
+      .then((r) => r.data),
+
+  postPublicStaffRegistration: (
+    tenantSlug: string,
+    eventSlug: string,
+    body: {
+      fullName: string;
+      role: string;
+      therapyIds?: string[];
+      volunteerRoleId?: string;
+      phone?: string;
+      notes?: string;
+    },
+  ) =>
+    api
+      .post<{ success: boolean; message: string }>(
+        `/public/events/${tenantSlug}/register/${eventSlug}/staff`,
+        body,
+      )
       .then((r) => r.data),
 
   getPublicRegistrationSlots: (tenantSlug: string, eventSlug: string, therapyId: string) =>

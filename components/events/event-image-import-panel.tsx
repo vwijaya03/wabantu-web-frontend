@@ -137,6 +137,12 @@ export function EventImageImportPanel({
           {title}
         </CardTitle>
         <CardDescription>{description}</CardDescription>
+        {kind === "patients" ? (
+          <p className="text-xs text-muted-foreground">
+            Kolom <strong>Jam</strong> dari gambar diisi ke slot otomatis saat commit (slot harus sudah di-generate di tab
+            Jadwal).
+          </p>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
         {tokenQuota ? (

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { EventAssignmentsTab } from "@/components/events/event-assignments-tab";
 import { EventPatientsTab } from "@/components/events/event-patients-tab";
 import { EventStaffTab } from "@/components/events/event-staff-tab";
+import { EventScheduleTab } from "@/components/events/event-schedule-tab";
 import { EventTherapySettingsTab } from "@/components/events/event-therapy-settings-tab";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,11 +47,6 @@ import { toast } from "sonner";
 
 const STATUSES = ["DRAFT", "PUBLISHED", "CLOSED", "CANCELLED", "ARCHIVED"] as const;
 
-function formatSlotTime(t?: string) {
-  if (!t) return "";
-  return t.length >= 5 ? t.slice(0, 5) : t;
-}
-
 function EventPublicRegistrationCard({
   tenantSlug,
   eventSlug,
@@ -60,15 +56,16 @@ function EventPublicRegistrationCard({
   eventSlug: string;
   status: string;
 }) {
-  const path = tenantSlug ? `/register/${tenantSlug}/${eventSlug}` : "";
+  const patientPath = tenantSlug ? `/register/${tenantSlug}/${eventSlug}` : "";
+  const staffPath = tenantSlug ? `/register/${tenantSlug}/${eventSlug}/staff` : "";
   const published = status === "PUBLISHED";
 
-  const copyLink = async () => {
+  const copyLink = async (path: string, label: string) => {
     if (!path) return;
     const url = `${window.location.origin}${path}`;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success("Link pendaftaran disalin");
+      toast.success(label);
     } catch {
       toast.error("Gagal menyalin link");
     }
@@ -77,7 +74,7 @@ function EventPublicRegistrationCard({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Link pendaftaran pasien (publik)</CardTitle>
+        <CardTitle className="text-base">Link pendaftaran publik</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
         {!tenantSlug ? (
@@ -92,20 +89,42 @@ function EventPublicRegistrationCard({
             &quot;Edit acara&quot; agar pasien bisa mendaftar lewat link ini.
           </p>
         ) : null}
-        {path ? (
+        {patientPath ? (
           <>
-            <p className="text-xs text-muted-foreground">
-              Bagikan link ini (domain + path di bawah):
-            </p>
-            <code className="block break-all rounded-md bg-muted px-3 py-2 text-xs">{path}</code>
+            <p className="text-sm font-medium">Pasien</p>
+            <code className="block break-all rounded-md bg-muted px-3 py-2 text-xs">{patientPath}</code>
             <div className="flex flex-wrap gap-2 pt-1">
-              <Button type="button" size="sm" variant="outline" onClick={() => void copyLink()}>
-                Salin link lengkap
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void copyLink(patientPath, "Link pendaftaran pasien disalin")}
+              >
+                Salin link pasien
               </Button>
               {published ? (
                 <Button size="sm" variant="secondary" asChild>
-                  <Link href={path} target="_blank" rel="noopener noreferrer">
-                    Buka halaman pendaftaran
+                  <Link href={patientPath} target="_blank" rel="noopener noreferrer">
+                    Buka pendaftaran pasien
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+            <p className="pt-2 text-sm font-medium">Terapis & relawan</p>
+            <code className="block break-all rounded-md bg-muted px-3 py-2 text-xs">{staffPath}</code>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void copyLink(staffPath, "Link pendaftaran staf disalin")}
+              >
+                Salin link staf
+              </Button>
+              {published ? (
+                <Button size="sm" variant="secondary" asChild>
+                  <Link href={staffPath} target="_blank" rel="noopener noreferrer">
+                    Buka pendaftaran staf
                   </Link>
                 </Button>
               ) : null}
@@ -420,134 +439,24 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
       ) : null}
 
       {tab === "schedule" ? (
-        <div className="mt-4 space-y-4">
-          <Card>
-            <CardContent className="grid gap-2 pt-4 md:grid-cols-3">
-              <div>
-                <Label>Filter terapi</Label>
-                <Select
-                  value={scheduleTherapy || "__all"}
-                  onValueChange={(v) => setScheduleTherapy(v === "__all" ? "" : v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all">Semua</SelectItem>
-                    {(therapies?.items ?? []).map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.therapyName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Tanggal</Label>
-                <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} />
-              </div>
-            </CardContent>
-          </Card>
-          {isOwner && !archived ? (
-            <div className="flex flex-wrap gap-2">
-              {(therapies?.items ?? []).map((t) => (
-                <Button
-                  key={t.id}
-                  size="sm"
-                  variant="outline"
-                  disabled={genSlotsMut.isPending}
-                  onClick={() => genSlotsMut.mutate(t.id)}
-                >
-                  Generate slot: {t.therapyName}
-                </Button>
-              ))}
-              <Button
-                size="sm"
-                variant="destructive"
-                disabled={deleteSlotsBulkMut.isPending || visibleSelectedSlotIds.length === 0}
-                onClick={() => deleteSlotsBulkMut.mutate(visibleSelectedSlotIds)}
-              >
-                Hapus terpilih ({visibleSelectedSlotIds.length})
-              </Button>
-            </div>
-          ) : null}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Slot waktu</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1 text-sm">
-              {isOwner && !archived && (schedule?.slots?.length ?? 0) > 0 ? (
-                <label className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={
-                      (schedule?.slots ?? []).length > 0 &&
-                      visibleSelectedSlotIds.length === (schedule?.slots ?? []).length
-                    }
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedSlotIds((schedule?.slots ?? []).map((s) => s.id));
-                      } else {
-                        setSelectedSlotIds([]);
-                      }
-                    }}
-                  />
-                  Pilih semua slot
-                </label>
-              ) : null}
-              {(schedule?.slots ?? []).map((s) => (
-                <div key={s.id} className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    {isOwner && !archived ? (
-                      <input
-                        type="checkbox"
-                        checked={selectedSlotIds.includes(s.id)}
-                        onChange={(e) =>
-                          setSelectedSlotIds((prev) =>
-                            e.target.checked
-                              ? prev.includes(s.id)
-                                ? prev
-                                : [...prev, s.id]
-                              : prev.filter((id) => id !== s.id),
-                          )
-                        }
-                      />
-                    ) : null}
-                    <span>
-                    {s.slotDate} {formatSlotTime(s.startTime)}–{formatSlotTime(s.endTime)} ({s.therapyName}) ·{" "}
-                    {s.bookedCount}/{s.capacity} pasien
-                    </span>
-                  </div>
-                  {isOwner && !archived ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      disabled={deleteSlotMut.isPending || deleteSlotsBulkMut.isPending}
-                      onClick={() => deleteSlotMut.mutate(s.id)}
-                    >
-                      <Trash2 className="mr-1 h-4 w-4" />
-                      Hapus
-                    </Button>
-                  ) : null}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Pasien terjadwal</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1 text-sm">
-              {(schedule?.patients ?? []).map((p) => (
-                <div key={p.id}>
-                  {p.fullName} — {p.therapyName} {p.slotLabel ? `(${p.slotLabel})` : ""}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+        <EventScheduleTab
+          canEdit={isOwner && !archived}
+          therapies={therapies?.items ?? []}
+          scheduleTherapy={scheduleTherapy}
+          onScheduleTherapyChange={setScheduleTherapy}
+          scheduleDate={scheduleDate}
+          onScheduleDateChange={setScheduleDate}
+          slots={schedule?.slots ?? []}
+          patients={schedule?.patients ?? []}
+          selectedSlotIds={visibleSelectedSlotIds}
+          onSelectedSlotIdsChange={(ids) => setSelectedSlotIds(ids)}
+          onGenerateSlots={(therapyId) => genSlotsMut.mutate(therapyId)}
+          onDeleteSlot={(slotId) => deleteSlotMut.mutate(slotId)}
+          onDeleteSlotsBulk={(ids) => deleteSlotsBulkMut.mutate(ids)}
+          genSlotsPending={genSlotsMut.isPending}
+          deleteSlotPending={deleteSlotMut.isPending}
+          deleteBulkPending={deleteSlotsBulkMut.isPending}
+        />
       ) : null}
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>

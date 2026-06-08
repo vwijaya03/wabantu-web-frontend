@@ -10,8 +10,16 @@ import { downloadDataUrl } from "@/lib/download";
 import { cn } from "@/lib/utils";
 
 function exportKindLabel(kind: EventExportKind) {
-  if (kind === "staff_sheet") return "Lembar terapis (Excel)";
-  return "Daftar pasien (PDF)";
+  switch (kind) {
+    case "staff_sheet":
+      return "Lembar operasional staf (Excel)";
+    case "staff_list":
+      return "Daftar staf & relawan (Excel)";
+    case "patients_xlsx":
+      return "Daftar pasien (Excel)";
+    default:
+      return "Daftar pasien (PDF)";
+  }
 }
 
 function exportFormatLabel(job: EventExportJob) {
@@ -30,6 +38,8 @@ function exportStatusLabel(status: string) {
       return "Gagal";
     case "processing":
       return "Memproses";
+    case "queued":
+      return "Antrian";
     default:
       return status;
   }
@@ -77,7 +87,7 @@ export function EventExportJobsPanel({
         {items.map((j) => (
           <div key={j.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
             <div className="flex items-center gap-2">
-              {j.kind === "staff_sheet" ? (
+              {j.kind === "staff_sheet" || j.kind === "staff_list" || j.kind === "patients_xlsx" ? (
                 <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
               ) : (
                 <FileText className="h-4 w-4 text-muted-foreground" />

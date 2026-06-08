@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { use, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -229,6 +230,12 @@ export default function PublicRegisterPage({
           )}
         </CardContent>
       </Card>
+      <p className="text-center text-xs text-muted-foreground">
+        Ingin mendaftar sebagai terapis atau relawan?{" "}
+        <Link className="underline" href={`/register/${tenantSlug}/${eventSlug}/staff`}>
+          Form pendaftaran staf
+        </Link>
+      </p>
     </main>
   );
 }
