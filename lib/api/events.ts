@@ -354,6 +354,8 @@ export const eventsApi = {
         status?: string;
         slotDate?: string;
         hasSlot?: string;
+        /** Kolom yang disembunyikan (No & Nama selalu ikut). */
+        hiddenColumns?: string[];
       };
     },
   ) => api.post<EventExportJob>(`/events/detail/${eventId}/export-jobs`, body).then((r) => r.data),

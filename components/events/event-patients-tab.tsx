@@ -45,6 +45,12 @@ import {
 import { ContactPicker } from "@/components/events/contact-picker";
 import type { Contact } from "@/lib/api/contacts";
 import { EventExportJobsPanel } from "@/components/events/event-export-jobs-panel";
+import {
+  buildPatientExportFilters,
+  DEFAULT_HIDDEN_PATIENT_EXPORT_COLUMNS,
+  PatientExportFiltersPanel,
+} from "@/components/events/patient-export-filters-panel";
+import type { PatientExportColumnKey } from "@/lib/events-export";
 import { eventsApi, EVENTS_MAX_PATIENT_EXPORT_ROWS, type Patient } from "@/lib/api/events";
 import { formatEventDateId, formatPatientSlotLabel } from "@/lib/events-format";
 import { toApiError } from "@/lib/api/client";
@@ -105,6 +111,9 @@ export function EventPatientsTab({
   const [contactId, setContactId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Patient | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exportHiddenCols, setExportHiddenCols] = useState<Set<PatientExportColumnKey>>(
+    () => new Set(DEFAULT_HIDDEN_PATIENT_EXPORT_COLUMNS),
+  );
 
   const filters = {
     q: search || undefined,
@@ -183,7 +192,11 @@ export function EventPatientsTab({
 
   const startExport = (kind: "patients_pdf" | "patients_xlsx") => {
     void eventsApi
-      .createExportJob(eventId, { kind, format: kind === "patients_xlsx" ? "xlsx" : "pdf", filters })
+      .createExportJob(eventId, {
+        kind,
+        format: kind === "patients_xlsx" ? "xlsx" : "pdf",
+        filters: buildPatientExportFilters(therapyFilter, exportHiddenCols, filters),
+      })
       .then(() => {
         toast.success("Export masuk antrian — lihat Riwayat export di bawah");
         void qc.invalidateQueries({ queryKey: ["event-export-jobs", eventId] });
@@ -268,6 +281,15 @@ export function EventPatientsTab({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          <PatientExportFiltersPanel
+            therapies={therapies}
+            therapyId={therapyFilter}
+            onTherapyIdChange={setTherapyFilter}
+            hiddenCols={exportHiddenCols}
+            onHiddenColsChange={setExportHiddenCols}
+            showTherapyHint
+            className="rounded-lg border bg-muted/30 p-3"
+          />
           <DataTableToolbar
             searchValue={q}
             onSearchChange={setQ}

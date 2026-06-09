@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Pencil, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { EventAssignmentsTab } from "@/components/events/event-assignments-tab";
 import { EventPatientsTab } from "@/components/events/event-patients-tab";
 import { EventStaffTab } from "@/components/events/event-staff-tab";
 import { EventScheduleTab } from "@/components/events/event-schedule-tab";
 import { EventTherapySettingsTab } from "@/components/events/event-therapy-settings-tab";
+import { EventShareExportCard } from "@/components/events/event-share-export-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -281,8 +282,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
         </div>
         <div className="flex flex-wrap gap-2">
           {tenantSlug && event.status === "PUBLISHED" ? (
-            <Button variant="outline" asChild>
-              <Link href={`/register/${tenantSlug}/${event.eventSlug}`} target="_blank">
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/register/${tenantSlug}/${event.eventSlug}`} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-1 h-4 w-4" />
                 Buka pendaftaran publik
               </Link>
             </Button>
@@ -389,8 +391,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
             Kelola daftar lengkap di tab <button type="button" className="underline" onClick={() => setTab("people")}>Staf</button>.
           </p>
           <Card className="mt-4">
-            <CardHeader>
+            <CardHeader className="pb-2">
               <CardTitle>Kapasitas terapi</CardTitle>
+              <p className="text-xs font-normal text-muted-foreground">
+                Terdaftar / total kapasitas (jumlah slot yang sudah di-generate, atau pengaturan terapi)
+              </p>
             </CardHeader>
             <CardContent className="space-y-2">
               {(dashboard?.therapyCapacity ?? []).map((t) => (
@@ -401,8 +406,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
                   </span>
                 </div>
               ))}
+              {(dashboard?.therapyCapacity ?? []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">Belum ada terapi dikonfigurasi.</p>
+              ) : null}
             </CardContent>
           </Card>
+          {isOwner ? (
+            <EventShareExportCard eventId={eventId} therapies={therapies?.items ?? []} />
+          ) : null}
         </div>
       ) : null}
 
