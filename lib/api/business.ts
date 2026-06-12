@@ -85,6 +85,17 @@ export type UpdateBusinessProfileInput = Partial<
   Omit<BusinessProfile, "id">
 >;
 
+export type ProfileAISuggestField = "description" | "productsServices";
+
+export interface ProfileAISuggestResult {
+  field: ProfileAISuggestField;
+  suggestion: string;
+  tokensUsed: number;
+  tokenQuotaRemaining: number;
+  tokenQuotaLimit: number;
+  quotaNotice: string;
+}
+
 export const businessApi = {
   async get(): Promise<BusinessProfile> {
     const res = await api.get<unknown>("/business/profile");
@@ -93,5 +104,14 @@ export const businessApi = {
   async update(input: UpdateBusinessProfileInput): Promise<BusinessProfile> {
     const res = await api.patch<unknown>("/business/profile", input);
     return normalizeProfile(res.data);
+  },
+  async suggestField(input: {
+    field: ProfileAISuggestField;
+    hint?: string;
+  }): Promise<ProfileAISuggestResult> {
+    const res = await api.post<ProfileAISuggestResult>("/business/profile/ai-suggest", input, {
+      timeout: 90_000,
+    });
+    return res.data;
   },
 };

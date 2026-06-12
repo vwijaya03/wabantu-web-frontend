@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
+import { ProfileAiAssistButton } from "@/components/dashboard/profile-ai-assist-button";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -470,7 +471,17 @@ export default function KnowledgeBaseSetupPage() {
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="si-products">Produk / jasa *</Label>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label htmlFor="si-products">Produk / jasa *</Label>
+                  <ProfileAiAssistButton
+                    field="productsServices"
+                    label="Produk / jasa"
+                    currentValue={profileEdit.productsServices}
+                    onApply={(text) =>
+                      setProfileEdit((p) => ({ ...p, productsServices: text }))
+                    }
+                  />
+                </div>
                 <Textarea
                   id="si-products"
                   rows={2}
@@ -503,7 +514,17 @@ export default function KnowledgeBaseSetupPage() {
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="si-desc">Deskripsi singkat</Label>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label htmlFor="si-desc">Deskripsi singkat</Label>
+                  <ProfileAiAssistButton
+                    field="description"
+                    label="Deskripsi singkat"
+                    currentValue={profileEdit.description}
+                    onApply={(text) =>
+                      setProfileEdit((p) => ({ ...p, description: text }))
+                    }
+                  />
+                </div>
                 <Textarea
                   id="si-desc"
                   rows={2}
