@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
@@ -76,6 +77,21 @@ export default function KnowledgeBasePage() {
         title="Knowledge Base"
         description="Daftar FAQ yang dipakai AI untuk menjawab pelanggan."
       />
+
+      <Card className="mb-6 border-primary/30 bg-primary/5">
+        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="font-medium">Baru di WABantu?</p>
+            <p className="text-sm text-muted-foreground">
+              Lewat chat singkat dengan AI, profil toko dan draft FAQ kebijakan bisa disusun otomatis —
+              Anda review dulu sebelum publish.
+            </p>
+          </div>
+          <Button asChild className="shrink-0">
+            <Link href="/dashboard/knowledge-base/setup">Mulai setup dengan AI</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

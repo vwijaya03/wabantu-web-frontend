@@ -6,7 +6,7 @@ export interface KbEntry {
   answer: string;
   category: string | null;
   isActive: boolean;
-  source: "manual" | "pdf" | "excel" | "csv";
+  source: "manual" | "pdf" | "excel" | "csv" | "ai_interview";
   createdAt: string;
 }
 
