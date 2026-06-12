@@ -101,7 +101,7 @@ export default function DashboardOverviewPage() {
       key: "kb",
       label: "Isi minimal 5 FAQ",
       done: kbDone,
-      href: "/dashboard/knowledge-base",
+      href: "/dashboard/knowledge-base/setup",
     },
   ];
 
