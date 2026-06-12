@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useLayoutEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm, useWatch } from "react-hook-form";
@@ -26,7 +27,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/components/providers/auth-provider";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { ProfileAiAssistButton } from "@/components/dashboard/profile-ai-assist-button";
+import { canPerformOwnerActions } from "@/lib/api/auth";
 import { businessApi, type BusinessProfile } from "@/lib/api/business";
 import { toApiError } from "@/lib/api/client";
 import { formatQueryError } from "@/lib/api/rate-limit";
@@ -102,6 +106,8 @@ export default function AiSettingsPage() {
 
 function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const canAiAssist = canPerformOwnerActions(user);
 
   const {
     register,
@@ -130,6 +136,8 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
 
   const aiEnabled = useWatch({ control, name: "aiEnabled" });
   const tone = useWatch({ control, name: "tone" });
+  const description = useWatch({ control, name: "description" });
+  const productsServices = useWatch({ control, name: "productsServices" });
 
   return (
     <>
@@ -227,7 +235,14 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
           <CardHeader>
             <CardTitle>Profil bisnis</CardTitle>
             <CardDescription>
-              Semakin lengkap, semakin akurat jawaban AI.
+              Semakin lengkap, semakin akurat jawaban AI. Butuh FAQ juga?{" "}
+              <Link
+                href="/dashboard/knowledge-base/setup"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                Setup lengkap dengan wawancara AI
+              </Link>
+              .
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -242,6 +257,18 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
               label="Deskripsi singkat"
               error={errors.description?.message}
               className="sm:col-span-2"
+              action={
+                canAiAssist ? (
+                  <ProfileAiAssistButton
+                    field="description"
+                    label="Deskripsi singkat"
+                    currentValue={description ?? undefined}
+                    onApply={(text) =>
+                      setValue("description", text, { shouldDirty: true })
+                    }
+                  />
+                ) : null
+              }
             >
               <Textarea
                 rows={3}
@@ -265,6 +292,18 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
               label="Produk / jasa"
               error={errors.productsServices?.message}
               className="sm:col-span-2"
+              action={
+                canAiAssist ? (
+                  <ProfileAiAssistButton
+                    field="productsServices"
+                    label="Produk / jasa"
+                    currentValue={productsServices ?? undefined}
+                    onApply={(text) =>
+                      setValue("productsServices", text, { shouldDirty: true })
+                    }
+                  />
+                ) : null
+              }
             >
               <Textarea
                 rows={3}
@@ -340,15 +379,20 @@ function Field({
   error,
   children,
   className,
+  action,
 }: {
   label: string;
   error?: string;
   children: React.ReactNode;
   className?: string;
+  action?: React.ReactNode;
 }) {
   return (
     <div className={`space-y-1.5 ${className ?? ""}`}>
-      <Label>{label}</Label>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Label>{label}</Label>
+        {action}
+      </div>
       {children}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
