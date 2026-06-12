@@ -2,7 +2,7 @@
 
 > **Audience:** Full-stack developers who may be strong in backend (Go, Node, PHP) but **new to Next.js / React 19**.  
 > **Codebase:** `web-frontend/` — Next.js 16 App Router talking to **`api-go/`** only (`/api/v1`, port 4000).  
-> **Companion docs:** [README.md](./README.md) · [APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md) · [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md) · **Finance:** [docs/FINANCE_MODULE.md](./docs/FINANCE_MODULE.md) · Backend: [../api-go/DEVELOPER_DOCUMENTATION.md](../api-go/DEVELOPER_DOCUMENTATION.md) · [../api-go/LIMITS_AND_QUOTAS.md](../api-go/LIMITS_AND_QUOTAS.md) · [../api-go/docs/FINANCE_MODULE.md](../api-go/docs/FINANCE_MODULE.md)
+> **Companion docs:** [README.md](./README.md) · [APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md) · [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md) · **Finance:** [docs/FINANCE_MODULE.md](./docs/FINANCE_MODULE.md) · **Orders chat:** [docs/ORDER_CUSTOMER_CHAT.md](./docs/ORDER_CUSTOMER_CHAT.md) · Backend: [../api-go/DEVELOPER_DOCUMENTATION.md](../api-go/DEVELOPER_DOCUMENTATION.md) · [../api-go/docs/ORDER_CUSTOMER_CHAT.md](../api-go/docs/ORDER_CUSTOMER_CHAT.md)
 
 **Belum paham React/Next?** Langsung ke **[Bagian 19 — React & Next.js untuk developer baru](#19-react--nextjs-guide-for-developers-new-to-this-stack)**.
 
