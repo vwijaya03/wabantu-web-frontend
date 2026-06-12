@@ -26,6 +26,7 @@ import { catalogApi, type CatalogItem, type ListCatalogResponse } from "@/lib/ap
 import { contactsApi, type ListContactsResponse } from "@/lib/api/contacts";
 import { priceTypesApi } from "@/lib/api/price-types";
 import { ordersApi, type Order } from "@/lib/api/orders";
+import { formatOrderNumber } from "@/lib/format-order-number";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -643,11 +644,11 @@ export default function OrdersPage() {
                       className="mt-1 lg:mt-0"
                       checked={selectedIds.has(order.id)}
                       onChange={() => toggleSelected(order.id)}
-                      aria-label={`Pilih pesanan ${order.id}`}
+                      aria-label={`Pilih pesanan ${formatOrderNumber(order.id)}`}
                     />
                     <div className="min-w-0">
                       <p className="truncate font-medium">
-                        #{order.id.slice(0, 8)} · {order.items.map((item) => item.name).join(", ") || "Tanpa item"}
+                        {formatOrderNumber(order.id)} · {order.items.map((item) => item.name).join(", ") || "Tanpa item"}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {order.trackingNumber ? `Resi ${order.trackingNumber}` : "Belum ada resi"}
@@ -671,7 +672,7 @@ export default function OrdersPage() {
                         disabled={!canManage}
                         className="text-destructive"
                         onClick={() => {
-                          if (confirm(`Hapus pesanan #${order.id.slice(0, 8)}?`)) deleteMut.mutate(order.id);
+                          if (confirm(`Hapus pesanan ${formatOrderNumber(order.id)}?`)) deleteMut.mutate(order.id);
                         }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />

@@ -136,7 +136,7 @@ Checklist “lengkapi profil” / “≥5 FAQ” / kartu “AI status”: `lib/b
 | `/dashboard/catalog` | `lib/api/catalog.ts`, `lib/api/price-types.ts` | katalog — harga per tipe; list mengembalikan `prices[]` |
 | `/dashboard/catalog/price-types` | `lib/api/price-types.ts` | master data tipe harga |
 | `/dashboard/catalog/import-image` | `lib/api/catalogImage.ts`, `lib/catalog-image-limits.ts` | Multi-screenshot (≤ **5** file, **5 MB**/file, **20 MB** total) → AI (Haiku) → pratinjau editable → commit; pakai kuota `ai_token` di preview saja. Backend: [api-go/docs/CATALOG_IMAGE_IMPORT.md](../api-go/docs/CATALOG_IMAGE_IMPORT.md) |
-| `/dashboard/orders` | `lib/api/orders.ts`, `lib/api/catalog.ts` (`contactId`) | pesanan — `effectiveSellPrice` per kontak; reprice saat ganti contact |
+| `/dashboard/orders` | `lib/api/orders.ts`, `lib/format-order-number.ts`, `lib/api/catalog.ts` (`contactId`) | pesanan — nomor `WB-XXXXXXXX` untuk pembeli; `effectiveSellPrice` per kontak; lihat [docs/ORDER_CUSTOMER_CHAT.md](./docs/ORDER_CUSTOMER_CHAT.md) |
 | `/dashboard/broadcast` | `lib/api/broadcast.ts` | broadcast (Business+ berbayar; trial dengan kuota) |
 | `/dashboard/import` | `lib/api/import.ts` | import produk/katalog: download template CSV/XLSX → upload → preview mapping → execute dengan `targetTable=business_catalog_item` |
 | `/dashboard/billing` | `billing`, `usage`, `payment` | overview, kuota, QRIS, AI top-up 20rb/30rb |
