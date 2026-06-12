@@ -30,6 +30,7 @@ import {
   type SetupInterviewProfileDraft,
   type SetupInterviewSession,
 } from "@/lib/api/setup-interview";
+import { canPerformOwnerActions } from "@/lib/api/auth";
 import { usageApi } from "@/lib/api/usage";
 import { cn } from "@/lib/utils";
 
@@ -83,12 +84,12 @@ export default function KnowledgeBaseSetupPage() {
   const [faqItems, setFaqItems] = useState<SetupInterviewFAQDraft[]>([]);
   const [showReview, setShowReview] = useState(false);
 
-  const isOwner = user?.role === "owner";
+  const canSetup = canPerformOwnerActions(user);
 
   const { data: usage } = useQuery({
     queryKey: ["usage-summary"],
     queryFn: () => usageApi.summary(),
-    enabled: isOwner,
+    enabled: canSetup,
   });
 
   const tokenQuota = useMemo(
@@ -153,10 +154,10 @@ export default function KnowledgeBaseSetupPage() {
   });
 
   useEffect(() => {
-    if (!isOwner || session || startMut.isPending || startMut.isSuccess) return;
+    if (!canSetup || session || startMut.isPending || startMut.isSuccess) return;
     startMut.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- start once per mount
-  }, [isOwner]);
+  }, [canSetup]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -194,16 +195,18 @@ export default function KnowledgeBaseSetupPage() {
     sendMut.mutate(msg);
   };
 
-  if (!isOwner) {
+  if (!canSetup) {
     return (
       <>
         <PageHeader
           title="Setup AI dengan wawancara"
-          description="Wizard ini hanya untuk owner toko."
+          description="Wizard ini untuk owner toko atau admin platform saat mode pantau tenant aktif."
         />
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Minta owner toko menyelesaikan setup profil & FAQ lewat halaman ini.
+            {user?.role === "super_admin"
+              ? "Aktifkan mode pantau tenant di banner atas, lalu buka halaman ini lagi."
+              : "Minta owner toko menyelesaikan setup profil & FAQ lewat halaman ini."}
             <div className="mt-4">
               <Button asChild variant="outline">
                 <Link href="/dashboard/knowledge-base">Kembali ke Knowledge Base</Link>
