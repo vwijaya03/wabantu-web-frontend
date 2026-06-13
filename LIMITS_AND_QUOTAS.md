@@ -49,3 +49,4 @@ Ringkasan untuk tim UI/UX & onboarding. **Detail lengkap & angka kuota:** [`../a
 
 Dokumen produk/onboarding: [`ONBOARDING_AND_PRODUCT_GUIDE.md`](./ONBOARDING_AND_PRODUCT_GUIDE.md) bagian 9.  
 Dokumen developer: [`DEVELOPER_DOCUMENTATION.md`](./DEVELOPER_DOCUMENTATION.md) bagian 7.5.
+
