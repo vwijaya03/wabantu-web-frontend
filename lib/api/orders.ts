@@ -2,6 +2,7 @@ import { api } from "./client";
 
 export interface Order {
   id: string;
+  orderNumber?: string;
   conversationId: string;
   contactId: string;
   items: Array<{

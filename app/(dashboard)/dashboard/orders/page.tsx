@@ -768,8 +768,12 @@ export default function OrdersPage() {
       <Dialog open={!!editOrder} onOpenChange={(open) => !open && setEditOrder(null)}>
         <DialogContent className="max-h-[92vh] max-w-6xl overflow-hidden p-0">
           <DialogHeader className="border-b px-6 pb-4 pt-6">
-            <DialogTitle>Edit Pesanan</DialogTitle>
-            <DialogDescription>Update contact, item katalog, status, kurir, nomor resi, ongkir, dan catatan.</DialogDescription>
+            <DialogTitle>
+              Detail Pesanan · {editOrder ? (editOrder.orderNumber ?? formatOrderNumber(editOrder.id)) : ""}
+            </DialogTitle>
+            <DialogDescription>
+              Nomor pesanan {editOrder ? (editOrder.orderNumber ?? formatOrderNumber(editOrder.id)) : ""} — update contact, item, status, kurir, resi, ongkir, dan catatan.
+            </DialogDescription>
           </DialogHeader>
           <div className="max-h-[calc(92vh-180px)] overflow-y-auto px-6 py-4">
             <OrderEditForm
