@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, PlusCircle, Search, Trash2 } from "lucide-react";
+import { Pencil, PlusCircle, RefreshCw, Search, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -140,7 +140,7 @@ export default function OrdersPage() {
     shippingCost: "",
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["orders", search, status, page, pageSize],
     queryFn: () =>
       ordersApi.list({
@@ -582,6 +582,15 @@ export default function OrdersPage() {
               <Button variant="secondary" onClick={runSearch}>
                 Cari
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => void refetch()}
+                disabled={isFetching}
+                aria-label="Refresh daftar pesanan"
+              >
+                <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
+                Refresh
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -647,9 +656,14 @@ export default function OrdersPage() {
                       aria-label={`Pilih pesanan ${formatOrderNumber(order.id)}`}
                     />
                     <div className="min-w-0">
-                      <p className="truncate font-medium">
+                      <button
+                        type="button"
+                        className="block w-full truncate text-left font-medium text-primary underline-offset-4 hover:underline"
+                        onClick={() => openEdit(order)}
+                        aria-label={`Lihat detail pesanan ${formatOrderNumber(order.id)}`}
+                      >
                         {formatOrderNumber(order.id)} · {order.items.map((item) => item.name).join(", ") || "Tanpa item"}
-                      </p>
+                      </button>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {order.trackingNumber ? `Resi ${order.trackingNumber}` : "Belum ada resi"}
                         {order.courier ? ` · ${order.courier}` : ""}
