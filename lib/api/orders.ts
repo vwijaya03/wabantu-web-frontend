@@ -5,6 +5,8 @@ export interface Order {
   orderNumber?: string;
   conversationId: string;
   contactId: string;
+  contactDisplayName?: string;
+  contactPhone?: string;
   items: Array<{
     catalogItemId?: string;
     externalCode?: string;

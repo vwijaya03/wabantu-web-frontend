@@ -635,9 +635,10 @@ export default function OrdersPage() {
             </div>
           ) : (
             <div className="overflow-hidden rounded-lg border">
-              <div className="grid grid-cols-[40px_minmax(220px,1fr)_150px_160px_120px] gap-3 border-b bg-muted/60 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground max-lg:hidden">
+              <div className="grid grid-cols-[40px_minmax(180px,1fr)_minmax(130px,0.75fr)_120px_130px_90px] gap-3 border-b bg-muted/60 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground max-lg:hidden">
                 <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectVisible} aria-label="Pilih semua pesanan" />
                 <span>Pesanan</span>
+                <span>Pembeli</span>
                 <span>Status</span>
                 <span>Total</span>
                 <span className="text-right">Aksi</span>
@@ -646,7 +647,7 @@ export default function OrdersPage() {
                 {orders.map((order) => (
                   <div
                     key={order.id}
-                    className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[40px_minmax(220px,1fr)_150px_160px_120px] lg:items-center"
+                    className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[40px_minmax(180px,1fr)_minmax(130px,0.75fr)_120px_130px_90px] lg:items-center"
                   >
                     <input
                       type="checkbox"
@@ -668,6 +669,13 @@ export default function OrdersPage() {
                         {order.trackingNumber ? `Resi ${order.trackingNumber}` : "Belum ada resi"}
                         {order.courier ? ` · ${order.courier}` : ""}
                       </p>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground lg:hidden">Pembeli</p>
+                      <p className="truncate font-medium">{formatBuyerLabel(order)}</p>
+                      {order.contactDisplayName && order.contactPhone ? (
+                        <p className="mt-1 truncate text-xs text-muted-foreground">{order.contactPhone}</p>
+                      ) : null}
                     </div>
                     <Badge variant={statusBadgeVariant(order.status)}>{statusLabel(order.status)}</Badge>
                     <div>
@@ -1306,6 +1314,14 @@ function OrderSummary({
       </div>
     </aside>
   );
+}
+
+function formatBuyerLabel(order: Order): string {
+  const name = order.contactDisplayName?.trim();
+  const phone = order.contactPhone?.trim();
+  if (name) return name;
+  if (phone) return phone;
+  return "Tanpa contact";
 }
 
 function normalizeEditableStatus(status: string) {
