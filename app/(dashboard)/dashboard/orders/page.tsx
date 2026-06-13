@@ -673,7 +673,7 @@ export default function OrdersPage() {
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground lg:hidden">Pembeli</p>
                       <p className="truncate font-medium">{formatBuyerLabel(order)}</p>
-                      {order.contactDisplayName && order.contactPhone ? (
+                      {normalizeBuyerField(order.contactDisplayName) && normalizeBuyerField(order.contactPhone) ? (
                         <p className="mt-1 truncate text-xs text-muted-foreground">{order.contactPhone}</p>
                       ) : null}
                     </div>
@@ -1317,11 +1317,18 @@ function OrderSummary({
 }
 
 function formatBuyerLabel(order: Order): string {
-  const name = order.contactDisplayName?.trim();
-  const phone = order.contactPhone?.trim();
+  const name = normalizeBuyerField(order.contactDisplayName);
+  const phone = normalizeBuyerField(order.contactPhone);
   if (name) return name;
   if (phone) return phone;
   return "Tanpa contact";
+}
+
+function normalizeBuyerField(value?: string): string {
+  const trimmed = value?.trim() ?? "";
+  // Legacy PII column placeholder after encryption migration (U+2022 BULLET).
+  if (trimmed === "\u2022" || trimmed === "•") return "";
+  return trimmed;
 }
 
 function normalizeEditableStatus(status: string) {
