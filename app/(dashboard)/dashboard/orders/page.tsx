@@ -26,6 +26,8 @@ import { catalogApi, type CatalogItem, type ListCatalogResponse } from "@/lib/ap
 import { contactsApi, type ListContactsResponse } from "@/lib/api/contacts";
 import { priceTypesApi } from "@/lib/api/price-types";
 import { ordersApi, type Order } from "@/lib/api/orders";
+import { financeApi, type Wallet } from "@/lib/api/finance";
+import { NO_WALLET } from "@/lib/finance/utils";
 import { formatOrderNumber } from "@/lib/format-order-number";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -64,6 +66,7 @@ type CreateForm = {
   trackingNumber: string;
   courier: string;
   shippingCost: string;
+  incomeWalletId: string;
 };
 
 type OrderItemForm = {
@@ -89,6 +92,7 @@ type EditForm = {
   trackingNumber: string;
   courier: string;
   shippingCost: string;
+  incomeWalletId: string;
 };
 
 const emptyCreateForm: CreateForm = {
@@ -105,6 +109,7 @@ const emptyCreateForm: CreateForm = {
   trackingNumber: "",
   courier: "",
   shippingCost: "",
+  incomeWalletId: NO_WALLET,
 };
 
 export default function OrdersPage() {
@@ -138,6 +143,7 @@ export default function OrdersPage() {
     trackingNumber: "",
     courier: "",
     shippingCost: "",
+    incomeWalletId: NO_WALLET,
   });
 
   const { data, isLoading, isFetching, refetch } = useQuery({
@@ -199,6 +205,15 @@ export default function OrdersPage() {
     queryFn: () => priceTypesApi.list({ pageSize: 50 }),
     enabled: createOpen || Boolean(editOrder),
   });
+  const { data: walletsData } = useQuery({
+    queryKey: ["finance-wallets", "orders"],
+    queryFn: () => financeApi.listWallets(),
+    enabled: createOpen || Boolean(editOrder),
+  });
+  const walletOptions = useMemo(
+    () => (walletsData?.wallets ?? []).filter((wallet) => wallet.isActive),
+    [walletsData],
+  );
   const priceTypeLabelById = useMemo(
     () => new Map((priceTypesData?.items ?? []).map((pt) => [pt.id, pt.label])),
     [priceTypesData],
@@ -233,6 +248,10 @@ export default function OrdersPage() {
         trackingNumber: optionalString(createForm.trackingNumber),
         courier: optionalString(createForm.courier),
         shippingCost: optionalNumber(createForm.shippingCost),
+        incomeWalletId:
+          createForm.incomeWalletId && createForm.incomeWalletId !== NO_WALLET
+            ? createForm.incomeWalletId
+            : undefined,
       }),
     onSuccess: () => {
       toast.success("Pesanan ditambahkan");
@@ -307,6 +326,10 @@ export default function OrdersPage() {
         trackingNumber: optionalString(editForm.trackingNumber),
         courier: optionalString(editForm.courier),
         shippingCost: optionalNumber(editForm.shippingCost),
+        incomeWalletId:
+          editForm.incomeWalletId && editForm.incomeWalletId !== NO_WALLET
+            ? editForm.incomeWalletId
+            : "",
       }),
     onSuccess: () => {
       toast.success("Pesanan diperbarui");
@@ -401,6 +424,7 @@ export default function OrdersPage() {
       trackingNumber: order.trackingNumber ?? "",
       courier: order.courier ?? "",
       shippingCost: order.shippingCost ? String(order.shippingCost) : "",
+      incomeWalletId: order.incomeWalletId || NO_WALLET,
     });
   };
 
@@ -754,6 +778,7 @@ export default function OrdersPage() {
               quickCreateCatalog={() => quickCreateCatalogMut.mutate()}
               quickCreatePending={quickCreateCatalogMut.isPending}
               priceTypeLabelById={priceTypeLabelById}
+              walletOptions={walletOptions}
               onContactSelect={(contactId) => {
                 void repriceCreateItems(contactId);
               }}
@@ -799,6 +824,7 @@ export default function OrdersPage() {
               quickCreateCatalog={() => quickCreateEditCatalogMut.mutate()}
               quickCreatePending={quickCreateEditCatalogMut.isPending}
               priceTypeLabelById={priceTypeLabelById}
+              walletOptions={walletOptions}
               onContactSelect={(contactId) => {
                 void repriceEditItems(contactId);
               }}
@@ -834,6 +860,7 @@ function OrderCreateForm({
   quickCreateCatalog,
   quickCreatePending,
   priceTypeLabelById,
+  walletOptions,
   onContactSelect,
 }: {
   form: CreateForm;
@@ -851,6 +878,7 @@ function OrderCreateForm({
   quickCreateCatalog: () => void;
   quickCreatePending: boolean;
   priceTypeLabelById: Map<string, string>;
+  walletOptions: Wallet[];
   onContactSelect: (contactId: string) => void;
 }) {
   const update = (patch: Partial<CreateForm>) => setForm({ ...form, ...patch });
@@ -1084,6 +1112,28 @@ function OrderCreateForm({
                       <Label>No. resi</Label>
                       <Input value={form.trackingNumber} onChange={(e) => update({ trackingNumber: e.target.value })} />
                     </div>
+                    <div className="sm:col-span-2">
+                      <Label>Dompet pemasukan</Label>
+                      <Select
+                        value={form.incomeWalletId}
+                        onValueChange={(value) => update({ incomeWalletId: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Dompet default" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_WALLET}>Dompet default (Kas Tunai)</SelectItem>
+                          {walletOptions.map((wallet) => (
+                            <SelectItem key={wallet.id} value={wallet.id}>
+                              {wallet.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Dipakai saat pesanan diselesaikan. Kosongkan untuk dompet default aktif.
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1123,6 +1173,7 @@ function OrderEditForm({
   quickCreateCatalog,
   quickCreatePending,
   priceTypeLabelById,
+  walletOptions,
   onContactSelect,
 }: {
   form: EditForm;
@@ -1139,6 +1190,7 @@ function OrderEditForm({
   quickCreateCatalog: () => void;
   quickCreatePending: boolean;
   priceTypeLabelById: Map<string, string>;
+  walletOptions: Wallet[];
   onContactSelect: (contactId: string) => void;
 }) {
   return (
@@ -1158,6 +1210,7 @@ function OrderEditForm({
       quickCreateCatalog={quickCreateCatalog}
       quickCreatePending={quickCreatePending}
       priceTypeLabelById={priceTypeLabelById}
+      walletOptions={walletOptions}
       onContactSelect={onContactSelect}
     />
   );

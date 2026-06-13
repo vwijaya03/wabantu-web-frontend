@@ -25,6 +25,7 @@ export interface Order {
   shippingCost: number;
   trackingNumber?: string;
   courier?: string;
+  incomeWalletId?: string;
   updatedAt?: string;
   createdAt: string;
 }
@@ -52,6 +53,7 @@ export interface CreateOrderInput {
   trackingNumber?: string;
   courier?: string;
   shippingCost?: number;
+  incomeWalletId?: string;
 }
 
 export interface UpdateOrderInput {
@@ -62,6 +64,7 @@ export interface UpdateOrderInput {
   trackingNumber?: string;
   courier?: string;
   shippingCost?: number;
+  incomeWalletId?: string;
 }
 
 export const ordersApi = {
