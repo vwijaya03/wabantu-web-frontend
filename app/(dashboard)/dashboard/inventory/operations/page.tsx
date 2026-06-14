@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { InventoryHelpButton, InventoryPageHeader } from "@/components/inventory/inventory-help";
+import type { InventoryHelpTopic } from "@/lib/inventory/help-content";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -29,17 +31,20 @@ import { cn } from "@/lib/utils";
 
 type Mode = "adjust" | "transfer" | "opening" | "revalue";
 
-const MODES: Array<{ id: Mode; label: string }> = [
-  { id: "adjust", label: "Penyesuaian ±" },
-  { id: "transfer", label: "Transfer" },
-  { id: "opening", label: "Saldo Awal" },
-  { id: "revalue", label: "Revaluasi HPP" },
+const MODES: Array<{ id: Mode; label: string; helpTopic: InventoryHelpTopic }> = [
+  { id: "adjust", label: "Penyesuaian ±", helpTopic: "operations-adjust" },
+  { id: "transfer", label: "Transfer", helpTopic: "operations-transfer" },
+  { id: "opening", label: "Saldo Awal", helpTopic: "operations-opening" },
+  { id: "revalue", label: "Revaluasi HPP", helpTopic: "operations-revalue" },
 ];
 
 export default function StockOperationsPage() {
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
-  const [mode, setMode] = useState<Mode>("adjust");
+  const searchParams = useSearchParams();
+  const modeParam = searchParams.get("mode");
+  const initialMode = MODES.some((m) => m.id === modeParam) ? (modeParam as Mode) : "adjust";
+  const [mode, setMode] = useState<Mode>(initialMode);
 
   const { data: whData } = useQuery({
     queryKey: ["inventory", "warehouses"],
@@ -50,28 +55,34 @@ export default function StockOperationsPage() {
   if (!canManage) {
     return (
       <RequireTenantDashboard title="Operasi Stok">
-        <PageHeader title="Operasi Stok" description="Hanya owner yang dapat mengubah stok." />
+        <InventoryPageHeader title="Operasi Stok" description="Hanya owner yang dapat mengubah stok." helpTopic="operations" />
       </RequireTenantDashboard>
     );
   }
 
   return (
     <RequireTenantDashboard title="Operasi Stok">
-      <PageHeader title="Operasi Stok" description="Penyesuaian, transfer, saldo awal, dan revaluasi HPP." />
+      <InventoryPageHeader
+        title="Operasi Stok"
+        description="Penyesuaian, transfer, saldo awal, dan revaluasi HPP."
+        helpTopic="operations"
+      />
 
       <div className="mb-4 inline-flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1">
         {MODES.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => setMode(m.id)}
-            className={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              mode === m.id ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {m.label}
-          </button>
+          <div key={m.id} className="inline-flex items-center">
+            <button
+              type="button"
+              onClick={() => setMode(m.id)}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                mode === m.id ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {m.label}
+            </button>
+            <InventoryHelpButton topic={m.helpTopic} />
+          </div>
         ))}
       </div>
 

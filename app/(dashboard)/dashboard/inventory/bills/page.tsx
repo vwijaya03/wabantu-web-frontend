@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { WarehouseSelect } from "@/components/inventory/warehouse-select";
@@ -51,7 +51,7 @@ export default function BillsPage() {
   return (
     <RequireTenantDashboard title="Penerimaan Barang">
       <div className="flex items-center justify-between">
-        <PageHeader title="Penerimaan Barang (Bill)" description="Terima barang dari supplier — menambah stok & HPP." />
+        <InventoryPageHeader title="Penerimaan Barang (Bill)" description="Terima barang dari supplier — menambah stok & HPP." helpTopic="bills" />
         {canManage ? <Button onClick={() => setCreating((v) => !v)}>{creating ? "Tutup" : "Terima Barang"}</Button> : null}
       </div>
 

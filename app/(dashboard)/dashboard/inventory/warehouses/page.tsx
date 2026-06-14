@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
@@ -62,7 +62,7 @@ export default function WarehousesPage() {
 
   return (
     <RequireTenantDashboard title="Gudang">
-      <PageHeader title="Gudang" description="Lokasi penyimpanan stok. Setiap pesanan & pembelian memilih gudang." />
+      <InventoryPageHeader title="Gudang" description="Lokasi penyimpanan stok. Setiap pesanan & pembelian memilih gudang." helpTopic="warehouses" />
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
         {canManage ? (
           <Card>

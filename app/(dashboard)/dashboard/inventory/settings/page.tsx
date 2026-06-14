@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { InventoryHelpButton, InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
@@ -31,14 +31,17 @@ export default function InventorySettingsPage() {
 
   return (
     <RequireTenantDashboard title="Pengaturan Persediaan">
-      <PageHeader title="Pengaturan & Akses" description="Metode HPP, kebijakan stok, dan hak akses modul persediaan." />
+      <InventoryPageHeader title="Pengaturan & Akses" description="Metode HPP, kebijakan stok, dan hak akses modul persediaan." helpTopic="settings" />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Metode HPP & Kebijakan</CardTitle></CardHeader>
           <CardContent className="space-y-5">
             <div>
-              <p className="text-sm font-medium">Metode HPP default</p>
+              <p className="flex items-center gap-1 text-sm font-medium">
+                Metode HPP default
+                <InventoryHelpButton topic="settings-costing" />
+              </p>
               <p className="mb-2 text-xs text-muted-foreground">
                 Berlaku untuk item yang mengikuti default. Untuk hitung ulang riwayat, buka Pemeliharaan → Recalculate.
               </p>
@@ -67,7 +70,10 @@ export default function InventorySettingsPage() {
                 onChange={(e) => update.mutate({ blockNegativeStock: e.target.checked })}
               />
               <span>
-                <span className="font-medium">Blokir stok minus</span><br />
+                <span className="inline-flex items-center gap-1 font-medium">
+                  Blokir stok minus
+                  <InventoryHelpButton topic="settings-block-negative" />
+                </span><br />
                 <span className="text-muted-foreground">Pesanan ditolak bila stok tidak cukup saat diproses.</span>
               </span>
             </label>
@@ -81,7 +87,10 @@ export default function InventorySettingsPage() {
                 onChange={(e) => update.mutate({ purchasePostsExpense: e.target.checked })}
               />
               <span>
-                <span className="font-medium">Mode cashflow (beli = biaya langsung)</span><br />
+                <span className="inline-flex items-center gap-1 font-medium">
+                  Mode cashflow (beli = biaya langsung)
+                  <InventoryHelpButton topic="settings-cashflow" />
+                </span><br />
                 <span className="text-muted-foreground">
                   Aktif: pembelian jadi biaya saat Bill (tanpa COGS saat jual). Nonaktif (disarankan):
                   biaya muncul sebagai HPP saat terjual — laba-rugi lebih akurat.
@@ -95,7 +104,12 @@ export default function InventorySettingsPage() {
 
         <div className="space-y-6">
           <Card>
-            <CardHeader><CardTitle>Hak Akses (ACL)</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-1">
+                Hak Akses (ACL)
+                <InventoryHelpButton topic="settings-acl" />
+              </CardTitle>
+            </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between rounded border p-3">
                 <div>

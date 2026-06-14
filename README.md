@@ -138,6 +138,8 @@ Detail + penjelasan React/Next: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUM
 
 **Events module (acara & terapi):** halaman `/dashboard/events`, komponen `components/events/`, API `lib/api/events.ts`. Panduan penggunaan: [`docs/EVENTS_MODULE.md`](docs/EVENTS_MODULE.md); teknis: [`../api-go/docs/EVENTS_MODULE.md`](../api-go/docs/EVENTS_MODULE.md).
 
+**Inventory module (persediaan & HPP):** halaman `/dashboard/inventory/*`, komponen `components/inventory/`, API `lib/api/inventory.ts`, konten bantuan owner `lib/inventory/help-content.ts` + tombol **(?)** di UI. Panduan owner bisnis: [`docs/INVENTORY_MODULE.md`](docs/INVENTORY_MODULE.md); teknis: [`../api-go/docs/INVENTORY_MODULE.md`](../api-go/docs/INVENTORY_MODULE.md).
+
 `hooks/use-plan.ts` memuat `GET /api/v1/billing/overview` hanya jika user punya konteks tenant (`hasTenantDashboardAccess` — owner/staff atau super_admin setelah **Pantau**).
 
 | Kondisi | Broadcast & workflow | Multi cabang | CRM leads |

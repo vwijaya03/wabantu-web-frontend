@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
 import {
@@ -26,7 +26,7 @@ export default function InventoryReportsPage() {
   const [tab, setTab] = useState<Tab>("valuation");
   return (
     <RequireTenantDashboard title="Laporan Persediaan">
-      <PageHeader title="Laporan Persediaan" description="Nilai persediaan dan margin penjualan (revenue − HPP)." />
+      <InventoryPageHeader title="Laporan Persediaan" description="Nilai persediaan dan margin penjualan (revenue − HPP)." helpTopic="reports" />
       <div className="mb-4 inline-flex gap-1 rounded-lg border bg-muted/40 p-1">
         <TabBtn active={tab === "valuation"} onClick={() => setTab("valuation")}>Nilai Persediaan</TabBtn>
         <TabBtn active={tab === "margin"} onClick={() => setTab("margin")}>Margin Penjualan</TabBtn>

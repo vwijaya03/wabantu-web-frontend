@@ -380,7 +380,11 @@ export default function OrdersPage() {
         status: batchStatus,
       }),
     onSuccess: (res) => {
-      toast.success(`${res.updated} pesanan diperbarui`);
+      if (res.updated === 0) {
+        toast.info("Tidak ada pesanan yang diubah — mungkin sudah berstatus yang sama.");
+      } else {
+        toast.success(`${res.updated} pesanan diperbarui`);
+      }
       setSelectedIds(new Set());
       invalidateOrders();
     },

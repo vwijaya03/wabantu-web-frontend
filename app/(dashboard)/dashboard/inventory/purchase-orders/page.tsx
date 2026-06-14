@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { WarehouseSelect } from "@/components/inventory/warehouse-select";
@@ -63,7 +63,7 @@ export default function PurchaseOrdersPage() {
   return (
     <RequireTenantDashboard title="Purchase Order">
       <div className="flex items-center justify-between">
-        <PageHeader title="Purchase Order" description="Rencana pembelian ke supplier. Stok masuk saat Penerimaan (Bill)." />
+        <InventoryPageHeader title="Purchase Order" description="Rencana pembelian ke supplier. Stok masuk saat Penerimaan (Bill)." helpTopic="purchase-orders" />
         {canManage ? <Button onClick={() => setCreating((v) => !v)}>{creating ? "Tutup" : "Buat PO"}</Button> : null}
       </div>
 

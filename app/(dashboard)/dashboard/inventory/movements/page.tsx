@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { inventoryApi, formatIDR, formatStockQty, movementTypeLabel } from "@/lib/api/inventory";
 import {
@@ -101,7 +101,7 @@ function MovementsContent() {
 export default function MovementsPage() {
   return (
     <RequireTenantDashboard title="Pergerakan Stok">
-      <PageHeader title="Pergerakan Stok" description="Buku besar stok: semua mutasi & HPP per transaksi." />
+      <InventoryPageHeader title="Pergerakan Stok" description="Buku besar stok: semua mutasi & HPP per transaksi." helpTopic="movements" />
       <Suspense fallback={<p className="text-sm text-muted-foreground">Memuat...</p>}>
         <MovementsContent />
       </Suspense>
