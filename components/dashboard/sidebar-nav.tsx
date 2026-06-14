@@ -34,6 +34,7 @@ import {
   Receipt,
   Undo2,
   Settings2,
+  SlidersHorizontal,
   Wrench,
   Wand2,
 } from "lucide-react";
@@ -96,6 +97,7 @@ const tenantNavGroups: Array<{
       { href: "/dashboard/inventory/items", label: "Konfigurasi Item", icon: Settings2 },
       { href: "/dashboard/inventory/reports", label: "Laporan", icon: BarChart3 },
       { href: "/dashboard/inventory/maintenance", label: "Pemeliharaan", icon: Wrench },
+      { href: "/dashboard/inventory/settings", label: "Pengaturan", icon: SlidersHorizontal },
       { href: "/dashboard/inventory/setup", label: "Setup HPP", icon: Wand2 },
     ],
   },
