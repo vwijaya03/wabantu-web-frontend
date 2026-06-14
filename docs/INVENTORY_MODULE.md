@@ -22,6 +22,7 @@ Sidebar grup **Persediaan**:
 | **Konfigurasi Item** | `/dashboard/inventory/items` | Track stok, metode HPP per item, bundle, batch/expiry |
 | **Laporan** | `/dashboard/inventory/reports` | Nilai persediaan + margin penjualan (revenue−HPP), export CSV |
 | **Pemeliharaan** | `/dashboard/inventory/maintenance` | Recalculate HPP, backfill pesanan lama, nilai per gudang |
+| **Pengaturan** | `/dashboard/inventory/settings` | Metode HPP, kebijakan stok, hak akses (ACL) |
 | **Setup HPP** | `/dashboard/inventory/setup` | Wizard metode HPP + aktivasi modul |
 
 ## Operasi Stok (UX)
@@ -91,7 +92,13 @@ Di `/dashboard/orders`, bila modul persediaan aktif, pesanan yang item ber-track
 melebihi stok tersedia diberi badge **"Stok kurang"** (hanya muncul untuk pengecualian,
 agar tidak berisik). Membantu admin sebelum memproses pesanan.
 
+## Pengaturan & Akses (ACL)
+
+Halaman **Pengaturan**: metode HPP default, blokir stok minus, mode cashflow, dan panel
+hak akses — **Owner/Super Admin = kelola penuh**, **Staff = lihat saja**.
+
 ## Status
 
-Modul persediaan UI lengkap: setup, stok+KPI, operasi, PO/Bill, faktur/retur, konfigurasi
-item (+bundle), pemeliharaan, kartu stok, dan badge stok di halaman Pesanan.
+Modul persediaan UI **lengkap (F1–F9)**: setup, stok+KPI, operasi, PO/Bill, faktur/retur,
+konfigurasi item (+bundle), laporan (+CSV), pemeliharaan, pengaturan/ACL, kartu stok, dan
+badge stok di halaman Pesanan.
