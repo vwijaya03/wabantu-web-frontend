@@ -19,6 +19,7 @@ Sidebar grup **Persediaan**:
 | **Retur** | `/dashboard/inventory/sales-returns` | Retur penjualan → stok kembali (HPP asli) |
 | **Pergerakan** | `/dashboard/inventory/movements` | Kartu stok: semua mutasi + HPP per transaksi |
 | **Gudang** | `/dashboard/inventory/warehouses` | Kelola lokasi gudang |
+| **Konfigurasi Item** | `/dashboard/inventory/items` | Track stok, metode HPP per item, bundle, batch/expiry |
 | **Setup HPP** | `/dashboard/inventory/setup` | Wizard metode HPP + aktivasi modul |
 
 ## Operasi Stok (UX)
@@ -65,8 +66,14 @@ Halaman **Operasi Stok** menyatukan 4 aksi dengan pola aman:
 - **Retur**: pilih pesanan → tentukan qty retur per produk → stok masuk kembali dengan
   **HPP asli** dari penjualan. Validasi qty ≤ yang terjual.
 
+## Konfigurasi Item
+
+Halaman **Konfigurasi Item** (per produk katalog):
+- **Lacak stok**: aktifkan agar item ikut dipotong saat pesanan.
+- **Metode HPP**: ikuti default tenant atau override FIFO/LIFO/Average (mengubah → recalculate item).
+- **Batch / expiry / serial**: aktifkan pelacakan tambahan.
+- **Bundle**: tetapkan komponen SKU anak (stok diambil dari komponen).
+
 ## Menyusul (PR frontend berikutnya)
 
-- Config item di Katalog (aktifkan track stok, metode HPP per item, bundle, batch/expiry).
-- Laporan nilai persediaan & margin.
-- Integrasi UI pesanan (badge stok) + tombol Recalculate/Backfill.
+- Laporan nilai persediaan & margin + tombol Recalculate/Backfill (pemeliharaan).

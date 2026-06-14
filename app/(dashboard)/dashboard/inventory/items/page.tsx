@@ -1,0 +1,237 @@
+"use client";
+
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
+import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
+import { useAuth } from "@/components/providers/auth-provider";
+import { canPerformOwnerActions } from "@/lib/api/auth";
+import { catalogApi, type CatalogItem } from "@/lib/api/catalog";
+import { inventoryApi, COSTING_METHOD_LABELS, type CostingMethod } from "@/lib/api/inventory";
+import { toApiError } from "@/lib/api/client";
+import { toast } from "sonner";
+
+export default function InventoryItemsPage() {
+  const { user } = useAuth();
+  const canManage = canPerformOwnerActions(user);
+  const [q, setQ] = useState("");
+  const [selected, setSelected] = useState<CatalogItem | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["catalog", "list", q],
+    queryFn: () => catalogApi.list({ q, pageSize: 50 }),
+  });
+  const items = data?.items ?? [];
+
+  return (
+    <RequireTenantDashboard title="Konfigurasi Item">
+      <PageHeader title="Konfigurasi Item Persediaan" description="Aktifkan pelacakan stok, metode HPP per item, bundle, dan batch/expiry." />
+      <Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle>Produk Katalog</CardTitle>
+          <Input placeholder="Cari produk..." value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2 text-left">Produk</th>
+                  <th className="px-3 py-2 text-left">Kode</th>
+                  <th className="px-3 py-2 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {isLoading ? (
+                  <tr><td colSpan={3} className="px-3 py-6 text-center text-muted-foreground">Memuat...</td></tr>
+                ) : items.length === 0 ? (
+                  <tr><td colSpan={3} className="px-3 py-6 text-center text-muted-foreground">Belum ada produk.</td></tr>
+                ) : (
+                  items.map((it) => (
+                    <tr key={it.id} className="hover:bg-muted/40">
+                      <td className="px-3 py-2 font-medium">{it.name}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{it.externalCode}</td>
+                      <td className="px-3 py-2 text-right">
+                        <Button variant="outline" size="sm" onClick={() => setSelected(it)}>Konfigurasi</Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <ItemConfigDialog item={selected} canManage={canManage} onClose={() => setSelected(null)} />
+    </RequireTenantDashboard>
+  );
+}
+
+function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | null; canManage: boolean; onClose: () => void }) {
+  const qc = useQueryClient();
+  const id = item?.id ?? "";
+
+  const { data: sku } = useQuery({
+    queryKey: ["inventory", "sku", id],
+    queryFn: () => inventoryApi.getSku(id),
+    enabled: Boolean(id),
+  });
+  const { data: bundle } = useQuery({
+    queryKey: ["inventory", "bundle", id],
+    queryFn: () => inventoryApi.getBundle(id),
+    enabled: Boolean(id),
+  });
+
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ["inventory", "sku", id] });
+    void qc.invalidateQueries({ queryKey: ["inventory", "bundle", id] });
+  };
+
+  const updateMut = useMutation({
+    mutationFn: (input: Parameters<typeof inventoryApi.updateSku>[1]) => inventoryApi.updateSku(id, input),
+    onSuccess: () => { toast.success("Konfigurasi disimpan"); refresh(); },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  // Bundle editing
+  const [bComponents, setBComponents] = useState<Array<{ item: PickedItem | null; qty: string }>>([]);
+  const [bundleMode, setBundleMode] = useState(false);
+
+  const startBundleEdit = () => {
+    setBundleMode(true);
+    setBComponents(
+      (bundle?.components ?? []).map((c) => ({
+        item: { id: c.childCatalogItemId, name: c.childName, externalCode: c.childExternalCode },
+        qty: String(c.qty),
+      })),
+    );
+    if ((bundle?.components ?? []).length === 0) setBComponents([{ item: null, qty: "" }]);
+  };
+
+  const saveBundleMut = useMutation({
+    mutationFn: () =>
+      inventoryApi.setBundle(
+        id,
+        bComponents.filter((c) => c.item && Number(c.qty) > 0).map((c) => ({ childCatalogItemId: c.item!.id, qty: Number(c.qty) })),
+      ),
+    onSuccess: () => { toast.success("Bundle disimpan"); setBundleMode(false); refresh(); },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const clearBundleMut = useMutation({
+    mutationFn: () => inventoryApi.setBundle(id, []),
+    onSuccess: () => { toast.success("Bundle dibatalkan"); setBundleMode(false); refresh(); },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  return (
+    <Dialog open={Boolean(item)} onOpenChange={(o) => { if (!o) { setBundleMode(false); onClose(); } }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader><DialogTitle>{item?.name}</DialogTitle></DialogHeader>
+        {!sku ? (
+          <p className="text-sm text-muted-foreground">Memuat...</p>
+        ) : !canManage ? (
+          <p className="text-sm text-muted-foreground">Hanya owner yang dapat mengubah konfigurasi.</p>
+        ) : (
+          <div className="space-y-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={sku.trackStock} onChange={(e) => updateMut.mutate({ trackStock: e.target.checked })} />
+              <span className="font-medium">Lacak stok untuk item ini</span>
+            </label>
+
+            <div className="space-y-1.5">
+              <Label>Metode HPP</Label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={sku.costingMethod ?? "inherit"}
+                onChange={(e) => updateMut.mutate({ costingMethod: e.target.value })}
+              >
+                <option value="inherit">Ikuti default tenant ({sku.effectiveMethod.toUpperCase()})</option>
+                {(["fifo", "lifo", "average"] as CostingMethod[]).map((m) => (
+                  <option key={m} value={m}>{COSTING_METHOD_LABELS[m]}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">Mengubah metode akan menghitung ulang HPP item ini.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Pelacakan tambahan</Label>
+              {([
+                ["trackBatch", "Batch / lot"],
+                ["trackExpiry", "Tanggal kedaluwarsa"],
+                ["trackSerial", "Nomor seri"],
+              ] as const).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={Boolean(sku[key])} onChange={(e) => updateMut.mutate({ [key]: e.target.checked })} />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Satuan dasar (opsional)</Label>
+              <Input
+                defaultValue={sku.baseUom ?? ""}
+                placeholder="pcs / kg / box"
+                onBlur={(e) => { if (e.target.value !== (sku.baseUom ?? "")) updateMut.mutate({ baseUom: e.target.value }); }}
+              />
+            </div>
+
+            <div className="rounded-lg border p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Bundle / Paket</p>
+                  <p className="text-xs text-muted-foreground">
+                    {sku.isBundle ? "Item ini bundle — stok diambil dari komponen." : "Jadikan bundle: stok dari SKU anak."}
+                  </p>
+                </div>
+                {!bundleMode ? (
+                  <Button variant="outline" size="sm" onClick={startBundleEdit}>{sku.isBundle ? "Edit" : "Jadikan bundle"}</Button>
+                ) : null}
+              </div>
+
+              {sku.isBundle && !bundleMode ? (
+                <ul className="mt-2 space-y-1 text-sm">
+                  {(bundle?.components ?? []).map((c) => (
+                    <li key={c.childCatalogItemId} className="flex justify-between">
+                      <span>{c.childName}</span>
+                      <span className="text-muted-foreground">×{c.qty}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              {bundleMode ? (
+                <div className="mt-3 space-y-2">
+                  {bComponents.map((c, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_80px_auto] items-end gap-2">
+                      <ItemPicker value={c.item} onChange={(it) => setBComponents((cs) => cs.map((x, idx) => (idx === i ? { ...x, item: it } : x)))} />
+                      <Input type="number" min="0" step="any" placeholder="qty" value={c.qty} onChange={(e) => setBComponents((cs) => cs.map((x, idx) => (idx === i ? { ...x, qty: e.target.value } : x)))} />
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setBComponents((cs) => cs.filter((_, idx) => idx !== i))}>×</Button>
+                    </div>
+                  ))}
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setBComponents((cs) => [...cs, { item: null, qty: "" }])}>+ Komponen</Button>
+                    <Button size="sm" onClick={() => saveBundleMut.mutate()} disabled={saveBundleMut.isPending}>Simpan Bundle</Button>
+                    {sku.isBundle ? <Button variant="ghost" size="sm" className="text-destructive" onClick={() => clearBundleMut.mutate()}>Batalkan bundle</Button> : null}
+                    <Button variant="ghost" size="sm" onClick={() => setBundleMode(false)}>Tutup</Button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {sku.isBundle ? <Badge variant="secondary">Bundle aktif</Badge> : sku.trackStock ? <Badge variant="success">Stok dilacak</Badge> : <Badge variant="secondary">Stok tidak dilacak</Badge>}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
