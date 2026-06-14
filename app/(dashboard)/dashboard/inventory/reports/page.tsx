@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,11 +47,11 @@ function ValuationReport() {
   const rows = data?.stock ?? [];
   const total = rows.reduce((s, r) => s + r.totalValue, 0);
 
-  const byWarehouse = useMemo(() => {
+  const byWarehouse = (() => {
     const m = new Map<string, number>();
     for (const r of rows) m.set(r.warehouseName, (m.get(r.warehouseName) ?? 0) + r.totalValue);
     return [...m.entries()];
-  }, [rows]);
+  })();
 
   const exportCSV = () => {
     downloadCSV(
@@ -124,11 +124,9 @@ function MarginReport() {
   });
   const invoices = data?.invoices ?? [];
 
-  const totals = useMemo(() => {
-    const rev = invoices.reduce((s, i) => s + i.subtotal, 0);
-    const cogs = invoices.reduce((s, i) => s + i.totalCogs, 0);
-    return { rev, cogs, margin: rev - cogs };
-  }, [invoices]);
+  const rev = invoices.reduce((s, i) => s + i.subtotal, 0);
+  const cogs = invoices.reduce((s, i) => s + i.totalCogs, 0);
+  const totals = { rev, cogs, margin: rev - cogs };
 
   const exportCSV = () => {
     downloadCSV(
