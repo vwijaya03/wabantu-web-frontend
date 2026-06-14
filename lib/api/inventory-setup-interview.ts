@@ -31,14 +31,14 @@ export interface InvSetupInterviewFinishResponse {
 export const inventorySetupInterviewApi = {
   async start(): Promise<InvSetupInterviewSession> {
     const res = await api.post<InvSetupInterviewSession>("/inventory/setup-interview/start");
-    return res.data;
+    return { ...res.data, messages: res.data.messages ?? [] };
   },
 
   async get(sessionId: string): Promise<InvSetupInterviewSession> {
     const res = await api.get<InvSetupInterviewSession>(
       `/inventory/setup-interview/session/${encodeURIComponent(sessionId)}`,
     );
-    return res.data;
+    return { ...res.data, messages: res.data.messages ?? [] };
   },
 
   async sendMessage(sessionId: string, message: string): Promise<InvSetupInterviewMessageResponse> {
@@ -47,7 +47,7 @@ export const inventorySetupInterviewApi = {
       { message },
       { timeout: 120_000 },
     );
-    return res.data;
+    return { ...res.data, messages: res.data.messages ?? [] };
   },
 
   async finish(sessionId: string): Promise<InvSetupInterviewFinishResponse> {

@@ -103,6 +103,41 @@ function SkipAverageHint({ onSetAverage, disabled }: { onSetAverage: () => void;
   );
 }
 
+function normalizeInvSetupSession(
+  data: Partial<InvSetupInterviewSession> & Pick<InvSetupInterviewSession, "sessionId">,
+): InvSetupInterviewSession {
+  return {
+    sessionId: data.sessionId,
+    phase: data.phase ?? "intro",
+    messages: data.messages ?? [],
+    answersDraft: data.answersDraft ?? {
+      perishable: false,
+      needBatchTracking: false,
+      highVolumeUniform: false,
+      priceVolatile: false,
+      usesExpiryDates: false,
+      seasonalStock: false,
+      businessType: "",
+      productDescription: "",
+      stockTurnover: "",
+      priceTrend: "",
+      ownerNotes: "",
+    },
+    readyForRecommendation: data.readyForRecommendation ?? false,
+    tokenQuotaRemaining: data.tokenQuotaRemaining ?? 0,
+    tokenQuotaLimit: data.tokenQuotaLimit ?? 0,
+    quotaNotice: data.quotaNotice ?? "",
+  };
+}
+
+function scrollChatContainer(el: HTMLDivElement | null, force = false) {
+  if (!el) return;
+  const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 96;
+  if (force || nearBottom) {
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
 function draftLabel(map: Record<string, string>, value: string): string {
   const v = value.trim();
   if (!v) return "—";
@@ -113,7 +148,8 @@ export default function InventorySetupPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const stickChatToBottomRef = useRef(true);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [session, setSession] = useState<InvSetupInterviewSession | null>(null);
@@ -129,14 +165,18 @@ export default function InventorySetupPage() {
 
   const startMut = useMutation({
     mutationFn: () => inventorySetupInterviewApi.start(),
-    onSuccess: (data) => setSession(data),
+    onSuccess: (data) => {
+      stickChatToBottomRef.current = true;
+      setSession(normalizeInvSetupSession(data));
+    },
     onError: (e) => toast.error(toApiError(e).message),
   });
 
   const sendMut = useMutation({
     mutationFn: (message: string) => inventorySetupInterviewApi.sendMessage(session!.sessionId, message),
     onSuccess: (data) => {
-      setSession(data);
+      stickChatToBottomRef.current = true;
+      setSession(normalizeInvSetupSession(data));
       if (data.tokensUsed > 0) {
         toast.success(`Balasan AI (${data.tokensUsed} token)`, { duration: 2500 });
       }
@@ -193,8 +233,21 @@ export default function InventorySetupPage() {
   }, [step, canManage]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [session?.messages.length, sendMut.isPending]);
+    const el = chatScrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      stickChatToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 96;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [step]);
+
+  const messageCount = session?.messages?.length ?? 0;
+
+  useEffect(() => {
+    if (step !== 2) return;
+    scrollChatContainer(chatScrollRef.current, stickChatToBottomRef.current);
+  }, [step, messageCount, sendMut.isPending]);
 
   const quotaExhausted =
     (session?.tokenQuotaRemaining ?? 1) <= 0 && (session?.tokenQuotaLimit ?? 0) > 0;
@@ -210,6 +263,7 @@ export default function InventorySetupPage() {
     const msg = text.trim();
     if (!msg || !session) return;
     setInput("");
+    stickChatToBottomRef.current = true;
     sendMut.mutate(msg);
   };
 
@@ -327,6 +381,7 @@ export default function InventorySetupPage() {
               ) : null}
 
               <div
+                ref={chatScrollRef}
                 className="flex max-h-[420px] min-h-[280px] flex-col gap-3 overflow-y-auto rounded-lg border bg-muted/20 p-4"
                 role="log"
                 aria-live="polite"
@@ -346,7 +401,7 @@ export default function InventorySetupPage() {
                     Menyiapkan sesi…
                   </div>
                 ) : null}
-                {session?.messages.map((m, i) => (
+                {(session?.messages ?? []).map((m, i) => (
                   <div
                     key={`${m.role}-${i}`}
                     className={cn("flex gap-2", m.role === "user" ? "justify-end" : "justify-start")}
@@ -379,7 +434,6 @@ export default function InventorySetupPage() {
                     AI mengetik…
                   </div>
                 ) : null}
-                <div ref={chatEndRef} />
               </div>
 
               <div className="flex flex-wrap gap-2">
