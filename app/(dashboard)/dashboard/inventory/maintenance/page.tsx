@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,11 +16,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { InventoryCardTitleWithHelp, InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
-import { inventoryApi, formatIDR } from "@/lib/api/inventory";
+import { inventoryApi, formatIDR, formatStockQty, type BackfillOrdersResult } from "@/lib/api/inventory";
 import {
   InventoryTable,
   InventoryTableBody,
@@ -38,14 +39,14 @@ export default function InventoryMaintenancePage() {
   if (!canManage) {
     return (
       <RequireTenantDashboard title="Pemeliharaan">
-        <PageHeader title="Pemeliharaan Persediaan" description="Hanya owner yang dapat menjalankan pemeliharaan." />
+        <InventoryPageHeader title="Pemeliharaan Persediaan" description="Hanya owner yang dapat menjalankan pemeliharaan." helpTopic="maintenance" />
       </RequireTenantDashboard>
     );
   }
 
   return (
     <RequireTenantDashboard title="Pemeliharaan">
-      <PageHeader title="Pemeliharaan Persediaan" description="Recalculate HPP, backfill pesanan lama, dan ringkasan nilai." />
+      <InventoryPageHeader title="Pemeliharaan Persediaan" description="Recalculate HPP, backfill pesanan lama, dan ringkasan nilai." helpTopic="maintenance" />
       <div className="grid gap-6 lg:grid-cols-2">
         <RecalcCard />
         <BackfillCard />
@@ -66,7 +67,7 @@ function RecalcCard() {
   });
   return (
     <Card>
-      <CardHeader><CardTitle>Recalculate HPP</CardTitle></CardHeader>
+      <CardHeader><CardTitle><InventoryCardTitleWithHelp title="Recalculate HPP" helpTopic="maintenance-recalc" /></CardTitle></CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
           Hitung ulang lapisan biaya, saldo, dan HPP dari riwayat pergerakan. Gunakan bila HPP terlihat tidak wajar.
@@ -99,26 +100,40 @@ function RecalcCard() {
 
 function BackfillCard() {
   const [confirm, setConfirm] = useState(false);
-  const [preview, setPreview] = useState<{ pendingOrders: number; insufficient: string[] } | null>(null);
+  const [preview, setPreview] = useState<BackfillOrdersResult | null>(null);
+  const [lastResult, setLastResult] = useState<BackfillOrdersResult | null>(null);
 
   const previewMut = useMutation({
     mutationFn: () => inventoryApi.backfillOrders(false),
-    onSuccess: (r) => setPreview({ pendingOrders: r.pendingOrders, insufficient: r.insufficient }),
+    onSuccess: (r) => {
+      setPreview(r);
+      setLastResult(null);
+    },
     onError: (e) => toast.error(toApiError(e).message),
   });
   const execMut = useMutation({
     mutationFn: () => inventoryApi.backfillOrders(true),
     onSuccess: (r) => {
-      toast.success(`Backfill selesai: ${r.processed} berhasil, ${r.failed} gagal`);
+      setLastResult(r);
       setConfirm(false);
       setPreview(null);
+      if (r.failed > 0) {
+        toast.warning(`Backfill selesai: ${r.processed} berhasil, ${r.failed} gagal — lihat detail di bawah`);
+      } else {
+        toast.success(`Backfill selesai: ${r.processed} pesanan berhasil diproses`);
+      }
     },
     onError: (e) => { toast.error(toApiError(e).message); setConfirm(false); },
   });
 
+  const issues = preview?.issues?.length ? preview.issues : lastResult?.issues ?? [];
+  const suggested = preview?.suggestedOpening?.length
+    ? preview.suggestedOpening
+    : lastResult?.suggestedOpening ?? [];
+
   return (
     <Card>
-      <CardHeader><CardTitle>Backfill Pesanan Lama</CardTitle></CardHeader>
+      <CardHeader><CardTitle><InventoryCardTitleWithHelp title="Backfill Pesanan Lama" helpTopic="maintenance-backfill" /></CardTitle></CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
           Potong stok untuk pesanan committed yang dibuat sebelum modul persediaan aktif.
@@ -128,20 +143,28 @@ function BackfillCard() {
         </Button>
 
         {preview ? (
-          <div className="rounded-md border p-3 text-sm">
+          <div className="rounded-md border p-3 text-sm space-y-2">
             <p>Pesanan akan diproses: <span className="font-semibold">{preview.pendingOrders}</span></p>
             {preview.insufficient.length > 0 ? (
-              <p className="mt-1 text-amber-800">
-                {preview.insufficient.length} pesanan stoknya tidak cukup (akan gagal jika blokir stok minus aktif).
+              <p className="text-amber-800">
+                {preview.insufficient.length} pesanan stoknya tidak cukup dan akan gagal jika blokir stok minus aktif.
               </p>
-            ) : (
-              <p className="mt-1 text-emerald-700">Semua pesanan punya stok cukup.</p>
-            )}
+            ) : preview.pendingOrders > 0 ? (
+              <p className="text-emerald-700">Semua pesanan punya stok cukup.</p>
+            ) : null}
             {preview.pendingOrders > 0 ? (
-              <Button className="mt-3" size="sm" onClick={() => setConfirm(true)}>Jalankan Backfill</Button>
+              <Button className="mt-1" size="sm" onClick={() => setConfirm(true)}>Jalankan Backfill</Button>
             ) : null}
           </div>
         ) : null}
+
+        {lastResult && lastResult.processed > 0 && lastResult.failed === 0 ? (
+          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            {lastResult.processed} pesanan berhasil diproses.
+          </p>
+        ) : null}
+
+        {issues.length > 0 ? <BackfillIssuesPanel issues={issues} suggested={suggested} /> : null}
       </CardContent>
 
       <AlertDialog open={confirm} onOpenChange={setConfirm}>
@@ -150,6 +173,9 @@ function BackfillCard() {
             <AlertDialogTitle>Jalankan backfill {preview?.pendingOrders ?? 0} pesanan?</AlertDialogTitle>
             <AlertDialogDescription>
               Stok akan dipotong retroaktif + COGS dicatat untuk pesanan lama yang committed. Tidak bisa dibatalkan otomatis.
+              {preview && preview.insufficient.length > 0 ? (
+                <> {preview.insufficient.length} pesanan kemungkinan gagal karena stok tidak cukup.</>
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -161,6 +187,97 @@ function BackfillCard() {
         </AlertDialogContent>
       </AlertDialog>
     </Card>
+  );
+}
+
+function BackfillIssuesPanel({
+  issues,
+  suggested,
+}: {
+  issues: NonNullable<BackfillOrdersResult["issues"]>;
+  suggested: NonNullable<BackfillOrdersResult["suggestedOpening"]>;
+}) {
+  return (
+    <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/50 p-3 text-sm">
+      <div>
+        <p className="font-medium text-amber-950">Pesanan yang gagal / akan gagal</p>
+        <p className="mt-1 text-amber-900">
+          Stok belum cukup. Isi <strong>saldo awal</strong> atau penyesuaian stok, lalu jalankan backfill lagi.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {issues.map((issue) => (
+          <div key={issue.orderId} className="rounded-md border bg-background p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold">{issue.orderRef}</span>
+              <Badge variant="secondary">{issue.status}</Badge>
+            </div>
+            {issue.message ? (
+              <p className="mt-1 text-muted-foreground">{issue.message}</p>
+            ) : null}
+            {issue.shortages && issue.shortages.length > 0 ? (
+              <InventoryTable className="mt-2">
+                <InventoryTableHeader>
+                  <InventoryTableRow>
+                    <InventoryTableHead>Item</InventoryTableHead>
+                    <InventoryTableHead>Gudang</InventoryTableHead>
+                    <InventoryTableHead align="right">Butuh</InventoryTableHead>
+                    <InventoryTableHead align="right">Tersedia</InventoryTableHead>
+                    <InventoryTableHead align="right">Kurang</InventoryTableHead>
+                  </InventoryTableRow>
+                </InventoryTableHeader>
+                <InventoryTableBody>
+                  {issue.shortages.map((s) => (
+                    <InventoryTableRow key={`${issue.orderId}-${s.catalogItemId}-${s.warehouseId}`}>
+                      <InventoryTableCell>{s.itemName}</InventoryTableCell>
+                      <InventoryTableCell>{s.warehouseName}</InventoryTableCell>
+                      <InventoryTableCell align="right">{formatStockQty(s.qtyRequired)}</InventoryTableCell>
+                      <InventoryTableCell align="right">{formatStockQty(s.qtyAvailable)}</InventoryTableCell>
+                      <InventoryTableCell align="right" className="font-medium text-amber-800">
+                        {formatStockQty(s.qtyShort)}
+                      </InventoryTableCell>
+                    </InventoryTableRow>
+                  ))}
+                </InventoryTableBody>
+              </InventoryTable>
+            ) : null}
+          </div>
+        ))}
+      </div>
+
+      {suggested.length > 0 ? (
+        <div className="space-y-2 border-t border-amber-200 pt-3">
+          <p className="font-medium text-amber-950">Disarankan: saldo awal minimal</p>
+          <p className="text-amber-900">
+            Tambahkan baris berikut di Operasi Stok → Saldo Awal (isi harga pokok sendiri), lalu ulangi backfill.
+          </p>
+          <InventoryTable>
+            <InventoryTableHeader>
+              <InventoryTableRow>
+                <InventoryTableHead>Item</InventoryTableHead>
+                <InventoryTableHead>Gudang</InventoryTableHead>
+                <InventoryTableHead align="right">Qty minimal</InventoryTableHead>
+              </InventoryTableRow>
+            </InventoryTableHeader>
+            <InventoryTableBody>
+              {suggested.map((s) => (
+                <InventoryTableRow key={`${s.catalogItemId}-${s.warehouseId}`}>
+                  <InventoryTableCell>{s.itemName}</InventoryTableCell>
+                  <InventoryTableCell>{s.warehouseName}</InventoryTableCell>
+                  <InventoryTableCell align="right" className="font-medium">
+                    {formatStockQty(s.minQty)}
+                  </InventoryTableCell>
+                </InventoryTableRow>
+              ))}
+            </InventoryTableBody>
+          </InventoryTable>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/dashboard/inventory/operations?mode=opening">Buka Saldo Awal</Link>
+          </Button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -176,7 +293,7 @@ function ValuationCard() {
 
   return (
     <Card>
-      <CardHeader><CardTitle>Nilai Persediaan per Gudang</CardTitle></CardHeader>
+      <CardHeader><CardTitle><InventoryCardTitleWithHelp title="Nilai Persediaan per Gudang" helpTopic="maintenance-valuation" /></CardTitle></CardHeader>
       <CardContent>
         {byWarehouse.size === 0 ? (
           <p className="text-sm text-muted-foreground">Belum ada nilai persediaan.</p>

@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
@@ -272,7 +272,7 @@ export default function InventorySetupPage() {
   if (!canManage) {
     return (
       <RequireTenantDashboard title="Setup Persediaan">
-        <PageHeader title="Setup Persediaan" description="Hanya owner yang dapat mengatur persediaan." />
+        <InventoryPageHeader title="Setup Persediaan" description="Hanya owner yang dapat mengatur persediaan." helpTopic="setup" />
       </RequireTenantDashboard>
     );
   }
@@ -281,9 +281,10 @@ export default function InventorySetupPage() {
 
   return (
     <RequireTenantDashboard title="Setup Persediaan">
-      <PageHeader
+      <InventoryPageHeader
         title="Setup Persediaan & HPP"
         description="Pelajari metode HPP, ceritakan pola bisnis lewat chat, lalu dapatkan rekomendasi AI."
+        helpTopic="setup"
       />
 
       <div className="mb-4">

@@ -313,9 +313,46 @@ export const inventoryApi = {
   async updateSku(catalogItemId: string, input: Partial<{ trackStock: boolean; costingMethod: string; trackBatch: boolean; trackSerial: boolean; trackExpiry: boolean; baseUom: string }>): Promise<SkuConfig> {
     return (await api.patch(`/inventory/skus/${catalogItemId}`, input)).data;
   },
-  async backfillOrders(execute: boolean): Promise<{ preview: boolean; pendingOrders: number; processed: number; failed: number; insufficient: string[]; failures?: string[] }> {
+  async backfillOrders(execute: boolean): Promise<BackfillOrdersResult> {
     return (await api.post("/inventory/backfill/orders", { execute })).data;
   },
+};
+
+export type BackfillStockShortage = {
+  catalogItemId: string;
+  itemName: string;
+  warehouseId: string;
+  warehouseName: string;
+  qtyRequired: number;
+  qtyAvailable: number;
+  qtyShort: number;
+};
+
+export type BackfillOrderIssue = {
+  orderId: string;
+  orderRef: string;
+  status: string;
+  message?: string;
+  shortages?: BackfillStockShortage[];
+};
+
+export type BackfillSuggestedOpening = {
+  catalogItemId: string;
+  itemName: string;
+  warehouseId: string;
+  warehouseName: string;
+  minQty: number;
+};
+
+export type BackfillOrdersResult = {
+  preview: boolean;
+  pendingOrders: number;
+  processed: number;
+  failed: number;
+  insufficient: string[];
+  failures?: string[];
+  issues?: BackfillOrderIssue[];
+  suggestedOpening?: BackfillSuggestedOpening[];
 };
 
 export const COSTING_METHOD_LABELS: Record<CostingMethod, string> = {

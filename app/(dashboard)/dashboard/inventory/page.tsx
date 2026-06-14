@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
 import {
@@ -46,9 +46,10 @@ export default function InventoryStockPage() {
   return (
     <RequireTenantDashboard title="Stok">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader
+        <InventoryPageHeader
           title="Stok Persediaan"
           description="Saldo stok dan nilai persediaan per gudang."
+          helpTopic="stock"
         />
         <div className="flex gap-2">
           <Button variant="outline" asChild>

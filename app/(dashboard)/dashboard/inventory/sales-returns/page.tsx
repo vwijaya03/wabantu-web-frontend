@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { OrderPicker } from "@/components/inventory/order-picker";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -66,7 +66,7 @@ export default function SalesReturnsPage() {
 
   return (
     <RequireTenantDashboard title="Retur Penjualan">
-      <PageHeader title="Retur Penjualan" description="Barang kembali dari pelanggan — stok masuk lagi dengan HPP asli." />
+      <InventoryPageHeader title="Retur Penjualan" description="Barang kembali dari pelanggan — stok masuk lagi dengan HPP asli." helpTopic="sales-returns" />
 
       {canManage ? (
         <Card className="mb-4">
