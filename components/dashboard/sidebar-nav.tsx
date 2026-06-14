@@ -25,6 +25,10 @@ import {
   Wallet,
   Workflow,
   CalendarHeart,
+  Boxes,
+  Warehouse,
+  ArrowLeftRight,
+  Wand2,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { hasTenantDashboardAccess } from "@/lib/api/auth";
@@ -69,6 +73,15 @@ const tenantNavGroups: Array<{
       { href: "/dashboard/finance", label: "Finance", icon: Wallet },
       { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
       { href: "/dashboard/team", label: "Team", icon: Users },
+    ],
+  },
+  {
+    label: "Persediaan",
+    items: [
+      { href: "/dashboard/inventory", label: "Stok", icon: Boxes },
+      { href: "/dashboard/inventory/movements", label: "Pergerakan", icon: ArrowLeftRight },
+      { href: "/dashboard/inventory/warehouses", label: "Gudang", icon: Warehouse },
+      { href: "/dashboard/inventory/setup", label: "Setup HPP", icon: Wand2 },
     ],
   },
   {
