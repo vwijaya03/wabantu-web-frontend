@@ -56,7 +56,7 @@ function unwrapInvSetupPayload(data: Record<string, unknown>): Record<string, un
 export function normalizeInvSetupSession(
   data: Partial<InvSetupInterviewSession> & { sessionId?: string },
 ): InvSetupInterviewSession {
-  const raw = unwrapInvSetupPayload(data as Record<string, unknown>);
+  const raw = unwrapInvSetupPayload(data as unknown as Record<string, unknown>);
   const sessionId = String(raw.sessionId ?? data.sessionId ?? "");
   const messages = (raw.messages ?? data.messages) as InvSetupInterviewMessage[] | undefined;
 
@@ -111,7 +111,7 @@ export const inventorySetupInterviewApi = {
     );
     return {
       ...normalizeInvSetupSession(res.data),
-      tokensUsed: Number((unwrapInvSetupPayload(res.data as Record<string, unknown>).tokensUsed as number | undefined) ?? res.data.tokensUsed ?? 0),
+      tokensUsed: Number(res.data.tokensUsed ?? 0),
     };
   },
 
