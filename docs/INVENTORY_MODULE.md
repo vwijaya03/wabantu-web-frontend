@@ -84,7 +84,13 @@ Halaman **Pemeliharaan** (owner):
   (Preview dulu → Jalankan).
 - **Nilai Persediaan per Gudang**: ringkasan nilai stok.
 
+## Integrasi halaman Pesanan
+
+Di `/dashboard/orders`, bila modul persediaan aktif, pesanan yang item ber-track-stok-nya
+melebihi stok tersedia diberi badge **"Stok kurang"** (hanya muncul untuk pengecualian,
+agar tidak berisik). Membantu admin sebelum memproses pesanan.
+
 ## Status
 
-Modul persediaan UI lengkap: setup, stok, operasi, PO/Bill, faktur/retur, konfigurasi item,
-pemeliharaan. Integrasi mendalam di halaman Pesanan (badge stok inline) = enhancement opsional.
+Modul persediaan UI lengkap: setup, stok+KPI, operasi, PO/Bill, faktur/retur, konfigurasi
+item (+bundle), pemeliharaan, kartu stok, dan badge stok di halaman Pesanan.
