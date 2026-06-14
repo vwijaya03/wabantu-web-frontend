@@ -1,10 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ArrowRight,
+  Bot,
+  ExternalLink,
+  Loader2,
+  MessageSquare,
+  Scale,
+  Send,
+  Sparkles,
+  User,
+} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -18,54 +29,158 @@ import {
   type WizardAnswers,
   type WizardRecommendation,
 } from "@/lib/api/inventory";
+import {
+  inventorySetupInterviewApi,
+  mergeInvSetupSession,
+  normalizeInvSetupSession,
+  type InvSetupInterviewSession,
+} from "@/lib/api/inventory-setup-interview";
 import { COSTING_METHOD_GUIDES } from "@/lib/inventory/costing-guide";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const WIZARD_CHECKBOXES: Array<{ key: keyof WizardAnswers; label: string }> = [
-  { key: "perishable", label: "Produk mudah basi / perishable (mis. frozen food)" },
-  { key: "usesExpiryDates", label: "Operasional pakai tanggal kedaluwarsa (expiry)" },
-  { key: "needBatchTracking", label: "Perlu telusur batch / lot / nomor seri" },
-  { key: "highVolumeUniform", label: "Volume tinggi & barang seragam (banyak SKU mirip)" },
-  { key: "priceVolatile", label: "Harga beli sering berubah-ubah" },
-  { key: "seasonalStock", label: "Stok musiman (ramadan, natal, musim hujan, dll.)" },
+const QUICK_REPLIES = [
+  "Jual frozen food, stok cepat keluar",
+  "Retail umum, stok lambat",
+  "Harga beli naik-turun tiap minggu",
+  "Cukup, lanjut rekomendasi",
 ];
 
-const EMPTY_ANSWERS: WizardAnswers = {
-  perishable: false,
-  needBatchTracking: false,
-  highVolumeUniform: false,
-  priceVolatile: false,
-  usesExpiryDates: false,
-  seasonalStock: false,
-  businessType: "",
-  productDescription: "",
-  stockTurnover: "",
-  priceTrend: "",
-  ownerNotes: "",
+const BUSINESS_TYPE_LABELS: Record<string, string> = {
+  retail: "Retail / toko umum",
+  food: "Makanan / minuman / frozen",
+  fashion: "Fashion / apparel",
+  manufacturing: "Produksi / manufaktur ringan",
+  services: "Jasa dengan material",
+  other: "Lainnya",
 };
+
+const STOCK_TURNOVER_LABELS: Record<string, string> = {
+  fast: "Cepat (harian/mingguan)",
+  medium: "Sedang (2–4 minggu)",
+  slow: "Lambat (bulanan+)",
+};
+
+const PRICE_TREND_LABELS: Record<string, string> = {
+  stable: "Stabil",
+  rising: "Cenderung naik",
+  volatile: "Naik-turun sering",
+};
+
+const DRAFT_FLAGS: Array<{ key: keyof WizardAnswers; label: string }> = [
+  { key: "perishable", label: "Produk perishable" },
+  { key: "usesExpiryDates", label: "Pakai tanggal kedaluwarsa" },
+  { key: "needBatchTracking", label: "Telusur batch/lot" },
+  { key: "highVolumeUniform", label: "Volume tinggi & seragam" },
+  { key: "priceVolatile", label: "Harga beli fluktuatif" },
+  { key: "seasonalStock", label: "Stok musiman" },
+];
+
+function SetAverageButton({
+  onClick,
+  disabled,
+  className,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <Button type="button" variant="outline" size="sm" className={className} onClick={onClick} disabled={disabled}>
+      <Scale className="mr-2 h-4 w-4" />
+      Set metode Average
+    </Button>
+  );
+}
+
+function SkipAverageHint({ onSetAverage, disabled }: { onSetAverage: () => void; disabled?: boolean }) {
+  return (
+    <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-sm">
+      <p className="font-medium text-foreground">Sudah yakin pakai Average?</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Simpan metode HPP Average sekarang. Wawancara chat tetap wajib sebelum modul persediaan bisa diaktifkan.
+      </p>
+      <SetAverageButton onClick={onSetAverage} disabled={disabled} className="mt-2" />
+    </div>
+  );
+}
+
+function scrollChatContainer(el: HTMLDivElement | null, force = false) {
+  if (!el) return;
+  const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 96;
+  if (force || nearBottom) {
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+function draftLabel(map: Record<string, string>, value: string): string {
+  const v = value.trim();
+  if (!v) return "—";
+  return map[v] ?? v;
+}
 
 export default function InventorySetupPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const stickChatToBottomRef = useRef(true);
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [answers, setAnswers] = useState<WizardAnswers>(EMPTY_ANSWERS);
+  const [session, setSession] = useState<InvSetupInterviewSession | null>(null);
+  const [input, setInput] = useState("");
   const [rec, setRec] = useState<WizardRecommendation | null>(null);
   const [tokenInfo, setTokenInfo] = useState<{ used?: number; remaining?: number }>({});
+  const [methodApplied, setMethodApplied] = useState(false);
 
   const { data: setting } = useQuery({
     queryKey: ["inventory", "setting"],
     queryFn: () => inventoryApi.getSetting(),
   });
 
-  const recommendMut = useMutation({
-    mutationFn: () => inventoryApi.wizardRecommend(answers),
+  const startMut = useMutation({
+    mutationFn: () => inventorySetupInterviewApi.start(),
+    onSuccess: (data) => {
+      stickChatToBottomRef.current = true;
+      setSession(normalizeInvSetupSession(data));
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const sendMut = useMutation({
+    mutationFn: (message: string) => inventorySetupInterviewApi.sendMessage(session!.sessionId, message),
+    onSuccess: (data) => {
+      stickChatToBottomRef.current = true;
+      setSession((prev) => mergeInvSetupSession(prev, data));
+      if (data.tokensUsed > 0) {
+        toast.success(`Balasan AI (${data.tokensUsed} token)`, { duration: 2500 });
+      }
+    },
+    onError: (e) => {
+      const err = toApiError(e);
+      toast.error(err.message);
+      const sessionLost =
+        err.status === 404 ||
+        /tidak ditemukan|kedaluwarsa/i.test(err.message);
+      if (sessionLost && step === 2) {
+        startMut.reset();
+        setSession(null);
+        toast.info("Sesi chat kedaluwarsa — memulai sesi baru…");
+        startMut.mutate();
+      }
+    },
+  });
+
+  const finishMut = useMutation({
+    mutationFn: () => inventorySetupInterviewApi.finish(session!.sessionId),
     onSuccess: (res) => {
       setRec(res.recommendation);
       setTokenInfo({ used: res.tokensUsed, remaining: res.tokenQuotaRemaining });
+      setMethodApplied(false);
+      setSession(null);
       setStep(3);
+      void qc.invalidateQueries({ queryKey: ["inventory", "setting"] });
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -74,16 +189,7 @@ export default function InventorySetupPage() {
     mutationFn: (method: CostingMethod) => inventoryApi.updateSetting({ defaultCostingMethod: method }),
     onSuccess: () => {
       toast.success("Metode HPP diterapkan");
-      void qc.invalidateQueries({ queryKey: ["inventory", "setting"] });
-    },
-    onError: (e) => toast.error(toApiError(e).message),
-  });
-
-  const toggleMut = useMutation({
-    mutationFn: (input: { blockNegativeStock?: boolean; purchasePostsExpense?: boolean }) =>
-      inventoryApi.updateSetting(input),
-    onSuccess: () => {
-      toast.success("Pengaturan disimpan");
+      setMethodApplied(true);
       void qc.invalidateQueries({ queryKey: ["inventory", "setting"] });
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -98,6 +204,71 @@ export default function InventorySetupPage() {
     onError: (e) => toast.error(toApiError(e).message),
   });
 
+  useEffect(() => {
+    if (step !== 2 || !canManage || session || startMut.isPending) return;
+    startMut.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- start when entering step 2 without session
+  }, [step, canManage, session, startMut.isPending]);
+
+  useEffect(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      stickChatToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 96;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [step]);
+
+  const messageCount = session?.messages?.length ?? 0;
+
+  useEffect(() => {
+    if (step !== 2) return;
+    scrollChatContainer(chatScrollRef.current, stickChatToBottomRef.current);
+  }, [step, messageCount, sendMut.isPending]);
+
+  const quotaExhausted =
+    (session?.tokenQuotaRemaining ?? 1) <= 0 && (session?.tokenQuotaLimit ?? 0) > 0;
+
+  const canSend =
+    !!session &&
+    input.trim().length > 0 &&
+    !sendMut.isPending &&
+    !quotaExhausted &&
+    !finishMut.isPending;
+
+  const sendMessage = (text: string) => {
+    const msg = text.trim();
+    if (!msg || !session) return;
+    setInput("");
+    stickChatToBottomRef.current = true;
+    sendMut.mutate(msg);
+  };
+
+  const skipToAverage = () => {
+    applyMethodMut.mutate("average");
+    toast.success("Metode Average disimpan. Lanjut wawancara chat untuk bisa mengaktifkan modul stok.");
+  };
+
+  const goToInterview = () => {
+    setSession(null);
+    setRec(null);
+    setMethodApplied(false);
+    startMut.reset();
+    setStep(2);
+  };
+
+  const canActivateModule =
+    Boolean(setting?.wizardInterviewCompleted) &&
+    methodApplied &&
+    !setting?.setupCompleted;
+
+  const activationBlockedReason = !setting?.wizardInterviewCompleted
+    ? "Selesaikan wawancara chat dan dapatkan rekomendasi HPP dulu."
+    : !methodApplied
+      ? "Klik «Terapkan» pada rekomendasi metode HPP sebelum mengaktifkan modul."
+      : null;
+
   if (!canManage) {
     return (
       <RequireTenantDashboard title="Setup Persediaan">
@@ -106,15 +277,13 @@ export default function InventorySetupPage() {
     );
   }
 
-  const interviewValid =
-    answers.businessType.trim() !== "" &&
-    answers.productDescription.trim().length >= 20;
+  const draft = session?.answersDraft;
 
   return (
     <RequireTenantDashboard title="Setup Persediaan">
       <PageHeader
         title="Setup Persediaan & HPP"
-        description="Pelajari metode HPP, ceritakan pola bisnis & stok, lalu dapatkan rekomendasi AI."
+        description="Pelajari metode HPP, ceritakan pola bisnis lewat chat, lalu dapatkan rekomendasi AI."
       />
 
       <div className="mb-4">
@@ -130,13 +299,16 @@ export default function InventorySetupPage() {
           <button
             key={n}
             type="button"
-            onClick={() => n < 3 && setStep(n)}
+            onClick={() => {
+              if (n === 1) setStep(1);
+              if (n === 2) goToInterview();
+            }}
             className={cn(
               "rounded-full border px-3 py-1",
               step === n ? "border-primary bg-primary/10 font-medium" : "text-muted-foreground",
             )}
           >
-            {n === 1 ? "① Pelajari metode" : n === 2 ? "② Wawancara bisnis" : "③ Rekomendasi"}
+            {n === 1 ? "① Pelajari metode" : n === 2 ? "② Wawancara chat" : "③ Rekomendasi"}
           </button>
         ))}
       </div>
@@ -161,163 +333,223 @@ export default function InventorySetupPage() {
               </Card>
             );
           })}
-          <div className="lg:col-span-3 flex justify-end">
-            <Button onClick={() => setStep(2)}>Lanjut — ceritakan bisnis Anda</Button>
+          <div className="lg:col-span-3 flex flex-col gap-4 border-t pt-4 sm:flex-row sm:items-end sm:justify-between">
+            <SkipAverageHint onSetAverage={skipToAverage} disabled={applyMethodMut.isPending} />
+            <Button className="shrink-0" onClick={() => setStep(2)}>
+              Lanjut — wawancara chat
+            </Button>
           </div>
         </div>
       ) : null}
 
       {step === 2 ? (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Wawancara singkat (owner)</CardTitle>
+        <div className="grid gap-6 lg:grid-cols-5">
+          <Card className="lg:col-span-3">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                Wawancara setup HPP
+              </CardTitle>
+              <CardDescription>
+                Ceritakan produk dan pola stok seperti chat WhatsApp. AI menyiapkan rekomendasi FIFO, LIFO, atau Average.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Ceritakan bisnis dan pola stok Anda. AI akan membaca jawaban ini bersama profil toko untuk
-                merekomendasikan FIFO, LIFO, atau Average.
-              </p>
-              <div>
-                <Label>Jenis bisnis</Label>
-                <select
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={answers.businessType}
-                  onChange={(e) => setAnswers((a) => ({ ...a, businessType: e.target.value }))}
-                >
-                  <option value="">Pilih jenis...</option>
-                  <option value="retail">Retail / toko umum</option>
-                  <option value="food">Makanan / minuman / frozen</option>
-                  <option value="fashion">Fashion / apparel</option>
-                  <option value="manufacturing">Produksi / manufaktur ringan</option>
-                  <option value="services">Jasa dengan material</option>
-                  <option value="other">Lainnya</option>
-                </select>
-              </div>
-              <div>
-                <Label>Produk & pola stok (wajib, min. 20 karakter)</Label>
-                <textarea
-                  className="mt-1 min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="Contoh: jual salmon frozen by kg. Stok masuk per batch supplier, yang lama harus keluar dulu. Harga beli naik turun tiap minggu..."
-                  value={answers.productDescription}
-                  onChange={(e) => setAnswers((a) => ({ ...a, productDescription: e.target.value }))}
-                />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <Label>Kecepatan stok keluar</Label>
-                  <select
-                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={answers.stockTurnover}
-                    onChange={(e) => setAnswers((a) => ({ ...a, stockTurnover: e.target.value }))}
+              {session?.quotaNotice ? (
+                <p className="text-xs text-muted-foreground">{session.quotaNotice}</p>
+              ) : null}
+
+              <div
+                ref={chatScrollRef}
+                className="flex max-h-[420px] min-h-[280px] flex-col gap-3 overflow-y-auto rounded-lg border bg-muted/20 p-4"
+                role="log"
+                aria-live="polite"
+                aria-label="Riwayat chat setup persediaan"
+              >
+                {startMut.isError && !session ? (
+                  <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-sm">
+                    <p className="text-destructive">Gagal memulai sesi wawancara.</p>
+                    <Button type="button" variant="outline" size="sm" onClick={() => startMut.mutate()}>
+                      Coba lagi
+                    </Button>
+                  </div>
+                ) : null}
+                {startMut.isPending && !session ? (
+                  <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Menyiapkan sesi…
+                  </div>
+                ) : null}
+                {(session?.messages ?? []).map((m, i) => (
+                  <div
+                    key={`${m.role}-${i}`}
+                    className={cn("flex gap-2", m.role === "user" ? "justify-end" : "justify-start")}
                   >
-                    <option value="">Pilih...</option>
-                    <option value="fast">Cepat (harian/mingguan)</option>
-                    <option value="medium">Sedang (2–4 minggu)</option>
-                    <option value="slow">Lambat (bulanan+)</option>
-                  </select>
-                </div>
-                <div>
-                  <Label>Tren harga beli</Label>
-                  <select
-                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={answers.priceTrend}
-                    onChange={(e) => setAnswers((a) => ({ ...a, priceTrend: e.target.value }))}
+                    {m.role === "assistant" ? (
+                      <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                        <Bot className="h-4 w-4 text-primary" aria-hidden />
+                      </span>
+                    ) : null}
+                    <div
+                      className={cn(
+                        "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
+                        m.role === "user"
+                          ? "rounded-br-md bg-primary text-primary-foreground"
+                          : "rounded-bl-md border bg-card",
+                      )}
+                    >
+                      {m.content}
+                    </div>
+                    {m.role === "user" ? (
+                      <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                        <User className="h-4 w-4 text-muted-foreground" aria-hidden />
+                      </span>
+                    ) : null}
+                  </div>
+                ))}
+                {sendMut.isPending ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    AI mengetik…
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {QUICK_REPLIES.map((chip) => (
+                  <Button
+                    key={chip}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-full text-xs"
+                    disabled={!session || sendMut.isPending || quotaExhausted || finishMut.isPending}
+                    onClick={() => sendMessage(chip)}
                   >
-                    <option value="">Pilih...</option>
-                    <option value="stable">Stabil</option>
-                    <option value="rising">Cenderung naik</option>
-                    <option value="volatile">Naik-turun sering</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <Label>Catatan tambahan (opsional)</Label>
-                <Input
-                  className="mt-1"
-                  placeholder="Mis. ada bundle, multi gudang, barang titipan..."
-                  value={answers.ownerNotes}
-                  onChange={(e) => setAnswers((a) => ({ ...a, ownerNotes: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2 border-t pt-3">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ciri operasional</p>
-                {WIZARD_CHECKBOXES.map((q) => (
-                  <label key={q.key} className="flex items-start gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      className="mt-1"
-                      checked={Boolean(answers[q.key])}
-                      onChange={(e) => setAnswers((a) => ({ ...a, [q.key]: e.target.checked }))}
-                    />
-                    <span>{q.label}</span>
-                  </label>
+                    {chip}
+                  </Button>
                 ))}
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => setStep(1)}>Kembali</Button>
-                <Button
-                  onClick={() => recommendMut.mutate()}
-                  disabled={!interviewValid || recommendMut.isPending}
-                >
-                  {recommendMut.isPending ? "AI menganalisa..." : "Dapatkan rekomendasi AI"}
+
+              <form
+                className="flex gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  sendMessage(input);
+                }}
+              >
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Ceritakan produk & pola stok Anda…"
+                  disabled={!session || sendMut.isPending || quotaExhausted || finishMut.isPending}
+                  maxLength={2000}
+                  aria-label="Pesan ke AI setup persediaan"
+                />
+                <Button type="submit" disabled={!canSend} size="icon" aria-label="Kirim">
+                  <Send className="h-4 w-4" />
                 </Button>
+              </form>
+
+              {session?.readyForRecommendation ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  disabled={finishMut.isPending}
+                  onClick={() => finishMut.mutate()}
+                >
+                  {finishMut.isPending ? "Menghitung rekomendasi…" : "Lanjut ke rekomendasi HPP"}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              ) : null}
+
+              <div className="space-y-3 border-t pt-3">
+                <Button variant="outline" onClick={() => setStep(1)}>
+                  Kembali
+                </Button>
+                <SkipAverageHint onSetAverage={skipToAverage} disabled={applyMethodMut.isPending} />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader><CardTitle>2. Kebijakan & metode manual</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Anda tetap bisa memilih metode secara manual tanpa menunggu rekomendasi AI.
-              </p>
-              <div>
-                <Label>Metode HPP default</Label>
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {(["fifo", "lifo", "average"] as CostingMethod[]).map((m) => (
-                    <Button
-                      key={m}
-                      size="sm"
-                      variant={setting?.defaultCostingMethod === m ? "default" : "outline"}
-                      onClick={() => applyMethodMut.mutate(m)}
-                      disabled={applyMethodMut.isPending}
-                    >
-                      {m.toUpperCase()}
-                    </Button>
+          <div className="space-y-4 lg:col-span-2">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Ringkasan otomatis
+                </CardTitle>
+                <CardDescription>Terisi saat Anda chat. Dipakai AI untuk rekomendasi HPP.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Jenis bisnis</span>
+                  <span className="text-right font-medium">
+                    {draftLabel(BUSINESS_TYPE_LABELS, draft?.businessType ?? "")}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Produk & pola stok</p>
+                  <p className="mt-1 rounded-md border bg-muted/30 p-2 text-xs leading-relaxed">
+                    {draft?.productDescription?.trim() || "—"}
+                  </p>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Kecepatan stok</span>
+                  <span>{draftLabel(STOCK_TURNOVER_LABELS, draft?.stockTurnover ?? "")}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Tren harga beli</span>
+                  <span>{draftLabel(PRICE_TREND_LABELS, draft?.priceTrend ?? "")}</span>
+                </div>
+                {draft?.ownerNotes?.trim() ? (
+                  <div>
+                    <p className="text-muted-foreground">Catatan</p>
+                    <p className="mt-1 text-xs">{draft.ownerNotes}</p>
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {DRAFT_FLAGS.filter((f) => draft && Boolean(draft[f.key])).map((f) => (
+                    <Badge key={f.key} variant="secondary" className="text-xs">
+                      {f.label}
+                    </Badge>
                   ))}
                 </div>
-              </div>
-              <label className="flex items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="mt-1"
-                  checked={setting?.blockNegativeStock ?? true}
-                  onChange={(e) => toggleMut.mutate({ blockNegativeStock: e.target.checked })}
-                />
-                <span>
-                  <span className="font-medium">Blokir stok minus</span>
-                  <br />
-                  <span className="text-muted-foreground">Pesanan tidak bisa diproses jika stok tidak cukup.</span>
-                </span>
-              </label>
-              <label className="flex items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="mt-1"
-                  checked={setting?.purchasePostsExpense ?? false}
-                  onChange={(e) => toggleMut.mutate({ purchasePostsExpense: e.target.checked })}
-                />
-                <span>
-                  <span className="font-medium">Mode cashflow (beli = biaya langsung)</span>
-                  <br />
-                  <span className="text-muted-foreground">
-                    Nonaktif (disarankan): nilai persediaan naik saat beli, HPP muncul saat terjual.
-                  </span>
-                </span>
-              </label>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Kebijakan operasional</CardTitle>
+                <CardDescription>
+                  Blokir stok minus & mode cashflow diatur di halaman pengaturan — tidak perlu diisi saat wawancara.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <ul className="space-y-1.5 text-muted-foreground">
+                  <li>
+                    Blokir stok minus:{" "}
+                    <span className="font-medium text-foreground">
+                      {setting?.blockNegativeStock ?? true ? "Aktif" : "Nonaktif"}
+                    </span>
+                  </li>
+                  <li>
+                    Mode cashflow:{" "}
+                    <span className="font-medium text-foreground">
+                      {setting?.purchasePostsExpense ? "Aktif" : "Nonaktif (disarankan)"}
+                    </span>
+                  </li>
+                </ul>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/dashboard/inventory/settings">
+                    Buka Pengaturan Persediaan
+                    <ExternalLink className="ml-2 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       ) : null}
 
@@ -335,9 +567,7 @@ export default function InventorySetupPage() {
             <div className="rounded-lg border bg-muted/40 p-4 text-sm">
               <p className="text-lg font-semibold">{COSTING_METHOD_LABELS[rec.method]}</p>
               <p className="mt-2">{rec.reason}</p>
-              {rec.summary ? (
-                <p className="mt-2 text-muted-foreground">{rec.summary}</p>
-              ) : null}
+              {rec.summary ? <p className="mt-2 text-muted-foreground">{rec.summary}</p> : null}
             </div>
             <div className="rounded-lg border p-4 text-sm">
               <p className="font-medium">{COSTING_METHOD_GUIDES[rec.method].title}</p>
@@ -350,26 +580,48 @@ export default function InventorySetupPage() {
               </p>
             ) : null}
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => setStep(2)}>Ubah jawaban</Button>
+              <Button variant="outline" onClick={goToInterview}>
+                Ulangi wawancara
+              </Button>
               <Button onClick={() => applyMethodMut.mutate(rec.method)} disabled={applyMethodMut.isPending}>
                 Terapkan {rec.method.toUpperCase()}
               </Button>
             </div>
+
+            <Card className="border-dashed">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">④ Aktifkan modul</CardTitle>
+                <CardDescription>
+                  Setelah gudang & saldo awal siap, aktifkan agar pesanan mulai memotong stok otomatis.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {setting?.setupCompleted
+                    ? "Modul persediaan sudah aktif."
+                    : activationBlockedReason ??
+                      "Wawancara dan metode HPP sudah siap — Anda bisa mengaktifkan modul."}
+                </p>
+                <Button
+                  onClick={() => completeMut.mutate()}
+                  disabled={completeMut.isPending || setting?.setupCompleted || !canActivateModule}
+                >
+                  {setting?.setupCompleted ? "Sudah aktif" : "Aktifkan modul persediaan"}
+                </Button>
+              </CardContent>
+            </Card>
           </CardContent>
         </Card>
       ) : null}
 
-      <Card className="mt-6">
-        <CardHeader><CardTitle>3. Aktifkan modul</CardTitle></CardHeader>
-        <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            Setelah gudang & saldo awal siap, tandai setup selesai agar pesanan mulai memotong stok otomatis.
-          </p>
-          <Button onClick={() => completeMut.mutate()} disabled={completeMut.isPending || setting?.setupCompleted}>
-            {setting?.setupCompleted ? "Sudah aktif" : "Tandai setup selesai"}
-          </Button>
-        </CardContent>
-      </Card>
+      {step !== 3 && !setting?.setupCompleted ? (
+        <Card className="mt-6 border-dashed">
+          <CardContent className="py-4 text-sm text-muted-foreground">
+            Aktivasi modul persediaan tersedia setelah wawancara chat selesai, rekomendasi HPP diterapkan, dan gudang
+            siap.
+          </CardContent>
+        </Card>
+      ) : null}
     </RequireTenantDashboard>
   );
 }

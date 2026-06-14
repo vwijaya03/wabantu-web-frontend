@@ -11,6 +11,7 @@ export interface InventorySetting {
   blockNegativeStock: boolean;
   purchasePostsExpense: boolean;
   warehouseCount: number;
+  wizardInterviewCompleted?: boolean;
 }
 
 export interface Warehouse {
