@@ -20,6 +20,7 @@ Sidebar grup **Persediaan**:
 | **Pergerakan** | `/dashboard/inventory/movements` | Kartu stok: semua mutasi + HPP per transaksi |
 | **Gudang** | `/dashboard/inventory/warehouses` | Kelola lokasi gudang |
 | **Konfigurasi Item** | `/dashboard/inventory/items` | Track stok, metode HPP per item, bundle, batch/expiry |
+| **Pemeliharaan** | `/dashboard/inventory/maintenance` | Recalculate HPP, backfill pesanan lama, nilai per gudang |
 | **Setup HPP** | `/dashboard/inventory/setup` | Wizard metode HPP + aktivasi modul |
 
 ## Operasi Stok (UX)
@@ -74,6 +75,16 @@ Halaman **Konfigurasi Item** (per produk katalog):
 - **Batch / expiry / serial**: aktifkan pelacakan tambahan.
 - **Bundle**: tetapkan komponen SKU anak (stok diambil dari komponen).
 
-## Menyusul (PR frontend berikutnya)
+## Pemeliharaan
 
-- Laporan nilai persediaan & margin + tombol Recalculate/Backfill (pemeliharaan).
+Halaman **Pemeliharaan** (owner):
+- **Recalculate HPP**: bangun ulang lapisan biaya & saldo dari riwayat (bila HPP kacau).
+  Revaluasi manual tidak dipertahankan.
+- **Backfill Pesanan Lama**: potong stok retroaktif untuk pesanan committed sebelum modul aktif
+  (Preview dulu → Jalankan).
+- **Nilai Persediaan per Gudang**: ringkasan nilai stok.
+
+## Status
+
+Modul persediaan UI lengkap: setup, stok, operasi, PO/Bill, faktur/retur, konfigurasi item,
+pemeliharaan. Integrasi mendalam di halaman Pesanan (badge stok inline) = enhancement opsional.
