@@ -71,11 +71,20 @@ export interface WizardAnswers {
   priceVolatile: boolean;
   highVolumeUniform: boolean;
   needBatchTracking: boolean;
+  usesExpiryDates: boolean;
+  seasonalStock: boolean;
+  businessType: string;
+  productDescription: string;
+  stockTurnover: string;
+  priceTrend: string;
+  ownerNotes: string;
 }
 
 export interface WizardRecommendation {
   method: CostingMethod;
   reason: string;
+  summary?: string;
+  source?: "ai" | "rules";
 }
 
 export interface SkuConfig {
@@ -289,7 +298,12 @@ export const inventoryApi = {
   async recalculate(catalogItemId?: string): Promise<{ recomputed: number }> {
     return (await api.post("/inventory/recalculate", { catalogItemId: catalogItemId ?? "" })).data;
   },
-  async wizardRecommend(answers: WizardAnswers): Promise<{ recommendation: WizardRecommendation }> {
+  async wizardRecommend(answers: WizardAnswers): Promise<{
+    recommendation: WizardRecommendation;
+    tokensUsed?: number;
+    tokenQuotaRemaining?: number;
+    tokenQuotaLimit?: number;
+  }> {
     return (await api.post("/inventory/wizard/recommend", answers)).data;
   },
   async getSku(catalogItemId: string): Promise<SkuConfig> {
