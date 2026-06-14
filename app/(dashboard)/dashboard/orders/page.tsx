@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, PlusCircle, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Pencil, PlusCircle, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
@@ -808,7 +809,7 @@ export default function OrdersPage() {
       </Card>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-h-[92vh] max-w-6xl overflow-hidden p-0">
+        <DialogContent className="max-h-[92vh] max-w-7xl overflow-hidden p-0">
           <DialogHeader className="border-b px-6 pb-4 pt-6">
             <DialogTitle>Tambah Pesanan</DialogTitle>
             <DialogDescription>
@@ -857,7 +858,7 @@ export default function OrdersPage() {
       </Dialog>
 
       <Dialog open={!!editOrder} onOpenChange={(open) => !open && setEditOrder(null)}>
-        <DialogContent className="max-h-[92vh] max-w-6xl overflow-hidden p-0">
+        <DialogContent className="max-h-[92vh] max-w-7xl overflow-hidden p-0">
           <DialogHeader className="border-b px-6 pb-4 pt-6">
             <DialogTitle>
               Detail Pesanan · {editOrder ? (editOrder.orderNumber ?? formatOrderNumber(editOrder.id)) : ""}
@@ -997,7 +998,7 @@ function OrderCreateForm({
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="min-w-0 space-y-4">
           {activeStep === "contact" && (
             <div className="rounded-lg border p-4">
@@ -1061,126 +1062,128 @@ function OrderCreateForm({
           {activeStep === "items" && (
             <div className="space-y-4">
               {hasWarehouses ? (
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                  <div className="mb-3">
-                    <h3 className="font-medium">Gudang pengambilan stok</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Tentukan dari gudang mana setiap item diambil. Baris baru mengikuti gudang default di bawah.
-                      {!inventoryOn ? (
-                        <span className="mt-1 block text-amber-800">
-                          Stok belum dipotong sampai setup persediaan selesai — gudang tetap disimpan untuk pesanan ini.
-                        </span>
-                      ) : null}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                    <div className="min-w-[200px] flex-1 space-y-1.5">
-                      <Label>Gudang default</Label>
-                      <WarehouseSelect
-                        value={form.fulfillmentWarehouseId}
-                        onChange={(fulfillmentWarehouseId) => update({ fulfillmentWarehouseId })}
-                      />
-                    </div>
-                    <Button type="button" variant="outline" onClick={applyFulfillmentToAll} disabled={form.items.length === 0}>
-                      Terapkan ke semua baris
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
-              <div className="rounded-lg border p-4">
-                <div className="mb-3">
-                  <h3 className="font-medium">Pilih item katalog</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Harga produk mengikuti tipe harga contact: <span className="font-medium text-foreground">{selectedPriceTypeLabel}</span>
-                  </p>
-                </div>
-                <Input
-                  value={form.catalogSearch}
-                  onChange={(e) => {
-                    update({ catalogSearch: e.target.value });
-                    setCatalogPage(1);
-                  }}
-                  placeholder="Cari nama produk / SKU..."
-                />
-                <div className="mt-3 space-y-2">
-                  {catalogItems.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => addCatalogItem(item)}
-                      className="flex w-full min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-3 text-left text-sm hover:bg-muted/60"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{item.name}</span>
-                        <span className="text-xs text-muted-foreground">{item.externalCode}</span>
-                      </span>
-                      <span className="shrink-0 text-xs">{formatRupiah(catalogDisplayPrice(item))}</span>
-                    </button>
-                  ))}
-                  {catalogItems.length === 0 && (
-                    <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                      Produk tidak ditemukan di halaman ini.
-                    </p>
-                  )}
-                </div>
-                <SelectorPagination
-                  className="mt-3"
-                  page={catalogPage}
-                  total={catalogOptions?.total ?? 0}
-                  totalPages={catalogTotalPages}
-                  onPageChange={setCatalogPage}
-                />
-
-                <div className="mt-4 rounded-md bg-muted/40 p-3">
-                  <p className="mb-2 text-sm font-medium">Produk belum ada? Buat cepat di katalog</p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <Input
-                      value={form.quickExternalCode}
-                      onChange={(e) => update({ quickExternalCode: e.target.value })}
-                      placeholder="SKU opsional"
-                    />
-                    <Input
-                      value={form.quickName}
-                      onChange={(e) => update({ quickName: e.target.value })}
-                      placeholder="Nama produk"
-                    />
-                    <Input
-                      value={form.quickPrice}
-                      onChange={(e) => update({ quickPrice: e.target.value })}
-                      type="number"
-                      min="0"
-                      placeholder="Harga"
-                    />
-                    <Input
-                      value={form.quickUnit}
-                      onChange={(e) => update({ quickUnit: e.target.value })}
-                      placeholder="Satuan"
+                <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center">
+                  <p className="text-sm font-medium">Gudang default</p>
+                  <div className="w-full min-w-0 sm:w-52">
+                    <WarehouseSelect
+                      value={form.fulfillmentWarehouseId}
+                      onChange={(fulfillmentWarehouseId) => update({ fulfillmentWarehouseId })}
+                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                     />
                   </div>
                   <Button
                     type="button"
-                    className="mt-2"
-                    variant="secondary"
-                    disabled={!form.quickName.trim() || quickCreatePending}
-                    onClick={quickCreateCatalog}
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={applyFulfillmentToAll}
+                    disabled={form.items.length === 0}
                   >
-                    Buat Produk & Tambahkan
+                    Terapkan ke semua baris
                   </Button>
+                  {!inventoryOn ? (
+                    <p className="text-xs text-amber-800 sm:ml-auto sm:max-w-xs">
+                      Stok dipotong setelah setup persediaan selesai.
+                    </p>
+                  ) : null}
                 </div>
-              </div>
+              ) : null}
 
-              <SelectedItemsPanel
-                items={form.items}
-                subtotal={subtotal}
-                updateOrderItem={updateOrderItem}
-                removeOrderItem={removeOrderItem}
-                showWarehouse={hasWarehouses}
-                defaultWarehouseId={form.fulfillmentWarehouseId || defaultWarehouseId}
-                warehouseNames={warehouseNames}
-              />
-            </div>
+              <div className="grid gap-4">
+                <div className="rounded-lg border p-4">
+                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="font-medium">Pilih dari katalog</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Harga mengikuti: <span className="font-medium text-foreground">{selectedPriceTypeLabel}</span>
+                      </p>
+                    </div>
+                    <Input
+                      className="sm:w-64"
+                      value={form.catalogSearch}
+                      onChange={(e) => {
+                        update({ catalogSearch: e.target.value });
+                        setCatalogPage(1);
+                      }}
+                      placeholder="Cari nama / SKU..."
+                    />
+                  </div>
+                  <div className="max-h-52 space-y-1.5 overflow-y-auto pr-1">
+                    {catalogItems.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => addCatalogItem(item)}
+                        className="flex w-full min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-left text-sm hover:bg-muted/60"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="line-clamp-2 text-sm font-medium leading-snug">{item.name}</span>
+                          <span className="text-xs text-muted-foreground">{item.externalCode}</span>
+                        </span>
+                        <span className="shrink-0 text-xs font-medium">{formatRupiah(catalogDisplayPrice(item))}</span>
+                      </button>
+                    ))}
+                    {catalogItems.length === 0 ? (
+                      <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+                        Produk tidak ditemukan.
+                      </p>
+                    ) : null}
+                  </div>
+                  <SelectorPagination
+                    className="mt-3"
+                    page={catalogPage}
+                    total={catalogOptions?.total ?? 0}
+                    totalPages={catalogTotalPages}
+                    onPageChange={setCatalogPage}
+                  />
+
+                  <details className="mt-3 rounded-md border bg-muted/20 px-3 py-2">
+                    <summary className="cursor-pointer text-sm font-medium">Buat produk cepat</summary>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <Input
+                        value={form.quickExternalCode}
+                        onChange={(e) => update({ quickExternalCode: e.target.value })}
+                        placeholder="SKU opsional"
+                      />
+                      <Input
+                        value={form.quickName}
+                        onChange={(e) => update({ quickName: e.target.value })}
+                        placeholder="Nama produk"
+                      />
+                      <Input
+                        value={form.quickPrice}
+                        onChange={(e) => update({ quickPrice: e.target.value })}
+                        type="number"
+                        min="0"
+                        placeholder="Harga"
+                      />
+                      <Input
+                        value={form.quickUnit}
+                        onChange={(e) => update({ quickUnit: e.target.value })}
+                        placeholder="Satuan"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      className="mt-2"
+                      variant="secondary"
+                      size="sm"
+                      disabled={!form.quickName.trim() || quickCreatePending}
+                      onClick={quickCreateCatalog}
+                    >
+                      Buat & tambahkan
+                    </Button>
+                  </details>
+                </div>
+
+                <SelectedItemsPanel
+                  items={form.items}
+                  subtotal={subtotal}
+                  updateOrderItem={updateOrderItem}
+                  removeOrderItem={removeOrderItem}
+                  showWarehouse={hasWarehouses}
+                />
+              </div>
             </div>
           )}
 
@@ -1398,128 +1401,183 @@ function SelectedItemsPanel({
   updateOrderItem,
   removeOrderItem,
   showWarehouse = false,
-  defaultWarehouseId = "",
-  warehouseNames,
 }: {
   items: OrderItemForm[];
   subtotal: number;
   updateOrderItem: (index: number, patch: Partial<OrderItemForm>) => void;
   removeOrderItem: (index: number) => void;
   showWarehouse?: boolean;
-  defaultWarehouseId?: string;
-  warehouseNames: Map<string, string>;
 }) {
-  const applyDefaultWarehouse = () => {
-    if (!defaultWarehouseId) return;
-    items.forEach((item, index) => {
-      if (!item.warehouseId) updateOrderItem(index, { warehouseId: defaultWarehouseId });
-    });
-  };
-
   return (
     <div className="rounded-lg border p-4">
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <h3 className="font-medium">Item pesanan</h3>
           <p className="text-sm text-muted-foreground">
-            {showWarehouse
-              ? "Pilih gudang pengambilan stok per baris sebelum simpan."
-              : "Review item yang sudah dipilih sebelum simpan."}
+            {items.length === 0
+              ? "Belum ada item — pilih dari katalog di atas."
+              : showWarehouse
+                ? `${items.length} baris · atur gudang, qty, dan harga per baris.`
+                : `${items.length} baris · atur qty dan harga.`}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {showWarehouse && defaultWarehouseId ? (
-            <Button type="button" variant="outline" size="sm" onClick={applyDefaultWarehouse}>
-              Isi gudang default
-            </Button>
-          ) : null}
-          <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
-            <span className="text-muted-foreground">Subtotal: </span>
-            <span className="font-medium">{formatRupiah(subtotal)}</span>
-          </div>
+        <div className="shrink-0 rounded-md bg-muted/50 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">Subtotal </span>
+          <span className="font-semibold">{formatRupiah(subtotal)}</span>
         </div>
       </div>
+
       {items.length === 0 ? (
-        <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-          Belum ada item. Pilih produk dari katalog di sebelah kiri.
+        <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+          Keranjang masih kosong.
         </p>
-      ) : (
-        <div className="max-h-[440px] space-y-2 overflow-auto pr-1">
-          {showWarehouse ? (
-            <div className="hidden gap-2 px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(140px,0.45fr)_72px_minmax(100px,0.35fr)_auto] sm:items-center">
-              <span>Produk</span>
-              <span>Gudang</span>
-              <span>Qty</span>
-              <span>Harga</span>
-              <span />
-            </div>
-          ) : null}
-          {items.map((item, index) => (
-            <div key={`${item.catalogItemId}-${item.lineId || index}`} className="rounded-md border p-3">
-              {showWarehouse ? (
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(140px,0.45fr)_72px_minmax(100px,0.35fr)_auto] sm:items-center">
+      ) : showWarehouse ? (
+        <>
+          {/* Desktop: tabel dengan kolom jelas */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[200px]">Produk</TableHead>
+                  <TableHead className="w-[168px]">Gudang</TableHead>
+                  <TableHead className="w-20 text-right">Qty</TableHead>
+                  <TableHead className="w-28 text-right">Harga</TableHead>
+                  <TableHead className="w-10" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item, index) => (
+                  <TableRow key={`${item.catalogItemId}-${item.lineId || index}`}>
+                    <TableCell className="align-top">
+                      <p className="line-clamp-2 text-sm font-medium leading-snug">{item.name}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{item.externalCode || "Tanpa SKU"}</p>
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <WarehouseSelect
+                        value={item.warehouseId}
+                        onChange={(warehouseId) => updateOrderItem(index, { warehouseId })}
+                        className="h-9 w-full min-w-[140px] rounded-md border border-input bg-background px-2 text-sm"
+                      />
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <Input
+                        className="h-9 text-right"
+                        value={item.qty}
+                        onChange={(e) => updateOrderItem(index, { qty: e.target.value })}
+                        type="number"
+                        min="1"
+                      />
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <Input
+                        className="h-9 text-right"
+                        value={item.unitPrice}
+                        onChange={(e) => updateOrderItem(index, { unitPrice: e.target.value })}
+                        type="number"
+                        min="0"
+                      />
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-destructive"
+                        onClick={() => removeOrderItem(index)}
+                        aria-label="Hapus baris"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile: kartu bertingkat */}
+          <div className="space-y-3 md:hidden">
+            {items.map((item, index) => (
+              <div key={`${item.catalogItemId}-${item.lineId || index}`} className="rounded-lg border p-3">
+                <div className="mb-3 flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{item.name}</p>
+                    <p className="text-sm font-medium leading-snug">{item.name}</p>
                     <p className="text-xs text-muted-foreground">{item.externalCode || "Tanpa SKU"}</p>
                   </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-destructive"
+                    onClick={() => removeOrderItem(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid gap-2">
                   <div className="space-y-1">
-                    <Label className="text-xs sm:sr-only">Gudang</Label>
+                    <Label className="text-xs">Gudang</Label>
                     <WarehouseSelect
                       value={item.warehouseId}
                       onChange={(warehouseId) => updateOrderItem(index, { warehouseId })}
                       className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                     />
-                    {!item.warehouseId && defaultWarehouseId ? (
-                      <p className="text-xs text-muted-foreground sm:hidden">
-                        Pakai default: {warehouseLabel("", warehouseNames, defaultWarehouseId)}
-                      </p>
-                    ) : null}
                   </div>
-                  <Input
-                    value={item.qty}
-                    onChange={(e) => updateOrderItem(index, { qty: e.target.value })}
-                    type="number"
-                    min="1"
-                    placeholder="Qty"
-                  />
-                  <Input
-                    value={item.unitPrice}
-                    onChange={(e) => updateOrderItem(index, { unitPrice: e.target.value })}
-                    type="number"
-                    min="0"
-                    placeholder="Harga"
-                  />
-                  <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => removeOrderItem(index)}>
-                    Hapus
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Qty</Label>
+                      <Input
+                        value={item.qty}
+                        onChange={(e) => updateOrderItem(index, { qty: e.target.value })}
+                        type="number"
+                        min="1"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Harga</Label>
+                      <Input
+                        value={item.unitPrice}
+                        onChange={(e) => updateOrderItem(index, { unitPrice: e.target.value })}
+                        type="number"
+                        min="0"
+                      />
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <>
-                  <div className="mb-2 min-w-0">
-                    <p className="truncate text-sm font-medium">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.externalCode || "Tanpa SKU"}</p>
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-[88px_1fr_auto] sm:items-center">
-                    <Input
-                      value={item.qty}
-                      onChange={(e) => updateOrderItem(index, { qty: e.target.value })}
-                      type="number"
-                      min="1"
-                      placeholder="Qty"
-                    />
-                    <Input
-                      value={item.unitPrice}
-                      onChange={(e) => updateOrderItem(index, { unitPrice: e.target.value })}
-                      type="number"
-                      min="0"
-                      placeholder="Harga"
-                    />
-                    <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => removeOrderItem(index)}>
-                      Hapus
-                    </Button>
-                  </div>
-                </>
-              )}
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="space-y-2">
+          {items.map((item, index) => (
+            <div
+              key={`${item.catalogItemId}-${item.lineId || index}`}
+              className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-2 text-sm font-medium">{item.name}</p>
+                <p className="text-xs text-muted-foreground">{item.externalCode || "Tanpa SKU"}</p>
+              </div>
+              <div className="grid grid-cols-[72px_1fr_auto] items-center gap-2 sm:w-64">
+                <Input
+                  value={item.qty}
+                  onChange={(e) => updateOrderItem(index, { qty: e.target.value })}
+                  type="number"
+                  min="1"
+                  placeholder="Qty"
+                />
+                <Input
+                  value={item.unitPrice}
+                  onChange={(e) => updateOrderItem(index, { unitPrice: e.target.value })}
+                  type="number"
+                  min="0"
+                  placeholder="Harga"
+                />
+                <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeOrderItem(index)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
