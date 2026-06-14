@@ -890,6 +890,7 @@ function OrderCreateForm({
   defaultWarehouseId = "",
   onContactSelect,
 }: {
+  form: CreateForm;
   setForm: (form: CreateForm) => void;
   showOperationalFields?: boolean;
   contactOptions?: ListContactsResponse;
