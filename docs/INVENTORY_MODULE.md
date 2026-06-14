@@ -15,6 +15,8 @@ Sidebar grup **Persediaan**:
 | **Operasi Stok** | `/dashboard/inventory/operations` | Penyesuaian ±, transfer, saldo awal, revaluasi HPP |
 | **Pembelian (PO)** | `/dashboard/inventory/purchase-orders` | Rencana beli ke supplier (partial receive) |
 | **Penerimaan** | `/dashboard/inventory/bills` | Terima barang → stok masuk (bisa dari PO) |
+| **Faktur** | `/dashboard/inventory/invoices` | Faktur dari pesanan + HPP per baris |
+| **Retur** | `/dashboard/inventory/sales-returns` | Retur penjualan → stok kembali (HPP asli) |
 | **Pergerakan** | `/dashboard/inventory/movements` | Kartu stok: semua mutasi + HPP per transaksi |
 | **Gudang** | `/dashboard/inventory/warehouses` | Kelola lokasi gudang |
 | **Setup HPP** | `/dashboard/inventory/setup` | Wizard metode HPP + aktivasi modul |
@@ -57,9 +59,14 @@ Halaman **Operasi Stok** menyatukan 4 aksi dengan pola aman:
 - **Penerimaan (Bill)**: terima barang. Pilih PO untuk prefill sisa, atau input manual.
   Saat disimpan: **stok bertambah + HPP tercatat**, qty diterima PO ter-update otomatis.
 
+## Faktur & Retur
+
+- **Faktur**: pilih pesanan → buat faktur (`WINV-...`) dengan snapshot HPP per baris.
+- **Retur**: pilih pesanan → tentukan qty retur per produk → stok masuk kembali dengan
+  **HPP asli** dari penjualan. Validasi qty ≤ yang terjual.
+
 ## Menyusul (PR frontend berikutnya)
 
-- Faktur & Retur Penjualan.
-- Bundle (paket), config item (metode per item, batch/expiry).
+- Config item di Katalog (aktifkan track stok, metode HPP per item, bundle, batch/expiry).
 - Laporan nilai persediaan & margin.
-- Backfill stok pesanan lama.
+- Integrasi UI pesanan (badge stok) + tombol Recalculate/Backfill.
