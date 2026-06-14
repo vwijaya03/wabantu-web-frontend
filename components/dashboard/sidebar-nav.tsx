@@ -94,6 +94,7 @@ const tenantNavGroups: Array<{
       { href: "/dashboard/inventory/movements", label: "Pergerakan", icon: ScrollText },
       { href: "/dashboard/inventory/warehouses", label: "Gudang", icon: Warehouse },
       { href: "/dashboard/inventory/items", label: "Konfigurasi Item", icon: Settings2 },
+      { href: "/dashboard/inventory/reports", label: "Laporan", icon: BarChart3 },
       { href: "/dashboard/inventory/maintenance", label: "Pemeliharaan", icon: Wrench },
       { href: "/dashboard/inventory/setup", label: "Setup HPP", icon: Wand2 },
     ],
