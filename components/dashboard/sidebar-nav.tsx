@@ -34,6 +34,7 @@ import {
   Receipt,
   Undo2,
   Settings2,
+  Wrench,
   Wand2,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -93,6 +94,7 @@ const tenantNavGroups: Array<{
       { href: "/dashboard/inventory/movements", label: "Pergerakan", icon: ScrollText },
       { href: "/dashboard/inventory/warehouses", label: "Gudang", icon: Warehouse },
       { href: "/dashboard/inventory/items", label: "Konfigurasi Item", icon: Settings2 },
+      { href: "/dashboard/inventory/maintenance", label: "Pemeliharaan", icon: Wrench },
       { href: "/dashboard/inventory/setup", label: "Setup HPP", icon: Wand2 },
     ],
   },
