@@ -90,6 +90,7 @@ export default function InventorySetupPage() {
   const [input, setInput] = useState("");
   const [rec, setRec] = useState<WizardRecommendation | null>(null);
   const [tokenInfo, setTokenInfo] = useState<{ used?: number; remaining?: number }>({});
+  const [methodApplied, setMethodApplied] = useState(false);
 
   const { data: setting } = useQuery({
     queryKey: ["inventory", "setting"],
@@ -118,8 +119,10 @@ export default function InventorySetupPage() {
     onSuccess: (res) => {
       setRec(res.recommendation);
       setTokenInfo({ used: res.tokensUsed, remaining: res.tokenQuotaRemaining });
+      setMethodApplied(false);
       setSession(null);
       setStep(3);
+      void qc.invalidateQueries({ queryKey: ["inventory", "setting"] });
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -128,6 +131,7 @@ export default function InventorySetupPage() {
     mutationFn: (method: CostingMethod) => inventoryApi.updateSetting({ defaultCostingMethod: method }),
     onSuccess: () => {
       toast.success("Metode HPP diterapkan");
+      setMethodApplied(true);
       void qc.invalidateQueries({ queryKey: ["inventory", "setting"] });
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -181,18 +185,26 @@ export default function InventorySetupPage() {
 
   const skipToAverage = () => {
     applyMethodMut.mutate("average");
-    setRec({
-      method: "average",
-      reason: "Anda memilih Average sebagai metode default tanpa wawancara AI.",
-      source: "rules",
-    });
-    setStep(3);
+    toast.info("Metode Average disimpan. Selesaikan wawancara chat untuk bisa mengaktifkan modul stok.");
   };
 
   const goToInterview = () => {
     setSession(null);
+    setRec(null);
+    setMethodApplied(false);
     setStep(2);
   };
+
+  const canActivateModule =
+    Boolean(setting?.wizardInterviewCompleted) &&
+    methodApplied &&
+    !setting?.setupCompleted;
+
+  const activationBlockedReason = !setting?.wizardInterviewCompleted
+    ? "Selesaikan wawancara chat dan dapatkan rekomendasi HPP dulu."
+    : !methodApplied
+      ? "Klik «Terapkan» pada rekomendasi metode HPP sebelum mengaktifkan modul."
+      : null;
 
   if (!canManage) {
     return (
@@ -260,7 +272,7 @@ export default function InventorySetupPage() {
           })}
           <div className="lg:col-span-3 flex flex-wrap justify-end gap-2">
             <Button variant="outline" onClick={skipToAverage} disabled={applyMethodMut.isPending}>
-              Pakai Average (default)
+              Simpan Average sementara
             </Button>
             <Button onClick={() => setStep(2)}>Lanjut — wawancara chat</Button>
           </div>
@@ -394,7 +406,7 @@ export default function InventorySetupPage() {
                   Kembali
                 </Button>
                 <Button variant="ghost" onClick={skipToAverage} disabled={applyMethodMut.isPending}>
-                  Lewati — pakai Average
+                  Simpan Average — wawancara tetap wajib untuk aktivasi
                 </Button>
               </div>
             </CardContent>
@@ -538,23 +550,41 @@ export default function InventorySetupPage() {
                 Terapkan {rec.method.toUpperCase()}
               </Button>
             </div>
+
+            <Card className="border-dashed">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">④ Aktifkan modul</CardTitle>
+                <CardDescription>
+                  Setelah gudang & saldo awal siap, aktifkan agar pesanan mulai memotong stok otomatis.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {setting?.setupCompleted
+                    ? "Modul persediaan sudah aktif."
+                    : activationBlockedReason ??
+                      "Wawancara dan metode HPP sudah siap — Anda bisa mengaktifkan modul."}
+                </p>
+                <Button
+                  onClick={() => completeMut.mutate()}
+                  disabled={completeMut.isPending || setting?.setupCompleted || !canActivateModule}
+                >
+                  {setting?.setupCompleted ? "Sudah aktif" : "Aktifkan modul persediaan"}
+                </Button>
+              </CardContent>
+            </Card>
           </CardContent>
         </Card>
       ) : null}
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Aktifkan modul</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            Setelah gudang & saldo awal siap, tandai setup selesai agar pesanan mulai memotong stok otomatis.
-          </p>
-          <Button onClick={() => completeMut.mutate()} disabled={completeMut.isPending || setting?.setupCompleted}>
-            {setting?.setupCompleted ? "Sudah aktif" : "Tandai setup selesai"}
-          </Button>
-        </CardContent>
-      </Card>
+      {step !== 3 && !setting?.setupCompleted ? (
+        <Card className="mt-6 border-dashed">
+          <CardContent className="py-4 text-sm text-muted-foreground">
+            Aktivasi modul persediaan tersedia setelah wawancara chat selesai, rekomendasi HPP diterapkan, dan gudang
+            siap.
+          </CardContent>
+        </Card>
+      ) : null}
     </RequireTenantDashboard>
   );
 }
