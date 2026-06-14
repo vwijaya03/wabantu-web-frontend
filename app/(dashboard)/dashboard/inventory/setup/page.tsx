@@ -7,6 +7,7 @@ import {
   Bot,
   Loader2,
   MessageSquare,
+  Scale,
   Send,
   Sparkles,
   User,
@@ -72,6 +73,35 @@ const DRAFT_FLAGS: Array<{ key: keyof WizardAnswers; label: string }> = [
   { key: "priceVolatile", label: "Harga beli fluktuatif" },
   { key: "seasonalStock", label: "Stok musiman" },
 ];
+
+function SetAverageButton({
+  onClick,
+  disabled,
+  className,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <Button type="button" variant="outline" size="sm" className={className} onClick={onClick} disabled={disabled}>
+      <Scale className="mr-2 h-4 w-4" />
+      Set metode Average
+    </Button>
+  );
+}
+
+function SkipAverageHint({ onSetAverage, disabled }: { onSetAverage: () => void; disabled?: boolean }) {
+  return (
+    <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-sm">
+      <p className="font-medium text-foreground">Sudah yakin pakai Average?</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Simpan metode HPP Average sekarang. Wawancara chat tetap wajib sebelum modul persediaan bisa diaktifkan.
+      </p>
+      <SetAverageButton onClick={onSetAverage} disabled={disabled} className="mt-2" />
+    </div>
+  );
+}
 
 function draftLabel(map: Record<string, string>, value: string): string {
   const v = value.trim();
@@ -185,7 +215,7 @@ export default function InventorySetupPage() {
 
   const skipToAverage = () => {
     applyMethodMut.mutate("average");
-    toast.info("Metode Average disimpan. Selesaikan wawancara chat untuk bisa mengaktifkan modul stok.");
+    toast.success("Metode Average disimpan. Lanjut wawancara chat untuk bisa mengaktifkan modul stok.");
   };
 
   const goToInterview = () => {
@@ -270,11 +300,11 @@ export default function InventorySetupPage() {
               </Card>
             );
           })}
-          <div className="lg:col-span-3 flex flex-wrap justify-end gap-2">
-            <Button variant="outline" onClick={skipToAverage} disabled={applyMethodMut.isPending}>
-              Simpan Average sementara
+          <div className="lg:col-span-3 flex flex-col gap-4 border-t pt-4 sm:flex-row sm:items-end sm:justify-between">
+            <SkipAverageHint onSetAverage={skipToAverage} disabled={applyMethodMut.isPending} />
+            <Button className="shrink-0" onClick={() => setStep(2)}>
+              Lanjut — wawancara chat
             </Button>
-            <Button onClick={() => setStep(2)}>Lanjut — wawancara chat</Button>
           </div>
         </div>
       ) : null}
@@ -401,13 +431,11 @@ export default function InventorySetupPage() {
                 </Button>
               ) : null}
 
-              <div className="flex flex-wrap gap-2 border-t pt-3">
+              <div className="space-y-3 border-t pt-3">
                 <Button variant="outline" onClick={() => setStep(1)}>
                   Kembali
                 </Button>
-                <Button variant="ghost" onClick={skipToAverage} disabled={applyMethodMut.isPending}>
-                  Simpan Average — wawancara tetap wajib untuk aktivasi
-                </Button>
+                <SkipAverageHint onSetAverage={skipToAverage} disabled={applyMethodMut.isPending} />
               </div>
             </CardContent>
           </Card>
