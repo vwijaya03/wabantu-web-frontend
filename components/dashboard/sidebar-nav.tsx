@@ -33,6 +33,7 @@ import {
   FileText,
   Receipt,
   Undo2,
+  Settings2,
   Wand2,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -91,6 +92,7 @@ const tenantNavGroups: Array<{
       { href: "/dashboard/inventory/sales-returns", label: "Retur", icon: Undo2 },
       { href: "/dashboard/inventory/movements", label: "Pergerakan", icon: ScrollText },
       { href: "/dashboard/inventory/warehouses", label: "Gudang", icon: Warehouse },
+      { href: "/dashboard/inventory/items", label: "Konfigurasi Item", icon: Settings2 },
       { href: "/dashboard/inventory/setup", label: "Setup HPP", icon: Wand2 },
     ],
   },
