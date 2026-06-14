@@ -20,6 +20,7 @@ Sidebar grup **Persediaan**:
 | **Pergerakan** | `/dashboard/inventory/movements` | Kartu stok: semua mutasi + HPP per transaksi |
 | **Gudang** | `/dashboard/inventory/warehouses` | Kelola lokasi gudang |
 | **Konfigurasi Item** | `/dashboard/inventory/items` | Track stok, metode HPP per item, bundle, batch/expiry |
+| **Laporan** | `/dashboard/inventory/reports` | Nilai persediaan + margin penjualan (revenue−HPP), export CSV |
 | **Pemeliharaan** | `/dashboard/inventory/maintenance` | Recalculate HPP, backfill pesanan lama, nilai per gudang |
 | **Setup HPP** | `/dashboard/inventory/setup` | Wizard metode HPP + aktivasi modul |
 
