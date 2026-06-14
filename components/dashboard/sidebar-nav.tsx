@@ -31,6 +31,8 @@ import {
   ScrollText,
   ClipboardList,
   FileText,
+  Receipt,
+  Undo2,
   Wand2,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -85,6 +87,8 @@ const tenantNavGroups: Array<{
       { href: "/dashboard/inventory/operations", label: "Operasi Stok", icon: ArrowLeftRight },
       { href: "/dashboard/inventory/purchase-orders", label: "Pembelian (PO)", icon: ClipboardList },
       { href: "/dashboard/inventory/bills", label: "Penerimaan", icon: FileText },
+      { href: "/dashboard/inventory/invoices", label: "Faktur", icon: Receipt },
+      { href: "/dashboard/inventory/sales-returns", label: "Retur", icon: Undo2 },
       { href: "/dashboard/inventory/movements", label: "Pergerakan", icon: ScrollText },
       { href: "/dashboard/inventory/warehouses", label: "Gudang", icon: Warehouse },
       { href: "/dashboard/inventory/setup", label: "Setup HPP", icon: Wand2 },

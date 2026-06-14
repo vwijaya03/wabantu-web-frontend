@@ -278,6 +278,9 @@ export const inventoryApi = {
   async listSalesReturns(params: { page?: number; pageSize?: number } = {}): Promise<{ salesReturns: SalesReturn[]; total: number; page: number; pageSize: number }> {
     return (await api.get("/inventory/sales-returns", { params })).data;
   },
+  async getSalesReturn(id: string): Promise<SalesReturn> {
+    return (await api.get(`/inventory/sales-returns/${id}`)).data;
+  },
   async createSalesReturn(input: { orderId: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; qty: number }> }): Promise<SalesReturn> {
     return (await api.post("/inventory/sales-returns", input)).data;
   },
