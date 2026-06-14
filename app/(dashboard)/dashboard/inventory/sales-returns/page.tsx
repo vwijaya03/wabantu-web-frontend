@@ -13,6 +13,15 @@ import { OrderPicker } from "@/components/inventory/order-picker";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
+import {
+  InventoryTable,
+  InventoryTableBody,
+  InventoryTableCell,
+  InventoryTableEmpty,
+  InventoryTableHead,
+  InventoryTableHeader,
+  InventoryTableRow,
+} from "@/components/inventory/inventory-table";
 import { type Order } from "@/lib/api/orders";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
@@ -99,32 +108,30 @@ export default function SalesReturnsPage() {
       <Card>
         <CardHeader><CardTitle>Daftar Retur</CardTitle></CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-left">No Retur</th>
-                  <th className="px-3 py-2 text-right">Nilai HPP</th>
-                  <th className="px-3 py-2 text-left">Tanggal</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {isLoading ? (
-                  <tr><td colSpan={3} className="px-3 py-6 text-center text-muted-foreground">Memuat...</td></tr>
-                ) : returns.length === 0 ? (
-                  <tr><td colSpan={3} className="px-3 py-6 text-center text-muted-foreground">Belum ada retur.</td></tr>
-                ) : (
-                  returns.map((r) => (
-                    <tr key={r.id} className="cursor-pointer hover:bg-muted/40" onClick={() => setDetailId(r.id)}>
-                      <td className="px-3 py-2 font-medium text-primary">{r.returnNo}</td>
-                      <td className="px-3 py-2 text-right">{formatIDR(r.totalCost)}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">{r.transactionDate}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <InventoryTable>
+            <InventoryTableHeader>
+              <InventoryTableRow>
+                <InventoryTableHead>No Retur</InventoryTableHead>
+                <InventoryTableHead align="right">Nilai HPP</InventoryTableHead>
+                <InventoryTableHead>Tanggal</InventoryTableHead>
+              </InventoryTableRow>
+            </InventoryTableHeader>
+            <InventoryTableBody>
+              {isLoading ? (
+                <InventoryTableEmpty colSpan={3}>Memuat...</InventoryTableEmpty>
+              ) : returns.length === 0 ? (
+                <InventoryTableEmpty colSpan={3}>Belum ada retur.</InventoryTableEmpty>
+              ) : (
+                returns.map((r) => (
+                  <InventoryTableRow key={r.id} className="cursor-pointer" onClick={() => setDetailId(r.id)}>
+                    <InventoryTableCell className="font-medium text-primary">{r.returnNo}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatIDR(r.totalCost)}</InventoryTableCell>
+                    <InventoryTableCell className="text-xs text-muted-foreground">{r.transactionDate}</InventoryTableCell>
+                  </InventoryTableRow>
+                ))
+              )}
+            </InventoryTableBody>
+          </InventoryTable>
         </CardContent>
       </Card>
 
@@ -145,22 +152,24 @@ function ReturnDetailDialog({ id, onClose }: { id: string | null; onClose: () =>
         <DialogHeader><DialogTitle>{r ? r.returnNo : "Memuat..."}</DialogTitle></DialogHeader>
         {r ? (
           <div className="space-y-3">
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/60 text-xs uppercase text-muted-foreground">
-                  <tr><th className="px-3 py-2 text-left">Produk</th><th className="px-3 py-2 text-right">Qty</th><th className="px-3 py-2 text-right">HPP/unit</th></tr>
-                </thead>
-                <tbody className="divide-y">
-                  {r.lines.map((l, i) => (
-                    <tr key={i}>
-                      <td className="px-3 py-2">{l.itemName || l.catalogItemId}</td>
-                      <td className="px-3 py-2 text-right">{formatStockQty(l.qty)}</td>
-                      <td className="px-3 py-2 text-right">{formatIDR(l.unitCost)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <InventoryTable>
+              <InventoryTableHeader>
+                <InventoryTableRow>
+                  <InventoryTableHead>Produk</InventoryTableHead>
+                  <InventoryTableHead align="right">Qty</InventoryTableHead>
+                  <InventoryTableHead align="right">HPP/unit</InventoryTableHead>
+                </InventoryTableRow>
+              </InventoryTableHeader>
+              <InventoryTableBody>
+                {r.lines.map((l, i) => (
+                  <InventoryTableRow key={i}>
+                    <InventoryTableCell>{l.itemName || l.catalogItemId}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatStockQty(l.qty)}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatIDR(l.unitCost)}</InventoryTableCell>
+                  </InventoryTableRow>
+                ))}
+              </InventoryTableBody>
+            </InventoryTable>
             <p className="text-right text-sm">Total HPP kembali: <span className="font-semibold">{formatIDR(r.totalCost)}</span></p>
           </div>
         ) : null}

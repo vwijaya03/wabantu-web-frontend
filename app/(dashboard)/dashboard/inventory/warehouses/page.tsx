@@ -12,6 +12,15 @@ import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-da
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { inventoryApi } from "@/lib/api/inventory";
+import {
+  InventoryTable,
+  InventoryTableBody,
+  InventoryTableCell,
+  InventoryTableEmpty,
+  InventoryTableHead,
+  InventoryTableHeader,
+  InventoryTableRow,
+} from "@/components/inventory/inventory-table";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 
@@ -80,38 +89,51 @@ export default function WarehousesPage() {
 
         <Card>
           <CardHeader><CardTitle>Daftar Gudang</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            {isLoading ? (
-              <p className="text-sm text-muted-foreground">Memuat...</p>
-            ) : warehouses.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Belum ada gudang.</p>
-            ) : (
-              warehouses.map((w) => (
-                <div key={w.id} className="flex items-center justify-between rounded border p-3 text-sm">
-                  <div>
-                    <p className="font-medium">
-                      {w.name}{" "}
-                      {w.isDefault ? <Badge variant="secondary">Default</Badge> : null}
-                      {!w.isActive ? <Badge variant="destructive">Nonaktif</Badge> : null}
-                    </p>
-                    <p className="text-muted-foreground">{w.code}{w.address ? ` · ${w.address}` : ""}</p>
-                  </div>
-                  {canManage && !w.isDefault ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive"
-                      disabled={deleteMut.isPending}
-                      onClick={() => {
-                        if (confirm(`Hapus gudang ${w.name}?`)) deleteMut.mutate(w.id);
-                      }}
-                    >
-                      Hapus
-                    </Button>
-                  ) : null}
-                </div>
-              ))
-            )}
+          <CardContent>
+            <InventoryTable>
+              <InventoryTableHeader>
+                <InventoryTableRow>
+                  <InventoryTableHead>Nama</InventoryTableHead>
+                  <InventoryTableHead>Kode</InventoryTableHead>
+                  <InventoryTableHead>Alamat</InventoryTableHead>
+                  <InventoryTableHead align="right">Aksi</InventoryTableHead>
+                </InventoryTableRow>
+              </InventoryTableHeader>
+              <InventoryTableBody>
+                {isLoading ? (
+                  <InventoryTableEmpty colSpan={4}>Memuat...</InventoryTableEmpty>
+                ) : warehouses.length === 0 ? (
+                  <InventoryTableEmpty colSpan={4}>Belum ada gudang.</InventoryTableEmpty>
+                ) : (
+                  warehouses.map((w) => (
+                    <InventoryTableRow key={w.id}>
+                      <InventoryTableCell>
+                        <span className="font-medium">{w.name}</span>{" "}
+                        {w.isDefault ? <Badge variant="secondary">Default</Badge> : null}
+                        {!w.isActive ? <Badge variant="destructive">Nonaktif</Badge> : null}
+                      </InventoryTableCell>
+                      <InventoryTableCell className="text-muted-foreground">{w.code}</InventoryTableCell>
+                      <InventoryTableCell className="text-muted-foreground">{w.address || "-"}</InventoryTableCell>
+                      <InventoryTableCell align="right">
+                        {canManage && !w.isDefault ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            disabled={deleteMut.isPending}
+                            onClick={() => {
+                              if (confirm(`Hapus gudang ${w.name}?`)) deleteMut.mutate(w.id);
+                            }}
+                          >
+                            Hapus
+                          </Button>
+                        ) : null}
+                      </InventoryTableCell>
+                    </InventoryTableRow>
+                  ))
+                )}
+              </InventoryTableBody>
+            </InventoryTable>
           </CardContent>
         </Card>
       </div>

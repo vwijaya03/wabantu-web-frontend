@@ -8,6 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
+import {
+  InventoryTable,
+  InventoryTableBody,
+  InventoryTableCell,
+  InventoryTableEmpty,
+  InventoryTableHead,
+  InventoryTableHeader,
+  InventoryTableRow,
+} from "@/components/inventory/inventory-table";
 import { downloadCSV } from "@/lib/inventory/csv";
 import { cn } from "@/lib/utils";
 
@@ -81,36 +90,34 @@ function ValuationReport() {
       <Card>
         <CardHeader><CardTitle>Rincian per Item</CardTitle></CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-left">Produk</th>
-                  <th className="px-3 py-2 text-left">Gudang</th>
-                  <th className="px-3 py-2 text-right">On hand</th>
-                  <th className="px-3 py-2 text-right">HPP/unit</th>
-                  <th className="px-3 py-2 text-right">Nilai</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {isLoading ? (
-                  <tr><td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">Memuat...</td></tr>
-                ) : rows.length === 0 ? (
-                  <tr><td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">Belum ada data.</td></tr>
-                ) : (
-                  rows.map((r) => (
-                    <tr key={`${r.catalogItemId}-${r.warehouseId}`}>
-                      <td className="px-3 py-2">{r.itemName}</td>
-                      <td className="px-3 py-2">{r.warehouseName}</td>
-                      <td className="px-3 py-2 text-right">{formatStockQty(r.onHand)}</td>
-                      <td className="px-3 py-2 text-right">{formatIDR(r.avgUnitCost)}</td>
-                      <td className="px-3 py-2 text-right">{formatIDR(r.totalValue)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <InventoryTable>
+            <InventoryTableHeader>
+              <InventoryTableRow>
+                <InventoryTableHead>Produk</InventoryTableHead>
+                <InventoryTableHead>Gudang</InventoryTableHead>
+                <InventoryTableHead align="right">On hand</InventoryTableHead>
+                <InventoryTableHead align="right">HPP/unit</InventoryTableHead>
+                <InventoryTableHead align="right">Nilai</InventoryTableHead>
+              </InventoryTableRow>
+            </InventoryTableHeader>
+            <InventoryTableBody>
+              {isLoading ? (
+                <InventoryTableEmpty colSpan={5}>Memuat...</InventoryTableEmpty>
+              ) : rows.length === 0 ? (
+                <InventoryTableEmpty colSpan={5}>Belum ada data.</InventoryTableEmpty>
+              ) : (
+                rows.map((r) => (
+                  <InventoryTableRow key={`${r.catalogItemId}-${r.warehouseId}`}>
+                    <InventoryTableCell>{r.itemName}</InventoryTableCell>
+                    <InventoryTableCell>{r.warehouseName}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatStockQty(r.onHand)}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatIDR(r.avgUnitCost)}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatIDR(r.totalValue)}</InventoryTableCell>
+                  </InventoryTableRow>
+                ))
+              )}
+            </InventoryTableBody>
+          </InventoryTable>
         </CardContent>
       </Card>
     </div>
@@ -153,42 +160,40 @@ function MarginReport() {
         <CardHeader><CardTitle>Margin per Faktur</CardTitle></CardHeader>
         <CardContent>
           <p className="mb-3 text-xs text-muted-foreground">Margin = pendapatan faktur − HPP. Buat faktur dari pesanan agar muncul di sini.</p>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-left">No Faktur</th>
-                  <th className="px-3 py-2 text-left">Tanggal</th>
-                  <th className="px-3 py-2 text-right">Pendapatan</th>
-                  <th className="px-3 py-2 text-right">HPP</th>
-                  <th className="px-3 py-2 text-right">Margin</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {isLoading ? (
-                  <tr><td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">Memuat...</td></tr>
-                ) : invoices.length === 0 ? (
-                  <tr><td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">Belum ada faktur.</td></tr>
-                ) : (
-                  invoices.map((i) => {
-                    const margin = i.subtotal - i.totalCogs;
-                    const pct = i.subtotal > 0 ? (margin / i.subtotal) * 100 : 0;
-                    return (
-                      <tr key={i.id}>
-                        <td className="px-3 py-2 font-medium">{i.invoiceNo}</td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">{i.transactionDate}</td>
-                        <td className="px-3 py-2 text-right">{formatIDR(i.subtotal)}</td>
-                        <td className="px-3 py-2 text-right text-muted-foreground">{formatIDR(i.totalCogs)}</td>
-                        <td className={cn("px-3 py-2 text-right font-medium", margin >= 0 ? "text-emerald-700" : "text-red-700")}>
-                          {formatIDR(margin)} <span className="text-xs text-muted-foreground">({pct.toFixed(0)}%)</span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+          <InventoryTable>
+            <InventoryTableHeader>
+              <InventoryTableRow>
+                <InventoryTableHead>No Faktur</InventoryTableHead>
+                <InventoryTableHead>Tanggal</InventoryTableHead>
+                <InventoryTableHead align="right">Pendapatan</InventoryTableHead>
+                <InventoryTableHead align="right">HPP</InventoryTableHead>
+                <InventoryTableHead align="right">Margin</InventoryTableHead>
+              </InventoryTableRow>
+            </InventoryTableHeader>
+            <InventoryTableBody>
+              {isLoading ? (
+                <InventoryTableEmpty colSpan={5}>Memuat...</InventoryTableEmpty>
+              ) : invoices.length === 0 ? (
+                <InventoryTableEmpty colSpan={5}>Belum ada faktur.</InventoryTableEmpty>
+              ) : (
+                invoices.map((i) => {
+                  const margin = i.subtotal - i.totalCogs;
+                  const pct = i.subtotal > 0 ? (margin / i.subtotal) * 100 : 0;
+                  return (
+                    <InventoryTableRow key={i.id}>
+                      <InventoryTableCell className="font-medium">{i.invoiceNo}</InventoryTableCell>
+                      <InventoryTableCell className="text-xs text-muted-foreground">{i.transactionDate}</InventoryTableCell>
+                      <InventoryTableCell align="right">{formatIDR(i.subtotal)}</InventoryTableCell>
+                      <InventoryTableCell align="right" className="text-muted-foreground">{formatIDR(i.totalCogs)}</InventoryTableCell>
+                      <InventoryTableCell align="right" className={cn("font-medium", margin >= 0 ? "text-emerald-700" : "text-red-700")}>
+                        {formatIDR(margin)} <span className="text-xs text-muted-foreground">({pct.toFixed(0)}%)</span>
+                      </InventoryTableCell>
+                    </InventoryTableRow>
+                  );
+                })
+              )}
+            </InventoryTableBody>
+          </InventoryTable>
         </CardContent>
       </Card>
     </div>

@@ -15,6 +15,15 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { catalogApi, type CatalogItem } from "@/lib/api/catalog";
 import { inventoryApi, COSTING_METHOD_LABELS, type CostingMethod } from "@/lib/api/inventory";
+import {
+  InventoryTable,
+  InventoryTableBody,
+  InventoryTableCell,
+  InventoryTableEmpty,
+  InventoryTableHead,
+  InventoryTableHeader,
+  InventoryTableRow,
+} from "@/components/inventory/inventory-table";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 
@@ -39,34 +48,32 @@ export default function InventoryItemsPage() {
           <Input placeholder="Cari produk..." value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-left">Produk</th>
-                  <th className="px-3 py-2 text-left">Kode</th>
-                  <th className="px-3 py-2 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {isLoading ? (
-                  <tr><td colSpan={3} className="px-3 py-6 text-center text-muted-foreground">Memuat...</td></tr>
-                ) : items.length === 0 ? (
-                  <tr><td colSpan={3} className="px-3 py-6 text-center text-muted-foreground">Belum ada produk.</td></tr>
-                ) : (
-                  items.map((it) => (
-                    <tr key={it.id} className="hover:bg-muted/40">
-                      <td className="px-3 py-2 font-medium">{it.name}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{it.externalCode}</td>
-                      <td className="px-3 py-2 text-right">
-                        <Button variant="outline" size="sm" onClick={() => setSelected(it)}>Konfigurasi</Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <InventoryTable>
+            <InventoryTableHeader>
+              <InventoryTableRow>
+                <InventoryTableHead>Produk</InventoryTableHead>
+                <InventoryTableHead>Kode</InventoryTableHead>
+                <InventoryTableHead align="right">Aksi</InventoryTableHead>
+              </InventoryTableRow>
+            </InventoryTableHeader>
+            <InventoryTableBody>
+              {isLoading ? (
+                <InventoryTableEmpty colSpan={3}>Memuat...</InventoryTableEmpty>
+              ) : items.length === 0 ? (
+                <InventoryTableEmpty colSpan={3}>Belum ada produk.</InventoryTableEmpty>
+              ) : (
+                items.map((it) => (
+                  <InventoryTableRow key={it.id}>
+                    <InventoryTableCell className="font-medium">{it.name}</InventoryTableCell>
+                    <InventoryTableCell className="text-muted-foreground">{it.externalCode}</InventoryTableCell>
+                    <InventoryTableCell align="right">
+                      <Button variant="outline" size="sm" onClick={() => setSelected(it)}>Konfigurasi</Button>
+                    </InventoryTableCell>
+                  </InventoryTableRow>
+                ))
+              )}
+            </InventoryTableBody>
+          </InventoryTable>
         </CardContent>
       </Card>
 

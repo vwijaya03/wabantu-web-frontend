@@ -26,7 +26,8 @@ import { catalogApi, type CatalogItem, type ListCatalogResponse } from "@/lib/ap
 import { contactsApi, type ListContactsResponse } from "@/lib/api/contacts";
 import { priceTypesApi } from "@/lib/api/price-types";
 import { ordersApi, type Order } from "@/lib/api/orders";
-import { inventoryApi } from "@/lib/api/inventory";
+import { inventoryApi, type StockRow } from "@/lib/api/inventory";
+import { WarehouseSelect } from "@/components/inventory/warehouse-select";
 import { financeApi, type Wallet } from "@/lib/api/finance";
 import { NO_WALLET } from "@/lib/finance/utils";
 import { formatOrderNumber } from "@/lib/format-order-number";
@@ -71,12 +72,14 @@ type CreateForm = {
 };
 
 type OrderItemForm = {
+  lineId: string;
   catalogItemId: string;
   externalCode: string;
   name: string;
   qty: string;
   unitPrice: string;
   sellUnit: string;
+  warehouseId: string;
 };
 
 type EditForm = {
@@ -226,18 +229,21 @@ export default function OrdersPage() {
     queryFn: () => inventoryApi.getSetting(),
   });
   const inventoryOn = Boolean(invSetting?.setupCompleted);
+  const { data: warehousesData } = useQuery({
+    queryKey: ["inventory", "warehouses"],
+    queryFn: () => inventoryApi.listWarehouses(),
+    enabled: inventoryOn,
+  });
+  const defaultWarehouseId = useMemo(() => {
+    const list = warehousesData?.warehouses ?? [];
+    return list.find((w) => w.isDefault)?.id ?? list[0]?.id ?? "";
+  }, [warehousesData]);
   const { data: stockOverview } = useQuery({
     queryKey: ["inventory", "stock", "orders-overview"],
     queryFn: () => inventoryApi.listStock({ pageSize: 500 }),
     enabled: inventoryOn,
   });
-  const stockMap = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const r of stockOverview?.stock ?? []) {
-      m.set(r.catalogItemId, (m.get(r.catalogItemId) ?? 0) + r.available);
-    }
-    return m;
-  }, [stockOverview]);
+  const stockRows = stockOverview?.stock ?? [];
 
   const orders = data?.orders ?? [];
   const total = data?.total ?? 0;
@@ -252,16 +258,7 @@ export default function OrdersPage() {
   const createMut = useMutation({
     mutationFn: () =>
       ordersApi.create({
-        items: [
-          ...createForm.items.map((item) => ({
-            catalogItemId: item.catalogItemId,
-            externalCode: item.externalCode,
-            name: item.name,
-            qty: Number(item.qty || 1),
-            unitPrice: Number(item.unitPrice || 0),
-            sellUnit: item.sellUnit || undefined,
-          })),
-        ],
+        items: createForm.items.map((item) => toOrderItemPayload(item)),
         contactId: optionalString(createForm.contactId),
         notes: optionalString(createForm.notes),
         status: createForm.status,
@@ -334,14 +331,7 @@ export default function OrdersPage() {
       ordersApi.update(editOrder!.id, {
         contactId: editForm.contactId.trim(),
         notes: editForm.notes.trim(),
-        items: editForm.items.map((item) => ({
-          catalogItemId: item.catalogItemId,
-          externalCode: item.externalCode,
-          name: item.name,
-          qty: Number(item.qty || 1),
-          unitPrice: Number(item.unitPrice || 0),
-          sellUnit: item.sellUnit || undefined,
-        })),
+        items: editForm.items.map((item) => toOrderItemPayload(item)),
         status: editForm.status,
         trackingNumber: optionalString(editForm.trackingNumber),
         courier: optionalString(editForm.courier),
@@ -428,12 +418,14 @@ export default function OrdersPage() {
       contactSearch: "",
       catalogSearch: "",
       items: order.items.map((item) => ({
+        lineId: item.lineId ?? "",
         catalogItemId: item.catalogItemId ?? "",
         externalCode: item.externalCode ?? "",
         name: item.name,
         qty: String(item.qty || 1),
         unitPrice: String(item.unitPrice || 0),
         sellUnit: item.sellUnit ?? "",
+        warehouseId: item.warehouseId ?? "",
       })),
       notes: order.notes ?? "",
       quickExternalCode: "",
@@ -502,12 +494,14 @@ export default function OrdersPage() {
         items: [
           ...form.items,
           {
+            lineId: "",
             catalogItemId: item.id,
             externalCode: item.externalCode,
             name: item.name,
             qty: "1",
             unitPrice: String(catalogDisplayPrice(item)),
             sellUnit: item.sellUnit ?? "",
+            warehouseId: defaultWarehouseId,
           },
         ],
       };
@@ -522,12 +516,14 @@ export default function OrdersPage() {
         items: [
           ...form.items,
           {
+            lineId: "",
             catalogItemId: item.id,
             externalCode: item.externalCode,
             name: item.name,
             qty: "1",
             unitPrice: String(catalogDisplayPrice(item)),
             sellUnit: item.sellUnit ?? "",
+            warehouseId: defaultWarehouseId,
           },
         ],
       };
@@ -713,7 +709,7 @@ export default function OrdersPage() {
                         {order.trackingNumber ? `Resi ${order.trackingNumber}` : "Belum ada resi"}
                         {order.courier ? ` · ${order.courier}` : ""}
                       </p>
-                      {inventoryOn && orderHasInsufficientStock(order, stockMap) ? (
+                      {inventoryOn && orderHasInsufficientStock(order, stockRows, defaultWarehouseId) ? (
                         <p className="mt-1">
                           <Badge variant="warning">Stok kurang</Badge>
                         </p>
@@ -804,6 +800,8 @@ export default function OrdersPage() {
               quickCreatePending={quickCreateCatalogMut.isPending}
               priceTypeLabelById={priceTypeLabelById}
               walletOptions={walletOptions}
+              inventoryOn={inventoryOn}
+              defaultWarehouseId={defaultWarehouseId}
               onContactSelect={(contactId) => {
                 void repriceCreateItems(contactId);
               }}
@@ -850,6 +848,8 @@ export default function OrdersPage() {
               quickCreatePending={quickCreateEditCatalogMut.isPending}
               priceTypeLabelById={priceTypeLabelById}
               walletOptions={walletOptions}
+              inventoryOn={inventoryOn}
+              defaultWarehouseId={defaultWarehouseId}
               onContactSelect={(contactId) => {
                 void repriceEditItems(contactId);
               }}
@@ -886,9 +886,10 @@ function OrderCreateForm({
   quickCreatePending,
   priceTypeLabelById,
   walletOptions,
+  inventoryOn = false,
+  defaultWarehouseId = "",
   onContactSelect,
 }: {
-  form: CreateForm;
   setForm: (form: CreateForm) => void;
   showOperationalFields?: boolean;
   contactOptions?: ListContactsResponse;
@@ -904,6 +905,8 @@ function OrderCreateForm({
   quickCreatePending: boolean;
   priceTypeLabelById: Map<string, string>;
   walletOptions: Wallet[];
+  inventoryOn?: boolean;
+  defaultWarehouseId?: string;
   onContactSelect: (contactId: string) => void;
 }) {
   const update = (patch: Partial<CreateForm>) => setForm({ ...form, ...patch });
@@ -1094,6 +1097,8 @@ function OrderCreateForm({
                 subtotal={subtotal}
                 updateOrderItem={updateOrderItem}
                 removeOrderItem={removeOrderItem}
+                showWarehouse={inventoryOn}
+                defaultWarehouseId={defaultWarehouseId}
               />
             </div>
           )}
@@ -1199,6 +1204,8 @@ function OrderEditForm({
   quickCreatePending,
   priceTypeLabelById,
   walletOptions,
+  inventoryOn = false,
+  defaultWarehouseId = "",
   onContactSelect,
 }: {
   form: EditForm;
@@ -1216,6 +1223,8 @@ function OrderEditForm({
   quickCreatePending: boolean;
   priceTypeLabelById: Map<string, string>;
   walletOptions: Wallet[];
+  inventoryOn?: boolean;
+  defaultWarehouseId?: string;
   onContactSelect: (contactId: string) => void;
 }) {
   return (
@@ -1236,6 +1245,8 @@ function OrderEditForm({
       quickCreatePending={quickCreatePending}
       priceTypeLabelById={priceTypeLabelById}
       walletOptions={walletOptions}
+      inventoryOn={inventoryOn}
+      defaultWarehouseId={defaultWarehouseId}
       onContactSelect={onContactSelect}
     />
   );
@@ -1288,22 +1299,44 @@ function SelectedItemsPanel({
   subtotal,
   updateOrderItem,
   removeOrderItem,
+  showWarehouse = false,
+  defaultWarehouseId = "",
 }: {
   items: OrderItemForm[];
   subtotal: number;
   updateOrderItem: (index: number, patch: Partial<OrderItemForm>) => void;
   removeOrderItem: (index: number) => void;
+  showWarehouse?: boolean;
+  defaultWarehouseId?: string;
 }) {
+  const applyDefaultWarehouse = () => {
+    if (!defaultWarehouseId) return;
+    items.forEach((item, index) => {
+      if (!item.warehouseId) updateOrderItem(index, { warehouseId: defaultWarehouseId });
+    });
+  };
+
   return (
     <div className="rounded-lg border p-4">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="font-medium">Item pesanan</h3>
-          <p className="text-sm text-muted-foreground">Review item yang sudah dipilih sebelum simpan.</p>
+          <p className="text-sm text-muted-foreground">
+            {showWarehouse
+              ? "Pilih gudang pengambilan stok per baris sebelum simpan."
+              : "Review item yang sudah dipilih sebelum simpan."}
+          </p>
         </div>
-        <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
-          <span className="text-muted-foreground">Subtotal: </span>
-          <span className="font-medium">{formatRupiah(subtotal)}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          {showWarehouse && defaultWarehouseId ? (
+            <Button type="button" variant="outline" size="sm" onClick={applyDefaultWarehouse}>
+              Isi gudang default
+            </Button>
+          ) : null}
+          <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">Subtotal: </span>
+            <span className="font-medium">{formatRupiah(subtotal)}</span>
+          </div>
         </div>
       </div>
       {items.length === 0 ? (
@@ -1312,31 +1345,73 @@ function SelectedItemsPanel({
         </p>
       ) : (
         <div className="max-h-[440px] space-y-2 overflow-auto pr-1">
+          {showWarehouse ? (
+            <div className="hidden gap-2 px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(140px,0.45fr)_72px_minmax(100px,0.35fr)_auto] sm:items-center">
+              <span>Produk</span>
+              <span>Gudang</span>
+              <span>Qty</span>
+              <span>Harga</span>
+              <span />
+            </div>
+          ) : null}
           {items.map((item, index) => (
-            <div key={`${item.catalogItemId}-${index}`} className="rounded-md border p-3">
-              <div className="mb-2 min-w-0">
-                <p className="truncate text-sm font-medium">{item.name}</p>
-                <p className="text-xs text-muted-foreground">{item.externalCode || "Tanpa SKU"}</p>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-[88px_1fr_auto] sm:items-center">
-                <Input
-                  value={item.qty}
-                  onChange={(e) => updateOrderItem(index, { qty: e.target.value })}
-                  type="number"
-                  min="1"
-                  placeholder="Qty"
-                />
-                <Input
-                  value={item.unitPrice}
-                  onChange={(e) => updateOrderItem(index, { unitPrice: e.target.value })}
-                  type="number"
-                  min="0"
-                  placeholder="Harga"
-                />
-                <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => removeOrderItem(index)}>
-                  Hapus
-                </Button>
-              </div>
+            <div key={`${item.catalogItemId}-${item.lineId || index}`} className="rounded-md border p-3">
+              {showWarehouse ? (
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(140px,0.45fr)_72px_minmax(100px,0.35fr)_auto] sm:items-center">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">{item.externalCode || "Tanpa SKU"}</p>
+                  </div>
+                  <WarehouseSelect
+                    value={item.warehouseId}
+                    onChange={(warehouseId) => updateOrderItem(index, { warehouseId })}
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                  />
+                  <Input
+                    value={item.qty}
+                    onChange={(e) => updateOrderItem(index, { qty: e.target.value })}
+                    type="number"
+                    min="1"
+                    placeholder="Qty"
+                  />
+                  <Input
+                    value={item.unitPrice}
+                    onChange={(e) => updateOrderItem(index, { unitPrice: e.target.value })}
+                    type="number"
+                    min="0"
+                    placeholder="Harga"
+                  />
+                  <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => removeOrderItem(index)}>
+                    Hapus
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-2 min-w-0">
+                    <p className="truncate text-sm font-medium">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">{item.externalCode || "Tanpa SKU"}</p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-[88px_1fr_auto] sm:items-center">
+                    <Input
+                      value={item.qty}
+                      onChange={(e) => updateOrderItem(index, { qty: e.target.value })}
+                      type="number"
+                      min="1"
+                      placeholder="Qty"
+                    />
+                    <Input
+                      value={item.unitPrice}
+                      onChange={(e) => updateOrderItem(index, { unitPrice: e.target.value })}
+                      type="number"
+                      min="0"
+                      placeholder="Harga"
+                    />
+                    <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => removeOrderItem(index)}>
+                      Hapus
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -1395,14 +1470,30 @@ function OrderSummary({
 }
 
 // orderHasInsufficientStock returns true when any stock-tracked item on the order
-// exceeds available stock (stockMap only contains tracked catalog items).
-function orderHasInsufficientStock(order: Order, stockMap: Map<string, number>): boolean {
+// exceeds available stock at the chosen warehouse (or tenant default).
+function orderHasInsufficientStock(order: Order, stockRows: StockRow[], defaultWarehouseId: string): boolean {
   for (const it of order.items) {
     const id = it.catalogItemId;
-    if (!id || !stockMap.has(id)) continue;
-    if ((stockMap.get(id) ?? 0) < (it.qty ?? 0)) return true;
+    if (!id) continue;
+    const warehouseId = it.warehouseId || defaultWarehouseId;
+    const row = stockRows.find((r) => r.catalogItemId === id && (!warehouseId || r.warehouseId === warehouseId));
+    if (!row) continue;
+    if (row.available < (it.qty ?? 0)) return true;
   }
   return false;
+}
+
+function toOrderItemPayload(item: OrderItemForm): Order["items"][number] {
+  return {
+    lineId: item.lineId || undefined,
+    catalogItemId: item.catalogItemId,
+    externalCode: item.externalCode,
+    name: item.name,
+    qty: Number(item.qty || 1),
+    unitPrice: Number(item.unitPrice || 0),
+    sellUnit: item.sellUnit || undefined,
+    warehouseId: item.warehouseId || undefined,
+  };
 }
 
 function formatBuyerLabel(order: Order): string {

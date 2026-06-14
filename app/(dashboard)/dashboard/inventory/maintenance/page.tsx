@@ -20,6 +20,14 @@ import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-da
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { inventoryApi, formatIDR } from "@/lib/api/inventory";
+import {
+  InventoryTable,
+  InventoryTableBody,
+  InventoryTableCell,
+  InventoryTableHead,
+  InventoryTableHeader,
+  InventoryTableRow,
+} from "@/components/inventory/inventory-table";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 
@@ -173,13 +181,23 @@ function ValuationCard() {
         {byWarehouse.size === 0 ? (
           <p className="text-sm text-muted-foreground">Belum ada nilai persediaan.</p>
         ) : (
-          <div className="space-y-2">
-            {[...byWarehouse.entries()].map(([name, value]) => (
-              <div key={name} className="flex items-center justify-between rounded border p-3 text-sm">
-                <span>{name}</span>
-                <span className="font-medium">{formatIDR(value)}</span>
-              </div>
-            ))}
+          <div className="space-y-3">
+            <InventoryTable>
+              <InventoryTableHeader>
+                <InventoryTableRow>
+                  <InventoryTableHead>Gudang</InventoryTableHead>
+                  <InventoryTableHead align="right">Nilai</InventoryTableHead>
+                </InventoryTableRow>
+              </InventoryTableHeader>
+              <InventoryTableBody>
+                {[...byWarehouse.entries()].map(([name, value]) => (
+                  <InventoryTableRow key={name}>
+                    <InventoryTableCell>{name}</InventoryTableCell>
+                    <InventoryTableCell align="right" className="font-medium">{formatIDR(value)}</InventoryTableCell>
+                  </InventoryTableRow>
+                ))}
+              </InventoryTableBody>
+            </InventoryTable>
             <div className="flex items-center justify-between border-t pt-2 text-sm">
               <span className="font-semibold">Total</span>
               <span className="font-semibold">{formatIDR(total)}</span>

@@ -15,6 +15,15 @@ import { WarehouseSelect } from "@/components/inventory/warehouse-select";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
+import {
+  InventoryTable,
+  InventoryTableBody,
+  InventoryTableCell,
+  InventoryTableEmpty,
+  InventoryTableHead,
+  InventoryTableHeader,
+  InventoryTableRow,
+} from "@/components/inventory/inventory-table";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 
@@ -60,34 +69,32 @@ export default function BillsPage() {
       <Card className="mt-4">
         <CardHeader><CardTitle>Daftar Penerimaan</CardTitle></CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-left">No Bill</th>
-                  <th className="px-3 py-2 text-left">Supplier</th>
-                  <th className="px-3 py-2 text-right">Total</th>
-                  <th className="px-3 py-2 text-left">Tanggal</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {isLoading ? (
-                  <tr><td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">Memuat...</td></tr>
-                ) : bills.length === 0 ? (
-                  <tr><td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">Belum ada penerimaan.</td></tr>
-                ) : (
-                  bills.map((b) => (
-                    <tr key={b.id} className="cursor-pointer hover:bg-muted/40" onClick={() => setDetailId(b.id)}>
-                      <td className="px-3 py-2 font-medium text-primary">{b.billNo}</td>
-                      <td className="px-3 py-2">{b.supplierName || "-"}</td>
-                      <td className="px-3 py-2 text-right">{formatIDR(b.subtotal)}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">{b.transactionDate}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <InventoryTable>
+            <InventoryTableHeader>
+              <InventoryTableRow>
+                <InventoryTableHead>No Bill</InventoryTableHead>
+                <InventoryTableHead>Supplier</InventoryTableHead>
+                <InventoryTableHead align="right">Total</InventoryTableHead>
+                <InventoryTableHead>Tanggal</InventoryTableHead>
+              </InventoryTableRow>
+            </InventoryTableHeader>
+            <InventoryTableBody>
+              {isLoading ? (
+                <InventoryTableEmpty colSpan={4}>Memuat...</InventoryTableEmpty>
+              ) : bills.length === 0 ? (
+                <InventoryTableEmpty colSpan={4}>Belum ada penerimaan.</InventoryTableEmpty>
+              ) : (
+                bills.map((b) => (
+                  <InventoryTableRow key={b.id} className="cursor-pointer" onClick={() => setDetailId(b.id)}>
+                    <InventoryTableCell className="font-medium text-primary">{b.billNo}</InventoryTableCell>
+                    <InventoryTableCell>{b.supplierName || "-"}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatIDR(b.subtotal)}</InventoryTableCell>
+                    <InventoryTableCell className="text-xs text-muted-foreground">{b.transactionDate}</InventoryTableCell>
+                  </InventoryTableRow>
+                ))
+              )}
+            </InventoryTableBody>
+          </InventoryTable>
         </CardContent>
       </Card>
 
@@ -217,23 +224,26 @@ function BillDetailDialog({ id, onClose }: { id: string | null; onClose: () => v
               <Badge variant={bill.status === "posted" ? "success" : "destructive"}>{bill.status === "posted" ? "Diterima" : "Dibatalkan"}</Badge>
               <span className="text-muted-foreground">{bill.transactionDate}</span>
             </div>
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/60 text-xs uppercase text-muted-foreground">
-                  <tr><th className="px-3 py-2 text-left">Produk</th><th className="px-3 py-2 text-right">Qty</th><th className="px-3 py-2 text-right">Harga</th><th className="px-3 py-2 text-left">Batch</th></tr>
-                </thead>
-                <tbody className="divide-y">
-                  {bill.lines.map((l) => (
-                    <tr key={l.id}>
-                      <td className="px-3 py-2">{l.itemName}</td>
-                      <td className="px-3 py-2 text-right">{formatStockQty(l.qty)}</td>
-                      <td className="px-3 py-2 text-right">{formatIDR(l.unitCost)}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">{l.batchNo || "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <InventoryTable>
+              <InventoryTableHeader>
+                <InventoryTableRow>
+                  <InventoryTableHead>Produk</InventoryTableHead>
+                  <InventoryTableHead align="right">Qty</InventoryTableHead>
+                  <InventoryTableHead align="right">Harga</InventoryTableHead>
+                  <InventoryTableHead>Batch</InventoryTableHead>
+                </InventoryTableRow>
+              </InventoryTableHeader>
+              <InventoryTableBody>
+                {bill.lines.map((l) => (
+                  <InventoryTableRow key={l.id}>
+                    <InventoryTableCell>{l.itemName}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatStockQty(l.qty)}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatIDR(l.unitCost)}</InventoryTableCell>
+                    <InventoryTableCell className="text-xs text-muted-foreground">{l.batchNo || "-"}</InventoryTableCell>
+                  </InventoryTableRow>
+                ))}
+              </InventoryTableBody>
+            </InventoryTable>
             <p className="text-right text-sm">Total: <span className="font-semibold">{formatIDR(bill.subtotal)}</span></p>
           </div>
         ) : null}

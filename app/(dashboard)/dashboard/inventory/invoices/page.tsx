@@ -12,6 +12,15 @@ import { OrderPicker } from "@/components/inventory/order-picker";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
+import {
+  InventoryTable,
+  InventoryTableBody,
+  InventoryTableCell,
+  InventoryTableEmpty,
+  InventoryTableHead,
+  InventoryTableHeader,
+  InventoryTableRow,
+} from "@/components/inventory/inventory-table";
 import { type Order } from "@/lib/api/orders";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
@@ -59,36 +68,34 @@ export default function InvoicesPage() {
       <Card>
         <CardHeader><CardTitle>Daftar Faktur</CardTitle></CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-left">No Faktur</th>
-                  <th className="px-3 py-2 text-left">Status</th>
-                  <th className="px-3 py-2 text-right">Subtotal</th>
-                  <th className="px-3 py-2 text-right">HPP</th>
-                  <th className="px-3 py-2 text-left">Tanggal</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {isLoading ? (
-                  <tr><td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">Memuat...</td></tr>
-                ) : invoices.length === 0 ? (
-                  <tr><td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">Belum ada faktur.</td></tr>
-                ) : (
-                  invoices.map((inv) => (
-                    <tr key={inv.id} className="cursor-pointer hover:bg-muted/40" onClick={() => setDetailId(inv.id)}>
-                      <td className="px-3 py-2 font-medium text-primary">{inv.invoiceNo}</td>
-                      <td className="px-3 py-2"><Badge variant="secondary">{inv.status}</Badge></td>
-                      <td className="px-3 py-2 text-right">{formatIDR(inv.subtotal)}</td>
-                      <td className="px-3 py-2 text-right text-muted-foreground">{formatIDR(inv.totalCogs)}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">{inv.transactionDate}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <InventoryTable>
+            <InventoryTableHeader>
+              <InventoryTableRow>
+                <InventoryTableHead>No Faktur</InventoryTableHead>
+                <InventoryTableHead>Status</InventoryTableHead>
+                <InventoryTableHead align="right">Subtotal</InventoryTableHead>
+                <InventoryTableHead align="right">HPP</InventoryTableHead>
+                <InventoryTableHead>Tanggal</InventoryTableHead>
+              </InventoryTableRow>
+            </InventoryTableHeader>
+            <InventoryTableBody>
+              {isLoading ? (
+                <InventoryTableEmpty colSpan={5}>Memuat...</InventoryTableEmpty>
+              ) : invoices.length === 0 ? (
+                <InventoryTableEmpty colSpan={5}>Belum ada faktur.</InventoryTableEmpty>
+              ) : (
+                invoices.map((inv) => (
+                  <InventoryTableRow key={inv.id} className="cursor-pointer" onClick={() => setDetailId(inv.id)}>
+                    <InventoryTableCell className="font-medium text-primary">{inv.invoiceNo}</InventoryTableCell>
+                    <InventoryTableCell><Badge variant="secondary">{inv.status}</Badge></InventoryTableCell>
+                    <InventoryTableCell align="right">{formatIDR(inv.subtotal)}</InventoryTableCell>
+                    <InventoryTableCell align="right" className="text-muted-foreground">{formatIDR(inv.totalCogs)}</InventoryTableCell>
+                    <InventoryTableCell className="text-xs text-muted-foreground">{inv.transactionDate}</InventoryTableCell>
+                  </InventoryTableRow>
+                ))
+              )}
+            </InventoryTableBody>
+          </InventoryTable>
         </CardContent>
       </Card>
 
@@ -109,23 +116,26 @@ function InvoiceDetailDialog({ id, onClose }: { id: string | null; onClose: () =
         <DialogHeader><DialogTitle>{inv ? inv.invoiceNo : "Memuat..."}</DialogTitle></DialogHeader>
         {inv ? (
           <div className="space-y-3">
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/60 text-xs uppercase text-muted-foreground">
-                  <tr><th className="px-3 py-2 text-left">Produk</th><th className="px-3 py-2 text-right">Qty</th><th className="px-3 py-2 text-right">Harga</th><th className="px-3 py-2 text-right">HPP</th></tr>
-                </thead>
-                <tbody className="divide-y">
-                  {inv.lines.map((l, i) => (
-                    <tr key={i}>
-                      <td className="px-3 py-2">{l.description}</td>
-                      <td className="px-3 py-2 text-right">{formatStockQty(l.qty)}</td>
-                      <td className="px-3 py-2 text-right">{formatIDR(l.unitPrice)}</td>
-                      <td className="px-3 py-2 text-right text-muted-foreground">{formatIDR(l.cogs)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <InventoryTable>
+              <InventoryTableHeader>
+                <InventoryTableRow>
+                  <InventoryTableHead>Produk</InventoryTableHead>
+                  <InventoryTableHead align="right">Qty</InventoryTableHead>
+                  <InventoryTableHead align="right">Harga</InventoryTableHead>
+                  <InventoryTableHead align="right">HPP</InventoryTableHead>
+                </InventoryTableRow>
+              </InventoryTableHeader>
+              <InventoryTableBody>
+                {inv.lines.map((l, i) => (
+                  <InventoryTableRow key={i}>
+                    <InventoryTableCell>{l.description}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatStockQty(l.qty)}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatIDR(l.unitPrice)}</InventoryTableCell>
+                    <InventoryTableCell align="right" className="text-muted-foreground">{formatIDR(l.cogs)}</InventoryTableCell>
+                  </InventoryTableRow>
+                ))}
+              </InventoryTableBody>
+            </InventoryTable>
             <div className="flex justify-end gap-6 text-sm">
               <span>Subtotal: <span className="font-semibold">{formatIDR(inv.subtotal)}</span></span>
               <span className="text-muted-foreground">Total HPP: {formatIDR(inv.totalCogs)}</span>

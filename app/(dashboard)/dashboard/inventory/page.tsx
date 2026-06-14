@@ -10,6 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
+import {
+  InventoryTable,
+  InventoryTableBody,
+  InventoryTableCell,
+  InventoryTableEmpty,
+  InventoryTableHead,
+  InventoryTableHeader,
+  InventoryTableRow,
+} from "@/components/inventory/inventory-table";
 import { cn } from "@/lib/utils";
 
 export default function InventoryStockPage() {
@@ -113,54 +122,52 @@ export default function InventoryStockPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-left">Produk</th>
-                  <th className="px-3 py-2 text-left">Gudang</th>
-                  <th className="px-3 py-2 text-right">On hand</th>
-                  <th className="px-3 py-2 text-right">Tersedia</th>
-                  <th className="px-3 py-2 text-right">HPP/unit</th>
-                  <th className="px-3 py-2 text-right">Nilai</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {isLoading ? (
-                  <tr><td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">Memuat...</td></tr>
-                ) : rows.length === 0 ? (
-                  <tr><td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">Belum ada stok.</td></tr>
-                ) : (
-                  rows.map((r) => (
-                    <tr key={`${r.catalogItemId}-${r.warehouseId}`} className="hover:bg-muted/40">
-                      <td className="px-3 py-2">
-                        <Link
-                          href={`/dashboard/inventory/movements?catalogItemId=${r.catalogItemId}`}
-                          className="font-medium text-primary underline-offset-4 hover:underline"
-                        >
-                          {r.itemName || r.externalCode || "Produk"}
-                        </Link>
-                        <p className="text-xs text-muted-foreground">{r.externalCode}</p>
-                      </td>
-                      <td className="px-3 py-2">{r.warehouseName}</td>
-                      <td className="px-3 py-2 text-right">{formatStockQty(r.onHand)}</td>
-                      <td className="px-3 py-2 text-right">
-                        {r.available <= 0 ? (
-                          <Badge variant="destructive">Habis</Badge>
-                        ) : r.reserved > 0 ? (
-                          <Badge variant="secondary">{formatStockQty(r.available)} tersedia</Badge>
-                        ) : (
-                          formatStockQty(r.available)
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-right">{formatIDR(r.avgUnitCost)}</td>
-                      <td className="px-3 py-2 text-right">{formatIDR(r.totalValue)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <InventoryTable>
+            <InventoryTableHeader>
+              <InventoryTableRow>
+                <InventoryTableHead>Produk</InventoryTableHead>
+                <InventoryTableHead>Gudang</InventoryTableHead>
+                <InventoryTableHead align="right">On hand</InventoryTableHead>
+                <InventoryTableHead align="right">Tersedia</InventoryTableHead>
+                <InventoryTableHead align="right">HPP/unit</InventoryTableHead>
+                <InventoryTableHead align="right">Nilai</InventoryTableHead>
+              </InventoryTableRow>
+            </InventoryTableHeader>
+            <InventoryTableBody>
+              {isLoading ? (
+                <InventoryTableEmpty colSpan={6}>Memuat...</InventoryTableEmpty>
+              ) : rows.length === 0 ? (
+                <InventoryTableEmpty colSpan={6}>Belum ada stok.</InventoryTableEmpty>
+              ) : (
+                rows.map((r) => (
+                  <InventoryTableRow key={`${r.catalogItemId}-${r.warehouseId}`}>
+                    <InventoryTableCell>
+                      <Link
+                        href={`/dashboard/inventory/movements?catalogItemId=${r.catalogItemId}`}
+                        className="font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        {r.itemName || r.externalCode || "Produk"}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">{r.externalCode}</p>
+                    </InventoryTableCell>
+                    <InventoryTableCell>{r.warehouseName}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatStockQty(r.onHand)}</InventoryTableCell>
+                    <InventoryTableCell align="right">
+                      {r.available <= 0 ? (
+                        <Badge variant="destructive">Habis</Badge>
+                      ) : r.reserved > 0 ? (
+                        <Badge variant="secondary">{formatStockQty(r.available)} tersedia</Badge>
+                      ) : (
+                        formatStockQty(r.available)
+                      )}
+                    </InventoryTableCell>
+                    <InventoryTableCell align="right">{formatIDR(r.avgUnitCost)}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatIDR(r.totalValue)}</InventoryTableCell>
+                  </InventoryTableRow>
+                ))
+              )}
+            </InventoryTableBody>
+          </InventoryTable>
         </CardContent>
       </Card>
     </RequireTenantDashboard>

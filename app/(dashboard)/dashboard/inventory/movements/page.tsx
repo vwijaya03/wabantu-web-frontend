@@ -8,6 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { inventoryApi, formatIDR, formatStockQty, movementTypeLabel } from "@/lib/api/inventory";
+import {
+  InventoryTable,
+  InventoryTableBody,
+  InventoryTableCell,
+  InventoryTableEmpty,
+  InventoryTableHead,
+  InventoryTableHeader,
+  InventoryTableRow,
+} from "@/components/inventory/inventory-table";
 
 function MovementsContent() {
   const searchParams = useSearchParams();
@@ -44,48 +53,46 @@ function MovementsContent() {
         </select>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-left">Tanggal</th>
-                <th className="px-3 py-2 text-left">Produk</th>
-                <th className="px-3 py-2 text-left">Gudang</th>
-                <th className="px-3 py-2 text-left">Tipe</th>
-                <th className="px-3 py-2 text-right">Qty</th>
-                <th className="px-3 py-2 text-right">HPP/unit</th>
-                <th className="px-3 py-2 text-right">Total</th>
-                <th className="px-3 py-2 text-right">Saldo</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {isLoading ? (
-                <tr><td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">Memuat...</td></tr>
-              ) : rows.length === 0 ? (
-                <tr><td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">Belum ada pergerakan.</td></tr>
-              ) : (
-                rows.map((m) => (
-                  <tr key={m.id} className="hover:bg-muted/40">
-                    <td className="px-3 py-2 whitespace-nowrap text-xs text-muted-foreground">
-                      {new Date(m.createdAt).toLocaleString("id-ID")}
-                    </td>
-                    <td className="px-3 py-2">{m.itemName}</td>
-                    <td className="px-3 py-2">{m.warehouseName}</td>
-                    <td className="px-3 py-2">
-                      <Badge variant={m.direction === "in" ? "success" : "secondary"}>{movementTypeLabel(m.movementType)}</Badge>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      {m.direction === "in" ? "+" : "-"}{formatStockQty(m.qty)}
-                    </td>
-                    <td className="px-3 py-2 text-right">{formatIDR(m.unitCost)}</td>
-                    <td className="px-3 py-2 text-right">{formatIDR(m.totalCost)}</td>
-                    <td className="px-3 py-2 text-right">{formatStockQty(m.qtyAfter)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <InventoryTable>
+          <InventoryTableHeader>
+            <InventoryTableRow>
+              <InventoryTableHead>Tanggal</InventoryTableHead>
+              <InventoryTableHead>Produk</InventoryTableHead>
+              <InventoryTableHead>Gudang</InventoryTableHead>
+              <InventoryTableHead>Tipe</InventoryTableHead>
+              <InventoryTableHead align="right">Qty</InventoryTableHead>
+              <InventoryTableHead align="right">HPP/unit</InventoryTableHead>
+              <InventoryTableHead align="right">Total</InventoryTableHead>
+              <InventoryTableHead align="right">Saldo</InventoryTableHead>
+            </InventoryTableRow>
+          </InventoryTableHeader>
+          <InventoryTableBody>
+            {isLoading ? (
+              <InventoryTableEmpty colSpan={8}>Memuat...</InventoryTableEmpty>
+            ) : rows.length === 0 ? (
+              <InventoryTableEmpty colSpan={8}>Belum ada pergerakan.</InventoryTableEmpty>
+            ) : (
+              rows.map((m) => (
+                <InventoryTableRow key={m.id}>
+                  <InventoryTableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                    {new Date(m.createdAt).toLocaleString("id-ID")}
+                  </InventoryTableCell>
+                  <InventoryTableCell>{m.itemName}</InventoryTableCell>
+                  <InventoryTableCell>{m.warehouseName}</InventoryTableCell>
+                  <InventoryTableCell>
+                    <Badge variant={m.direction === "in" ? "success" : "secondary"}>{movementTypeLabel(m.movementType)}</Badge>
+                  </InventoryTableCell>
+                  <InventoryTableCell align="right">
+                    {m.direction === "in" ? "+" : "-"}{formatStockQty(m.qty)}
+                  </InventoryTableCell>
+                  <InventoryTableCell align="right">{formatIDR(m.unitCost)}</InventoryTableCell>
+                  <InventoryTableCell align="right">{formatIDR(m.totalCost)}</InventoryTableCell>
+                  <InventoryTableCell align="right">{formatStockQty(m.qtyAfter)}</InventoryTableCell>
+                </InventoryTableRow>
+              ))
+            )}
+          </InventoryTableBody>
+        </InventoryTable>
       </CardContent>
     </Card>
   );

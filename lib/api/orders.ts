@@ -8,6 +8,7 @@ export interface Order {
   contactDisplayName?: string;
   contactPhone?: string;
   items: Array<{
+    lineId?: string;
     catalogItemId?: string;
     externalCode?: string;
     name: string;
@@ -17,6 +18,7 @@ export interface Order {
     qty: number;
     unitPrice: number;
     sellUnit?: string;
+    warehouseId?: string;
   }>;
   status: string;
   notes?: string;

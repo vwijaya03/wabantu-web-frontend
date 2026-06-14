@@ -15,6 +15,15 @@ import { WarehouseSelect } from "@/components/inventory/warehouse-select";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
+import {
+  InventoryTable,
+  InventoryTableBody,
+  InventoryTableCell,
+  InventoryTableEmpty,
+  InventoryTableHead,
+  InventoryTableHeader,
+  InventoryTableRow,
+} from "@/components/inventory/inventory-table";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 
@@ -63,36 +72,34 @@ export default function PurchaseOrdersPage() {
       <Card className="mt-4">
         <CardHeader><CardTitle>Daftar PO</CardTitle></CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-left">No PO</th>
-                  <th className="px-3 py-2 text-left">Supplier</th>
-                  <th className="px-3 py-2 text-left">Status</th>
-                  <th className="px-3 py-2 text-right">Total</th>
-                  <th className="px-3 py-2 text-left">Tanggal</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {isLoading ? (
-                  <tr><td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">Memuat...</td></tr>
-                ) : orders.length === 0 ? (
-                  <tr><td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">Belum ada PO.</td></tr>
-                ) : (
-                  orders.map((po) => (
-                    <tr key={po.id} className="cursor-pointer hover:bg-muted/40" onClick={() => setDetailId(po.id)}>
-                      <td className="px-3 py-2 font-medium text-primary">{po.poNo}</td>
-                      <td className="px-3 py-2">{po.supplierName || "-"}</td>
-                      <td className="px-3 py-2">{poStatusBadge(po.status)}</td>
-                      <td className="px-3 py-2 text-right">{formatIDR(po.subtotal)}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">{po.transactionDate}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <InventoryTable>
+            <InventoryTableHeader>
+              <InventoryTableRow>
+                <InventoryTableHead>No PO</InventoryTableHead>
+                <InventoryTableHead>Supplier</InventoryTableHead>
+                <InventoryTableHead>Status</InventoryTableHead>
+                <InventoryTableHead align="right">Total</InventoryTableHead>
+                <InventoryTableHead>Tanggal</InventoryTableHead>
+              </InventoryTableRow>
+            </InventoryTableHeader>
+            <InventoryTableBody>
+              {isLoading ? (
+                <InventoryTableEmpty colSpan={5}>Memuat...</InventoryTableEmpty>
+              ) : orders.length === 0 ? (
+                <InventoryTableEmpty colSpan={5}>Belum ada PO.</InventoryTableEmpty>
+              ) : (
+                orders.map((po) => (
+                  <InventoryTableRow key={po.id} className="cursor-pointer" onClick={() => setDetailId(po.id)}>
+                    <InventoryTableCell className="font-medium text-primary">{po.poNo}</InventoryTableCell>
+                    <InventoryTableCell>{po.supplierName || "-"}</InventoryTableCell>
+                    <InventoryTableCell>{poStatusBadge(po.status)}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatIDR(po.subtotal)}</InventoryTableCell>
+                    <InventoryTableCell className="text-xs text-muted-foreground">{po.transactionDate}</InventoryTableCell>
+                  </InventoryTableRow>
+                ))
+              )}
+            </InventoryTableBody>
+          </InventoryTable>
         </CardContent>
       </Card>
 
@@ -176,23 +183,26 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
         {po ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm">{poStatusBadge(po.status)}<span className="text-muted-foreground">{po.transactionDate}</span></div>
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/60 text-xs uppercase text-muted-foreground">
-                  <tr><th className="px-3 py-2 text-left">Produk</th><th className="px-3 py-2 text-right">Dipesan</th><th className="px-3 py-2 text-right">Diterima</th><th className="px-3 py-2 text-right">Harga</th></tr>
-                </thead>
-                <tbody className="divide-y">
-                  {po.lines.map((l) => (
-                    <tr key={l.id}>
-                      <td className="px-3 py-2">{l.itemName}</td>
-                      <td className="px-3 py-2 text-right">{formatStockQty(l.qtyOrdered)}</td>
-                      <td className="px-3 py-2 text-right">{formatStockQty(l.qtyReceived ?? 0)}</td>
-                      <td className="px-3 py-2 text-right">{formatIDR(l.unitCost)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <InventoryTable>
+              <InventoryTableHeader>
+                <InventoryTableRow>
+                  <InventoryTableHead>Produk</InventoryTableHead>
+                  <InventoryTableHead align="right">Dipesan</InventoryTableHead>
+                  <InventoryTableHead align="right">Diterima</InventoryTableHead>
+                  <InventoryTableHead align="right">Harga</InventoryTableHead>
+                </InventoryTableRow>
+              </InventoryTableHeader>
+              <InventoryTableBody>
+                {po.lines.map((l) => (
+                  <InventoryTableRow key={l.id}>
+                    <InventoryTableCell>{l.itemName}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatStockQty(l.qtyOrdered)}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatStockQty(l.qtyReceived ?? 0)}</InventoryTableCell>
+                    <InventoryTableCell align="right">{formatIDR(l.unitCost)}</InventoryTableCell>
+                  </InventoryTableRow>
+                ))}
+              </InventoryTableBody>
+            </InventoryTable>
             <p className="text-right text-sm">Total: <span className="font-semibold">{formatIDR(po.subtotal)}</span></p>
             {canManage && (po.status === "open" || po.status === "partial") ? (
               <div className="flex justify-end gap-2">
