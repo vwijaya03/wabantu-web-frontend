@@ -13,6 +13,8 @@ Sidebar grup **Persediaan**:
 |------|---------|--------|
 | **Stok** | `/dashboard/inventory` | KPI (nilai persediaan, stok habis) + saldo per gudang |
 | **Operasi Stok** | `/dashboard/inventory/operations` | Penyesuaian ±, transfer, saldo awal, revaluasi HPP |
+| **Pembelian (PO)** | `/dashboard/inventory/purchase-orders` | Rencana beli ke supplier (partial receive) |
+| **Penerimaan** | `/dashboard/inventory/bills` | Terima barang → stok masuk (bisa dari PO) |
 | **Pergerakan** | `/dashboard/inventory/movements` | Kartu stok: semua mutasi + HPP per transaksi |
 | **Gudang** | `/dashboard/inventory/warehouses` | Kelola lokasi gudang |
 | **Setup HPP** | `/dashboard/inventory/setup` | Wizard metode HPP + aktivasi modul |
@@ -48,9 +50,15 @@ Halaman **Operasi Stok** menyatukan 4 aksi dengan pola aman:
 - Stok hanya dihitung untuk item yang diaktifkan pelacakannya _(menyusul: toggle di Katalog)_.
 - Pesanan dibatalkan → stok kembali otomatis.
 
+## Pembelian → Penerimaan
+
+- **Pembelian (PO)**: buat rencana beli (supplier, gudang, baris item + harga). Status:
+  Terbuka → Sebagian diterima → Diterima penuh; bisa Tutup/Batal.
+- **Penerimaan (Bill)**: terima barang. Pilih PO untuk prefill sisa, atau input manual.
+  Saat disimpan: **stok bertambah + HPP tercatat**, qty diterima PO ter-update otomatis.
+
 ## Menyusul (PR frontend berikutnya)
 
-- Purchase Order & Penerimaan Barang (Bill).
 - Faktur & Retur Penjualan.
 - Bundle (paket), config item (metode per item, batch/expiry).
 - Laporan nilai persediaan & margin.
