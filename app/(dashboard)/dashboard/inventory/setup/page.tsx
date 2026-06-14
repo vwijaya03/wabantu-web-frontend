@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   Bot,
+  ExternalLink,
   Loader2,
   MessageSquare,
   Scale,
@@ -14,7 +16,6 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -189,16 +190,6 @@ export default function InventorySetupPage() {
     onSuccess: () => {
       toast.success("Metode HPP diterapkan");
       setMethodApplied(true);
-      void qc.invalidateQueries({ queryKey: ["inventory", "setting"] });
-    },
-    onError: (e) => toast.error(toApiError(e).message),
-  });
-
-  const toggleMut = useMutation({
-    mutationFn: (input: { blockNegativeStock?: boolean; purchasePostsExpense?: boolean }) =>
-      inventoryApi.updateSetting(input),
-    onSuccess: () => {
-      toast.success("Pengaturan disimpan");
       void qc.invalidateQueries({ queryKey: ["inventory", "setting"] });
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -529,57 +520,33 @@ export default function InventorySetupPage() {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Kebijakan & metode manual</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Kebijakan operasional</CardTitle>
+                <CardDescription>
+                  Blokir stok minus & mode cashflow diatur di halaman pengaturan — tidak perlu diisi saat wawancara.
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Anda tetap bisa memilih metode secara manual tanpa menunggu rekomendasi AI.
-                </p>
-                <div>
-                  <Label>Metode HPP default</Label>
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    {(["fifo", "lifo", "average"] as CostingMethod[]).map((m) => (
-                      <Button
-                        key={m}
-                        size="sm"
-                        variant={setting?.defaultCostingMethod === m ? "default" : "outline"}
-                        onClick={() => applyMethodMut.mutate(m)}
-                        disabled={applyMethodMut.isPending}
-                      >
-                        {m.toUpperCase()}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={setting?.blockNegativeStock ?? true}
-                    onChange={(e) => toggleMut.mutate({ blockNegativeStock: e.target.checked })}
-                  />
-                  <span>
-                    <span className="font-medium">Blokir stok minus</span>
-                    <br />
-                    <span className="text-muted-foreground">Pesanan tidak bisa diproses jika stok tidak cukup.</span>
-                  </span>
-                </label>
-                <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={setting?.purchasePostsExpense ?? false}
-                    onChange={(e) => toggleMut.mutate({ purchasePostsExpense: e.target.checked })}
-                  />
-                  <span>
-                    <span className="font-medium">Mode cashflow (beli = biaya langsung)</span>
-                    <br />
-                    <span className="text-muted-foreground">
-                      Nonaktif (disarankan): nilai persediaan naik saat beli, HPP muncul saat terjual.
+              <CardContent className="space-y-3 text-sm">
+                <ul className="space-y-1.5 text-muted-foreground">
+                  <li>
+                    Blokir stok minus:{" "}
+                    <span className="font-medium text-foreground">
+                      {setting?.blockNegativeStock ?? true ? "Aktif" : "Nonaktif"}
                     </span>
-                  </span>
-                </label>
+                  </li>
+                  <li>
+                    Mode cashflow:{" "}
+                    <span className="font-medium text-foreground">
+                      {setting?.purchasePostsExpense ? "Aktif" : "Nonaktif (disarankan)"}
+                    </span>
+                  </li>
+                </ul>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/dashboard/inventory/settings">
+                    Buka Pengaturan Persediaan
+                    <ExternalLink className="ml-2 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           </div>
