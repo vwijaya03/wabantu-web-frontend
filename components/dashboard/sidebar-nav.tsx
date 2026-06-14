@@ -28,6 +28,7 @@ import {
   Boxes,
   Warehouse,
   ArrowLeftRight,
+  ScrollText,
   Wand2,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -79,7 +80,8 @@ const tenantNavGroups: Array<{
     label: "Persediaan",
     items: [
       { href: "/dashboard/inventory", label: "Stok", icon: Boxes },
-      { href: "/dashboard/inventory/movements", label: "Pergerakan", icon: ArrowLeftRight },
+      { href: "/dashboard/inventory/operations", label: "Operasi Stok", icon: ArrowLeftRight },
+      { href: "/dashboard/inventory/movements", label: "Pergerakan", icon: ScrollText },
       { href: "/dashboard/inventory/warehouses", label: "Gudang", icon: Warehouse },
       { href: "/dashboard/inventory/setup", label: "Setup HPP", icon: Wand2 },
     ],

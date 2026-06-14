@@ -11,10 +11,21 @@ Sidebar grup **Persediaan**:
 
 | Menu | Halaman | Fungsi |
 |------|---------|--------|
-| **Stok** | `/dashboard/inventory` | Saldo stok & nilai persediaan per gudang |
+| **Stok** | `/dashboard/inventory` | KPI (nilai persediaan, stok habis) + saldo per gudang |
+| **Operasi Stok** | `/dashboard/inventory/operations` | Penyesuaian ±, transfer, saldo awal, revaluasi HPP |
 | **Pergerakan** | `/dashboard/inventory/movements` | Kartu stok: semua mutasi + HPP per transaksi |
 | **Gudang** | `/dashboard/inventory/warehouses` | Kelola lokasi gudang |
 | **Setup HPP** | `/dashboard/inventory/setup` | Wizard metode HPP + aktivasi modul |
+
+## Operasi Stok (UX)
+
+Halaman **Operasi Stok** menyatukan 4 aksi dengan pola aman:
+- **Penyesuaian ±**: pilih tambah/kurangi, wajib isi **alasan** (audit), tampil stok &
+  peringatan bila melebihi stok.
+- **Transfer**: alur gudang asal → tujuan dengan **dialog konfirmasi** ("Transfer N X
+  dari A ke B?").
+- **Saldo Awal**: input banyak baris sekaligus; item otomatis mulai dilacak.
+- **Revaluasi HPP**: tampil **pratinjau selisih** nilai + dialog konfirmasi sebelum disimpan.
 
 ## Langkah pertama (owner)
 
@@ -39,7 +50,6 @@ Sidebar grup **Persediaan**:
 
 ## Menyusul (PR frontend berikutnya)
 
-- Penyesuaian stok (±), transfer antar gudang, saldo awal (form/CSV), revaluasi HPP.
 - Purchase Order & Penerimaan Barang (Bill).
 - Faktur & Retur Penjualan.
 - Bundle (paket), config item (metode per item, batch/expiry).
