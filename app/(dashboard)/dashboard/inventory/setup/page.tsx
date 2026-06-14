@@ -30,6 +30,8 @@ import {
 } from "@/lib/api/inventory";
 import {
   inventorySetupInterviewApi,
+  mergeInvSetupSession,
+  normalizeInvSetupSession,
   type InvSetupInterviewSession,
 } from "@/lib/api/inventory-setup-interview";
 import { COSTING_METHOD_GUIDES } from "@/lib/inventory/costing-guide";
@@ -103,33 +105,6 @@ function SkipAverageHint({ onSetAverage, disabled }: { onSetAverage: () => void;
   );
 }
 
-function normalizeInvSetupSession(
-  data: Partial<InvSetupInterviewSession> & Pick<InvSetupInterviewSession, "sessionId">,
-): InvSetupInterviewSession {
-  return {
-    sessionId: data.sessionId,
-    phase: data.phase ?? "intro",
-    messages: data.messages ?? [],
-    answersDraft: data.answersDraft ?? {
-      perishable: false,
-      needBatchTracking: false,
-      highVolumeUniform: false,
-      priceVolatile: false,
-      usesExpiryDates: false,
-      seasonalStock: false,
-      businessType: "",
-      productDescription: "",
-      stockTurnover: "",
-      priceTrend: "",
-      ownerNotes: "",
-    },
-    readyForRecommendation: data.readyForRecommendation ?? false,
-    tokenQuotaRemaining: data.tokenQuotaRemaining ?? 0,
-    tokenQuotaLimit: data.tokenQuotaLimit ?? 0,
-    quotaNotice: data.quotaNotice ?? "",
-  };
-}
-
 function scrollChatContainer(el: HTMLDivElement | null, force = false) {
   if (!el) return;
   const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 96;
@@ -176,12 +151,24 @@ export default function InventorySetupPage() {
     mutationFn: (message: string) => inventorySetupInterviewApi.sendMessage(session!.sessionId, message),
     onSuccess: (data) => {
       stickChatToBottomRef.current = true;
-      setSession(normalizeInvSetupSession(data));
+      setSession((prev) => mergeInvSetupSession(prev, data));
       if (data.tokensUsed > 0) {
         toast.success(`Balasan AI (${data.tokensUsed} token)`, { duration: 2500 });
       }
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => {
+      const err = toApiError(e);
+      toast.error(err.message);
+      const sessionLost =
+        err.status === 404 ||
+        /tidak ditemukan|kedaluwarsa/i.test(err.message);
+      if (sessionLost && step === 2) {
+        startMut.reset();
+        setSession(null);
+        toast.info("Sesi chat kedaluwarsa — memulai sesi baru…");
+        startMut.mutate();
+      }
+    },
   });
 
   const finishMut = useMutation({
@@ -227,10 +214,10 @@ export default function InventorySetupPage() {
   });
 
   useEffect(() => {
-    if (step !== 2 || !canManage || session || startMut.isPending || startMut.isSuccess) return;
+    if (step !== 2 || !canManage || session || startMut.isPending) return;
     startMut.mutate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- start once when entering step 2
-  }, [step, canManage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- start when entering step 2 without session
+  }, [step, canManage, session, startMut.isPending]);
 
   useEffect(() => {
     const el = chatScrollRef.current;
@@ -276,6 +263,7 @@ export default function InventorySetupPage() {
     setSession(null);
     setRec(null);
     setMethodApplied(false);
+    startMut.reset();
     setStep(2);
   };
 
