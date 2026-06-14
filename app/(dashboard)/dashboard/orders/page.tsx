@@ -31,6 +31,12 @@ import { WarehouseSelect } from "@/components/inventory/warehouse-select";
 import { financeApi, type Wallet } from "@/lib/api/finance";
 import { NO_WALLET } from "@/lib/finance/utils";
 import { formatOrderNumber } from "@/lib/format-order-number";
+import {
+  formatOrderWarehouseSummary,
+  normalizeLineWarehouses,
+  warehouseLabel,
+  warehouseNameMap,
+} from "@/lib/orders/fulfillment";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -48,8 +54,8 @@ const ORDER_STATUSES = [
 
 const ORDER_FORM_STEPS = [
   { value: "contact", label: "1. Contact" },
-  { value: "items", label: "2. Produk" },
-  { value: "details", label: "3. Pengiriman" },
+  { value: "items", label: "2. Produk & Gudang" },
+  { value: "details", label: "3. Pengiriman & Bayar" },
 ] as const;
 
 type OrderFormStep = (typeof ORDER_FORM_STEPS)[number]["value"];
@@ -69,6 +75,7 @@ type CreateForm = {
   courier: string;
   shippingCost: string;
   incomeWalletId: string;
+  fulfillmentWarehouseId: string;
 };
 
 type OrderItemForm = {
@@ -97,6 +104,7 @@ type EditForm = {
   courier: string;
   shippingCost: string;
   incomeWalletId: string;
+  fulfillmentWarehouseId: string;
 };
 
 const emptyCreateForm: CreateForm = {
@@ -114,6 +122,7 @@ const emptyCreateForm: CreateForm = {
   courier: "",
   shippingCost: "",
   incomeWalletId: NO_WALLET,
+  fulfillmentWarehouseId: "",
 };
 
 export default function OrdersPage() {
@@ -148,6 +157,7 @@ export default function OrdersPage() {
     courier: "",
     shippingCost: "",
     incomeWalletId: NO_WALLET,
+    fulfillmentWarehouseId: "",
   });
 
   const { data, isLoading, isFetching, refetch } = useQuery({
@@ -232,12 +242,13 @@ export default function OrdersPage() {
   const { data: warehousesData } = useQuery({
     queryKey: ["inventory", "warehouses"],
     queryFn: () => inventoryApi.listWarehouses(),
-    enabled: inventoryOn,
   });
+  const warehouses = useMemo(() => warehousesData?.warehouses ?? [], [warehousesData]);
+  const hasWarehouses = warehouses.length > 0;
+  const warehouseNames = useMemo(() => warehouseNameMap(warehouses), [warehouses]);
   const defaultWarehouseId = useMemo(() => {
-    const list = warehousesData?.warehouses ?? [];
-    return list.find((w) => w.isDefault)?.id ?? list[0]?.id ?? "";
-  }, [warehousesData]);
+    return warehouses.find((w) => w.isDefault)?.id ?? warehouses[0]?.id ?? "";
+  }, [warehouses]);
   const { data: stockOverview } = useQuery({
     queryKey: ["inventory", "stock", "orders-overview"],
     queryFn: () => inventoryApi.listStock({ pageSize: 500 }),
@@ -256,9 +267,14 @@ export default function OrdersPage() {
   };
 
   const createMut = useMutation({
-    mutationFn: () =>
-      ordersApi.create({
-        items: createForm.items.map((item) => toOrderItemPayload(item)),
+    mutationFn: () => {
+      const fallbackWh = createForm.fulfillmentWarehouseId || defaultWarehouseId;
+      const items = normalizeLineWarehouses(createForm.items, fallbackWh);
+      if (hasWarehouses && items.some((item) => !item.warehouseId)) {
+        throw new Error("Pilih gudang untuk setiap item pesanan");
+      }
+      return ordersApi.create({
+        items: items.map((item) => toOrderItemPayload(item, fallbackWh)),
         contactId: optionalString(createForm.contactId),
         notes: optionalString(createForm.notes),
         status: createForm.status,
@@ -269,7 +285,8 @@ export default function OrdersPage() {
           createForm.incomeWalletId && createForm.incomeWalletId !== NO_WALLET
             ? createForm.incomeWalletId
             : undefined,
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success("Pesanan ditambahkan");
       setCreateForm(emptyCreateForm);
@@ -327,11 +344,16 @@ export default function OrdersPage() {
   });
 
   const updateMut = useMutation({
-    mutationFn: () =>
-      ordersApi.update(editOrder!.id, {
+    mutationFn: () => {
+      const fallbackWh = editForm.fulfillmentWarehouseId || defaultWarehouseId;
+      const items = normalizeLineWarehouses(editForm.items, fallbackWh);
+      if (hasWarehouses && items.some((item) => !item.warehouseId)) {
+        throw new Error("Pilih gudang untuk setiap item pesanan");
+      }
+      return ordersApi.update(editOrder!.id, {
         contactId: editForm.contactId.trim(),
         notes: editForm.notes.trim(),
-        items: editForm.items.map((item) => toOrderItemPayload(item)),
+        items: items.map((item) => toOrderItemPayload(item, fallbackWh)),
         status: editForm.status,
         trackingNumber: optionalString(editForm.trackingNumber),
         courier: optionalString(editForm.courier),
@@ -340,7 +362,8 @@ export default function OrdersPage() {
           editForm.incomeWalletId && editForm.incomeWalletId !== NO_WALLET
             ? editForm.incomeWalletId
             : "",
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success("Pesanan diperbarui");
       setEditOrder(null);
@@ -437,6 +460,8 @@ export default function OrdersPage() {
       courier: order.courier ?? "",
       shippingCost: order.shippingCost ? String(order.shippingCost) : "",
       incomeWalletId: order.incomeWalletId || NO_WALLET,
+      fulfillmentWarehouseId:
+        order.items.find((item) => item.warehouseId)?.warehouseId ?? defaultWarehouseId,
     });
   };
 
@@ -487,6 +512,7 @@ export default function OrdersPage() {
   };
 
   const addCatalogItem = (item: CatalogItem) => {
+    const wh = createForm.fulfillmentWarehouseId || defaultWarehouseId;
     setCreateForm((form) => {
       if (form.items.some((row) => row.catalogItemId === item.id)) return form;
       return {
@@ -501,7 +527,7 @@ export default function OrdersPage() {
             qty: "1",
             unitPrice: String(catalogDisplayPrice(item)),
             sellUnit: item.sellUnit ?? "",
-            warehouseId: defaultWarehouseId,
+            warehouseId: wh,
           },
         ],
       };
@@ -509,6 +535,7 @@ export default function OrdersPage() {
   };
 
   const addCatalogItemToEdit = (item: CatalogItem) => {
+    const wh = editForm.fulfillmentWarehouseId || defaultWarehouseId;
     setEditForm((form) => {
       if (form.items.some((row) => row.catalogItemId === item.id)) return form;
       return {
@@ -523,7 +550,7 @@ export default function OrdersPage() {
             qty: "1",
             unitPrice: String(catalogDisplayPrice(item)),
             sellUnit: item.sellUnit ?? "",
-            warehouseId: defaultWarehouseId,
+            warehouseId: wh,
           },
         ],
       };
@@ -568,6 +595,7 @@ export default function OrdersPage() {
             onClick={() => {
               setCreateContactPage(1);
               setCreateCatalogPage(1);
+              setCreateForm({ ...emptyCreateForm, fulfillmentWarehouseId: defaultWarehouseId });
               setCreateOpen(true);
             }}
             disabled={!canManage}
@@ -709,6 +737,11 @@ export default function OrdersPage() {
                         {order.trackingNumber ? `Resi ${order.trackingNumber}` : "Belum ada resi"}
                         {order.courier ? ` · ${order.courier}` : ""}
                       </p>
+                      {hasWarehouses ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Gudang: {formatOrderWarehouseSummary(order, warehouseNames, defaultWarehouseId) || "—"}
+                        </p>
+                      ) : null}
                       {inventoryOn && orderHasInsufficientStock(order, stockRows, defaultWarehouseId) ? (
                         <p className="mt-1">
                           <Badge variant="warning">Stok kurang</Badge>
@@ -801,7 +834,9 @@ export default function OrdersPage() {
               priceTypeLabelById={priceTypeLabelById}
               walletOptions={walletOptions}
               inventoryOn={inventoryOn}
+              hasWarehouses={hasWarehouses}
               defaultWarehouseId={defaultWarehouseId}
+              warehouseNames={warehouseNames}
               onContactSelect={(contactId) => {
                 void repriceCreateItems(contactId);
               }}
@@ -849,7 +884,9 @@ export default function OrdersPage() {
               priceTypeLabelById={priceTypeLabelById}
               walletOptions={walletOptions}
               inventoryOn={inventoryOn}
+              hasWarehouses={hasWarehouses}
               defaultWarehouseId={defaultWarehouseId}
+              warehouseNames={warehouseNames}
               onContactSelect={(contactId) => {
                 void repriceEditItems(contactId);
               }}
@@ -887,7 +924,9 @@ function OrderCreateForm({
   priceTypeLabelById,
   walletOptions,
   inventoryOn = false,
+  hasWarehouses = false,
   defaultWarehouseId = "",
+  warehouseNames,
   onContactSelect,
 }: {
   form: CreateForm;
@@ -907,7 +946,9 @@ function OrderCreateForm({
   priceTypeLabelById: Map<string, string>;
   walletOptions: Wallet[];
   inventoryOn?: boolean;
+  hasWarehouses?: boolean;
   defaultWarehouseId?: string;
+  warehouseNames: Map<string, string>;
   onContactSelect: (contactId: string) => void;
 }) {
   const update = (patch: Partial<CreateForm>) => setForm({ ...form, ...patch });
@@ -929,6 +970,14 @@ function OrderCreateForm({
     : form.contactId
       ? "Contact terpilih"
       : "Tanpa contact";
+
+  const applyFulfillmentToAll = () => {
+    const wh = form.fulfillmentWarehouseId || defaultWarehouseId;
+    if (!wh) return;
+    update({
+      items: form.items.map((item) => ({ ...item, warehouseId: wh })),
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -1010,6 +1059,35 @@ function OrderCreateForm({
           )}
 
           {activeStep === "items" && (
+            <div className="space-y-4">
+              {hasWarehouses ? (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <div className="mb-3">
+                    <h3 className="font-medium">Gudang pengambilan stok</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Tentukan dari gudang mana setiap item diambil. Baris baru mengikuti gudang default di bawah.
+                      {!inventoryOn ? (
+                        <span className="mt-1 block text-amber-800">
+                          Stok belum dipotong sampai setup persediaan selesai — gudang tetap disimpan untuk pesanan ini.
+                        </span>
+                      ) : null}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                    <div className="min-w-[200px] flex-1 space-y-1.5">
+                      <Label>Gudang default</Label>
+                      <WarehouseSelect
+                        value={form.fulfillmentWarehouseId}
+                        onChange={(fulfillmentWarehouseId) => update({ fulfillmentWarehouseId })}
+                      />
+                    </div>
+                    <Button type="button" variant="outline" onClick={applyFulfillmentToAll} disabled={form.items.length === 0}>
+                      Terapkan ke semua baris
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
               <div className="rounded-lg border p-4">
                 <div className="mb-3">
@@ -1098,9 +1176,11 @@ function OrderCreateForm({
                 subtotal={subtotal}
                 updateOrderItem={updateOrderItem}
                 removeOrderItem={removeOrderItem}
-                showWarehouse={inventoryOn}
-                defaultWarehouseId={defaultWarehouseId}
+                showWarehouse={hasWarehouses}
+                defaultWarehouseId={form.fulfillmentWarehouseId || defaultWarehouseId}
+                warehouseNames={warehouseNames}
               />
+            </div>
             </div>
           )}
 
@@ -1143,28 +1223,36 @@ function OrderCreateForm({
                       <Label>No. resi</Label>
                       <Input value={form.trackingNumber} onChange={(e) => update({ trackingNumber: e.target.value })} />
                     </div>
-                    <div className="sm:col-span-2">
-                      <Label>Dompet pemasukan</Label>
-                      <Select
-                        value={form.incomeWalletId}
-                        onValueChange={(value) => update({ incomeWalletId: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Dompet default" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={NO_WALLET}>Dompet default (Kas Tunai)</SelectItem>
-                          {walletOptions.map((wallet) => (
-                            <SelectItem key={wallet.id} value={wallet.id}>
-                              {wallet.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Dipakai saat pesanan diselesaikan. Kosongkan untuk dompet default aktif.
-                      </p>
-                    </div>
+                  </div>
+                </div>
+              )}
+              {showOperationalFields && (
+                <div className="rounded-lg border p-4">
+                  <h3 className="mb-1 font-medium">Pembayaran</h3>
+                  <p className="mb-3 text-sm text-muted-foreground">
+                    Dompet tujuan pemasukan saat pesanan diselesaikan — terpisah dari logistik pengiriman.
+                  </p>
+                  <div className="space-y-1.5">
+                    <Label>Dompet pemasukan</Label>
+                    <Select
+                      value={form.incomeWalletId}
+                      onValueChange={(value) => update({ incomeWalletId: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Dompet default" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NO_WALLET}>Dompet default (Kas Tunai)</SelectItem>
+                        {walletOptions.map((wallet) => (
+                          <SelectItem key={wallet.id} value={wallet.id}>
+                            {wallet.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Kosongkan untuk dompet default aktif tenant.
+                    </p>
                   </div>
                 </div>
               )}
@@ -1178,7 +1266,10 @@ function OrderCreateForm({
 
         <OrderSummary
           contactLabel={contactSummaryLabel}
-          itemCount={form.items.length}
+          items={form.items}
+          warehouseNames={warehouseNames}
+          fulfillmentWarehouseId={form.fulfillmentWarehouseId || defaultWarehouseId}
+          hasWarehouses={hasWarehouses}
           subtotal={subtotal}
           shippingCost={shippingCost}
           total={total}
@@ -1206,7 +1297,9 @@ function OrderEditForm({
   priceTypeLabelById,
   walletOptions,
   inventoryOn = false,
+  hasWarehouses = false,
   defaultWarehouseId = "",
+  warehouseNames,
   onContactSelect,
 }: {
   form: EditForm;
@@ -1225,7 +1318,9 @@ function OrderEditForm({
   priceTypeLabelById: Map<string, string>;
   walletOptions: Wallet[];
   inventoryOn?: boolean;
+  hasWarehouses?: boolean;
   defaultWarehouseId?: string;
+  warehouseNames: Map<string, string>;
   onContactSelect: (contactId: string) => void;
 }) {
   return (
@@ -1247,7 +1342,9 @@ function OrderEditForm({
       priceTypeLabelById={priceTypeLabelById}
       walletOptions={walletOptions}
       inventoryOn={inventoryOn}
+      hasWarehouses={hasWarehouses}
       defaultWarehouseId={defaultWarehouseId}
+      warehouseNames={warehouseNames}
       onContactSelect={onContactSelect}
     />
   );
@@ -1302,6 +1399,7 @@ function SelectedItemsPanel({
   removeOrderItem,
   showWarehouse = false,
   defaultWarehouseId = "",
+  warehouseNames,
 }: {
   items: OrderItemForm[];
   subtotal: number;
@@ -1309,6 +1407,7 @@ function SelectedItemsPanel({
   removeOrderItem: (index: number) => void;
   showWarehouse?: boolean;
   defaultWarehouseId?: string;
+  warehouseNames: Map<string, string>;
 }) {
   const applyDefaultWarehouse = () => {
     if (!defaultWarehouseId) return;
@@ -1363,11 +1462,19 @@ function SelectedItemsPanel({
                     <p className="truncate text-sm font-medium">{item.name}</p>
                     <p className="text-xs text-muted-foreground">{item.externalCode || "Tanpa SKU"}</p>
                   </div>
-                  <WarehouseSelect
-                    value={item.warehouseId}
-                    onChange={(warehouseId) => updateOrderItem(index, { warehouseId })}
-                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                  />
+                  <div className="space-y-1">
+                    <Label className="text-xs sm:sr-only">Gudang</Label>
+                    <WarehouseSelect
+                      value={item.warehouseId}
+                      onChange={(warehouseId) => updateOrderItem(index, { warehouseId })}
+                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    />
+                    {!item.warehouseId && defaultWarehouseId ? (
+                      <p className="text-xs text-muted-foreground sm:hidden">
+                        Pakai default: {warehouseLabel("", warehouseNames, defaultWarehouseId)}
+                      </p>
+                    ) : null}
+                  </div>
                   <Input
                     value={item.qty}
                     onChange={(e) => updateOrderItem(index, { qty: e.target.value })}
@@ -1423,14 +1530,20 @@ function SelectedItemsPanel({
 
 function OrderSummary({
   contactLabel,
-  itemCount,
+  items,
+  warehouseNames,
+  fulfillmentWarehouseId,
+  hasWarehouses,
   subtotal,
   shippingCost,
   total,
   onStepChange,
 }: {
   contactLabel: string;
-  itemCount: number;
+  items: OrderItemForm[];
+  warehouseNames: Map<string, string>;
+  fulfillmentWarehouseId: string;
+  hasWarehouses: boolean;
   subtotal: number;
   shippingCost: number;
   total: number;
@@ -1448,8 +1561,20 @@ function OrderSummary({
           <span className="font-medium">{contactLabel}</span>
         </button>
         <button type="button" className="w-full rounded-md bg-muted/40 p-3 text-left" onClick={() => onStepChange("items")}>
-          <span className="block text-xs text-muted-foreground">Item</span>
-          <span className="font-medium">{itemCount} item dipilih</span>
+          <span className="block text-xs text-muted-foreground">Produk & gudang</span>
+          <span className="font-medium">{items.length} item dipilih</span>
+          {items.length > 0 ? (
+            <ul className="mt-2 max-h-28 space-y-1 overflow-auto text-xs text-muted-foreground">
+              {items.map((item, index) => (
+                <li key={`${item.catalogItemId}-${item.lineId || index}`} className="flex justify-between gap-2">
+                  <span className="truncate">{item.name} ×{item.qty}</span>
+                  {hasWarehouses ? (
+                    <span className="shrink-0">{warehouseLabel(item.warehouseId, warehouseNames, fulfillmentWarehouseId)}</span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </button>
         <div className="rounded-md bg-muted/40 p-3">
           <div className="flex justify-between">
@@ -1484,7 +1609,7 @@ function orderHasInsufficientStock(order: Order, stockRows: StockRow[], defaultW
   return false;
 }
 
-function toOrderItemPayload(item: OrderItemForm): Order["items"][number] {
+function toOrderItemPayload(item: OrderItemForm, fallbackWarehouseId = ""): Order["items"][number] {
   return {
     lineId: item.lineId || undefined,
     catalogItemId: item.catalogItemId,
@@ -1493,7 +1618,7 @@ function toOrderItemPayload(item: OrderItemForm): Order["items"][number] {
     qty: Number(item.qty || 1),
     unitPrice: Number(item.unitPrice || 0),
     sellUnit: item.sellUnit || undefined,
-    warehouseId: item.warehouseId || undefined,
+    warehouseId: item.warehouseId || fallbackWarehouseId || undefined,
   };
 }
 
