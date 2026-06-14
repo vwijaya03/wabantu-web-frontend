@@ -26,6 +26,7 @@ import { catalogApi, type CatalogItem, type ListCatalogResponse } from "@/lib/ap
 import { contactsApi, type ListContactsResponse } from "@/lib/api/contacts";
 import { priceTypesApi } from "@/lib/api/price-types";
 import { ordersApi, type Order } from "@/lib/api/orders";
+import { inventoryApi } from "@/lib/api/inventory";
 import { financeApi, type Wallet } from "@/lib/api/finance";
 import { NO_WALLET } from "@/lib/finance/utils";
 import { formatOrderNumber } from "@/lib/format-order-number";
@@ -218,6 +219,25 @@ export default function OrdersPage() {
     () => new Map((priceTypesData?.items ?? []).map((pt) => [pt.id, pt.label])),
     [priceTypesData],
   );
+
+  // Inventory: flag orders whose tracked items lack enough stock (exception-only badge).
+  const { data: invSetting } = useQuery({
+    queryKey: ["inventory", "setting"],
+    queryFn: () => inventoryApi.getSetting(),
+  });
+  const inventoryOn = Boolean(invSetting?.setupCompleted);
+  const { data: stockOverview } = useQuery({
+    queryKey: ["inventory", "stock", "orders-overview"],
+    queryFn: () => inventoryApi.listStock({ pageSize: 500 }),
+    enabled: inventoryOn,
+  });
+  const stockMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of stockOverview?.stock ?? []) {
+      m.set(r.catalogItemId, (m.get(r.catalogItemId) ?? 0) + r.available);
+    }
+    return m;
+  }, [stockOverview]);
 
   const orders = data?.orders ?? [];
   const total = data?.total ?? 0;
@@ -693,6 +713,11 @@ export default function OrdersPage() {
                         {order.trackingNumber ? `Resi ${order.trackingNumber}` : "Belum ada resi"}
                         {order.courier ? ` · ${order.courier}` : ""}
                       </p>
+                      {inventoryOn && orderHasInsufficientStock(order, stockMap) ? (
+                        <p className="mt-1">
+                          <Badge variant="warning">Stok kurang</Badge>
+                        </p>
+                      ) : null}
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground lg:hidden">Pembeli</p>
@@ -1367,6 +1392,17 @@ function OrderSummary({
       </div>
     </aside>
   );
+}
+
+// orderHasInsufficientStock returns true when any stock-tracked item on the order
+// exceeds available stock (stockMap only contains tracked catalog items).
+function orderHasInsufficientStock(order: Order, stockMap: Map<string, number>): boolean {
+  for (const it of order.items) {
+    const id = it.catalogItemId;
+    if (!id || !stockMap.has(id)) continue;
+    if ((stockMap.get(id) ?? 0) < (it.qty ?? 0)) return true;
+  }
+  return false;
 }
 
 function formatBuyerLabel(order: Order): string {

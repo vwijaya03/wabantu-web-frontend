@@ -11,10 +11,29 @@ Sidebar grup **Persediaan**:
 
 | Menu | Halaman | Fungsi |
 |------|---------|--------|
-| **Stok** | `/dashboard/inventory` | Saldo stok & nilai persediaan per gudang |
+| **Stok** | `/dashboard/inventory` | KPI (nilai persediaan, stok habis) + saldo per gudang |
+| **Operasi Stok** | `/dashboard/inventory/operations` | Penyesuaian ±, transfer, saldo awal, revaluasi HPP |
+| **Pembelian (PO)** | `/dashboard/inventory/purchase-orders` | Rencana beli ke supplier (partial receive) |
+| **Penerimaan** | `/dashboard/inventory/bills` | Terima barang → stok masuk (bisa dari PO) |
+| **Faktur** | `/dashboard/inventory/invoices` | Faktur dari pesanan + HPP per baris |
+| **Retur** | `/dashboard/inventory/sales-returns` | Retur penjualan → stok kembali (HPP asli) |
 | **Pergerakan** | `/dashboard/inventory/movements` | Kartu stok: semua mutasi + HPP per transaksi |
 | **Gudang** | `/dashboard/inventory/warehouses` | Kelola lokasi gudang |
+| **Konfigurasi Item** | `/dashboard/inventory/items` | Track stok, metode HPP per item, bundle, batch/expiry |
+| **Laporan** | `/dashboard/inventory/reports` | Nilai persediaan + margin penjualan (revenue−HPP), export CSV |
+| **Pemeliharaan** | `/dashboard/inventory/maintenance` | Recalculate HPP, backfill pesanan lama, nilai per gudang |
+| **Pengaturan** | `/dashboard/inventory/settings` | Metode HPP, kebijakan stok, hak akses (ACL) |
 | **Setup HPP** | `/dashboard/inventory/setup` | Wizard metode HPP + aktivasi modul |
+
+## Operasi Stok (UX)
+
+Halaman **Operasi Stok** menyatukan 4 aksi dengan pola aman:
+- **Penyesuaian ±**: pilih tambah/kurangi, wajib isi **alasan** (audit), tampil stok &
+  peringatan bila melebihi stok.
+- **Transfer**: alur gudang asal → tujuan dengan **dialog konfirmasi** ("Transfer N X
+  dari A ke B?").
+- **Saldo Awal**: input banyak baris sekaligus; item otomatis mulai dilacak.
+- **Revaluasi HPP**: tampil **pratinjau selisih** nilai + dialog konfirmasi sebelum disimpan.
 
 ## Langkah pertama (owner)
 
@@ -37,11 +56,49 @@ Sidebar grup **Persediaan**:
 - Stok hanya dihitung untuk item yang diaktifkan pelacakannya _(menyusul: toggle di Katalog)_.
 - Pesanan dibatalkan → stok kembali otomatis.
 
-## Menyusul (PR frontend berikutnya)
+## Pembelian → Penerimaan
 
-- Penyesuaian stok (±), transfer antar gudang, saldo awal (form/CSV), revaluasi HPP.
-- Purchase Order & Penerimaan Barang (Bill).
-- Faktur & Retur Penjualan.
-- Bundle (paket), config item (metode per item, batch/expiry).
-- Laporan nilai persediaan & margin.
-- Backfill stok pesanan lama.
+- **Pembelian (PO)**: buat rencana beli (supplier, gudang, baris item + harga). Status:
+  Terbuka → Sebagian diterima → Diterima penuh; bisa Tutup/Batal.
+- **Penerimaan (Bill)**: terima barang. Pilih PO untuk prefill sisa, atau input manual.
+  Saat disimpan: **stok bertambah + HPP tercatat**, qty diterima PO ter-update otomatis.
+
+## Faktur & Retur
+
+- **Faktur**: pilih pesanan → buat faktur (`WINV-...`) dengan snapshot HPP per baris.
+- **Retur**: pilih pesanan → tentukan qty retur per produk → stok masuk kembali dengan
+  **HPP asli** dari penjualan. Validasi qty ≤ yang terjual.
+
+## Konfigurasi Item
+
+Halaman **Konfigurasi Item** (per produk katalog):
+- **Lacak stok**: aktifkan agar item ikut dipotong saat pesanan.
+- **Metode HPP**: ikuti default tenant atau override FIFO/LIFO/Average (mengubah → recalculate item).
+- **Batch / expiry / serial**: aktifkan pelacakan tambahan.
+- **Bundle**: tetapkan komponen SKU anak (stok diambil dari komponen).
+
+## Pemeliharaan
+
+Halaman **Pemeliharaan** (owner):
+- **Recalculate HPP**: bangun ulang lapisan biaya & saldo dari riwayat (bila HPP kacau).
+  Revaluasi manual tidak dipertahankan.
+- **Backfill Pesanan Lama**: potong stok retroaktif untuk pesanan committed sebelum modul aktif
+  (Preview dulu → Jalankan).
+- **Nilai Persediaan per Gudang**: ringkasan nilai stok.
+
+## Integrasi halaman Pesanan
+
+Di `/dashboard/orders`, bila modul persediaan aktif, pesanan yang item ber-track-stok-nya
+melebihi stok tersedia diberi badge **"Stok kurang"** (hanya muncul untuk pengecualian,
+agar tidak berisik). Membantu admin sebelum memproses pesanan.
+
+## Pengaturan & Akses (ACL)
+
+Halaman **Pengaturan**: metode HPP default, blokir stok minus, mode cashflow, dan panel
+hak akses — **Owner/Super Admin = kelola penuh**, **Staff = lihat saja**.
+
+## Status
+
+Modul persediaan UI **lengkap (F1–F9)**: setup, stok+KPI, operasi, PO/Bill, faktur/retur,
+konfigurasi item (+bundle), laporan (+CSV), pemeliharaan, pengaturan/ACL, kartu stok, dan
+badge stok di halaman Pesanan.

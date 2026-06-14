@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
+import { cn } from "@/lib/utils";
 
 export default function InventoryStockPage() {
   const [q, setQ] = useState("");
@@ -31,13 +32,45 @@ export default function InventoryStockPage() {
   const warehouses = warehousesData?.warehouses ?? [];
   const rows = data?.stock ?? [];
   const totalValue = rows.reduce((sum, r) => sum + r.totalValue, 0);
+  const outOfStock = rows.filter((r) => r.available <= 0).length;
 
   return (
     <RequireTenantDashboard title="Stok">
-      <PageHeader
-        title="Stok Persediaan"
-        description="Saldo stok dan nilai persediaan per gudang."
-      />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <PageHeader
+          title="Stok Persediaan"
+          description="Saldo stok dan nilai persediaan per gudang."
+        />
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/inventory/movements">Kartu Stok</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/dashboard/inventory/operations">Operasi Stok</Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="my-4 grid gap-3 sm:grid-cols-3">
+        <Card>
+          <CardContent className="py-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Nilai persediaan</p>
+            <p className="mt-1 text-2xl font-semibold">{formatIDR(totalValue)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Baris stok</p>
+            <p className="mt-1 text-2xl font-semibold">{rows.length}</p>
+          </CardContent>
+        </Card>
+        <Card className={outOfStock > 0 ? "border-red-300 bg-red-50" : undefined}>
+          <CardContent className="py-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Stok habis</p>
+            <p className={cn("mt-1 text-2xl font-semibold", outOfStock > 0 && "text-red-700")}>{outOfStock}</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {setting && !setting.setupCompleted ? (
         <Card className="mb-6 border-amber-300 bg-amber-50">
@@ -80,9 +113,6 @@ export default function InventoryStockPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="mb-3 text-sm text-muted-foreground">
-            Total nilai persediaan: <span className="font-semibold text-foreground">{formatIDR(totalValue)}</span>
-          </div>
           <div className="overflow-x-auto rounded-lg border">
             <table className="w-full text-sm">
               <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
@@ -115,8 +145,10 @@ export default function InventoryStockPage() {
                       <td className="px-3 py-2">{r.warehouseName}</td>
                       <td className="px-3 py-2 text-right">{formatStockQty(r.onHand)}</td>
                       <td className="px-3 py-2 text-right">
-                        {r.reserved > 0 ? (
-                          <Badge variant="secondary">{formatStockQty(r.available)}</Badge>
+                        {r.available <= 0 ? (
+                          <Badge variant="destructive">Habis</Badge>
+                        ) : r.reserved > 0 ? (
+                          <Badge variant="secondary">{formatStockQty(r.available)} tersedia</Badge>
                         ) : (
                           formatStockQty(r.available)
                         )}
