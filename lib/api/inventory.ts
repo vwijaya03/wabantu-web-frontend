@@ -95,6 +95,11 @@ export interface StockTransaction {
   signedQty?: number;
   unitCost?: number;
   newUnitCost?: number;
+  itemName?: string;
+  warehouseName?: string;
+  fromWarehouseName?: string;
+  toWarehouseName?: string;
+  lineCount?: number;
   lines?: StockTransactionLine[];
   createdAt: string;
 }
@@ -271,6 +276,9 @@ export const inventoryApi = {
   },
   async updateStockTransaction(id: string, input: Record<string, unknown>): Promise<StockTransaction> {
     return (await api.patch(`/inventory/stock-transactions/${id}`, input)).data;
+  },
+  async batchDeleteStockTransactions(ids: string[]): Promise<{ deleted: number; failed: number; errors?: string[] }> {
+    return (await api.post("/inventory/stock-transactions/batch-delete", { ids })).data;
   },
 
   // manual movements

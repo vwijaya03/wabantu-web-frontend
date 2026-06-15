@@ -273,7 +273,7 @@ function BackfillIssuesPanel({
             </InventoryTableBody>
           </InventoryTable>
           <Button asChild size="sm" variant="outline">
-            <Link href="/dashboard/inventory/operations?mode=opening">Buka Saldo Awal</Link>
+            <Link href="/dashboard/inventory/opening-balance">Buka Saldo Awal</Link>
           </Button>
         </div>
       ) : null}

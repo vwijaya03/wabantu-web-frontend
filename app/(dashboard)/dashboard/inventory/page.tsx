@@ -56,7 +56,7 @@ export default function InventoryStockPage() {
             <Link href="/dashboard/inventory/movements">Kartu Stok</Link>
           </Button>
           <Button asChild>
-            <Link href="/dashboard/inventory/operations">Operasi Stok</Link>
+            <Link href="/dashboard/inventory/adjustments">Penyesuaian Stok</Link>
           </Button>
         </div>
       </div>

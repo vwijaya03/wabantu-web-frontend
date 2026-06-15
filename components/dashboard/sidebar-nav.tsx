@@ -37,7 +37,9 @@ import {
   SlidersHorizontal,
   Wrench,
   Wand2,
-  Hash,
+  Scale,
+  Layers,
+  TrendingUp,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { hasTenantDashboardAccess } from "@/lib/api/auth";
@@ -88,8 +90,10 @@ const tenantNavGroups: Array<{
     label: "Persediaan",
     items: [
       { href: "/dashboard/inventory", label: "Stok", icon: Boxes },
-      { href: "/dashboard/inventory/operations", label: "Operasi Stok", icon: ArrowLeftRight },
-      { href: "/dashboard/inventory/transactions", label: "Transaksi Stok", icon: Hash },
+      { href: "/dashboard/inventory/adjustments", label: "Penyesuaian", icon: Scale },
+      { href: "/dashboard/inventory/transfers", label: "Transfer", icon: ArrowLeftRight },
+      { href: "/dashboard/inventory/opening-balance", label: "Saldo Awal", icon: Layers },
+      { href: "/dashboard/inventory/revaluations", label: "Revaluasi HPP", icon: TrendingUp },
       { href: "/dashboard/inventory/purchase-orders", label: "Pembelian (PO)", icon: ClipboardList },
       { href: "/dashboard/inventory/bills", label: "Penerimaan", icon: FileText },
       { href: "/dashboard/inventory/invoices", label: "Faktur", icon: Receipt },
