@@ -20,7 +20,7 @@ export function WarehouseSelect({
     queryKey: ["inventory", "warehouses"],
     queryFn: () => inventoryApi.listWarehouses(),
   });
-  const warehouses = (data?.warehouses ?? []).filter((w) => w.id !== exclude);
+  const warehouses = (data?.warehouses ?? []).filter((w) => w.id !== exclude && !w.isDeleted && w.isActive);
   return (
     <select
       className={

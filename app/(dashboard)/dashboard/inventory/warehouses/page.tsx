@@ -49,6 +49,15 @@ export default function WarehousesPage() {
     onError: (e) => toast.error(toApiError(e).message),
   });
 
+  const reactivateMut = useMutation({
+    mutationFn: (id: string) => inventoryApi.reactivateWarehouse(id),
+    onSuccess: () => {
+      toast.success("Gudang diaktifkan kembali");
+      void qc.invalidateQueries({ queryKey: ["inventory", "warehouses"] });
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
   const deleteMut = useMutation({
     mutationFn: (id: string) => inventoryApi.deleteWarehouse(id),
     onSuccess: () => {
@@ -111,18 +120,23 @@ export default function WarehousesPage() {
                         <span className="font-medium">{w.name}</span>{" "}
                         {w.isDefault ? <Badge variant="secondary">Default</Badge> : null}
                         {!w.isActive ? <Badge variant="destructive">Nonaktif</Badge> : null}
+                        {w.isDeleted ? <Badge variant="warning">Terhapus</Badge> : null}
                       </InventoryTableCell>
                       <InventoryTableCell className="text-muted-foreground">{w.code}</InventoryTableCell>
                       <InventoryTableCell className="text-muted-foreground">{w.address || "-"}</InventoryTableCell>
                       <InventoryTableCell align="right">
-                        {canManage && !w.isDefault ? (
+                        {canManage && w.isDeleted ? (
+                          <Button variant="outline" size="sm" disabled={reactivateMut.isPending} onClick={() => reactivateMut.mutate(w.id)}>
+                            Aktifkan
+                          </Button>
+                        ) : canManage && !w.isDefault ? (
                           <Button
                             variant="ghost"
                             size="sm"
                             className="text-destructive"
                             disabled={deleteMut.isPending}
                             onClick={() => {
-                              if (confirm(`Hapus gudang ${w.name}?`)) deleteMut.mutate(w.id);
+                              if (confirm(`Hapus gudang ${w.name}? Hanya bisa jika tidak dipakai transaksi.`)) deleteMut.mutate(w.id);
                             }}
                           >
                             Hapus

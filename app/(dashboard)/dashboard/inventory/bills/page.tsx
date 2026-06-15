@@ -209,10 +209,22 @@ function CreateBillPanel({ onDone }: { onDone: () => void }) {
 }
 
 function BillDetailDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const canManage = canPerformOwnerActions(user);
   const { data: bill } = useQuery({
     queryKey: ["inventory", "bill", id],
     queryFn: () => inventoryApi.getBill(id!),
     enabled: Boolean(id),
+  });
+  const delMut = useMutation({
+    mutationFn: () => inventoryApi.deleteBill(id!),
+    onSuccess: () => {
+      toast.success("Penerimaan dihapus — stok dikurangi");
+      onClose();
+      void qc.invalidateQueries({ queryKey: ["inventory"] });
+    },
+    onError: (e) => toast.error(toApiError(e).message),
   });
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -220,9 +232,23 @@ function BillDetailDialog({ id, onClose }: { id: string | null; onClose: () => v
         <DialogHeader><DialogTitle>{bill ? `${bill.billNo} · ${bill.supplierName || "Tanpa supplier"}` : "Memuat..."}</DialogTitle></DialogHeader>
         {bill ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm">
-              <Badge variant={bill.status === "posted" ? "success" : "destructive"}>{bill.status === "posted" ? "Diterima" : "Dibatalkan"}</Badge>
-              <span className="text-muted-foreground">{bill.transactionDate}</span>
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Badge variant={bill.status === "posted" ? "success" : "destructive"}>{bill.status === "posted" ? "Diterima" : "Dibatalkan"}</Badge>
+                <span className="text-muted-foreground">{bill.transactionDate}</span>
+              </div>
+              {canManage ? (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={delMut.isPending}
+                  onClick={() => {
+                    if (confirm(`Hapus ${bill.billNo}? Stok akan dikurangi.`)) delMut.mutate();
+                  }}
+                >
+                  Hapus
+                </Button>
+              ) : null}
             </div>
             <InventoryTable>
               <InventoryTableHeader>
