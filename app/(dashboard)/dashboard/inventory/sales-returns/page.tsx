@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
+import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { OrderPicker } from "@/components/inventory/order-picker";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -34,10 +35,14 @@ export default function SalesReturnsPage() {
   const [qtys, setQtys] = useState<Record<string, string>>({});
   const [note, setNote] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [searchQ, setSearchQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "sales-returns"],
-    queryFn: () => inventoryApi.listSalesReturns({ pageSize: 50 }),
+    queryKey: ["inventory", "sales-returns", searchQ, page, pageSize],
+    queryFn: () => inventoryApi.listSalesReturns({ q: searchQ || undefined, page, pageSize }),
   });
   const returns = data?.salesReturns ?? [];
 
@@ -106,7 +111,16 @@ export default function SalesReturnsPage() {
       ) : null}
 
       <Card>
-        <CardHeader><CardTitle>Daftar Retur</CardTitle></CardHeader>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle>Daftar Retur</CardTitle>
+          <Input
+            placeholder="Cari no retur..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { setSearchQ(q); setPage(1); } }}
+            className="w-44"
+          />
+        </CardHeader>
         <CardContent>
           <InventoryTable>
             <InventoryTableHeader>
@@ -132,19 +146,36 @@ export default function SalesReturnsPage() {
               )}
             </InventoryTableBody>
           </InventoryTable>
+          <InventoryDataTablePagination
+            page={page}
+            pageSize={pageSize}
+            total={data?.total ?? 0}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          />
         </CardContent>
       </Card>
 
-      <ReturnDetailDialog id={detailId} onClose={() => setDetailId(null)} />
+      <ReturnDetailDialog id={detailId} canManage={canManage} onClose={() => setDetailId(null)} />
     </RequireTenantDashboard>
   );
 }
 
-function ReturnDetailDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
+function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; canManage: boolean; onClose: () => void }) {
+  const qc = useQueryClient();
   const { data: r } = useQuery({
     queryKey: ["inventory", "sales-return", id],
     queryFn: () => inventoryApi.getSalesReturn(id!),
     enabled: Boolean(id),
+  });
+  const delMut = useMutation({
+    mutationFn: () => inventoryApi.deleteSalesReturn(id!),
+    onSuccess: () => {
+      toast.success("Retur dihapus — stok disesuaikan");
+      onClose();
+      void qc.invalidateQueries({ queryKey: ["inventory"] });
+    },
+    onError: (e) => toast.error(toApiError(e).message),
   });
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -152,6 +183,18 @@ function ReturnDetailDialog({ id, onClose }: { id: string | null; onClose: () =>
         <DialogHeader><DialogTitle>{r ? r.returnNo : "Memuat..."}</DialogTitle></DialogHeader>
         {r ? (
           <div className="space-y-3">
+            {canManage ? (
+              <div className="flex justify-end">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={delMut.isPending}
+                  onClick={() => { if (confirm(`Hapus retur ${r.returnNo}? Stok akan dikurangi.`)) delMut.mutate(); }}
+                >
+                  Hapus
+                </Button>
+              </div>
+            ) : null}
             <InventoryTable>
               <InventoryTableHeader>
                 <InventoryTableRow>

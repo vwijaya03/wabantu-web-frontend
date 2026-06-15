@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
+import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { WarehouseSelect } from "@/components/inventory/warehouse-select";
@@ -53,10 +54,14 @@ export default function PurchaseOrdersPage() {
   const canManage = canPerformOwnerActions(user);
   const [creating, setCreating] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [searchQ, setSearchQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "purchase-orders"],
-    queryFn: () => inventoryApi.listPurchaseOrders({ pageSize: 50 }),
+    queryKey: ["inventory", "purchase-orders", searchQ, page, pageSize],
+    queryFn: () => inventoryApi.listPurchaseOrders({ q: searchQ || undefined, page, pageSize }),
   });
   const orders = data?.purchaseOrders ?? [];
 
@@ -70,7 +75,16 @@ export default function PurchaseOrdersPage() {
       {creating ? <CreatePOPanel onDone={() => { setCreating(false); void qc.invalidateQueries({ queryKey: ["inventory", "purchase-orders"] }); }} /> : null}
 
       <Card className="mt-4">
-        <CardHeader><CardTitle>Daftar PO</CardTitle></CardHeader>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle>Daftar PO</CardTitle>
+          <Input
+            placeholder="Cari no PO / supplier..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { setSearchQ(q); setPage(1); } }}
+            className="w-52"
+          />
+        </CardHeader>
         <CardContent>
           <InventoryTable>
             <InventoryTableHeader>
@@ -100,6 +114,13 @@ export default function PurchaseOrdersPage() {
               )}
             </InventoryTableBody>
           </InventoryTable>
+          <InventoryDataTablePagination
+            page={page}
+            pageSize={pageSize}
+            total={data?.total ?? 0}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          />
         </CardContent>
       </Card>
 
@@ -175,6 +196,18 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
   };
   const closeMut = useMutation({ mutationFn: () => inventoryApi.closePurchaseOrder(id!), onSuccess: () => { toast.success("PO ditutup"); refresh(); }, onError: (e) => toast.error(toApiError(e).message) });
   const cancelMut = useMutation({ mutationFn: () => inventoryApi.cancelPurchaseOrder(id!), onSuccess: () => { toast.success("PO dibatalkan"); refresh(); }, onError: (e) => toast.error(toApiError(e).message) });
+  const delMut = useMutation({
+    mutationFn: () => inventoryApi.deletePurchaseOrder(id!),
+    onSuccess: () => {
+      toast.success("PO dihapus");
+      onClose();
+      void qc.invalidateQueries({ queryKey: ["inventory", "purchase-orders"] });
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const hasReceipts = (po?.lines ?? []).some((l) => (l.qtyReceived ?? 0) > 0);
+  const canDelete = po && (po.status === "open" || po.status === "cancelled") && !hasReceipts;
 
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -208,6 +241,18 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
               <div className="flex justify-end gap-2">
                 <Button variant="outline" size="sm" onClick={() => cancelMut.mutate()} disabled={cancelMut.isPending}>Batalkan</Button>
                 <Button variant="outline" size="sm" onClick={() => closeMut.mutate()} disabled={closeMut.isPending}>Tutup PO</Button>
+              </div>
+            ) : null}
+            {canManage && canDelete ? (
+              <div className="flex justify-end">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={delMut.isPending}
+                  onClick={() => { if (confirm(`Hapus PO ${po.poNo}?`)) delMut.mutate(); }}
+                >
+                  Hapus PO
+                </Button>
               </div>
             ) : null}
           </div>

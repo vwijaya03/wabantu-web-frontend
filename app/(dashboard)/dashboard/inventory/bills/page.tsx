@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
+import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { WarehouseSelect } from "@/components/inventory/warehouse-select";
@@ -41,10 +42,14 @@ export default function BillsPage() {
   const canManage = canPerformOwnerActions(user);
   const [creating, setCreating] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [searchQ, setSearchQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "bills"],
-    queryFn: () => inventoryApi.listBills({ pageSize: 50 }),
+    queryKey: ["inventory", "bills", searchQ, page, pageSize],
+    queryFn: () => inventoryApi.listBills({ q: searchQ || undefined, page, pageSize }),
   });
   const bills = data?.bills ?? [];
 
@@ -67,7 +72,16 @@ export default function BillsPage() {
       ) : null}
 
       <Card className="mt-4">
-        <CardHeader><CardTitle>Daftar Penerimaan</CardTitle></CardHeader>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle>Daftar Penerimaan</CardTitle>
+          <Input
+            placeholder="Cari no bill..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { setSearchQ(q); setPage(1); } }}
+            className="w-44"
+          />
+        </CardHeader>
         <CardContent>
           <InventoryTable>
             <InventoryTableHeader>
@@ -95,6 +109,13 @@ export default function BillsPage() {
               )}
             </InventoryTableBody>
           </InventoryTable>
+          <InventoryDataTablePagination
+            page={page}
+            pageSize={pageSize}
+            total={data?.total ?? 0}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          />
         </CardContent>
       </Card>
 

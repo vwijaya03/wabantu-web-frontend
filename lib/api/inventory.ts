@@ -311,6 +311,12 @@ export const inventoryApi = {
   async cancelPurchaseOrder(id: string): Promise<PurchaseOrder> {
     return (await api.post(`/inventory/purchase-orders/${id}/cancel`)).data;
   },
+  async deletePurchaseOrder(id: string): Promise<void> {
+    await api.delete(`/inventory/purchase-orders/${id}`);
+  },
+  async updatePurchaseOrder(id: string, input: { supplierName?: string; contactId?: string; warehouseId?: string; transactionDate?: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; description?: string; qtyOrdered: number; unitCost: number }> }): Promise<PurchaseOrder> {
+    return (await api.patch(`/inventory/purchase-orders/${id}`, input)).data;
+  },
 
   // bills
   async listBills(params: { q?: string; page?: number; pageSize?: number } = {}): Promise<{ bills: Bill[]; total: number; page: number; pageSize: number }> {
@@ -336,7 +342,10 @@ export const inventoryApi = {
   async createInvoiceFromOrder(orderId: string): Promise<Invoice> {
     return (await api.post(`/inventory/invoices/from-order/${orderId}`)).data;
   },
-  async listSalesReturns(params: { page?: number; pageSize?: number } = {}): Promise<{ salesReturns: SalesReturn[]; total: number; page: number; pageSize: number }> {
+  async deleteInvoice(id: string): Promise<void> {
+    await api.delete(`/inventory/invoices/${id}`);
+  },
+  async listSalesReturns(params: { q?: string; page?: number; pageSize?: number } = {}): Promise<{ salesReturns: SalesReturn[]; total: number; page: number; pageSize: number }> {
     return (await api.get("/inventory/sales-returns", { params })).data;
   },
   async getSalesReturn(id: string): Promise<SalesReturn> {
@@ -344,6 +353,12 @@ export const inventoryApi = {
   },
   async createSalesReturn(input: { orderId: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; qty: number }> }): Promise<SalesReturn> {
     return (await api.post("/inventory/sales-returns", input)).data;
+  },
+  async deleteSalesReturn(id: string): Promise<void> {
+    await api.delete(`/inventory/sales-returns/${id}`);
+  },
+  async updateSalesReturn(id: string, input: { note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; qty: number }> }): Promise<SalesReturn> {
+    return (await api.patch(`/inventory/sales-returns/${id}`, input)).data;
   },
 
   // recalc / wizard / sku / backfill
