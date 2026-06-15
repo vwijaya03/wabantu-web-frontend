@@ -390,8 +390,11 @@ export const inventoryApi = {
   async updateSku(catalogItemId: string, input: Partial<{ trackStock: boolean; costingMethod: string; trackBatch: boolean; trackSerial: boolean; trackExpiry: boolean; baseUom: string }>): Promise<SkuConfig> {
     return (await api.patch(`/inventory/skus/${catalogItemId}`, input)).data;
   },
-  async backfillOrders(execute: boolean): Promise<BackfillOrdersResult> {
-    return (await api.post("/inventory/backfill/orders", { execute })).data;
+  async backfillOrders(execute: boolean, issuesLimit?: number): Promise<BackfillOrdersResult> {
+    return (await api.post("/inventory/backfill/orders", {
+      execute,
+      ...(issuesLimit != null ? { issuesLimit } : {}),
+    })).data;
   },
 };
 
@@ -424,9 +427,15 @@ export type BackfillSuggestedOpening = {
 export type BackfillOrdersResult = {
   preview: boolean;
   pendingOrders: number;
+  sufficientOrders?: number;
   processed: number;
   failed: number;
-  insufficient: string[];
+  insufficientCount?: number;
+  issueCount?: number;
+  issuesTruncated?: boolean;
+  failureCount?: number;
+  failuresTruncated?: boolean;
+  insufficient?: string[];
   failures?: string[];
   issues?: BackfillOrderIssue[];
   suggestedOpening?: BackfillSuggestedOpening[];

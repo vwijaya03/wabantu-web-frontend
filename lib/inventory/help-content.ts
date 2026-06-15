@@ -279,6 +279,8 @@ export const INVENTORY_HELP: Record<InventoryHelpTopic, InventoryHelpContent> = 
     ],
     tips: [
       "Error “stok tidak cukup” = saldo awal belum cukup, bukan bug sistem",
+      "Qty saran saldo awal = jumlah kekurangan semua pesanan (bukan cukup pesanan terbesar saja)",
+      "Preview ribuan pesanan? Lihat ringkasan + tabel saldo awal; detail pesanan dibatasi sampel",
       "Sistem tidak otomatis menyesuaikan stok — Anda yang mengisi saldo awal",
     ],
     relatedLinks: [{ label: "Saldo Awal", href: "/dashboard/inventory/opening-balance" }],
