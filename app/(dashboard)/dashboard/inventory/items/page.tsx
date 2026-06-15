@@ -8,7 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
+import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
+import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
+import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -26,31 +35,112 @@ import {
 } from "@/components/inventory/inventory-table";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { HelpCircle } from "lucide-react";
 
 export default function InventoryItemsPage() {
+  const qc = useQueryClient();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<CatalogItem | null>(null);
+  const [checked, setChecked] = useState<Set<string>>(new Set());
 
   const { data, isLoading } = useQuery({
     queryKey: ["catalog", "list", q],
     queryFn: () => catalogApi.list({ q, pageSize: 50 }),
   });
   const items = data?.items ?? [];
+  const visibleIds = items.map((it) => it.id);
+  const allVisible = visibleIds.length > 0 && visibleIds.every((id) => checked.has(id));
+
+  const toggleOne = (id: string) => {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const batchMut = useMutation({
+    mutationFn: (input: { all?: boolean; trackStock: boolean }) =>
+      inventoryApi.batchTrackStock({
+        all: input.all,
+        catalogItemIds: input.all ? undefined : Array.from(checked),
+        trackStock: input.trackStock,
+      }),
+    onSuccess: (res, vars) => {
+      toast.success(
+        vars.trackStock
+          ? `${res.updated} produk dilacak stoknya${res.skipped ? `, ${res.skipped} dilewati (bundle)` : ""}`
+          : `${res.updated} produk dinonaktifkan lacak stoknya`,
+      );
+      setChecked(new Set());
+      void qc.invalidateQueries({ queryKey: ["inventory", "sku"] });
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
 
   return (
     <RequireTenantDashboard title="Konfigurasi Item">
       <InventoryPageHeader title="Konfigurasi Item Persediaan" description="Aktifkan pelacakan stok, metode HPP per item, bundle, dan batch/expiry." helpTopic="items" />
+
+      <Card className="mb-4 border-blue-200 bg-blue-50/40">
+        <CardContent className="py-4 text-sm text-blue-950">
+          <p className="font-medium">Apa itu lacak stok?</p>
+          <p className="mt-1 text-blue-900/90">
+            Aktifkan untuk produk fisik agar setiap penjualan, pembelian, dan penyesuaian mengubah saldo gudang serta HPP.
+            Produk jasa biasanya tidak perlu dilacak. Bundle mengambil stok dari komponen di dalamnya — jangan lacak stok di parent bundle.
+          </p>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Produk Katalog</CardTitle>
-          <Input placeholder="Cari produk..." value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />
+          <div className="flex flex-wrap items-center gap-2">
+            <Input placeholder="Cari produk..." value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />
+            {canManage && checked.size > 0 ? (
+              <>
+                <Button size="sm" variant="outline" disabled={batchMut.isPending} onClick={() => batchMut.mutate({ trackStock: true })}>
+                  Aktifkan lacak ({checked.size})
+                </Button>
+                <Button size="sm" variant="outline" disabled={batchMut.isPending} onClick={() => batchMut.mutate({ trackStock: false })}>
+                  Nonaktifkan ({checked.size})
+                </Button>
+              </>
+            ) : null}
+            {canManage ? (
+              <Button
+                size="sm"
+                disabled={batchMut.isPending}
+                onClick={() => {
+                  if (confirm("Aktifkan lacak stok untuk semua produk katalog? Bundle akan dilewati. Nonaktifkan manual untuk produk jasa.")) {
+                    batchMut.mutate({ all: true, trackStock: true });
+                  }
+                }}
+              >
+                Lacak semua produk
+              </Button>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent>
           <InventoryTable>
             <InventoryTableHeader>
               <InventoryTableRow>
+                {canManage ? (
+                  <InventoryTableHead className="w-10">
+                    <input type="checkbox" checked={allVisible} onChange={() => {
+                      setChecked((prev) => {
+                        const next = new Set(prev);
+                        if (allVisible) visibleIds.forEach((id) => next.delete(id));
+                        else visibleIds.forEach((id) => next.add(id));
+                        return next;
+                      });
+                    }} aria-label="Pilih semua" />
+                  </InventoryTableHead>
+                ) : null}
                 <InventoryTableHead>Produk</InventoryTableHead>
                 <InventoryTableHead>Kode</InventoryTableHead>
                 <InventoryTableHead align="right">Aksi</InventoryTableHead>
@@ -58,12 +148,17 @@ export default function InventoryItemsPage() {
             </InventoryTableHeader>
             <InventoryTableBody>
               {isLoading ? (
-                <InventoryTableEmpty colSpan={3}>Memuat...</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={canManage ? 4 : 3}>Memuat...</InventoryTableEmpty>
               ) : items.length === 0 ? (
-                <InventoryTableEmpty colSpan={3}>Belum ada produk.</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={canManage ? 4 : 3}>Belum ada produk.</InventoryTableEmpty>
               ) : (
                 items.map((it) => (
                   <InventoryTableRow key={it.id}>
+                    {canManage ? (
+                      <InventoryTableCell>
+                        <input type="checkbox" checked={checked.has(it.id)} onChange={() => toggleOne(it.id)} />
+                      </InventoryTableCell>
+                    ) : null}
                     <InventoryTableCell className="font-medium">{it.name}</InventoryTableCell>
                     <InventoryTableCell className="text-muted-foreground">{it.externalCode}</InventoryTableCell>
                     <InventoryTableCell align="right">
@@ -108,7 +203,6 @@ function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | nu
     onError: (e) => toast.error(toApiError(e).message),
   });
 
-  // Bundle editing
   const [bComponents, setBComponents] = useState<Array<{ item: PickedItem | null; qty: string }>>([]);
   const [bundleMode, setBundleMode] = useState(false);
 
@@ -152,6 +246,18 @@ function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | nu
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={sku.trackStock} onChange={(e) => updateMut.mutate({ trackStock: e.target.checked })} />
               <span className="font-medium">Lacak stok untuk item ini</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="text-muted-foreground" aria-label="Penjelasan lacak stok">
+                      <HelpCircle className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    Stok & HPP diperbarui otomatis dari penjualan, pembelian, dan penyesuaian. Nonaktifkan untuk jasa atau item tanpa inventori fisik.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </label>
 
             <div className="space-y-1.5">

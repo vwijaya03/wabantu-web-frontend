@@ -1,9 +1,12 @@
 "use client";
 
 import { Suspense, useCallback, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
@@ -196,6 +199,14 @@ function MovementsContent() {
 export default function MovementsPage() {
   return (
     <RequireTenantDashboard title="Pergerakan Stok">
+      <div className="mb-4">
+        <Button variant="ghost" size="sm" asChild className="-ml-2">
+          <Link href="/dashboard/inventory">
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Kembali ke Stok
+          </Link>
+        </Button>
+      </div>
       <InventoryPageHeader title="Pergerakan Stok" description="Buku besar stok per SKU — pilih produk dulu." helpTopic="movements" />
       <Suspense fallback={<p className="text-sm text-muted-foreground">Memuat...</p>}>
         <MovementsContent />

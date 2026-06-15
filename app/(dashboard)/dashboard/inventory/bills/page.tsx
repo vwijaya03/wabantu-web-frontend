@@ -29,6 +29,7 @@ import {
 } from "@/components/inventory/inventory-table";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { Pencil, Trash2 } from "lucide-react";
 
 type BillDraftLine = {
   item: PickedItem | null;
@@ -44,6 +45,7 @@ export default function BillsPage() {
   const canManage = canPerformOwnerActions(user);
   const [creating, setCreating] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [editOnOpen, setEditOnOpen] = useState(false);
   const [q, setQ] = useState("");
   const [searchQ, setSearchQ] = useState("");
   const [page, setPage] = useState(1);
@@ -54,6 +56,15 @@ export default function BillsPage() {
     queryFn: () => inventoryApi.listBills({ q: searchQ || undefined, page, pageSize }),
   });
   const bills = data?.bills ?? [];
+
+  const deleteBillMut = useMutation({
+    mutationFn: (id: string) => inventoryApi.deleteBill(id),
+    onSuccess: () => {
+      toast.success("Penerimaan dihapus — stok dikurangi");
+      void qc.invalidateQueries({ queryKey: ["inventory"] });
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
 
   return (
     <RequireTenantDashboard title="Penerimaan Barang">
@@ -94,22 +105,50 @@ export default function BillsPage() {
                 <InventoryTableHead>Supplier</InventoryTableHead>
                 <InventoryTableHead align="right">Total</InventoryTableHead>
                 <InventoryTableHead>Tanggal</InventoryTableHead>
+                {canManage ? <InventoryTableHead align="right">Aksi</InventoryTableHead> : null}
               </InventoryTableRow>
             </InventoryTableHeader>
             <InventoryTableBody>
               {isLoading ? (
-                <InventoryTableEmpty colSpan={4}>Memuat...</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={canManage ? 5 : 4}>Memuat...</InventoryTableEmpty>
               ) : bills.length === 0 ? (
-                <InventoryTableEmpty colSpan={4}>Belum ada penerimaan.</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={canManage ? 5 : 4}>Belum ada penerimaan.</InventoryTableEmpty>
               ) : (
                 bills.map((b) => (
-                  <InventoryTableRow key={b.id} className="cursor-pointer" onClick={() => setDetailId(b.id)}>
+                  <InventoryTableRow key={b.id} className="cursor-pointer" onClick={() => { setEditOnOpen(false); setDetailId(b.id); }}>
                     <InventoryTableCell>
-                      <TransactionDocLink docNo={b.billNo} onClick={() => setDetailId(b.id)} />
+                      <TransactionDocLink docNo={b.billNo} onClick={() => { setEditOnOpen(false); setDetailId(b.id); }} />
                     </InventoryTableCell>
                     <InventoryTableCell>{b.supplierName || "-"}</InventoryTableCell>
                     <InventoryTableCell align="right">{formatIDR(b.subtotal)}</InventoryTableCell>
                     <InventoryTableCell className="text-xs text-muted-foreground">{b.transactionDate}</InventoryTableCell>
+                    {canManage ? (
+                      <InventoryTableCell align="right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            aria-label={`Edit ${b.billNo}`}
+                            onClick={() => { setEditOnOpen(true); setDetailId(b.id); }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            aria-label={`Hapus ${b.billNo}`}
+                            disabled={deleteBillMut.isPending}
+                            onClick={() => {
+                              if (confirm(`Hapus ${b.billNo}? Stok akan dikurangi.`)) deleteBillMut.mutate(b.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </InventoryTableCell>
+                    ) : null}
                   </InventoryTableRow>
                 ))
               )}
@@ -125,7 +164,7 @@ export default function BillsPage() {
         </CardContent>
       </Card>
 
-      <BillDetailDialog id={detailId} onClose={() => setDetailId(null)} />
+      <BillDetailDialog id={detailId} initialEditing={editOnOpen} onClose={() => { setEditOnOpen(false); setDetailId(null); }} />
     </RequireTenantDashboard>
   );
 }
@@ -235,7 +274,7 @@ function CreateBillPanel({ onDone }: { onDone: () => void }) {
   );
 }
 
-function BillDetailDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
+function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; initialEditing?: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
@@ -259,7 +298,7 @@ function BillDetailDialog({ id, onClose }: { id: string | null; onClose: () => v
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader><DialogTitle>{bill ? `${bill.billNo} · ${bill.supplierName || "Tanpa supplier"}` : "Memuat..."}</DialogTitle></DialogHeader>
         {bill ? (
-          editing ? (
+          (editing || initialEditing) ? (
             <BillEditForm
               bill={bill}
               onCancel={() => setEditing(false)}

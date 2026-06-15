@@ -13,6 +13,7 @@ import { TransactionDocLink } from "@/components/inventory/transaction-doc-link"
 import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { OrderPicker } from "@/components/inventory/order-picker";
+import { BulkSalesReturnPanel } from "@/components/inventory/bulk-sales-return-panel";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
@@ -76,7 +77,8 @@ export default function SalesReturnsPage() {
       <InventoryPageHeader title="Retur Penjualan" description="Barang kembali dari pelanggan — stok masuk lagi dengan HPP asli." helpTopic="sales-returns" />
 
       {canManage ? (
-        <Card className="mb-4">
+        <>
+          <Card className="mb-4">
           <CardHeader><CardTitle>Buat Retur</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5"><Label>Pesanan</Label><OrderPicker value={order} onChange={(o) => { setOrder(o); setQtys({}); }} /></div>
@@ -109,7 +111,9 @@ export default function SalesReturnsPage() {
               <p className="text-sm text-muted-foreground">Pesanan ini tidak punya item yang bisa diretur.</p>
             ) : null}
           </CardContent>
-        </Card>
+          </Card>
+          <BulkSalesReturnPanel />
+        </>
       ) : null}
 
       <InventoryOpenDetailSuspense setDetailId={setDetailId} />

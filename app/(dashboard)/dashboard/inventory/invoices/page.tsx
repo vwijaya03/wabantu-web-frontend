@@ -13,6 +13,7 @@ import { TransactionDocLink } from "@/components/inventory/transaction-doc-link"
 import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { OrderPicker } from "@/components/inventory/order-picker";
+import { BulkInvoicePanel } from "@/components/inventory/bulk-invoice-panel";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
@@ -62,15 +63,18 @@ export default function InvoicesPage() {
       <InventoryPageHeader title="Faktur Penjualan" description="Dokumen faktur dari pesanan, lengkap dengan HPP per baris." helpTopic="invoices" />
 
       {canManage ? (
-        <Card className="mb-4">
-          <CardHeader><CardTitle>Buat Faktur dari Pesanan</CardTitle></CardHeader>
-          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1"><OrderPicker value={order} onChange={setOrder} /></div>
-            <Button onClick={() => createMut.mutate()} disabled={!order || createMut.isPending}>
-              {createMut.isPending ? "Membuat..." : "Buat Faktur"}
-            </Button>
-          </CardContent>
-        </Card>
+        <>
+          <Card className="mb-4">
+            <CardHeader><CardTitle>Buat Faktur dari Pesanan</CardTitle></CardHeader>
+            <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex-1"><OrderPicker value={order} onChange={setOrder} /></div>
+              <Button onClick={() => createMut.mutate()} disabled={!order || createMut.isPending}>
+                {createMut.isPending ? "Membuat..." : "Buat Faktur"}
+              </Button>
+            </CardContent>
+          </Card>
+          <BulkInvoicePanel />
+        </>
       ) : null}
 
       <InventoryOpenDetailSuspense setDetailId={setDetailId} />
