@@ -136,7 +136,7 @@ function BackfillCard() {
       <CardHeader><CardTitle><InventoryCardTitleWithHelp title="Backfill Pesanan Lama" helpTopic="maintenance-backfill" /></CardTitle></CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Potong stok untuk pesanan committed yang dibuat sebelum modul persediaan aktif.
+          Potong stok untuk pesanan committed (Sedang diproses, Dalam pengiriman, Selesai) yang belum sinkron dengan persediaan.
         </p>
         <Button variant="outline" onClick={() => previewMut.mutate()} disabled={previewMut.isPending}>
           {previewMut.isPending ? "Memindai..." : "Preview"}
@@ -211,7 +211,7 @@ function BackfillIssuesPanel({
           <div key={issue.orderId} className="rounded-md border bg-background p-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-semibold">{issue.orderRef}</span>
-              <Badge variant="secondary">{issue.status}</Badge>
+              <Badge variant="secondary">{orderStatusLabel(issue.status)}</Badge>
             </div>
             {issue.message ? (
               <p className="mt-1 text-muted-foreground">{issue.message}</p>
@@ -325,4 +325,17 @@ function ValuationCard() {
       </CardContent>
     </Card>
   );
+}
+
+function orderStatusLabel(status: string) {
+  const s = status.trim().toLowerCase();
+  if (s === "confirmed" || s === "paid") return "Sedang diproses";
+  const labels: Record<string, string> = {
+    processing: "Sedang diproses",
+    shipped: "Dalam pengiriman",
+    completed: "Selesai",
+    draft: "Draft",
+    cancelled: "Dibatalkan",
+  };
+  return labels[s] ?? status;
 }

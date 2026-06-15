@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
+import { InventoryGettingStarted } from "@/components/inventory/inventory-getting-started";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
 import {
@@ -60,6 +61,12 @@ export default function InventoryStockPage() {
           </Button>
         </div>
       </div>
+
+      <InventoryGettingStarted
+        setupCompleted={setting?.setupCompleted ?? false}
+        warehouseCount={setting?.warehouseCount ?? warehouses.length}
+        stockRowCount={rows.length}
+      />
 
       <div className="my-4 grid gap-3 sm:grid-cols-3">
         <Card>

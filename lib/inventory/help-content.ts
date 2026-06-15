@@ -64,6 +64,7 @@ export const INVENTORY_HELP: Record<InventoryHelpTopic, InventoryHelpContent> = 
       "Filter per gudang bila punya lebih dari satu lokasi",
     ],
     tips: [
+      "Gunakan kartu “Panduan pemula” di atas untuk tahu langkah berikutnya yang disarankan",
       "Klik nama produk untuk membuka Kartu Stok (riwayat keluar-masuk)",
       "“Tersedia” = on hand dikurangi yang sudah direservasi (jika ada)",
       "Setup belum selesai? Banner kuning mengarahkan ke wizard setup",
