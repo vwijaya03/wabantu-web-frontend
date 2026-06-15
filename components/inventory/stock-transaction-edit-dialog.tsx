@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { WarehouseSelect } from "@/components/inventory/warehouse-select";
 import { inventoryApi, formatIDR, type StockTransaction } from "@/lib/api/inventory";
@@ -50,11 +50,16 @@ export function StockTransactionEditDialog({
 
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>
             {txn ? `Edit ${txn.docNo} · ${KIND_LABELS[txn.kind]}` : "Memuat..."}
           </DialogTitle>
+          {txn ? (
+            <DialogDescription className="sr-only">
+              Form edit transaksi {txn.docNo}
+            </DialogDescription>
+          ) : null}
         </DialogHeader>
         {isLoading || !txn ? (
           <p className="text-sm text-muted-foreground">Memuat...</p>

@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
+import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
+import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { OrderPicker } from "@/components/inventory/order-picker";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -110,6 +112,8 @@ export default function SalesReturnsPage() {
         </Card>
       ) : null}
 
+      <InventoryOpenDetailSuspense setDetailId={setDetailId} />
+
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Daftar Retur</CardTitle>
@@ -138,7 +142,9 @@ export default function SalesReturnsPage() {
               ) : (
                 returns.map((r) => (
                   <InventoryTableRow key={r.id} className="cursor-pointer" onClick={() => setDetailId(r.id)}>
-                    <InventoryTableCell className="font-medium text-primary">{r.returnNo}</InventoryTableCell>
+                    <InventoryTableCell>
+                      <TransactionDocLink docNo={r.returnNo} onClick={() => setDetailId(r.id)} />
+                    </InventoryTableCell>
                     <InventoryTableCell align="right">{formatIDR(r.totalCost)}</InventoryTableCell>
                     <InventoryTableCell className="text-xs text-muted-foreground">{r.transactionDate}</InventoryTableCell>
                   </InventoryTableRow>
@@ -179,7 +185,7 @@ function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; can
   });
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl" aria-describedby={undefined}>
         <DialogHeader><DialogTitle>{r ? r.returnNo : "Memuat..."}</DialogTitle></DialogHeader>
         {r ? (
           <div className="space-y-3">

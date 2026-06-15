@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
+import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
+import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { WarehouseSelect } from "@/components/inventory/warehouse-select";
@@ -74,6 +76,8 @@ export default function PurchaseOrdersPage() {
 
       {creating ? <CreatePOPanel onDone={() => { setCreating(false); void qc.invalidateQueries({ queryKey: ["inventory", "purchase-orders"] }); }} /> : null}
 
+      <InventoryOpenDetailSuspense setDetailId={setDetailId} />
+
       <Card className="mt-4">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Daftar PO</CardTitle>
@@ -104,7 +108,9 @@ export default function PurchaseOrdersPage() {
               ) : (
                 orders.map((po) => (
                   <InventoryTableRow key={po.id} className="cursor-pointer" onClick={() => setDetailId(po.id)}>
-                    <InventoryTableCell className="font-medium text-primary">{po.poNo}</InventoryTableCell>
+                    <InventoryTableCell>
+                      <TransactionDocLink docNo={po.poNo} onClick={() => setDetailId(po.id)} />
+                    </InventoryTableCell>
                     <InventoryTableCell>{po.supplierName || "-"}</InventoryTableCell>
                     <InventoryTableCell>{poStatusBadge(po.status)}</InventoryTableCell>
                     <InventoryTableCell align="right">{formatIDR(po.subtotal)}</InventoryTableCell>
@@ -213,7 +219,7 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
 
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) { setEditing(false); onClose(); } }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader><DialogTitle>{po ? `${po.poNo} · ${po.supplierName || "Tanpa supplier"}` : "Memuat..."}</DialogTitle></DialogHeader>
         {po ? (
           editing ? (

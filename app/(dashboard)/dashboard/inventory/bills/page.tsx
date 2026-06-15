@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
+import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
+import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { WarehouseSelect } from "@/components/inventory/warehouse-select";
@@ -71,6 +73,8 @@ export default function BillsPage() {
         />
       ) : null}
 
+      <InventoryOpenDetailSuspense setDetailId={setDetailId} />
+
       <Card className="mt-4">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Daftar Penerimaan</CardTitle>
@@ -100,7 +104,9 @@ export default function BillsPage() {
               ) : (
                 bills.map((b) => (
                   <InventoryTableRow key={b.id} className="cursor-pointer" onClick={() => setDetailId(b.id)}>
-                    <InventoryTableCell className="font-medium text-primary">{b.billNo}</InventoryTableCell>
+                    <InventoryTableCell>
+                      <TransactionDocLink docNo={b.billNo} onClick={() => setDetailId(b.id)} />
+                    </InventoryTableCell>
                     <InventoryTableCell>{b.supplierName || "-"}</InventoryTableCell>
                     <InventoryTableCell align="right">{formatIDR(b.subtotal)}</InventoryTableCell>
                     <InventoryTableCell className="text-xs text-muted-foreground">{b.transactionDate}</InventoryTableCell>
@@ -250,7 +256,7 @@ function BillDetailDialog({ id, onClose }: { id: string | null; onClose: () => v
   });
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) { setEditing(false); onClose(); } }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader><DialogTitle>{bill ? `${bill.billNo} · ${bill.supplierName || "Tanpa supplier"}` : "Memuat..."}</DialogTitle></DialogHeader>
         {bill ? (
           editing ? (

@@ -18,6 +18,7 @@ import {
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
 import { StockTransactionEditDialog } from "@/components/inventory/stock-transaction-edit-dialog";
+import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
@@ -69,9 +70,10 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
   });
   const warehouses = whData?.warehouses ?? [];
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["inventory", "stock-transactions", kind, searchQ, page, pageSize],
     queryFn: () => inventoryApi.listStockTransactions({ kind, q: searchQ || undefined, page, pageSize }),
+    retry: 1,
   });
 
   const rows = useMemo(() => data?.transactions ?? [], [data?.transactions]);
@@ -195,6 +197,10 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
             <InventoryTableBody>
               {isLoading ? (
                 <InventoryTableEmpty colSpan={colSpan}>Memuat...</InventoryTableEmpty>
+              ) : isError ? (
+                <InventoryTableEmpty colSpan={colSpan}>
+                  Gagal memuat: {toApiError(error).message}
+                </InventoryTableEmpty>
               ) : rows.length === 0 ? (
                 <InventoryTableEmpty colSpan={colSpan}>Belum ada transaksi.</InventoryTableEmpty>
               ) : (
@@ -205,7 +211,9 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
                         <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggleOne(t.id)} aria-label={`Pilih ${t.docNo}`} />
                       </InventoryTableCell>
                     ) : null}
-                    <InventoryTableCell className="font-mono font-medium text-primary">{t.docNo}</InventoryTableCell>
+                    <InventoryTableCell>
+                      <TransactionDocLink docNo={t.docNo} onClick={() => setEditId(t.id)} />
+                    </InventoryTableCell>
                     <InventoryTableCell className="text-sm">{t.transactionDate}</InventoryTableCell>
                     <InventoryTableCell className="max-w-xs text-sm">{renderDetail(t)}</InventoryTableCell>
                     <InventoryTableCell className="max-w-[140px] truncate text-xs text-muted-foreground">{t.note || "—"}</InventoryTableCell>

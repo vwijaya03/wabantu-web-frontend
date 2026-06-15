@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
+import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
+import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { OrderPicker } from "@/components/inventory/order-picker";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -71,6 +73,8 @@ export default function InvoicesPage() {
         </Card>
       ) : null}
 
+      <InventoryOpenDetailSuspense setDetailId={setDetailId} />
+
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Daftar Faktur</CardTitle>
@@ -101,7 +105,9 @@ export default function InvoicesPage() {
               ) : (
                 invoices.map((inv) => (
                   <InventoryTableRow key={inv.id} className="cursor-pointer" onClick={() => setDetailId(inv.id)}>
-                    <InventoryTableCell className="font-medium text-primary">{inv.invoiceNo}</InventoryTableCell>
+                    <InventoryTableCell>
+                      <TransactionDocLink docNo={inv.invoiceNo} onClick={() => setDetailId(inv.id)} />
+                    </InventoryTableCell>
                     <InventoryTableCell><Badge variant="secondary">{inv.status}</Badge></InventoryTableCell>
                     <InventoryTableCell align="right">{formatIDR(inv.subtotal)}</InventoryTableCell>
                     <InventoryTableCell align="right" className="text-muted-foreground">{formatIDR(inv.totalCogs)}</InventoryTableCell>
@@ -144,7 +150,7 @@ function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; ca
   });
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" aria-describedby={undefined}>
         <DialogHeader><DialogTitle>{inv ? inv.invoiceNo : "Memuat..."}</DialogTitle></DialogHeader>
         {inv ? (
           <div className="space-y-3">
