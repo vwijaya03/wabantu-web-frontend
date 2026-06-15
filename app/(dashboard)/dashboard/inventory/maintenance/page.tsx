@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,8 @@ import { InventoryCardTitleWithHelp, InventoryPageHeader } from "@/components/in
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
-import { inventoryApi, formatIDR, formatStockQty, type BackfillOrdersResult } from "@/lib/api/inventory";
+import { inventoryApi, formatIDR, type BackfillOrdersResult } from "@/lib/api/inventory";
+import { BackfillResultPanel, insufficientCount } from "@/components/inventory/backfill-result-panel";
 import {
   InventoryTable,
   InventoryTableBody,
@@ -47,10 +47,7 @@ export default function InventoryMaintenancePage() {
   return (
     <RequireTenantDashboard title="Pemeliharaan">
       <InventoryPageHeader title="Pemeliharaan Persediaan" description="Recalculate HPP, backfill pesanan lama, dan ringkasan nilai." helpTopic="maintenance" />
-      <div className="grid gap-6 lg:grid-cols-2">
-        <RecalcCard />
-        <BackfillCard />
-      </div>
+      <BackfillMaintenanceSection />
       <div className="mt-6">
         <ValuationCard />
       </div>
@@ -98,7 +95,7 @@ function RecalcCard() {
   );
 }
 
-function BackfillCard() {
+function BackfillMaintenanceSection() {
   const [confirm, setConfirm] = useState(false);
   const [preview, setPreview] = useState<BackfillOrdersResult | null>(null);
   const [lastResult, setLastResult] = useState<BackfillOrdersResult | null>(null);
@@ -127,157 +124,81 @@ function BackfillCard() {
   });
 
   const issues = preview?.issues?.length ? preview.issues : lastResult?.issues ?? [];
-  const suggested = preview?.suggestedOpening?.length
-    ? preview.suggestedOpening
-    : lastResult?.suggestedOpening ?? [];
+  const hasDetail =
+    issues.length > 0 ||
+    (preview?.suggestedOpening?.length ?? 0) > 0 ||
+    (lastResult?.suggestedOpening?.length ?? 0) > 0 ||
+    insufficientCount(preview ?? lastResult ?? { preview: true, pendingOrders: 0, processed: 0, failed: 0 }) > 0;
+  const detailResult = preview ?? lastResult;
 
   return (
-    <Card>
-      <CardHeader><CardTitle><InventoryCardTitleWithHelp title="Backfill Pesanan Lama" helpTopic="maintenance-backfill" /></CardTitle></CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          Potong stok untuk pesanan committed yang dibuat sebelum modul persediaan aktif.
-        </p>
-        <Button variant="outline" onClick={() => previewMut.mutate()} disabled={previewMut.isPending}>
-          {previewMut.isPending ? "Memindai..." : "Preview"}
-        </Button>
+    <>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <RecalcCard />
+        <Card>
+          <CardHeader><CardTitle><InventoryCardTitleWithHelp title="Backfill Pesanan Lama" helpTopic="maintenance-backfill" /></CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Potong stok untuk pesanan committed (Sedang diproses, Dalam pengiriman, Selesai) yang belum sinkron dengan persediaan.
+            </p>
+            <Button variant="outline" onClick={() => previewMut.mutate()} disabled={previewMut.isPending}>
+              {previewMut.isPending ? "Memindai..." : "Preview"}
+            </Button>
 
-        {preview ? (
-          <div className="rounded-md border p-3 text-sm space-y-2">
-            <p>Pesanan akan diproses: <span className="font-semibold">{preview.pendingOrders}</span></p>
-            {preview.insufficient.length > 0 ? (
-              <p className="text-amber-800">
-                {preview.insufficient.length} pesanan stoknya tidak cukup dan akan gagal jika blokir stok minus aktif.
+            {preview ? (
+              <div className="rounded-md border p-3 text-sm space-y-2">
+                <p>Pesanan akan diproses: <span className="font-semibold">{preview.pendingOrders.toLocaleString("id-ID")}</span></p>
+                {insufficientCount(preview) > 0 ? (
+                  <p className="text-amber-800">
+                    {insufficientCount(preview).toLocaleString("id-ID")} pesanan stoknya tidak cukup dan akan gagal jika blokir stok minus aktif.
+                  </p>
+                ) : preview.pendingOrders > 0 ? (
+                  <p className="text-emerald-700">Semua pesanan punya stok cukup.</p>
+                ) : null}
+                {preview.pendingOrders > 0 ? (
+                  <Button className="mt-1" size="sm" onClick={() => setConfirm(true)}>Jalankan Backfill</Button>
+                ) : null}
+              </div>
+            ) : null}
+
+            {lastResult && lastResult.processed > 0 && lastResult.failed === 0 ? (
+              <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                {lastResult.processed.toLocaleString("id-ID")} pesanan berhasil diproses.
               </p>
-            ) : preview.pendingOrders > 0 ? (
-              <p className="text-emerald-700">Semua pesanan punya stok cukup.</p>
             ) : null}
-            {preview.pendingOrders > 0 ? (
-              <Button className="mt-1" size="sm" onClick={() => setConfirm(true)}>Jalankan Backfill</Button>
-            ) : null}
-          </div>
-        ) : null}
+          </CardContent>
 
-        {lastResult && lastResult.processed > 0 && lastResult.failed === 0 ? (
-          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-            {lastResult.processed} pesanan berhasil diproses.
-          </p>
-        ) : null}
-
-        {issues.length > 0 ? <BackfillIssuesPanel issues={issues} suggested={suggested} /> : null}
-      </CardContent>
-
-      <AlertDialog open={confirm} onOpenChange={setConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Jalankan backfill {preview?.pendingOrders ?? 0} pesanan?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Stok akan dipotong retroaktif + COGS dicatat untuk pesanan lama yang committed. Tidak bisa dibatalkan otomatis.
-              {preview && preview.insufficient.length > 0 ? (
-                <> {preview.insufficient.length} pesanan kemungkinan gagal karena stok tidak cukup.</>
-              ) : null}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel autoFocus>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={() => execMut.mutate()} disabled={execMut.isPending}>
-              {execMut.isPending ? "Memproses..." : "Jalankan"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Card>
-  );
-}
-
-function BackfillIssuesPanel({
-  issues,
-  suggested,
-}: {
-  issues: NonNullable<BackfillOrdersResult["issues"]>;
-  suggested: NonNullable<BackfillOrdersResult["suggestedOpening"]>;
-}) {
-  return (
-    <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/50 p-3 text-sm">
-      <div>
-        <p className="font-medium text-amber-950">Pesanan yang gagal / akan gagal</p>
-        <p className="mt-1 text-amber-900">
-          Stok belum cukup. Isi <strong>saldo awal</strong> atau penyesuaian stok, lalu jalankan backfill lagi.
-        </p>
+          <AlertDialog open={confirm} onOpenChange={setConfirm}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Jalankan backfill {preview?.pendingOrders ?? 0} pesanan?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Stok akan dipotong retroaktif + COGS dicatat untuk pesanan lama yang committed. Tidak bisa dibatalkan otomatis.
+                  {preview && insufficientCount(preview) > 0 ? (
+                    <> {insufficientCount(preview).toLocaleString("id-ID")} pesanan kemungkinan gagal karena stok tidak cukup.</>
+                  ) : null}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel autoFocus>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={() => execMut.mutate()} disabled={execMut.isPending}>
+                  {execMut.isPending ? "Memproses..." : "Jalankan"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </Card>
       </div>
 
-      <div className="space-y-3">
-        {issues.map((issue) => (
-          <div key={issue.orderId} className="rounded-md border bg-background p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold">{issue.orderRef}</span>
-              <Badge variant="secondary">{issue.status}</Badge>
-            </div>
-            {issue.message ? (
-              <p className="mt-1 text-muted-foreground">{issue.message}</p>
-            ) : null}
-            {issue.shortages && issue.shortages.length > 0 ? (
-              <InventoryTable className="mt-2">
-                <InventoryTableHeader>
-                  <InventoryTableRow>
-                    <InventoryTableHead>Item</InventoryTableHead>
-                    <InventoryTableHead>Gudang</InventoryTableHead>
-                    <InventoryTableHead align="right">Butuh</InventoryTableHead>
-                    <InventoryTableHead align="right">Tersedia</InventoryTableHead>
-                    <InventoryTableHead align="right">Kurang</InventoryTableHead>
-                  </InventoryTableRow>
-                </InventoryTableHeader>
-                <InventoryTableBody>
-                  {issue.shortages.map((s) => (
-                    <InventoryTableRow key={`${issue.orderId}-${s.catalogItemId}-${s.warehouseId}`}>
-                      <InventoryTableCell>{s.itemName}</InventoryTableCell>
-                      <InventoryTableCell>{s.warehouseName}</InventoryTableCell>
-                      <InventoryTableCell align="right">{formatStockQty(s.qtyRequired)}</InventoryTableCell>
-                      <InventoryTableCell align="right">{formatStockQty(s.qtyAvailable)}</InventoryTableCell>
-                      <InventoryTableCell align="right" className="font-medium text-amber-800">
-                        {formatStockQty(s.qtyShort)}
-                      </InventoryTableCell>
-                    </InventoryTableRow>
-                  ))}
-                </InventoryTableBody>
-              </InventoryTable>
-            ) : null}
-          </div>
-        ))}
-      </div>
-
-      {suggested.length > 0 ? (
-        <div className="space-y-2 border-t border-amber-200 pt-3">
-          <p className="font-medium text-amber-950">Disarankan: saldo awal minimal</p>
-          <p className="text-amber-900">
-            Tambahkan baris berikut di Operasi Stok → Saldo Awal (isi harga pokok sendiri), lalu ulangi backfill.
-          </p>
-          <InventoryTable>
-            <InventoryTableHeader>
-              <InventoryTableRow>
-                <InventoryTableHead>Item</InventoryTableHead>
-                <InventoryTableHead>Gudang</InventoryTableHead>
-                <InventoryTableHead align="right">Qty minimal</InventoryTableHead>
-              </InventoryTableRow>
-            </InventoryTableHeader>
-            <InventoryTableBody>
-              {suggested.map((s) => (
-                <InventoryTableRow key={`${s.catalogItemId}-${s.warehouseId}`}>
-                  <InventoryTableCell>{s.itemName}</InventoryTableCell>
-                  <InventoryTableCell>{s.warehouseName}</InventoryTableCell>
-                  <InventoryTableCell align="right" className="font-medium">
-                    {formatStockQty(s.minQty)}
-                  </InventoryTableCell>
-                </InventoryTableRow>
-              ))}
-            </InventoryTableBody>
-          </InventoryTable>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/dashboard/inventory/operations?mode=opening">Buka Saldo Awal</Link>
-          </Button>
+      {hasDetail && detailResult ? (
+        <div className="mt-6">
+          <BackfillResultPanel
+            result={detailResult}
+            mode={detailResult.preview ? "preview" : "execute"}
+          />
         </div>
       ) : null}
-    </div>
+    </>
   );
 }
 

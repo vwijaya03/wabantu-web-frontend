@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
+import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
+import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
+import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { WarehouseSelect } from "@/components/inventory/warehouse-select";
@@ -41,10 +44,14 @@ export default function BillsPage() {
   const canManage = canPerformOwnerActions(user);
   const [creating, setCreating] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [searchQ, setSearchQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "bills"],
-    queryFn: () => inventoryApi.listBills({ pageSize: 50 }),
+    queryKey: ["inventory", "bills", searchQ, page, pageSize],
+    queryFn: () => inventoryApi.listBills({ q: searchQ || undefined, page, pageSize }),
   });
   const bills = data?.bills ?? [];
 
@@ -66,8 +73,19 @@ export default function BillsPage() {
         />
       ) : null}
 
+      <InventoryOpenDetailSuspense setDetailId={setDetailId} />
+
       <Card className="mt-4">
-        <CardHeader><CardTitle>Daftar Penerimaan</CardTitle></CardHeader>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle>Daftar Penerimaan</CardTitle>
+          <Input
+            placeholder="Cari no bill..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { setSearchQ(q); setPage(1); } }}
+            className="w-44"
+          />
+        </CardHeader>
         <CardContent>
           <InventoryTable>
             <InventoryTableHeader>
@@ -86,7 +104,9 @@ export default function BillsPage() {
               ) : (
                 bills.map((b) => (
                   <InventoryTableRow key={b.id} className="cursor-pointer" onClick={() => setDetailId(b.id)}>
-                    <InventoryTableCell className="font-medium text-primary">{b.billNo}</InventoryTableCell>
+                    <InventoryTableCell>
+                      <TransactionDocLink docNo={b.billNo} onClick={() => setDetailId(b.id)} />
+                    </InventoryTableCell>
                     <InventoryTableCell>{b.supplierName || "-"}</InventoryTableCell>
                     <InventoryTableCell align="right">{formatIDR(b.subtotal)}</InventoryTableCell>
                     <InventoryTableCell className="text-xs text-muted-foreground">{b.transactionDate}</InventoryTableCell>
@@ -95,6 +115,13 @@ export default function BillsPage() {
               )}
             </InventoryTableBody>
           </InventoryTable>
+          <InventoryDataTablePagination
+            page={page}
+            pageSize={pageSize}
+            total={data?.total ?? 0}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          />
         </CardContent>
       </Card>
 
@@ -209,20 +236,62 @@ function CreateBillPanel({ onDone }: { onDone: () => void }) {
 }
 
 function BillDetailDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const canManage = canPerformOwnerActions(user);
+  const [editing, setEditing] = useState(false);
   const { data: bill } = useQuery({
     queryKey: ["inventory", "bill", id],
     queryFn: () => inventoryApi.getBill(id!),
     enabled: Boolean(id),
   });
+  const delMut = useMutation({
+    mutationFn: () => inventoryApi.deleteBill(id!),
+    onSuccess: () => {
+      toast.success("Penerimaan dihapus — stok dikurangi");
+      onClose();
+      void qc.invalidateQueries({ queryKey: ["inventory"] });
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
   return (
-    <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-2xl">
+    <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) { setEditing(false); onClose(); } }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader><DialogTitle>{bill ? `${bill.billNo} · ${bill.supplierName || "Tanpa supplier"}` : "Memuat..."}</DialogTitle></DialogHeader>
         {bill ? (
+          editing ? (
+            <BillEditForm
+              bill={bill}
+              onCancel={() => setEditing(false)}
+              onSaved={() => {
+                setEditing(false);
+                void qc.invalidateQueries({ queryKey: ["inventory", "bill", id] });
+                void qc.invalidateQueries({ queryKey: ["inventory", "bills"] });
+                void qc.invalidateQueries({ queryKey: ["inventory", "stock"] });
+              }}
+            />
+          ) : (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm">
-              <Badge variant={bill.status === "posted" ? "success" : "destructive"}>{bill.status === "posted" ? "Diterima" : "Dibatalkan"}</Badge>
-              <span className="text-muted-foreground">{bill.transactionDate}</span>
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Badge variant={bill.status === "posted" ? "success" : "destructive"}>{bill.status === "posted" ? "Diterima" : "Dibatalkan"}</Badge>
+                <span className="text-muted-foreground">{bill.transactionDate}</span>
+              </div>
+              {canManage ? (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditing(true)}>Edit</Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={delMut.isPending}
+                    onClick={() => {
+                      if (confirm(`Hapus ${bill.billNo}? Stok akan dikurangi.`)) delMut.mutate();
+                    }}
+                  >
+                    Hapus
+                  </Button>
+                </div>
+              ) : null}
             </div>
             <InventoryTable>
               <InventoryTableHeader>
@@ -246,8 +315,77 @@ function BillDetailDialog({ id, onClose }: { id: string | null; onClose: () => v
             </InventoryTable>
             <p className="text-right text-sm">Total: <span className="font-semibold">{formatIDR(bill.subtotal)}</span></p>
           </div>
+          )
         ) : null}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function BillEditForm({
+  bill,
+  onCancel,
+  onSaved,
+}: {
+  bill: import("@/lib/api/inventory").Bill;
+  onCancel: () => void;
+  onSaved: () => void;
+}) {
+  const [supplierName, setSupplierName] = useState(bill.supplierName ?? "");
+  const [note, setNote] = useState(bill.note ?? "");
+  const [lines, setLines] = useState<BillDraftLine[]>(
+    bill.lines.map((l) => ({
+      item: { id: l.catalogItemId, name: l.itemName ?? "Produk", externalCode: "" },
+      qty: String(l.qty),
+      unitCost: String(l.unitCost),
+      batchNo: l.batchNo ?? "",
+    })),
+  );
+
+  const setLine = (i: number, patch: Partial<BillDraftLine>) => setLines((ls) => ls.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  const addLine = () => setLines((ls) => [...ls, { item: null, qty: "", unitCost: "", batchNo: "" }]);
+  const removeLine = (i: number) => setLines((ls) => ls.filter((_, idx) => idx !== i));
+  const validLines = lines.filter((l) => l.item && Number(l.qty) > 0);
+
+  const mut = useMutation({
+    mutationFn: () =>
+      inventoryApi.updateBill(bill.id, {
+        supplierName: supplierName || undefined,
+        note: note || undefined,
+        lines: validLines.map((l) => ({
+          catalogItemId: l.item!.id,
+          qty: Number(l.qty),
+          unitCost: Number(l.unitCost) || 0,
+          batchNo: l.batchNo || undefined,
+        })),
+      }),
+    onSuccess: () => { toast.success("Penerimaan diperbarui — stok disesuaikan"); onSaved(); },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Nomor bill tetap: <span className="font-mono font-medium">{bill.billNo}</span></p>
+      <div className="space-y-1.5"><Label>Supplier</Label><Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} /></div>
+      <div className="space-y-1.5"><Label>Catatan</Label><Input value={note} onChange={(e) => setNote(e.target.value)} /></div>
+      <div className="space-y-2">
+        {lines.map((l, i) => (
+          <div key={i} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_100px_120px_120px_auto] sm:items-end">
+            <div className="space-y-1.5">{i === 0 ? <Label>Produk</Label> : null}<ItemPicker value={l.item} onChange={(it) => setLine(i, { item: it })} /></div>
+            <div className="space-y-1.5">{i === 0 ? <Label>Qty</Label> : null}<Input type="number" min="0" step="any" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></div>
+            <div className="space-y-1.5">{i === 0 ? <Label>Harga/unit</Label> : null}<Input type="number" min="0" step="any" value={l.unitCost} onChange={(e) => setLine(i, { unitCost: e.target.value })} /></div>
+            <div className="space-y-1.5">{i === 0 ? <Label>Batch</Label> : null}<Input value={l.batchNo} onChange={(e) => setLine(i, { batchNo: e.target.value })} /></div>
+            <Button type="button" variant="ghost" size="sm" className="text-destructive" disabled={lines.length === 1} onClick={() => removeLine(i)}>Hapus</Button>
+          </div>
+        ))}
+      </div>
+      <Button type="button" variant="outline" onClick={addLine}>+ Baris</Button>
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={onCancel}>Batal</Button>
+        <Button onClick={() => mut.mutate()} disabled={validLines.length === 0 || mut.isPending}>
+          {mut.isPending ? "Menyimpan..." : "Simpan Perubahan"}
+        </Button>
+      </div>
+    </div>
   );
 }

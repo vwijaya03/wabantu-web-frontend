@@ -4,9 +4,13 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
+import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
+import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
+import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { OrderPicker } from "@/components/inventory/order-picker";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -31,10 +35,14 @@ export default function InvoicesPage() {
   const canManage = canPerformOwnerActions(user);
   const [order, setOrder] = useState<Order | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [searchQ, setSearchQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "invoices"],
-    queryFn: () => inventoryApi.listInvoices({ pageSize: 50 }),
+    queryKey: ["inventory", "invoices", searchQ, page, pageSize],
+    queryFn: () => inventoryApi.listInvoices({ q: searchQ || undefined, page, pageSize }),
   });
   const invoices = data?.invoices ?? [];
 
@@ -65,8 +73,19 @@ export default function InvoicesPage() {
         </Card>
       ) : null}
 
+      <InventoryOpenDetailSuspense setDetailId={setDetailId} />
+
       <Card>
-        <CardHeader><CardTitle>Daftar Faktur</CardTitle></CardHeader>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle>Daftar Faktur</CardTitle>
+          <Input
+            placeholder="Cari no faktur..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { setSearchQ(q); setPage(1); } }}
+            className="w-44"
+          />
+        </CardHeader>
         <CardContent>
           <InventoryTable>
             <InventoryTableHeader>
@@ -86,7 +105,9 @@ export default function InvoicesPage() {
               ) : (
                 invoices.map((inv) => (
                   <InventoryTableRow key={inv.id} className="cursor-pointer" onClick={() => setDetailId(inv.id)}>
-                    <InventoryTableCell className="font-medium text-primary">{inv.invoiceNo}</InventoryTableCell>
+                    <InventoryTableCell>
+                      <TransactionDocLink docNo={inv.invoiceNo} onClick={() => setDetailId(inv.id)} />
+                    </InventoryTableCell>
                     <InventoryTableCell><Badge variant="secondary">{inv.status}</Badge></InventoryTableCell>
                     <InventoryTableCell align="right">{formatIDR(inv.subtotal)}</InventoryTableCell>
                     <InventoryTableCell align="right" className="text-muted-foreground">{formatIDR(inv.totalCogs)}</InventoryTableCell>
@@ -96,26 +117,55 @@ export default function InvoicesPage() {
               )}
             </InventoryTableBody>
           </InventoryTable>
+          <InventoryDataTablePagination
+            page={page}
+            pageSize={pageSize}
+            total={data?.total ?? 0}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          />
         </CardContent>
       </Card>
 
-      <InvoiceDetailDialog id={detailId} onClose={() => setDetailId(null)} />
+      <InvoiceDetailDialog id={detailId} canManage={canManage} onClose={() => setDetailId(null)} />
     </RequireTenantDashboard>
   );
 }
 
-function InvoiceDetailDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
+function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; canManage: boolean; onClose: () => void }) {
+  const qc = useQueryClient();
   const { data: inv } = useQuery({
     queryKey: ["inventory", "invoice", id],
     queryFn: () => inventoryApi.getInvoice(id!),
     enabled: Boolean(id),
   });
+  const delMut = useMutation({
+    mutationFn: () => inventoryApi.deleteInvoice(id!),
+    onSuccess: () => {
+      toast.success("Faktur dihapus");
+      onClose();
+      void qc.invalidateQueries({ queryKey: ["inventory", "invoices"] });
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" aria-describedby={undefined}>
         <DialogHeader><DialogTitle>{inv ? inv.invoiceNo : "Memuat..."}</DialogTitle></DialogHeader>
         {inv ? (
           <div className="space-y-3">
+            {canManage ? (
+              <div className="flex justify-end">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={delMut.isPending}
+                  onClick={() => { if (confirm(`Hapus faktur ${inv.invoiceNo}?`)) delMut.mutate(); }}
+                >
+                  Hapus
+                </Button>
+              </div>
+            ) : null}
             <InventoryTable>
               <InventoryTableHeader>
                 <InventoryTableRow>

@@ -141,7 +141,7 @@ function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | nu
 
   return (
     <Dialog open={Boolean(item)} onOpenChange={(o) => { if (!o) { setBundleMode(false); onClose(); } }}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg" aria-describedby={undefined}>
         <DialogHeader><DialogTitle>{item?.name}</DialogTitle></DialogHeader>
         {!sku ? (
           <p className="text-sm text-muted-foreground">Memuat...</p>

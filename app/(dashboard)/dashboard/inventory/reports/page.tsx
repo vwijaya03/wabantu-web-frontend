@@ -19,6 +19,7 @@ import {
 } from "@/components/inventory/inventory-table";
 import { downloadCSV } from "@/lib/inventory/csv";
 import { cn } from "@/lib/utils";
+import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
 
 type Tab = "valuation" | "margin";
 
@@ -49,12 +50,15 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
 }
 
 function ValuationReport() {
+  const [page, setPage] = useState(1);
+  const pageSize = 100;
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "stock", "report"],
-    queryFn: () => inventoryApi.listStock({ pageSize: 1000 }),
+    queryKey: ["inventory", "stock", "report", page, pageSize],
+    queryFn: () => inventoryApi.listStock({ page, pageSize }),
   });
   const rows = data?.stock ?? [];
-  const total = rows.reduce((s, r) => s + r.totalValue, 0);
+  const total = data?.total ?? 0;
+  const pageTotal = rows.reduce((s, r) => s + r.totalValue, 0);
 
   const byWarehouse = (() => {
     const m = new Map<string, number>();
@@ -75,8 +79,11 @@ function ValuationReport() {
       <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
         <Card>
           <CardContent className="py-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Total nilai persediaan</p>
-            <p className="mt-1 text-2xl font-semibold">{formatIDR(total)}</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Nilai persediaan (halaman ini)</p>
+            <p className="mt-1 text-2xl font-semibold">{formatIDR(pageTotal)}</p>
+            {total > rows.length ? (
+              <p className="mt-1 text-xs text-muted-foreground">{total} baris total — gunakan pagination untuk melihat semua.</p>
+            ) : null}
             <div className="mt-2 flex flex-wrap gap-2">
               {byWarehouse.map(([name, value]) => (
                 <Badge key={name} variant="secondary">{name}: {formatIDR(value)}</Badge>
@@ -118,6 +125,12 @@ function ValuationReport() {
               )}
             </InventoryTableBody>
           </InventoryTable>
+          <InventoryDataTablePagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+          />
         </CardContent>
       </Card>
     </div>

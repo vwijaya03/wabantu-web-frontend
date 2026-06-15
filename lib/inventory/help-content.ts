@@ -64,27 +64,34 @@ export const INVENTORY_HELP: Record<InventoryHelpTopic, InventoryHelpContent> = 
       "Filter per gudang bila punya lebih dari satu lokasi",
     ],
     tips: [
+      "Gunakan kartu “Panduan pemula” di atas untuk tahu langkah berikutnya yang disarankan",
       "Klik nama produk untuk membuka Kartu Stok (riwayat keluar-masuk)",
       "“Tersedia” = on hand dikurangi yang sudah direservasi (jika ada)",
       "Setup belum selesai? Banner kuning mengarahkan ke wizard setup",
     ],
     relatedLinks: [
-      { label: "Operasi Stok", href: "/dashboard/inventory/operations" },
+      { label: "Penyesuaian Stok", href: "/dashboard/inventory/adjustments" },
       { label: "Kartu Stok", href: "/dashboard/inventory/movements" },
     ],
   },
   operations: {
     title: "Operasi Stok",
-    what: "Empat aksi manual untuk mengoreksi atau mengisi stok: penyesuaian ±, transfer antar gudang, saldo awal, dan revaluasi HPP. Semua tercatat di buku besar stok untuk audit.",
+    what: "Empat jenis dokumen stok manual — masing-masing punya halaman sendiri: Penyesuaian, Transfer, Saldo Awal, dan Revaluasi HPP. Setiap halaman punya daftar transaksi (CRUD, cari, pagination) dan form buat baru.",
     useCases: [
-      "Baru aktifkan modul → isi saldo awal semua produk",
-      "Hasil opname fisik beda dengan sistem → penyesuaian ±",
-      "Pindahkan barang dari gudang A ke gudang B → transfer",
-      "Harga pokok di laporan perlu dikoreksi tanpa ubah qty → revaluasi",
+      "Baru aktifkan modul → Saldo Awal",
+      "Opname fisik → Penyesuaian ±",
+      "Pindah gudang → Transfer",
+      "Koreksi HPP tanpa ubah qty → Revaluasi",
     ],
     tips: [
-      "Saldo awal wajib sebelum backfill pesanan lama bila stok masih nol",
-      "Penyesuaian pengurangan wajib isi alasan (jejak audit)",
+      "Satu jenis dokumen = satu halaman menu (tidak digabung)",
+      "Bisa pilih beberapa baris lalu hapus batch (owner)",
+    ],
+    relatedLinks: [
+      { label: "Penyesuaian", href: "/dashboard/inventory/adjustments" },
+      { label: "Transfer", href: "/dashboard/inventory/transfers" },
+      { label: "Saldo Awal", href: "/dashboard/inventory/opening-balance" },
+      { label: "Revaluasi", href: "/dashboard/inventory/revaluations" },
     ],
   },
   "operations-adjust": {
@@ -122,7 +129,8 @@ export const INVENTORY_HELP: Record<InventoryHelpTopic, InventoryHelpContent> = 
       "Simpan — stok langsung tercatat sebagai movement saldo awal",
     ],
     tips: [
-      "Backfill pesanan gagal “stok tidak cukup”? Isi saldo awal minimal sesuai saran di Pemeliharaan",
+      "Satu kombinasi produk+gudang hanya boleh satu saldo awal — tambah/kurang stok pakai Penyesuaian",
+      "Backfill pesanan gagal “stok tidak cukup”? Isi saldo awal sesuai saran di Pemeliharaan",
       "Harga pokok bisa perkiraan; bisa disesuaikan lewat revaluasi nanti",
     ],
   },
@@ -210,6 +218,7 @@ export const INVENTORY_HELP: Record<InventoryHelpTopic, InventoryHelpContent> = 
     tips: [
       "Gudang default dipakai bila pesanan tidak menyebut gudang spesifik",
       "Gudang default tidak bisa dihapus",
+      "Gunakan pencarian & pagination untuk banyak gudang; edit nama/alamat/status lewat tombol Edit",
     ],
   },
   items: {
@@ -272,9 +281,11 @@ export const INVENTORY_HELP: Record<InventoryHelpTopic, InventoryHelpContent> = 
     ],
     tips: [
       "Error “stok tidak cukup” = saldo awal belum cukup, bukan bug sistem",
+      "Qty saran saldo awal = jumlah kekurangan semua pesanan (bukan cukup pesanan terbesar saja)",
+      "Preview ribuan pesanan? Lihat ringkasan + tabel saldo awal; detail pesanan dibatasi sampel",
       "Sistem tidak otomatis menyesuaikan stok — Anda yang mengisi saldo awal",
     ],
-    relatedLinks: [{ label: "Saldo Awal", href: "/dashboard/inventory/operations?mode=opening" }],
+    relatedLinks: [{ label: "Saldo Awal", href: "/dashboard/inventory/opening-balance" }],
   },
   "maintenance-valuation": {
     title: "Nilai Persediaan per Gudang",
@@ -348,7 +359,7 @@ export const INVENTORY_HELP: Record<InventoryHelpTopic, InventoryHelpContent> = 
     ],
     relatedLinks: [
       { label: "Pengaturan", href: "/dashboard/inventory/settings" },
-      { label: "Saldo Awal", href: "/dashboard/inventory/operations?mode=opening" },
+      { label: "Saldo Awal", href: "/dashboard/inventory/opening-balance" },
     ],
   },
 };

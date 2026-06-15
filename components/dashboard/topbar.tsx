@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, ChevronDown, LogOut, Settings, User } from "lucide-react";
+import { MobileSidebarSheet } from "@/components/dashboard/mobile-sidebar-sheet";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -71,8 +72,11 @@ export function Topbar() {
   });
 
   return (
-    <div className="flex h-16 items-center justify-between border-b bg-background px-6">
-      <div className="flex items-center gap-3">
+    <div className="flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        <div className="lg:hidden">
+          <MobileSidebarSheet />
+        </div>
         {isSuperAdmin ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

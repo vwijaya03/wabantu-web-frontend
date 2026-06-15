@@ -21,6 +21,7 @@ export interface Warehouse {
   externalLocationId?: number;
   isDefault: boolean;
   isActive: boolean;
+  isDeleted?: boolean;
   address?: string;
   note?: string;
   displayOrder: number;
@@ -56,15 +57,51 @@ export interface MovementRow {
   batchNo?: string;
   refType?: string;
   refId?: string;
+  refDocNo?: string;
+  refKind?: string;
   note?: string;
   createdAt: string;
 }
 
 export interface StockOpResult {
+  transactionId?: string;
+  docNo?: string;
   movementIds: string[];
   qtyAfter: number;
   totalCost: number;
   shortfall?: number;
+}
+
+export interface StockTransactionLine {
+  id: string;
+  catalogItemId: string;
+  itemName?: string;
+  warehouseId: string;
+  warehouseName?: string;
+  qty: number;
+  unitCost: number;
+}
+
+export interface StockTransaction {
+  id: string;
+  docNo: string;
+  kind: "adjustment" | "transfer" | "opening_balance" | "revaluation";
+  transactionDate: string;
+  note?: string;
+  catalogItemId?: string;
+  warehouseId?: string;
+  fromWarehouseId?: string;
+  toWarehouseId?: string;
+  signedQty?: number;
+  unitCost?: number;
+  newUnitCost?: number;
+  itemName?: string;
+  warehouseName?: string;
+  fromWarehouseName?: string;
+  toWarehouseName?: string;
+  lineCount?: number;
+  lines?: StockTransactionLine[];
+  createdAt: string;
 }
 
 export interface WizardAnswers {
@@ -204,8 +241,13 @@ export const inventoryApi = {
   },
 
   // warehouses
-  async listWarehouses(): Promise<{ warehouses: Warehouse[] }> {
-    return (await api.get("/inventory/warehouses")).data;
+  async listWarehouses(params?: { q?: string; page?: number; pageSize?: number; all?: boolean }): Promise<{
+    warehouses: Warehouse[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
+    return (await api.get("/inventory/warehouses", { params })).data;
   },
   async createWarehouse(input: { name: string; code?: string; address?: string; note?: string }): Promise<Warehouse> {
     return (await api.post("/inventory/warehouses", input)).data;
@@ -216,13 +258,32 @@ export const inventoryApi = {
   async deleteWarehouse(id: string): Promise<void> {
     await api.delete(`/inventory/warehouses/${id}`);
   },
+  async reactivateWarehouse(id: string): Promise<Warehouse> {
+    return (await api.post(`/inventory/warehouses/${id}/reactivate`)).data;
+  },
 
   // stock + movements
-  async listStock(params: { warehouseId?: string; q?: string; page?: number; pageSize?: number } = {}): Promise<{ stock: StockRow[]; total: number; page: number; pageSize: number }> {
+  async listStock(params: { warehouseId?: string; catalogItemId?: string; q?: string; page?: number; pageSize?: number } = {}): Promise<{ stock: StockRow[]; total: number; page: number; pageSize: number }> {
     return (await api.get("/inventory/stock", { params })).data;
   },
-  async listMovements(params: { catalogItemId?: string; warehouseId?: string; type?: string; page?: number; pageSize?: number } = {}): Promise<{ movements: MovementRow[]; total: number; page: number; pageSize: number }> {
+  async listMovements(params: { catalogItemId?: string; warehouseId?: string; type?: string; q?: string; page?: number; pageSize?: number } = {}): Promise<{ movements: MovementRow[]; total: number; page: number; pageSize: number }> {
     return (await api.get("/inventory/movements", { params })).data;
+  },
+
+  async listStockTransactions(params: { kind?: string; q?: string; page?: number; pageSize?: number } = {}): Promise<{ transactions: StockTransaction[]; total: number; page: number; pageSize: number }> {
+    return (await api.get("/inventory/stock-transactions", { params })).data;
+  },
+  async getStockTransaction(id: string): Promise<StockTransaction> {
+    return (await api.get(`/inventory/stock-transactions/${id}`)).data;
+  },
+  async deleteStockTransaction(id: string): Promise<void> {
+    await api.delete(`/inventory/stock-transactions/${id}`);
+  },
+  async updateStockTransaction(id: string, input: Record<string, unknown>): Promise<StockTransaction> {
+    return (await api.patch(`/inventory/stock-transactions/${id}`, input)).data;
+  },
+  async batchDeleteStockTransactions(ids: string[]): Promise<{ deleted: number; failed: number; errors?: string[] }> {
+    return (await api.post("/inventory/stock-transactions/batch-delete", { ids })).data;
   },
 
   // manual movements
@@ -232,7 +293,7 @@ export const inventoryApi = {
   async transfer(input: { catalogItemId: string; fromWarehouseId: string; toWarehouseId: string; qty: number; note?: string }): Promise<StockOpResult> {
     return (await api.post("/inventory/transfers", input)).data;
   },
-  async openingBalance(entries: Array<{ catalogItemId: string; warehouseId: string; qty: number; unitCost: number; batchNo?: string; expiryDate?: string }>): Promise<{ applied: number; movementIds: string[] }> {
+  async openingBalance(entries: Array<{ catalogItemId: string; warehouseId: string; qty: number; unitCost: number; batchNo?: string; expiryDate?: string }>): Promise<{ transactionId: string; docNo: string; applied: number; movementIds: string[] }> {
     return (await api.post("/inventory/opening-balance", { entries })).data;
   },
   async revaluate(input: { catalogItemId: string; warehouseId: string; newUnitCost: number; note?: string }): Promise<StockOpResult> {
@@ -263,6 +324,12 @@ export const inventoryApi = {
   async cancelPurchaseOrder(id: string): Promise<PurchaseOrder> {
     return (await api.post(`/inventory/purchase-orders/${id}/cancel`)).data;
   },
+  async deletePurchaseOrder(id: string): Promise<void> {
+    await api.delete(`/inventory/purchase-orders/${id}`);
+  },
+  async updatePurchaseOrder(id: string, input: { supplierName?: string; contactId?: string; warehouseId?: string; transactionDate?: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; description?: string; qtyOrdered: number; unitCost: number }> }): Promise<PurchaseOrder> {
+    return (await api.patch(`/inventory/purchase-orders/${id}`, input)).data;
+  },
 
   // bills
   async listBills(params: { q?: string; page?: number; pageSize?: number } = {}): Promise<{ bills: Bill[]; total: number; page: number; pageSize: number }> {
@@ -270,6 +337,12 @@ export const inventoryApi = {
   },
   async getBill(id: string): Promise<Bill> {
     return (await api.get(`/inventory/bills/${id}`)).data;
+  },
+  async deleteBill(id: string): Promise<void> {
+    await api.delete(`/inventory/bills/${id}`);
+  },
+  async updateBill(id: string, input: { supplierName?: string; warehouseId?: string; transactionDate?: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; purchaseOrderLineId?: string; description?: string; qty: number; unitCost: number; batchNo?: string }> }): Promise<Bill> {
+    return (await api.patch(`/inventory/bills/${id}`, input)).data;
   },
   async createBill(input: { purchaseOrderId?: string; supplierName?: string; warehouseId?: string; transactionDate?: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; purchaseOrderLineId?: string; description?: string; qty: number; unitCost: number; batchNo?: string; expiryDate?: string }> }): Promise<Bill> {
     return (await api.post("/inventory/bills", input)).data;
@@ -285,7 +358,10 @@ export const inventoryApi = {
   async createInvoiceFromOrder(orderId: string): Promise<Invoice> {
     return (await api.post(`/inventory/invoices/from-order/${orderId}`)).data;
   },
-  async listSalesReturns(params: { page?: number; pageSize?: number } = {}): Promise<{ salesReturns: SalesReturn[]; total: number; page: number; pageSize: number }> {
+  async deleteInvoice(id: string): Promise<void> {
+    await api.delete(`/inventory/invoices/${id}`);
+  },
+  async listSalesReturns(params: { q?: string; page?: number; pageSize?: number } = {}): Promise<{ salesReturns: SalesReturn[]; total: number; page: number; pageSize: number }> {
     return (await api.get("/inventory/sales-returns", { params })).data;
   },
   async getSalesReturn(id: string): Promise<SalesReturn> {
@@ -293,6 +369,12 @@ export const inventoryApi = {
   },
   async createSalesReturn(input: { orderId: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; qty: number }> }): Promise<SalesReturn> {
     return (await api.post("/inventory/sales-returns", input)).data;
+  },
+  async deleteSalesReturn(id: string): Promise<void> {
+    await api.delete(`/inventory/sales-returns/${id}`);
+  },
+  async updateSalesReturn(id: string, input: { note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; qty: number }> }): Promise<SalesReturn> {
+    return (await api.patch(`/inventory/sales-returns/${id}`, input)).data;
   },
 
   // recalc / wizard / sku / backfill
@@ -313,8 +395,11 @@ export const inventoryApi = {
   async updateSku(catalogItemId: string, input: Partial<{ trackStock: boolean; costingMethod: string; trackBatch: boolean; trackSerial: boolean; trackExpiry: boolean; baseUom: string }>): Promise<SkuConfig> {
     return (await api.patch(`/inventory/skus/${catalogItemId}`, input)).data;
   },
-  async backfillOrders(execute: boolean): Promise<BackfillOrdersResult> {
-    return (await api.post("/inventory/backfill/orders", { execute })).data;
+  async backfillOrders(execute: boolean, issuesLimit?: number): Promise<BackfillOrdersResult> {
+    return (await api.post("/inventory/backfill/orders", {
+      execute,
+      ...(issuesLimit != null ? { issuesLimit } : {}),
+    })).data;
   },
 };
 
@@ -347,9 +432,15 @@ export type BackfillSuggestedOpening = {
 export type BackfillOrdersResult = {
   preview: boolean;
   pendingOrders: number;
+  sufficientOrders?: number;
   processed: number;
   failed: number;
-  insufficient: string[];
+  insufficientCount?: number;
+  issueCount?: number;
+  issuesTruncated?: boolean;
+  failureCount?: number;
+  failuresTruncated?: boolean;
+  insufficient?: string[];
   failures?: string[];
   issues?: BackfillOrderIssue[];
   suggestedOpening?: BackfillSuggestedOpening[];

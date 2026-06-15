@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
+import { InventoryGettingStarted } from "@/components/inventory/inventory-getting-started";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
 import {
@@ -30,8 +31,8 @@ export default function InventoryStockPage() {
     queryFn: () => inventoryApi.getSetting(),
   });
   const { data: warehousesData } = useQuery({
-    queryKey: ["inventory", "warehouses"],
-    queryFn: () => inventoryApi.listWarehouses(),
+    queryKey: ["inventory", "warehouses", "all"],
+    queryFn: () => inventoryApi.listWarehouses({ all: true }),
   });
   const { data, isLoading } = useQuery({
     queryKey: ["inventory", "stock", q, warehouseId],
@@ -40,6 +41,7 @@ export default function InventoryStockPage() {
 
   const warehouses = warehousesData?.warehouses ?? [];
   const rows = data?.stock ?? [];
+  const stockTotal = data?.total ?? rows.length;
   const totalValue = rows.reduce((sum, r) => sum + r.totalValue, 0);
   const outOfStock = rows.filter((r) => r.available <= 0).length;
 
@@ -53,13 +55,22 @@ export default function InventoryStockPage() {
         />
         <div className="flex gap-2">
           <Button variant="outline" asChild>
+            <Link href="/dashboard/inventory/guide">Panduan Pemula</Link>
+          </Button>
+          <Button variant="outline" asChild>
             <Link href="/dashboard/inventory/movements">Kartu Stok</Link>
           </Button>
           <Button asChild>
-            <Link href="/dashboard/inventory/operations">Operasi Stok</Link>
+            <Link href="/dashboard/inventory/adjustments">Penyesuaian Stok</Link>
           </Button>
         </div>
       </div>
+
+      <InventoryGettingStarted
+        setupCompleted={setting?.setupCompleted ?? false}
+        warehouseCount={setting?.warehouseCount ?? warehouses.length}
+        stockRowCount={stockTotal}
+      />
 
       <div className="my-4 grid gap-3 sm:grid-cols-3">
         <Card>
