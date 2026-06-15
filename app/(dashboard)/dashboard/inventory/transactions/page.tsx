@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
+import { StockTransactionEditDialog } from "@/components/inventory/stock-transaction-edit-dialog";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
@@ -52,6 +53,7 @@ export default function StockTransactionsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["inventory", "stock-transactions", kind, searchQ, page, pageSize],
@@ -132,9 +134,14 @@ export default function StockTransactionsPage() {
                     <InventoryTableCell className="max-w-xs truncate text-muted-foreground">{t.note || "—"}</InventoryTableCell>
                     {canManage ? (
                       <InventoryTableCell align="right">
-                        <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeleteId(t.id)}>
-                          Hapus
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => setEditId(t.id)}>
+                            Edit
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeleteId(t.id)}>
+                            Hapus
+                          </Button>
+                        </div>
                       </InventoryTableCell>
                     ) : null}
                   </InventoryTableRow>
@@ -151,6 +158,8 @@ export default function StockTransactionsPage() {
           />
         </CardContent>
       </Card>
+
+      <StockTransactionEditDialog id={editId} onClose={() => setEditId(null)} />
 
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent>

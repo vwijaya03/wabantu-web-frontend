@@ -328,6 +328,9 @@ export const inventoryApi = {
   async deleteBill(id: string): Promise<void> {
     await api.delete(`/inventory/bills/${id}`);
   },
+  async updateBill(id: string, input: { supplierName?: string; warehouseId?: string; transactionDate?: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; purchaseOrderLineId?: string; description?: string; qty: number; unitCost: number; batchNo?: string }> }): Promise<Bill> {
+    return (await api.patch(`/inventory/bills/${id}`, input)).data;
+  },
   async createBill(input: { purchaseOrderId?: string; supplierName?: string; warehouseId?: string; transactionDate?: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; purchaseOrderLineId?: string; description?: string; qty: number; unitCost: number; batchNo?: string; expiryDate?: string }> }): Promise<Bill> {
     return (await api.post("/inventory/bills", input)).data;
   },
