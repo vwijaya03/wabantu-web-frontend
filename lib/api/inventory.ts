@@ -241,8 +241,13 @@ export const inventoryApi = {
   },
 
   // warehouses
-  async listWarehouses(): Promise<{ warehouses: Warehouse[] }> {
-    return (await api.get("/inventory/warehouses")).data;
+  async listWarehouses(params?: { q?: string; page?: number; pageSize?: number; all?: boolean }): Promise<{
+    warehouses: Warehouse[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
+    return (await api.get("/inventory/warehouses", { params })).data;
   },
   async createWarehouse(input: { name: string; code?: string; address?: string; note?: string }): Promise<Warehouse> {
     return (await api.post("/inventory/warehouses", input)).data;

@@ -31,8 +31,8 @@ export default function InventoryStockPage() {
     queryFn: () => inventoryApi.getSetting(),
   });
   const { data: warehousesData } = useQuery({
-    queryKey: ["inventory", "warehouses"],
-    queryFn: () => inventoryApi.listWarehouses(),
+    queryKey: ["inventory", "warehouses", "all"],
+    queryFn: () => inventoryApi.listWarehouses({ all: true }),
   });
   const { data, isLoading } = useQuery({
     queryKey: ["inventory", "stock", q, warehouseId],

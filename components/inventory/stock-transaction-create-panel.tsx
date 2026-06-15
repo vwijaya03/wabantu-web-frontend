@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -187,6 +188,20 @@ export function CreateOpeningBalancePanel({ warehouses, onSuccess }: { warehouse
   const setRow = (i: number, patch: Partial<OpeningRow>) => setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   const validRows = rows.filter((r) => r.item && r.warehouseId && Number(r.qty) > 0);
 
+  const duplicatePair = (() => {
+    const seen = new Map<string, number>();
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r.item || !r.warehouseId) continue;
+      const key = `${r.item.id}:${r.warehouseId}`;
+      if (seen.has(key)) {
+        return { a: seen.get(key)! + 1, b: i + 1 };
+      }
+      seen.set(key, i);
+    }
+    return null;
+  })();
+
   const mut = useMutation({
     mutationFn: () =>
       inventoryApi.openingBalance(
@@ -208,7 +223,15 @@ export function CreateOpeningBalancePanel({ warehouses, onSuccess }: { warehouse
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Satu submit = satu nomor transaksi (banyak SKU).</p>
+      <p className="text-sm text-muted-foreground">
+        Satu submit = satu nomor transaksi. Setiap kombinasi <strong>produk + gudang</strong> hanya boleh punya satu saldo awal — tambah/kurang stok pakai{" "}
+        <Link href="/dashboard/inventory/adjustments" className="text-primary underline-offset-4 hover:underline">Penyesuaian</Link>.
+      </p>
+      {duplicatePair ? (
+        <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          Baris {duplicatePair.a} dan {duplicatePair.b} memakai produk+gudang yang sama.
+        </p>
+      ) : null}
       {rows.map((r, i) => (
         <div key={i} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_140px_100px_100px_auto] sm:items-end">
           <Field label={i === 0 ? "Produk" : ""}><ItemPicker value={r.item} onChange={(it) => setRow(i, { item: it })} /></Field>
@@ -220,7 +243,7 @@ export function CreateOpeningBalancePanel({ warehouses, onSuccess }: { warehouse
       ))}
       <div className="flex gap-2">
         <Button type="button" variant="outline" onClick={() => setRows((rs) => [...rs, { item: null, warehouseId: defaultWh, qty: "", unitCost: "" }])}>+ Baris</Button>
-        <Button onClick={() => mut.mutate()} disabled={validRows.length === 0 || mut.isPending}>{mut.isPending ? "Menyimpan..." : "Simpan Saldo Awal"}</Button>
+        <Button onClick={() => mut.mutate()} disabled={validRows.length === 0 || mut.isPending || duplicatePair != null}>{mut.isPending ? "Menyimpan..." : "Simpan Saldo Awal"}</Button>
       </div>
     </div>
   );

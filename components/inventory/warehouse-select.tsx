@@ -19,8 +19,8 @@ export function WarehouseSelect({
   disabled?: boolean;
 }) {
   const { data } = useQuery({
-    queryKey: ["inventory", "warehouses"],
-    queryFn: () => inventoryApi.listWarehouses(),
+    queryKey: ["inventory", "warehouses", "all"],
+    queryFn: () => inventoryApi.listWarehouses({ all: true }),
   });
   const warehouses = (data?.warehouses ?? []).filter((w) => w.id !== exclude && !w.isDeleted && w.isActive);
   return (

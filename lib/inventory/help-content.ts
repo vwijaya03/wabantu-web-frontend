@@ -129,7 +129,8 @@ export const INVENTORY_HELP: Record<InventoryHelpTopic, InventoryHelpContent> = 
       "Simpan — stok langsung tercatat sebagai movement saldo awal",
     ],
     tips: [
-      "Backfill pesanan gagal “stok tidak cukup”? Isi saldo awal minimal sesuai saran di Pemeliharaan",
+      "Satu kombinasi produk+gudang hanya boleh satu saldo awal — tambah/kurang stok pakai Penyesuaian",
+      "Backfill pesanan gagal “stok tidak cukup”? Isi saldo awal sesuai saran di Pemeliharaan",
       "Harga pokok bisa perkiraan; bisa disesuaikan lewat revaluasi nanti",
     ],
   },
@@ -217,6 +218,7 @@ export const INVENTORY_HELP: Record<InventoryHelpTopic, InventoryHelpContent> = 
     tips: [
       "Gudang default dipakai bila pesanan tidak menyebut gudang spesifik",
       "Gudang default tidak bisa dihapus",
+      "Gunakan pencarian & pagination untuk banyak gudang; edit nama/alamat/status lewat tombol Edit",
     ],
   },
   items: {

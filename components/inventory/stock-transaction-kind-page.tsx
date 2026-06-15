@@ -65,8 +65,8 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
   const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
 
   const { data: whData } = useQuery({
-    queryKey: ["inventory", "warehouses"],
-    queryFn: () => inventoryApi.listWarehouses(),
+    queryKey: ["inventory", "warehouses", "all"],
+    queryFn: () => inventoryApi.listWarehouses({ all: true }),
   });
   const warehouses = whData?.warehouses ?? [];
 

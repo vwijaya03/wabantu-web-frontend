@@ -241,8 +241,8 @@ export default function OrdersPage() {
   });
   const inventoryOn = Boolean(invSetting?.setupCompleted);
   const { data: warehousesData } = useQuery({
-    queryKey: ["inventory", "warehouses"],
-    queryFn: () => inventoryApi.listWarehouses(),
+    queryKey: ["inventory", "warehouses", "all"],
+    queryFn: () => inventoryApi.listWarehouses({ all: true }),
   });
   const warehouses = useMemo(() => warehousesData?.warehouses ?? [], [warehousesData]);
   const hasWarehouses = warehouses.length > 0;
