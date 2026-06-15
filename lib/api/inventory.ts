@@ -263,7 +263,7 @@ export const inventoryApi = {
   },
 
   // stock + movements
-  async listStock(params: { warehouseId?: string; q?: string; page?: number; pageSize?: number } = {}): Promise<{ stock: StockRow[]; total: number; page: number; pageSize: number }> {
+  async listStock(params: { warehouseId?: string; catalogItemId?: string; q?: string; page?: number; pageSize?: number } = {}): Promise<{ stock: StockRow[]; total: number; page: number; pageSize: number }> {
     return (await api.get("/inventory/stock", { params })).data;
   },
   async listMovements(params: { catalogItemId?: string; warehouseId?: string; type?: string; q?: string; page?: number; pageSize?: number } = {}): Promise<{ movements: MovementRow[]; total: number; page: number; pageSize: number }> {

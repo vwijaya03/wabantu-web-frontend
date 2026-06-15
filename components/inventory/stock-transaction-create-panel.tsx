@@ -62,11 +62,17 @@ function WhSelect({
 
 function useItemStock(itemId: string | undefined, warehouseId: string) {
   const { data } = useQuery({
-    queryKey: ["inventory", "stock", "lookup", warehouseId],
-    queryFn: () => inventoryApi.listStock({ warehouseId, pageSize: 200 }),
+    queryKey: ["inventory", "stock", "lookup", warehouseId, itemId],
+    queryFn: () =>
+      inventoryApi.listStock({
+        warehouseId,
+        catalogItemId: itemId,
+        pageSize: 1,
+      }),
     enabled: Boolean(itemId && warehouseId),
+    staleTime: 30_000,
   });
-  return data?.stock.find((r) => r.catalogItemId === itemId && r.warehouseId === warehouseId);
+  return data?.stock[0];
 }
 
 function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
