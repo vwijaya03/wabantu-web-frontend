@@ -25,15 +25,18 @@ function NavItemLink({
   active,
   showInboxDot,
   inboxUnread,
+  onNavigate,
 }: {
   item: NavLink;
   active: boolean;
   showInboxDot: boolean;
   inboxUnread: number;
+  onNavigate?: () => void;
 }) {
   return (
     <Link
       href={item.href}
+      onClick={() => onNavigate?.()}
       className={cn(
         "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
         active
@@ -59,11 +62,13 @@ function CollapsibleNavSection({
   pathname,
   inboxUnread,
   showInboxDot,
+  onNavigate,
 }: {
   section: NavSection;
   pathname: string;
   inboxUnread: number;
   showInboxDot: boolean;
+  onNavigate?: () => void;
 }) {
   const routeActive = sectionMatchesPath(section, pathname);
   const [manualOpen, setManualOpen] = useState<boolean | null>(null);
@@ -79,6 +84,7 @@ function CollapsibleNavSection({
                 active={isNavLinkActive(item.href, pathname)}
                 showInboxDot={showInboxDot}
                 inboxUnread={inboxUnread}
+                onNavigate={onNavigate}
               />
             </li>
           ))
@@ -96,6 +102,7 @@ function CollapsibleNavSection({
                   active={isNavLinkActive(item.href, pathname)}
                   showInboxDot={showInboxDot}
                   inboxUnread={inboxUnread}
+                  onNavigate={onNavigate}
                 />
               </li>
             ))}
@@ -135,7 +142,7 @@ function CollapsibleNavSection({
   );
 }
 
-export function SidebarNav() {
+export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const tenantMode = hasTenantDashboardAccess(user);
@@ -168,6 +175,7 @@ export function SidebarNav() {
           pathname={pathname}
           inboxUnread={inboxUnread}
           showInboxDot={showInboxDot}
+          onNavigate={onNavigate}
         />
       ))}
     </nav>

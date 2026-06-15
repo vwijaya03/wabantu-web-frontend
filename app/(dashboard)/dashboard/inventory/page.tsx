@@ -41,6 +41,7 @@ export default function InventoryStockPage() {
 
   const warehouses = warehousesData?.warehouses ?? [];
   const rows = data?.stock ?? [];
+  const stockTotal = data?.total ?? rows.length;
   const totalValue = rows.reduce((sum, r) => sum + r.totalValue, 0);
   const outOfStock = rows.filter((r) => r.available <= 0).length;
 
@@ -54,6 +55,9 @@ export default function InventoryStockPage() {
         />
         <div className="flex gap-2">
           <Button variant="outline" asChild>
+            <Link href="/dashboard/inventory/guide">Panduan Pemula</Link>
+          </Button>
+          <Button variant="outline" asChild>
             <Link href="/dashboard/inventory/movements">Kartu Stok</Link>
           </Button>
           <Button asChild>
@@ -65,7 +69,7 @@ export default function InventoryStockPage() {
       <InventoryGettingStarted
         setupCompleted={setting?.setupCompleted ?? false}
         warehouseCount={setting?.warehouseCount ?? warehouses.length}
-        stockRowCount={rows.length}
+        stockRowCount={stockTotal}
       />
 
       <div className="my-4 grid gap-3 sm:grid-cols-3">

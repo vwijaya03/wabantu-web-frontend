@@ -12,6 +12,7 @@ import {
   Inbox,
   LayoutDashboard,
   Layers,
+  GraduationCap,
   Megaphone,
   MessageSquare,
   Package,
@@ -97,6 +98,7 @@ export const TENANT_NAV_SECTIONS: NavSection[] = [
         label: "Ringkasan",
         items: [
           { href: "/dashboard/inventory", label: "Stok", icon: Boxes },
+          { href: "/dashboard/inventory/guide", label: "Panduan Pemula", icon: GraduationCap },
           { href: "/dashboard/inventory/movements", label: "Pergerakan", icon: ScrollText },
           { href: "/dashboard/inventory/reports", label: "Laporan", icon: BarChart3 },
         ],

@@ -133,11 +133,16 @@ export function InventoryGettingStarted({ setupCompleted, warehouseCount, stockR
         </ol>
 
         <p className="text-xs text-muted-foreground">
-          Butuh penjelasan per halaman? Klik ikon{" "}
+          Butuh penjelasan lengkap?{" "}
+          <Link href="/dashboard/inventory/guide" className="text-primary underline-offset-4 hover:underline">
+            Buka panduan persediaan
+          </Link>
+          {" · "}
+          Klik ikon{" "}
           <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[10px]">?</span> di
           judul halaman.{" "}
           <Link href="/dashboard/docs?q=INVENTORY_MODULE" className="text-primary underline-offset-4 hover:underline">
-            Baca dokumentasi lengkap
+            Dokumentasi teknis
           </Link>
         </p>
       </CardContent>
