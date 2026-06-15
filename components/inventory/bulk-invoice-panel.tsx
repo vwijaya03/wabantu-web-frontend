@@ -44,7 +44,7 @@ export function BulkInvoicePanel() {
     queryKey: ["inventory", "invoices", "eligible", searchQ, page, pageSize],
     queryFn: () => inventoryApi.listEligibleInvoiceOrders({ q: searchQ || undefined, page, pageSize }),
   });
-  const orders = data?.orders ?? [];
+  const orders = useMemo(() => data?.orders ?? [], [data?.orders]);
   const visibleIds = useMemo(() => orders.map((o) => o.id), [orders]);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
 

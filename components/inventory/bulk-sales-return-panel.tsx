@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
 import { BulkActionResultPanel } from "@/components/inventory/bulk-action-result-panel";
 import { inventoryApi, formatStockQty } from "@/lib/api/inventory";
@@ -51,7 +50,7 @@ export function BulkSalesReturnPanel() {
     queryFn: () => inventoryApi.listEligibleInvoiceOrders({ q: searchQ || undefined, page, pageSize }),
     enabled: step === "select",
   });
-  const orders = data?.orders ?? [];
+  const orders = useMemo(() => data?.orders ?? [], [data?.orders]);
   const visibleIds = useMemo(() => orders.map((o) => o.id), [orders]);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
 

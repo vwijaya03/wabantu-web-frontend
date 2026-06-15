@@ -5,7 +5,6 @@ import {
   InventoryTable,
   InventoryTableBody,
   InventoryTableCell,
-  InventoryTableEmpty,
   InventoryTableHead,
   InventoryTableHeader,
   InventoryTableRow,

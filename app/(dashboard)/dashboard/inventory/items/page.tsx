@@ -15,9 +15,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
-import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
-import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
-import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { useAuth } from "@/components/providers/auth-provider";
