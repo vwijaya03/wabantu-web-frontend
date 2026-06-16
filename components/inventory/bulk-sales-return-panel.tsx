@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ type ReviewOrder = {
   }>;
 };
 
-export function BulkSalesReturnPanel() {
+export function BulkSalesReturnPanel({ embedded = false }: { embedded?: boolean }) {
   const qc = useQueryClient();
   const [step, setStep] = useState<"select" | "review">("select");
   const [q, setQ] = useState("");
@@ -147,14 +147,19 @@ export function BulkSalesReturnPanel() {
     error: r.error,
   }));
 
-  if (step === "review") {
-    return (
+  const wrap = (title: string, children: ReactNode) =>
+    embedded ? children : (
       <Card className="mb-4 border-primary/20">
-        <CardHeader>
-          <CardTitle>Review Retur Massal</CardTitle>
-          <p className="text-sm text-muted-foreground">Isi qty retur per produk. Kosongkan baris yang tidak diretur.</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
+        <CardContent>{children}</CardContent>
+      </Card>
+    );
+
+  if (step === "review") {
+    return wrap(
+      "Review Retur Massal",
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">Isi qty retur per produk. Kosongkan baris yang tidak diretur.</p>
           {reviewOrders.map((o) => (
             <div key={o.orderId} className="rounded-lg border p-3 space-y-2">
               <p className="font-medium">{formatOrderNumber(o.orderId)}</p>
@@ -193,20 +198,16 @@ export function BulkSalesReturnPanel() {
               results={resultLines}
             />
           ) : null}
-        </CardContent>
-      </Card>
+      </div>,
     );
   }
 
-  return (
-    <Card className="mb-4 border-primary/20">
-      <CardHeader>
-        <CardTitle>Buat Retur Massal</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Pilih pesanan Dalam pengiriman / Selesai, lalu isi qty retur per produk. Maks. {MAX_BATCH} per aksi.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
+  return wrap(
+    "Buat Retur Massal",
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Pilih pesanan Dalam pengiriman / Selesai, lalu isi qty retur per produk. Maks. {MAX_BATCH} per aksi.
+      </p>
         <div className="flex flex-wrap items-center gap-2">
           <Input
             placeholder="Cari pesanan / pelanggan..."
@@ -276,7 +277,6 @@ export function BulkSalesReturnPanel() {
         </InventoryTable>
 
         <InventoryDataTablePagination page={page} pageSize={pageSize} total={data?.total ?? 0} onPageChange={setPage} />
-      </CardContent>
-    </Card>
+    </div>,
   );
 }

@@ -50,7 +50,7 @@ export function StockTransactionEditDialog({
 
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {txn ? `Edit ${txn.docNo} · ${KIND_LABELS[txn.kind]}` : "Memuat..."}

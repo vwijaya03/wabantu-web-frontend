@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
 import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
@@ -14,6 +14,7 @@ import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventor
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { OrderPicker } from "@/components/inventory/order-picker";
 import { BulkInvoicePanel } from "@/components/inventory/bulk-invoice-panel";
+import { InventoryFormModeSwitch } from "@/components/inventory/inventory-form-mode-switch";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
@@ -40,6 +41,7 @@ export default function InvoicesPage() {
   const [searchQ, setSearchQ] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [createMode, setCreateMode] = useState<"single" | "bulk">("single");
 
   const { data, isLoading } = useQuery({
     queryKey: ["inventory", "invoices", searchQ, page, pageSize],
@@ -63,18 +65,24 @@ export default function InvoicesPage() {
       <InventoryPageHeader title="Faktur Penjualan" description="Dokumen faktur dari pesanan, lengkap dengan HPP per baris." helpTopic="invoices" />
 
       {canManage ? (
-        <>
-          <Card className="mb-4">
-            <CardHeader><CardTitle>Buat Faktur dari Pesanan</CardTitle></CardHeader>
-            <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="flex-1"><OrderPicker value={order} onChange={setOrder} /></div>
-              <Button onClick={() => createMut.mutate()} disabled={!order || createMut.isPending}>
-                {createMut.isPending ? "Membuat..." : "Buat Faktur"}
-              </Button>
-            </CardContent>
-          </Card>
-          <BulkInvoicePanel />
-        </>
+        <Card className="mb-4">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle>Buat Faktur</CardTitle>
+            <InventoryFormModeSwitch mode={createMode} onChange={setCreateMode} />
+          </CardHeader>
+          <CardContent>
+            {createMode === "single" ? (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="flex-1"><OrderPicker value={order} onChange={setOrder} /></div>
+                <Button onClick={() => createMut.mutate()} disabled={!order || createMut.isPending}>
+                  {createMut.isPending ? "Membuat..." : "Buat Faktur"}
+                </Button>
+              </div>
+            ) : (
+              <BulkInvoicePanel embedded />
+            )}
+          </CardContent>
+        </Card>
       ) : null}
 
       <InventoryOpenDetailSuspense setDetailId={setDetailId} />
@@ -154,8 +162,11 @@ function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; ca
   });
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-2xl" aria-describedby={undefined}>
-        <DialogHeader><DialogTitle>{inv ? inv.invoiceNo : "Memuat..."}</DialogTitle></DialogHeader>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{inv ? inv.invoiceNo : "Memuat..."}</DialogTitle>
+          <DialogDescription className="sr-only">Detail faktur penjualan</DialogDescription>
+        </DialogHeader>
         {inv ? (
           <div className="space-y-3">
             {canManage ? (

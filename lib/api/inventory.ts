@@ -4,6 +4,13 @@ import { api } from "./client";
 
 export type CostingMethod = "fifo" | "lifo" | "average";
 
+export interface ConfigCatalogItem {
+  id: string;
+  name: string;
+  externalCode: string;
+  trackStock: boolean;
+}
+
 export interface InventorySetting {
   setupCompleted: boolean;
   setupCompletedAt?: string;
@@ -417,6 +424,14 @@ export const inventoryApi = {
     tokenQuotaLimit?: number;
   }> {
     return (await api.post("/inventory/wizard/recommend", answers)).data;
+  },
+  async listConfigItems(params: { q?: string; page?: number; pageSize?: number } = {}): Promise<{
+    items: ConfigCatalogItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
+    return (await api.get("/inventory/config-items", { params })).data;
   },
   async getSku(catalogItemId: string): Promise<SkuConfig> {
     return (await api.get(`/inventory/skus/${catalogItemId}`)).data;

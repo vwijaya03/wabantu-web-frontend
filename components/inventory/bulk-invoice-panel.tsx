@@ -31,7 +31,7 @@ function orderStatusLabel(status: string) {
   return status;
 }
 
-export function BulkInvoicePanel() {
+export function BulkInvoicePanel({ embedded = false }: { embedded?: boolean }) {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [searchQ, setSearchQ] = useState("");
@@ -97,16 +97,12 @@ export function BulkInvoicePanel() {
     error: r.error,
   }));
 
-  return (
-    <Card className="mb-4 border-primary/20">
-      <CardHeader>
-        <CardTitle>Buat Faktur Massal</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Hanya pesanan <strong>Dalam pengiriman</strong> atau <strong>Selesai</strong> yang belum punya faktur. Maks. {MAX_BATCH} per aksi.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
+  const body = (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Hanya pesanan <strong>Dalam pengiriman</strong> atau <strong>Selesai</strong> yang belum punya faktur. Maks. {MAX_BATCH} per aksi.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
           <Input
             placeholder="Cari pesanan / pelanggan..."
             value={q}
@@ -180,7 +176,15 @@ export function BulkInvoicePanel() {
             results={resultLines}
           />
         ) : null}
-      </CardContent>
+    </div>
+  );
+
+  if (embedded) return body;
+
+  return (
+    <Card className="mb-4 border-primary/20">
+      <CardHeader><CardTitle>Buat Faktur Massal</CardTitle></CardHeader>
+      <CardContent>{body}</CardContent>
     </Card>
   );
 }

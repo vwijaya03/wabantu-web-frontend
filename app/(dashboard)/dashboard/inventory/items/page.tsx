@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -15,12 +15,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
+import { InventoryFormModeSwitch } from "@/components/inventory/inventory-form-mode-switch";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
-import { catalogApi, type CatalogItem } from "@/lib/api/catalog";
-import { inventoryApi, COSTING_METHOD_LABELS, type CostingMethod } from "@/lib/api/inventory";
+import { type CatalogItem } from "@/lib/api/catalog";
+import { inventoryApi, COSTING_METHOD_LABELS, type CostingMethod, type ConfigCatalogItem } from "@/lib/api/inventory";
 import {
   InventoryTable,
   InventoryTableBody,
@@ -41,12 +42,13 @@ export default function InventoryItemsPage() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<CatalogItem | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [pageMode, setPageMode] = useState<"single" | "bulk">("single");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["catalog", "list", q],
-    queryFn: () => catalogApi.list({ q, pageSize: 50 }),
+    queryKey: ["inventory", "config-items", q],
+    queryFn: () => inventoryApi.listConfigItems({ q, pageSize: 50 }),
   });
-  const items = data?.items ?? [];
+  const items: ConfigCatalogItem[] = data?.items ?? [];
   const visibleIds = items.map((it) => it.id);
   const allVisible = visibleIds.length > 0 && visibleIds.every((id) => checked.has(id));
 
@@ -73,7 +75,7 @@ export default function InventoryItemsPage() {
           : `${res.updated} produk dinonaktifkan lacak stoknya`,
       );
       setChecked(new Set());
-      void qc.invalidateQueries({ queryKey: ["inventory", "sku"] });
+      void qc.invalidateQueries({ queryKey: ["inventory", "config-items"] });
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -81,6 +83,16 @@ export default function InventoryItemsPage() {
   return (
     <RequireTenantDashboard title="Konfigurasi Item">
       <InventoryPageHeader title="Konfigurasi Item Persediaan" description="Aktifkan pelacakan stok, metode HPP per item, bundle, dan batch/expiry." helpTopic="items" />
+
+      <Card className="mb-4 border-amber-200 bg-amber-50/50">
+        <CardContent className="py-4 text-sm text-amber-950">
+          <p className="font-medium">Produk bundle tidak ditampilkan di sini</p>
+          <p className="mt-1 text-amber-900/90">
+            Bundle tidak dilacak stok di level parent — stok diambil dari komponen anak (nilai terkecil).
+            Atur komponen bundle lewat tombol Konfigurasi di katalog produk yang menjadi parent bundle.
+          </p>
+        </CardContent>
+      </Card>
 
       <Card className="mb-4 border-blue-200 bg-blue-50/40">
         <CardContent className="py-4 text-sm text-blue-950">
@@ -94,10 +106,13 @@ export default function InventoryItemsPage() {
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Produk Katalog</CardTitle>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+            <CardTitle>Produk Katalog</CardTitle>
+            {canManage ? <InventoryFormModeSwitch mode={pageMode} onChange={setPageMode} singleLabel="Per produk" bulkLabel="Lacak massal" /> : null}
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <Input placeholder="Cari produk..." value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />
-            {canManage && checked.size > 0 ? (
+            {canManage && pageMode === "bulk" && checked.size > 0 ? (
               <>
                 <Button size="sm" variant="outline" disabled={batchMut.isPending} onClick={() => batchMut.mutate({ trackStock: true })}>
                   Aktifkan lacak ({checked.size})
@@ -107,7 +122,7 @@ export default function InventoryItemsPage() {
                 </Button>
               </>
             ) : null}
-            {canManage ? (
+            {canManage && pageMode === "bulk" ? (
               <Button
                 size="sm"
                 disabled={batchMut.isPending}
@@ -126,7 +141,7 @@ export default function InventoryItemsPage() {
           <InventoryTable>
             <InventoryTableHeader>
               <InventoryTableRow>
-                {canManage ? (
+                {canManage && pageMode === "bulk" ? (
                   <InventoryTableHead className="w-10">
                     <input type="checkbox" checked={allVisible} onChange={() => {
                       setChecked((prev) => {
@@ -145,21 +160,24 @@ export default function InventoryItemsPage() {
             </InventoryTableHeader>
             <InventoryTableBody>
               {isLoading ? (
-                <InventoryTableEmpty colSpan={canManage ? 4 : 3}>Memuat...</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={canManage ? (pageMode === "bulk" ? 4 : 3) : 3}>Memuat...</InventoryTableEmpty>
               ) : items.length === 0 ? (
-                <InventoryTableEmpty colSpan={canManage ? 4 : 3}>Belum ada produk.</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={canManage ? (pageMode === "bulk" ? 4 : 3) : 3}>Belum ada produk.</InventoryTableEmpty>
               ) : (
                 items.map((it) => (
                   <InventoryTableRow key={it.id}>
-                    {canManage ? (
+                    {canManage && pageMode === "bulk" ? (
                       <InventoryTableCell>
                         <input type="checkbox" checked={checked.has(it.id)} onChange={() => toggleOne(it.id)} />
                       </InventoryTableCell>
                     ) : null}
-                    <InventoryTableCell className="font-medium">{it.name}</InventoryTableCell>
+                    <InventoryTableCell className="font-medium">
+                      {it.name}
+                      {it.trackStock ? <Badge className="ml-2" variant="success">Dilacak</Badge> : null}
+                    </InventoryTableCell>
                     <InventoryTableCell className="text-muted-foreground">{it.externalCode}</InventoryTableCell>
                     <InventoryTableCell align="right">
-                      <Button variant="outline" size="sm" onClick={() => setSelected(it)}>Konfigurasi</Button>
+                      <Button variant="outline" size="sm" onClick={() => setSelected({ id: it.id, name: it.name, externalCode: it.externalCode } as CatalogItem)}>Konfigurasi</Button>
                     </InventoryTableCell>
                   </InventoryTableRow>
                 ))
@@ -232,8 +250,11 @@ function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | nu
 
   return (
     <Dialog open={Boolean(item)} onOpenChange={(o) => { if (!o) { setBundleMode(false); onClose(); } }}>
-      <DialogContent className="max-w-lg" aria-describedby={undefined}>
-        <DialogHeader><DialogTitle>{item?.name}</DialogTitle></DialogHeader>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{item?.name}</DialogTitle>
+          <DialogDescription className="sr-only">Konfigurasi persediaan produk</DialogDescription>
+        </DialogHeader>
         {!sku ? (
           <p className="text-sm text-muted-foreground">Memuat...</p>
         ) : !canManage ? (
