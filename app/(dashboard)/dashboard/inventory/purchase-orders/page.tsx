@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
 import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
@@ -219,8 +219,11 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
 
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) { setEditing(false); onClose(); } }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
-        <DialogHeader><DialogTitle>{po ? `${po.poNo} · ${po.supplierName || "Tanpa supplier"}` : "Memuat..."}</DialogTitle></DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{po ? `${po.poNo} · ${po.supplierName || "Tanpa supplier"}` : "Memuat..."}</DialogTitle>
+          <DialogDescription className="sr-only">Detail purchase order</DialogDescription>
+        </DialogHeader>
         {po ? (
           editing ? (
             <POEditForm

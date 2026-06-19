@@ -43,7 +43,7 @@ export default function InventorySettingsPage() {
                 <InventoryHelpButton topic="settings-costing" />
               </p>
               <p className="mb-2 text-xs text-muted-foreground">
-                Berlaku untuk item yang mengikuti default. Untuk hitung ulang riwayat, buka Pemeliharaan → Recalculate.
+                Berlaku untuk item baru yang mengikuti default. Mengganti metode <strong>tidak otomatis</strong> menghitung ulang HPP riwayat — jalankan Pemeliharaan → Recalculate HPP jika perlu.
               </p>
               <div className="flex flex-wrap gap-2">
                 {(["fifo", "lifo", "average"] as CostingMethod[]).map((m) => (

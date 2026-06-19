@@ -6,13 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
 import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
 import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { OrderPicker } from "@/components/inventory/order-picker";
+import { BulkSalesReturnPanel } from "@/components/inventory/bulk-sales-return-panel";
+import { InventoryFormModeSwitch } from "@/components/inventory/inventory-form-mode-switch";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { inventoryApi, formatIDR, formatStockQty } from "@/lib/api/inventory";
@@ -41,6 +43,7 @@ export default function SalesReturnsPage() {
   const [searchQ, setSearchQ] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [createMode, setCreateMode] = useState<"single" | "bulk">("single");
 
   const { data, isLoading } = useQuery({
     queryKey: ["inventory", "sales-returns", searchQ, page, pageSize],
@@ -77,37 +80,46 @@ export default function SalesReturnsPage() {
 
       {canManage ? (
         <Card className="mb-4">
-          <CardHeader><CardTitle>Buat Retur</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5"><Label>Pesanan</Label><OrderPicker value={order} onChange={(o) => { setOrder(o); setQtys({}); }} /></div>
-            {order && returnableItems.length > 0 ? (
-              <div className="space-y-2">
-                <Label>Jumlah diretur per produk</Label>
-                {returnableItems.map((it) => (
-                  <div key={it.catalogItemId} className="grid grid-cols-[1fr_120px] items-center gap-2 rounded border p-2 text-sm">
-                    <div>
-                      <p className="font-medium">{it.name}</p>
-                      <p className="text-xs text-muted-foreground">Dipesan: {formatStockQty(it.qty)}</p>
-                    </div>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={it.qty}
-                      step="any"
-                      placeholder="0"
-                      value={qtys[it.catalogItemId!] ?? ""}
-                      onChange={(e) => setQtys((q) => ({ ...q, [it.catalogItemId!]: e.target.value }))}
-                    />
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle>Buat Retur</CardTitle>
+            <InventoryFormModeSwitch mode={createMode} onChange={setCreateMode} />
+          </CardHeader>
+          <CardContent>
+            {createMode === "single" ? (
+              <div className="space-y-4">
+                <div className="space-y-1.5"><Label>Pesanan</Label><OrderPicker value={order} onChange={(o) => { setOrder(o); setQtys({}); }} /></div>
+                {order && returnableItems.length > 0 ? (
+                  <div className="space-y-2">
+                    <Label>Jumlah diretur per produk</Label>
+                    {returnableItems.map((it) => (
+                      <div key={it.catalogItemId} className="grid grid-cols-[1fr_120px] items-center gap-2 rounded border p-2 text-sm">
+                        <div>
+                          <p className="font-medium">{it.name}</p>
+                          <p className="text-xs text-muted-foreground">Dipesan: {formatStockQty(it.qty)}</p>
+                        </div>
+                        <Input
+                          type="number"
+                          min="0"
+                          max={it.qty}
+                          step="any"
+                          placeholder="0"
+                          value={qtys[it.catalogItemId!] ?? ""}
+                          onChange={(e) => setQtys((q) => ({ ...q, [it.catalogItemId!]: e.target.value }))}
+                        />
+                      </div>
+                    ))}
+                    <div className="space-y-1.5"><Label>Catatan (opsional)</Label><Input value={note} onChange={(e) => setNote(e.target.value)} /></div>
+                    <Button onClick={() => createMut.mutate()} disabled={!hasQty || createMut.isPending}>
+                      {createMut.isPending ? "Memproses..." : "Simpan Retur"}
+                    </Button>
                   </div>
-                ))}
-                <div className="space-y-1.5"><Label>Catatan (opsional)</Label><Input value={note} onChange={(e) => setNote(e.target.value)} /></div>
-                <Button onClick={() => createMut.mutate()} disabled={!hasQty || createMut.isPending}>
-                  {createMut.isPending ? "Memproses..." : "Simpan Retur"}
-                </Button>
+                ) : order ? (
+                  <p className="text-sm text-muted-foreground">Pesanan ini tidak punya item yang bisa diretur.</p>
+                ) : null}
               </div>
-            ) : order ? (
-              <p className="text-sm text-muted-foreground">Pesanan ini tidak punya item yang bisa diretur.</p>
-            ) : null}
+            ) : (
+              <BulkSalesReturnPanel embedded />
+            )}
           </CardContent>
         </Card>
       ) : null}
@@ -185,8 +197,11 @@ function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; can
   });
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-xl" aria-describedby={undefined}>
-        <DialogHeader><DialogTitle>{r ? r.returnNo : "Memuat..."}</DialogTitle></DialogHeader>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{r ? r.returnNo : "Memuat..."}</DialogTitle>
+          <DialogDescription className="sr-only">Detail retur penjualan</DialogDescription>
+        </DialogHeader>
         {r ? (
           <div className="space-y-3">
             {canManage ? (

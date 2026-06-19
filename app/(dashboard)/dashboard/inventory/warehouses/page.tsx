@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
@@ -170,21 +171,34 @@ export default function WarehousesPage() {
                             >
                               Aktifkan
                             </Button>
-                          ) : !w.isDefault ? (
+                          ) : w.isDefault ? (
                             <Button
                               variant="ghost"
-                              size="sm"
-                              className="text-destructive"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground"
+                              disabled
+                              title="Gudang default tidak bisa dihapus"
+                              aria-label="Gudang default tidak bisa dihapus"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
                               disabled={deleteMut.isPending}
+                              title="Hapus gudang (hanya jika belum dipakai transaksi)"
+                              aria-label={`Hapus gudang ${w.name}`}
                               onClick={() => {
-                                if (confirm(`Hapus gudang ${w.name}? Hanya bisa jika tidak dipakai transaksi.`)) {
+                                if (confirm(`Hapus gudang ${w.name}? Tidak bisa jika sudah dipakai di transaksi stok, PO, atau pesanan.`)) {
                                   deleteMut.mutate(w.id);
                                 }
                               }}
                             >
-                              Hapus
+                              <Trash2 className="h-4 w-4" />
                             </Button>
-                          ) : null}
+                          )}
                         </div>
                       </InventoryTableCell>
                     ) : null}
@@ -307,6 +321,7 @@ function EditWarehouseDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Gudang</DialogTitle>
+          <DialogDescription className="sr-only">Form edit data gudang</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">

@@ -4,6 +4,13 @@ import { api } from "./client";
 
 export type CostingMethod = "fifo" | "lifo" | "average";
 
+export interface ConfigCatalogItem {
+  id: string;
+  name: string;
+  externalCode: string;
+  trackStock: boolean;
+}
+
 export interface InventorySetting {
   setupCompleted: boolean;
   setupCompletedAt?: string;
@@ -358,6 +365,21 @@ export const inventoryApi = {
   async createInvoiceFromOrder(orderId: string): Promise<Invoice> {
     return (await api.post(`/inventory/invoices/from-order/${orderId}`)).data;
   },
+  async listEligibleInvoiceOrders(params: { q?: string; page?: number; pageSize?: number } = {}): Promise<{
+    orders: Array<{ id: string; status: string; subtotal: number; contactDisplayName?: string; contactPhone?: string }>;
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
+    return (await api.get("/inventory/invoice-eligible/orders", { params })).data;
+  },
+  async batchCreateInvoices(orderIds: string[]): Promise<{
+    processed: number;
+    failed: number;
+    results: Array<{ orderId: string; invoiceId?: string; invoiceNo?: string; error?: string }>;
+  }> {
+    return (await api.post("/inventory/invoice-batch", { orderIds })).data;
+  },
   async deleteInvoice(id: string): Promise<void> {
     await api.delete(`/inventory/invoices/${id}`);
   },
@@ -369,6 +391,20 @@ export const inventoryApi = {
   },
   async createSalesReturn(input: { orderId: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; qty: number }> }): Promise<SalesReturn> {
     return (await api.post("/inventory/sales-returns", input)).data;
+  },
+  async getReturnableOrderLines(orderId: string): Promise<{
+    orderId: string;
+    status: string;
+    lines: Array<{ catalogItemId: string; itemName: string; warehouseId?: string; qtySold: number; qtyReturned: number; qtyReturnable: number }>;
+  }> {
+    return (await api.get(`/inventory/return-eligible-lines/${orderId}`)).data;
+  },
+  async batchCreateSalesReturns(orders: Array<{ orderId: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; qty: number }> }>): Promise<{
+    processed: number;
+    failed: number;
+    results: Array<{ orderId: string; returnId?: string; returnNo?: string; error?: string }>;
+  }> {
+    return (await api.post("/inventory/sales-return-batch", { orders })).data;
   },
   async deleteSalesReturn(id: string): Promise<void> {
     await api.delete(`/inventory/sales-returns/${id}`);
@@ -389,11 +425,22 @@ export const inventoryApi = {
   }> {
     return (await api.post("/inventory/wizard/recommend", answers)).data;
   },
+  async listConfigItems(params: { q?: string; page?: number; pageSize?: number } = {}): Promise<{
+    items: ConfigCatalogItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
+    return (await api.get("/inventory/config-items", { params })).data;
+  },
   async getSku(catalogItemId: string): Promise<SkuConfig> {
     return (await api.get(`/inventory/skus/${catalogItemId}`)).data;
   },
   async updateSku(catalogItemId: string, input: Partial<{ trackStock: boolean; costingMethod: string; trackBatch: boolean; trackSerial: boolean; trackExpiry: boolean; baseUom: string }>): Promise<SkuConfig> {
     return (await api.patch(`/inventory/skus/${catalogItemId}`, input)).data;
+  },
+  async batchTrackStock(input: { catalogItemIds?: string[]; all?: boolean; trackStock: boolean }): Promise<{ updated: number; skipped: number }> {
+    return (await api.post("/inventory/sku-batch/track", input)).data;
   },
   async backfillOrders(execute: boolean, issuesLimit?: number): Promise<BackfillOrdersResult> {
     return (await api.post("/inventory/backfill/orders", {
