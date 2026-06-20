@@ -4,7 +4,7 @@
 **Branch:** `feat/inbox-media`  
 **PR:** [#25](https://github.com/vwijaya03/wabantu-web-frontend/pull/25)  
 **Tanggal:** 2026-06  
-**Backend:** [api-go PR #35](https://github.com/vwijaya03/wabantu-api-go/pull/35) — [`api-go/shipped/inbox-media-fase1.md`](../../api-go/shipped/inbox-media-fase1.md)
+**Backend:** [api-go PR #35](https://github.com/vwijaya03/wabantu-api-go/pull/35) — [`api-go/docs-development-shipped/inbox-media-fase1.md`](../../api-go/docs-development-shipped/inbox-media-fase1.md)
 
 ---
 
