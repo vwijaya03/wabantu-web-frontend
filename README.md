@@ -10,6 +10,8 @@ Alur lengkap: **[APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md)** · Backend: **[../api
 
 **Docs Hub internal:** login sebagai `super_admin` → **Platform → Dokumentasi** (`/dashboard/docs`). Halaman ini menggabungkan semua file `.md` dari `web-frontend/` dan `api-go/`, dengan fuzzy search, highlight kata kunci, poin/heading relevan yang bisa diklik, dan viewer markdown internal.
 
+**Fitur yang sudah rilis (bukan roadmap):** **[shipped/](./shipped/)** — catatan implementasi per PR.
+
 ---
 
 ## Untuk developer baru — checklist sebelum `npm run dev`
