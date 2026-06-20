@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { InboxMessageBubble } from "@/components/inbox/inbox-message-bubble";
 import { useAuth } from "@/components/providers/auth-provider";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
 import { Input } from "@/components/ui/input";
@@ -650,19 +651,7 @@ export default function InboxPage() {
                   </p>
                 ) : null}
                 {messages.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`max-w-[85%] rounded-lg border px-3 py-2 text-sm ${
-                      m.direction === "out"
-                        ? "ml-auto bg-primary/10"
-                        : "bg-background text-foreground"
-                    }`}
-                  >
-                    <p className="whitespace-pre-wrap">{m.body || "(pesan non-text)"}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
-                      {m.author} · {new Date(m.createdAt).toLocaleTimeString("id-ID")}
-                    </p>
-                  </div>
+                  <InboxMessageBubble key={m.id} message={m} />
                 ))}
               </div>
               <div className="flex items-center gap-2 border-t p-3">
