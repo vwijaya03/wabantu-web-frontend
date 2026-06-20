@@ -32,6 +32,11 @@ export interface InboxContact {
   tags: string[];
 }
 
+export interface InboxMessageMedia {
+  url: string;
+  mimeType?: string;
+}
+
 export interface InboxMessage {
   id: string;
   conversationId: string;
@@ -40,6 +45,7 @@ export interface InboxMessage {
   author: "contact" | "ai" | "human" | "system";
   type: "text" | "image" | "audio" | "video" | "document" | "location";
   body: string | null;
+  media?: InboxMessageMedia | null;
   status: "sent" | "delivered" | "read" | "failed";
   createdAt: string;
 }
@@ -125,6 +131,13 @@ export const inboxApi = {
 
   async sendMessage(conversationId: string, body: string): Promise<void> {
     await api.post(`/inbox/conversations/${conversationId}/messages`, { body });
+  },
+
+  async fetchMessageMediaBlob(messageId: string): Promise<Blob> {
+    const res = await api.get<Blob>(`/inbox/messages/${messageId}/media`, {
+      responseType: "blob",
+    });
+    return res.data;
   },
 
   async getContact(contactId: string): Promise<InboxContact> {
