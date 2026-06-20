@@ -12,8 +12,6 @@ function InboxMessageImage({ messageId, alt, className }: { messageId: string; a
   useEffect(() => {
     let objectUrl: string | null = null;
     let cancelled = false;
-    setFailed(false);
-    setSrc(null);
 
     void inboxApi
       .fetchMessageMediaBlob(messageId)
@@ -60,7 +58,7 @@ export function InboxMessageBubble({ message }: { message: InboxMessage }) {
   if (message.type === "image" && message.media?.url) {
     content = (
       <div className="space-y-2">
-        <InboxMessageImage messageId={message.id} alt={body || undefined} />
+        <InboxMessageImage key={message.id} messageId={message.id} alt={body || undefined} />
         {body ? <p className="whitespace-pre-wrap">{body}</p> : null}
       </div>
     );
