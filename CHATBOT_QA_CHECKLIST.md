@@ -22,6 +22,8 @@ Checklist ini untuk memastikan UI `dashboard/inbox` konsisten dengan pipeline AI
 - Setelah alamat/order selesai, pertanyaan ongkir/total (`ongkir kena berapa`, `total termasuk ongkir`) mendapat balasan AI (path `llm`), bukan template out-of-scope.
 - Konfirmasi pembayaran (`nanti saya transfer`, `trf`) setelah checkout tidak boleh dijawab “di luar topik bisnis”.
 - Minta **list produk** / katalog: balasan dari `business_catalog_item` (path `catalog_db`), bukan mengarah ke IG/website dulu jika katalog DB terisi.
+- `listkan semua jualan` / `semua jualan kamu` → path `catalog_db` (bukan `llm_tools`).
+- Pesanan **multi-baris** (`mau buat pesanan baru` + `1. Produk qty ukuran`) → path `order_flow`, ringkasan semua baris sebelum minta penerima — bukan daftar katalog generik meski nama produk mengandung kata "best seller".
 - Katalog DB kosong: ada penanda `[Katalog WABantu: kosong]`; URL eksternal hanya pelengkap.
 
 ## Catalog import (dashboard, bukan inbox)
