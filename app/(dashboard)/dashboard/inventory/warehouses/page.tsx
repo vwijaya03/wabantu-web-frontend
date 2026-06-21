@@ -238,6 +238,7 @@ export default function WarehousesPage() {
 function CreateWarehousePanel({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
+  const [customerLabel, setCustomerLabel] = useState("");
   const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
 
@@ -246,6 +247,7 @@ function CreateWarehousePanel({ onDone }: { onDone: () => void }) {
       inventoryApi.createWarehouse({
         name,
         code: code || undefined,
+        customerLabel: customerLabel.trim() || undefined,
         address: address || undefined,
         note: note || undefined,
       }),
@@ -263,6 +265,11 @@ function CreateWarehousePanel({ onDone }: { onDone: () => void }) {
         <div className="space-y-1.5">
           <Label>Nama gudang</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Gudang Cabang Bekasi" />
+          <p className="text-xs text-muted-foreground">Nama internal untuk tim Anda. Tampil ke pelanggan lewat label di bawah (atau nama ini jika label kosong).</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Label untuk pelanggan (opsional)</Label>
+          <Input value={customerLabel} onChange={(e) => setCustomerLabel(e.target.value)} placeholder="Contoh: Jakarta Selatan, Surabaya" />
         </div>
         <div className="space-y-1.5">
           <Label>Kode (opsional)</Label>
@@ -297,6 +304,7 @@ function EditWarehouseDialog({
   onSaved: () => void;
 }) {
   const [name, setName] = useState(warehouse.name);
+  const [customerLabel, setCustomerLabel] = useState(warehouse.customerLabel ?? "");
   const [address, setAddress] = useState(warehouse.address ?? "");
   const [note, setNote] = useState(warehouse.note ?? "");
   const [isActive, setIsActive] = useState(warehouse.isActive);
@@ -305,6 +313,7 @@ function EditWarehouseDialog({
     mutationFn: () =>
       inventoryApi.updateWarehouse(warehouse.id, {
         name: name.trim(),
+        customerLabel: customerLabel.trim() || undefined,
         address: address.trim() || undefined,
         note: note.trim() || undefined,
         isActive: warehouse.isDefault ? true : isActive,
@@ -327,6 +336,11 @@ function EditWarehouseDialog({
           <div className="space-y-1.5">
             <Label>Nama</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <p className="text-xs text-muted-foreground">Nama internal. Jika label pelanggan kosong, nama ini yang dipakai di chat WhatsApp.</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Label untuk pelanggan (opsional)</Label>
+            <Input value={customerLabel} onChange={(e) => setCustomerLabel(e.target.value)} placeholder="Contoh: Surabaya" />
           </div>
           <div className="space-y-1.5">
             <Label>Kode</Label>

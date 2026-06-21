@@ -25,6 +25,7 @@ export interface Warehouse {
   id: string;
   code: string;
   name: string;
+  customerLabel?: string;
   externalLocationId?: number;
   isDefault: boolean;
   isActive: boolean;
@@ -256,10 +257,10 @@ export const inventoryApi = {
   }> {
     return (await api.get("/inventory/warehouses", { params })).data;
   },
-  async createWarehouse(input: { name: string; code?: string; address?: string; note?: string }): Promise<Warehouse> {
+  async createWarehouse(input: { name: string; code?: string; customerLabel?: string; address?: string; note?: string }): Promise<Warehouse> {
     return (await api.post("/inventory/warehouses", input)).data;
   },
-  async updateWarehouse(id: string, input: { name: string; address?: string; note?: string; isActive?: boolean }): Promise<Warehouse> {
+  async updateWarehouse(id: string, input: { name: string; customerLabel?: string; address?: string; note?: string; isActive?: boolean }): Promise<Warehouse> {
     return (await api.patch(`/inventory/warehouses/${id}`, input)).data;
   },
   async deleteWarehouse(id: string): Promise<void> {
