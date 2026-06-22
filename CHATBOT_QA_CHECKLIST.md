@@ -24,6 +24,9 @@ Checklist ini untuk memastikan UI `dashboard/inbox` konsisten dengan pipeline AI
 - Minta **list produk** / katalog: balasan dari `business_catalog_item` (path `catalog_db`), bukan mengarah ke IG/website dulu jika katalog DB terisi.
 - `listkan semua jualan` / `semua jualan kamu` → path `catalog_db` (bukan `llm_tools`).
 - Pesanan **multi-baris** (`mau buat pesanan baru` + `1. Produk qty ukuran`) → path `order_flow`, ringkasan semua baris sebelum minta penerima — bukan daftar katalog generik meski nama produk mengandung kata "best seller".
+- Setelah `mau buat pesanan baru`, pesan `mau beli [produk] stok ready?` harus **tetap** `order_flow` — tidak boleh kembali ke `catalog_db` retail policy.
+- Follow-up `stoknya ready?` setelah bahas satu produk → jawab stok produk itu, bukan list katalog generik.
+- Stock guard: qty melebihi stok satu gudang ditolak; qty dalam batas gudang default → draft order punya `warehouseId`.
 - Katalog DB kosong: ada penanda `[Katalog WABantu: kosong]`; URL eksternal hanya pelengkap.
 
 ## Catalog import (dashboard, bukan inbox)
