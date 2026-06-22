@@ -42,3 +42,11 @@ Checklist ini untuk memastikan UI `dashboard/inbox` konsisten dengan pipeline AI
 - Human-send message tetap bekerja normal.
 - SSE reconnect tetap berfungsi setelah tab idle.
 - Tidak ada UI crash jika message metadata memiliki `reason`.
+
+## Order flow continuity (Abon Sapi)
+
+Manual QA di inbox setelah deploy api-go terbaru:
+
+1. `jual abon sapi ?` → balasan `catalog_db` (harga + stok Abon), bukan LLM generik.
+2. `mau beli 2 lusin bisa ? stoknya ready ?` → `order_flow` / `order_intent` (24 pcs, cek stok), bukan retail policy per pcs saja.
+3. `stoknya ada ?` (follow-up) → jawab stok produk dari konteks chat, bukan daftar katalog acak.
