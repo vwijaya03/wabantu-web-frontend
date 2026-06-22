@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 
 export default function InventoryStockPage() {
   const [q, setQ] = useState("");
+  const [searchQ, setSearchQ] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
 
   const { data: setting } = useQuery({
@@ -34,14 +35,18 @@ export default function InventoryStockPage() {
     queryKey: ["inventory", "warehouses", "all"],
     queryFn: () => inventoryApi.listWarehouses({ all: true }),
   });
+  const { data: stockOverview } = useQuery({
+    queryKey: ["inventory", "stock", "overview-total"],
+    queryFn: () => inventoryApi.listStock({ page: 1, pageSize: 1 }),
+  });
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "stock", q, warehouseId],
-    queryFn: () => inventoryApi.listStock({ q, warehouseId, pageSize: 100 }),
+    queryKey: ["inventory", "stock", searchQ, warehouseId],
+    queryFn: () => inventoryApi.listStock({ q: searchQ, warehouseId, pageSize: 100 }),
   });
 
   const warehouses = warehousesData?.warehouses ?? [];
   const rows = data?.stock ?? [];
-  const stockTotal = data?.total ?? rows.length;
+  const stockRowCount = stockOverview?.total ?? 0;
   const totalValue = rows.reduce((sum, r) => sum + r.totalValue, 0);
   const outOfStock = rows.filter((r) => r.available <= 0).length;
 
@@ -69,7 +74,7 @@ export default function InventoryStockPage() {
       <InventoryGettingStarted
         setupCompleted={setting?.setupCompleted ?? false}
         warehouseCount={setting?.warehouseCount ?? warehouses.length}
-        stockRowCount={stockTotal}
+        stockRowCount={stockRowCount}
       />
 
       <div className="my-4 grid gap-3 sm:grid-cols-3">
@@ -112,7 +117,13 @@ export default function InventoryStockPage() {
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Daftar Stok</CardTitle>
-          <div className="flex flex-wrap gap-2">
+          <form
+            className="flex flex-wrap gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setSearchQ(q.trim());
+            }}
+          >
             <Input
               placeholder="Cari produk / kode..."
               value={q}
@@ -131,7 +142,22 @@ export default function InventoryStockPage() {
                 </option>
               ))}
             </select>
-          </div>
+            <Button type="submit" variant="secondary">
+              Cari
+            </Button>
+            {searchQ ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setQ("");
+                  setSearchQ("");
+                }}
+              >
+                Reset
+              </Button>
+            ) : null}
+          </form>
         </CardHeader>
         <CardContent>
           <InventoryTable>
@@ -149,7 +175,9 @@ export default function InventoryStockPage() {
               {isLoading ? (
                 <InventoryTableEmpty colSpan={6}>Memuat...</InventoryTableEmpty>
               ) : rows.length === 0 ? (
-                <InventoryTableEmpty colSpan={6}>Belum ada stok.</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={6}>
+                  {searchQ ? "Tidak ada stok cocok." : "Belum ada stok."}
+                </InventoryTableEmpty>
               ) : (
                 rows.map((r) => (
                   <InventoryTableRow key={`${r.catalogItemId}-${r.warehouseId}`}>

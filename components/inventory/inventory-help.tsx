@@ -45,55 +45,53 @@ export function InventoryHelpButton({ topic, variant = "inline", className }: In
       <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{content.title}</DialogTitle>
-          <DialogDescription asChild>
-            <div className="space-y-4 pt-2 text-left text-sm text-foreground">
-              <p>{content.what}</p>
-
-              {content.useCases.length > 0 ? (
-                <div>
-                  <p className="font-medium text-foreground">Kapan dipakai</p>
-                  <ul className="mt-1.5 list-disc space-y-1 pl-5 text-muted-foreground">
-                    {content.useCases.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              {content.howTo && content.howTo.length > 0 ? (
-                <div>
-                  <p className="font-medium text-foreground">Langkah singkat</p>
-                  <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-muted-foreground">
-                    {content.howTo.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ol>
-                </div>
-              ) : null}
-
-              {content.tips && content.tips.length > 0 ? (
-                <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2">
-                  <p className="font-medium text-amber-950">Tips</p>
-                  <ul className="mt-1 list-disc space-y-1 pl-5 text-amber-900">
-                    {content.tips.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              {content.relatedLinks && content.relatedLinks.length > 0 ? (
-                <div className="flex flex-wrap gap-2 border-t pt-3">
-                  {content.relatedLinks.map((link) => (
-                    <Button key={link.href} variant="outline" size="sm" asChild>
-                      <Link href={link.href}>{link.label}</Link>
-                    </Button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          </DialogDescription>
+          <DialogDescription>{content.what}</DialogDescription>
         </DialogHeader>
+
+        <div className="space-y-4 text-sm">
+          {content.useCases.length > 0 ? (
+            <div>
+              <p className="font-medium text-foreground">Kapan dipakai</p>
+              <ul className="mt-1.5 list-disc space-y-1 pl-5 text-muted-foreground">
+                {content.useCases.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {content.howTo && content.howTo.length > 0 ? (
+            <div>
+              <p className="font-medium text-foreground">Langkah singkat</p>
+              <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-muted-foreground">
+                {content.howTo.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
+
+          {content.tips && content.tips.length > 0 ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2">
+              <p className="font-medium text-amber-950">Tips</p>
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-amber-900">
+                {content.tips.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {content.relatedLinks && content.relatedLinks.length > 0 ? (
+            <div className="flex flex-wrap gap-2 border-t pt-3">
+              {content.relatedLinks.map((link) => (
+                <Button key={link.href} variant="outline" size="sm" asChild>
+                  <Link href={link.href}>{link.label}</Link>
+                </Button>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </DialogContent>
     </Dialog>
   );
