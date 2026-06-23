@@ -1,5 +1,19 @@
 import { api } from "./client";
 
+export interface ShippingAddress {
+  name?: string;
+  phone?: string;
+  street?: string;
+  rt?: string;
+  rw?: string;
+  kelurahan?: string;
+  kecamatan?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  country?: string;
+}
+
 export interface Order {
   id: string;
   orderNumber?: string;
@@ -7,6 +21,7 @@ export interface Order {
   contactId: string;
   contactDisplayName?: string;
   contactPhone?: string;
+  shippingAddress?: ShippingAddress;
   items: Array<{
     lineId?: string;
     catalogItemId?: string;

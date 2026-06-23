@@ -24,9 +24,10 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
 import { catalogApi, type CatalogItem, type ListCatalogResponse } from "@/lib/api/catalog";
-import { contactsApi, type ListContactsResponse } from "@/lib/api/contacts";
+import { contactsApi, type Contact, type ListContactsResponse } from "@/lib/api/contacts";
+import { inboxApi } from "@/lib/api/inbox";
 import { priceTypesApi } from "@/lib/api/price-types";
-import { ordersApi, type Order } from "@/lib/api/orders";
+import { ordersApi, type Order, type ShippingAddress } from "@/lib/api/orders";
 import { inventoryApi, type StockRow } from "@/lib/api/inventory";
 import { WarehouseSelect } from "@/components/inventory/warehouse-select";
 import { financeApi, type Wallet } from "@/lib/api/finance";
@@ -190,6 +191,11 @@ export default function OrdersPage() {
         pageSize: selectorPageSize,
       }),
     enabled: Boolean(editOrder),
+  });
+  const { data: editResolvedContact } = useQuery({
+    queryKey: ["order-edit-resolved-contact", editOrder?.contactId],
+    queryFn: () => inboxApi.getContact(editOrder!.contactId),
+    enabled: Boolean(editOrder?.contactId),
   });
   const { data: catalogOptions } = useQuery({
     queryKey: ["order-catalog-options", createForm.catalogSearch, createForm.contactId, createCatalogPage, selectorPageSize],
@@ -876,6 +882,9 @@ export default function OrdersPage() {
               form={editForm}
               setForm={setEditForm}
               contactOptions={editContactOptions}
+              extraContact={editResolvedContact ? inboxContactToContact(editResolvedContact) : undefined}
+              buyerLabelFallback={editOrder ? formatBuyerLabel(editOrder) : undefined}
+              shippingAddress={editOrder?.shippingAddress}
               contactPage={editContactPage}
               setContactPage={setEditContactPage}
               catalogOptions={editCatalogOptions}
@@ -916,6 +925,9 @@ function OrderCreateForm({
   setForm,
   showOperationalFields = false,
   contactOptions,
+  extraContact,
+  buyerLabelFallback,
+  shippingAddress,
   contactPage,
   setContactPage,
   catalogOptions,
@@ -938,6 +950,9 @@ function OrderCreateForm({
   setForm: (form: CreateForm) => void;
   showOperationalFields?: boolean;
   contactOptions?: ListContactsResponse;
+  extraContact?: Contact;
+  buyerLabelFallback?: string;
+  shippingAddress?: ShippingAddress;
   contactPage: number;
   setContactPage: (page: number) => void;
   catalogOptions?: ListCatalogResponse;
@@ -961,7 +976,19 @@ function OrderCreateForm({
   const shippingCost = optionalNumber(form.shippingCost) ?? 0;
   const total = subtotal + shippingCost;
   const [activeStep, setActiveStep] = useState<OrderFormStep>("contact");
-  const contacts = contactOptions?.items ?? [];
+  const contacts = useMemo(() => {
+    const baseContacts = contactOptions?.items ?? [];
+    const merged =
+      extraContact && !baseContacts.some((c) => c.id === extraContact.id)
+        ? [extraContact, ...baseContacts]
+        : baseContacts;
+    const seen = new Set<string>();
+    return merged.filter((contact) => {
+      if (!contact.id || seen.has(contact.id)) return false;
+      seen.add(contact.id);
+      return true;
+    });
+  }, [contactOptions?.items, extraContact]);
   const catalogItems = catalogOptions?.items ?? [];
   const contactTotalPages = Math.max(1, Math.ceil((contactOptions?.total ?? 0) / selectorPageSize));
   const catalogTotalPages = Math.max(1, Math.ceil((catalogOptions?.total ?? 0) / selectorPageSize));
@@ -972,9 +999,11 @@ function OrderCreateForm({
 
   const contactSummaryLabel = selectedContact
     ? `${selectedContact.displayName || selectedContact.phoneNumber} · ${selectedPriceTypeLabel}`
-    : form.contactId
-      ? "Contact terpilih"
-      : "Tanpa contact";
+    : buyerLabelFallback?.trim()
+      ? buyerLabelFallback.trim()
+      : form.contactId
+        ? "Contact terpilih"
+        : "Tanpa contact";
 
   const applyFulfillmentToAll = () => {
     const wh = form.fulfillmentWarehouseId || defaultWarehouseId;
@@ -1020,6 +1049,7 @@ function OrderCreateForm({
               />
               <div className="mt-3 grid gap-2">
                 <button
+                  key="contact-none"
                   type="button"
                   onClick={() => onContactSelect("")}
                   className={cn(
@@ -1035,21 +1065,21 @@ function OrderCreateForm({
                     ? priceTypeLabelById.get(contact.priceTypeId) ?? "Kustom"
                     : "Harga umum";
                   return (
-                  <button
-                    key={contact.id}
-                    type="button"
-                    onClick={() => onContactSelect(contact.id)}
-                    className={cn(
-                      "rounded-md border px-3 py-3 text-left text-sm hover:bg-muted/60",
-                      form.contactId === contact.id && "border-primary bg-primary/5",
-                    )}
-                  >
-                    <span className="font-medium">{contact.displayName || contact.phoneNumber}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{contact.phoneNumber}</span>
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      {contact.status} · {priceLabel}
-                    </span>
-                  </button>
+                    <button
+                      key={contact.id}
+                      type="button"
+                      onClick={() => onContactSelect(contact.id)}
+                      className={cn(
+                        "rounded-md border px-3 py-3 text-left text-sm hover:bg-muted/60",
+                        form.contactId === contact.id && "border-primary bg-primary/5",
+                      )}
+                    >
+                      <span className="font-medium">{contact.displayName || contact.phoneNumber}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{contact.phoneNumber}</span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {contact.status} · {priceLabel}
+                      </span>
+                    </button>
                   );
                 })}
               </div>
@@ -1273,6 +1303,7 @@ function OrderCreateForm({
 
         <OrderSummary
           contactLabel={contactSummaryLabel}
+          shippingAddress={shippingAddress}
           items={form.items}
           warehouseNames={warehouseNames}
           fulfillmentWarehouseId={form.fulfillmentWarehouseId || defaultWarehouseId}
@@ -1291,6 +1322,9 @@ function OrderEditForm({
   form,
   setForm,
   contactOptions,
+  extraContact,
+  buyerLabelFallback,
+  shippingAddress,
   contactPage,
   setContactPage,
   catalogOptions,
@@ -1312,6 +1346,9 @@ function OrderEditForm({
   form: EditForm;
   setForm: (form: EditForm) => void;
   contactOptions?: ListContactsResponse;
+  extraContact?: Contact;
+  buyerLabelFallback?: string;
+  shippingAddress?: ShippingAddress;
   contactPage: number;
   setContactPage: (page: number) => void;
   catalogOptions?: ListCatalogResponse;
@@ -1336,6 +1373,9 @@ function OrderEditForm({
       setForm={(nextForm) => setForm({ ...form, ...nextForm })}
       showOperationalFields
       contactOptions={contactOptions}
+      extraContact={extraContact}
+      buyerLabelFallback={buyerLabelFallback}
+      shippingAddress={shippingAddress}
       contactPage={contactPage}
       setContactPage={setContactPage}
       catalogOptions={catalogOptions}
@@ -1592,6 +1632,7 @@ function SelectedItemsPanel({
 
 function OrderSummary({
   contactLabel,
+  shippingAddress,
   items,
   warehouseNames,
   fulfillmentWarehouseId,
@@ -1602,6 +1643,7 @@ function OrderSummary({
   onStepChange,
 }: {
   contactLabel: string;
+  shippingAddress?: ShippingAddress;
   items: OrderItemForm[];
   warehouseNames: Map<string, string>;
   fulfillmentWarehouseId: string;
@@ -1611,6 +1653,7 @@ function OrderSummary({
   total: number;
   onStepChange: (step: OrderFormStep) => void;
 }) {
+  const recipientSummary = formatShippingRecipientSummary(shippingAddress);
   return (
     <aside className="h-fit rounded-lg border bg-background p-4 lg:sticky lg:top-0">
       <div className="mb-3">
@@ -1622,6 +1665,12 @@ function OrderSummary({
           <span className="block text-xs text-muted-foreground">Contact</span>
           <span className="font-medium">{contactLabel}</span>
         </button>
+        {recipientSummary ? (
+          <div className="rounded-md bg-muted/40 p-3">
+            <span className="block text-xs text-muted-foreground">Penerima & alamat</span>
+            <span className="font-medium whitespace-pre-line">{recipientSummary}</span>
+          </div>
+        ) : null}
         <button type="button" className="w-full rounded-md bg-muted/40 p-3 text-left" onClick={() => onStepChange("items")}>
           <span className="block text-xs text-muted-foreground">Produk & gudang</span>
           <span className="font-medium">{items.length} item dipilih</span>
@@ -1689,7 +1738,44 @@ function formatBuyerLabel(order: Order): string {
   const phone = normalizeBuyerField(order.contactPhone);
   if (name) return name;
   if (phone) return phone;
+  const shipName = order.shippingAddress?.name?.trim();
+  if (shipName) return shipName;
   return "Tanpa contact";
+}
+
+function inboxContactToContact(contact: {
+  id: string;
+  phoneNumber: string;
+  displayName: string | null;
+  notes?: string | null;
+  tags?: string[];
+}): Contact {
+  return {
+    id: contact.id,
+    phoneNumber: contact.phoneNumber,
+    displayName: contact.displayName,
+    notes: contact.notes ?? null,
+    status: "active",
+    tags: contact.tags ?? [],
+  };
+}
+
+function formatShippingRecipientSummary(addr?: ShippingAddress): string {
+  if (!addr) return "";
+  const lines: string[] = [];
+  const name = addr.name?.trim();
+  const phone = addr.phone?.trim();
+  if (name) lines.push(name);
+  if (phone) lines.push(phone);
+  const street = addr.street?.trim();
+  if (street) lines.push(street);
+  const locality = [addr.kelurahan, addr.kecamatan].map((s) => s?.trim()).filter(Boolean).join(", ");
+  if (locality) lines.push(locality);
+  const region = [addr.city, addr.province].map((s) => s?.trim()).filter(Boolean).join(", ");
+  if (region) lines.push(region);
+  const postal = addr.postalCode?.trim();
+  if (postal) lines.push(`Kode pos: ${postal}`);
+  return lines.join("\n");
 }
 
 function normalizeBuyerField(value?: string): string {
