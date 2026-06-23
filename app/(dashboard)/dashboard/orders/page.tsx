@@ -758,6 +758,11 @@ export default function OrdersPage() {
                           <Badge variant="warning">Stok kurang</Badge>
                         </p>
                       ) : null}
+                      {inventoryOn && orderShowsDraftStockHint(order, stockRows) ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Stok belum dikurangi — ubah status ke Sedang diproses untuk mencatat pergerakan stok.
+                        </p>
+                      ) : null}
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground lg:hidden">Pembeli</p>
@@ -901,6 +906,11 @@ export default function OrdersPage() {
               hasWarehouses={hasWarehouses}
               defaultWarehouseId={defaultWarehouseId}
               warehouseNames={warehouseNames}
+              showDraftStockHint={
+                inventoryOn &&
+                editForm.status === "draft" &&
+                orderHasTrackedStockItems(editForm.items, stockRows)
+              }
               onContactSelect={(contactId) => {
                 void repriceEditItems(contactId);
               }}
@@ -944,6 +954,7 @@ function OrderCreateForm({
   hasWarehouses = false,
   defaultWarehouseId = "",
   warehouseNames,
+  showDraftStockHint = false,
   onContactSelect,
 }: {
   form: CreateForm;
@@ -969,6 +980,7 @@ function OrderCreateForm({
   hasWarehouses?: boolean;
   defaultWarehouseId?: string;
   warehouseNames: Map<string, string>;
+  showDraftStockHint?: boolean;
   onContactSelect: (contactId: string) => void;
 }) {
   const update = (patch: Partial<CreateForm>) => setForm({ ...form, ...patch });
@@ -1242,6 +1254,11 @@ function OrderCreateForm({
                         </SelectContent>
                       </Select>
                     </div>
+                    {showDraftStockHint ? (
+                      <p className="sm:col-span-2 text-sm text-muted-foreground">
+                        Stok belum dikurangi — ubah status ke Sedang diproses untuk mencatat pergerakan stok.
+                      </p>
+                    ) : null}
                     <div>
                       <Label>Ongkir</Label>
                       <Input
@@ -1311,6 +1328,7 @@ function OrderCreateForm({
           subtotal={subtotal}
           shippingCost={shippingCost}
           total={total}
+          showDraftStockHint={showDraftStockHint}
           onStepChange={setActiveStep}
         />
       </div>
@@ -1341,6 +1359,7 @@ function OrderEditForm({
   hasWarehouses = false,
   defaultWarehouseId = "",
   warehouseNames,
+  showDraftStockHint = false,
   onContactSelect,
 }: {
   form: EditForm;
@@ -1365,6 +1384,7 @@ function OrderEditForm({
   hasWarehouses?: boolean;
   defaultWarehouseId?: string;
   warehouseNames: Map<string, string>;
+  showDraftStockHint?: boolean;
   onContactSelect: (contactId: string) => void;
 }) {
   return (
@@ -1392,6 +1412,7 @@ function OrderEditForm({
       hasWarehouses={hasWarehouses}
       defaultWarehouseId={defaultWarehouseId}
       warehouseNames={warehouseNames}
+      showDraftStockHint={showDraftStockHint}
       onContactSelect={onContactSelect}
     />
   );
@@ -1640,6 +1661,7 @@ function OrderSummary({
   subtotal,
   shippingCost,
   total,
+  showDraftStockHint = false,
   onStepChange,
 }: {
   contactLabel: string;
@@ -1651,6 +1673,7 @@ function OrderSummary({
   subtotal: number;
   shippingCost: number;
   total: number;
+  showDraftStockHint?: boolean;
   onStepChange: (step: OrderFormStep) => void;
 }) {
   const recipientSummary = formatShippingRecipientSummary(shippingAddress);
@@ -1659,6 +1682,11 @@ function OrderSummary({
       <div className="mb-3">
         <h3 className="font-medium">Ringkasan pesanan</h3>
         <p className="text-sm text-muted-foreground">Tetap terlihat saat mengisi form.</p>
+        {showDraftStockHint ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Stok belum dikurangi — ubah status ke Sedang diproses untuk mencatat pergerakan stok.
+          </p>
+        ) : null}
       </div>
       <div className="space-y-3 text-sm">
         <button type="button" className="w-full rounded-md bg-muted/40 p-3 text-left" onClick={() => onStepChange("contact")}>
@@ -1708,6 +1736,20 @@ function OrderSummary({
 
 // orderHasInsufficientStock returns true when any stock-tracked item on the order
 // exceeds available stock at the chosen warehouse (or tenant default).
+function orderHasTrackedStockItems(
+  items: Array<{ catalogItemId?: string }>,
+  stockRows: StockRow[],
+): boolean {
+  if (items.length === 0 || stockRows.length === 0) return false;
+  const tracked = new Set(stockRows.map((row) => row.catalogItemId));
+  return items.some((item) => item.catalogItemId && tracked.has(item.catalogItemId));
+}
+
+function orderShowsDraftStockHint(order: Order, stockRows: StockRow[]): boolean {
+  if (order.status !== "draft") return false;
+  return orderHasTrackedStockItems(order.items, stockRows);
+}
+
 function orderHasInsufficientStock(order: Order, stockRows: StockRow[], defaultWarehouseId: string): boolean {
   for (const it of order.items) {
     const id = it.catalogItemId;
