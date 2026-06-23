@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
@@ -34,10 +34,12 @@ export function SessionReauthDialog() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const closedBySuccessRef = useRef(false);
   const hint = getProfileHint();
 
   useEffect(() => {
     const onRequired = () => {
+      closedBySuccessRef.current = false;
       setPassword("");
       setOpen(true);
     };
@@ -64,9 +66,10 @@ export function SessionReauthDialog() {
       dispatchAuthSessionUpdated(user);
       await queryClient.invalidateQueries();
       router.refresh();
-      setOpen(false);
-      setPassword("");
+      closedBySuccessRef.current = true;
       resolveSessionReauth(true);
+      setPassword("");
+      setOpen(false);
       toast.success("Sesi diperbarui");
     } catch (err) {
       const apiErr = toApiError(err);
@@ -92,6 +95,10 @@ export function SessionReauthDialog() {
       return;
     }
     if (submitting) return;
+    if (closedBySuccessRef.current) {
+      closedBySuccessRef.current = false;
+      return;
+    }
     goToLogin();
   };
 

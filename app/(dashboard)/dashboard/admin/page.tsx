@@ -43,6 +43,7 @@ export default function AdminPage() {
   const pageSize = 10;
   const [deleteTarget, setDeleteTarget] = useState<AdminTenant | null>(null);
   const [confirmSchema, setConfirmSchema] = useState("");
+  const [migrateErrors, setMigrateErrors] = useState<string[]>([]);
   const { data, isLoading } = useQuery({
     queryKey: ["admin-tenants", search, page, pageSize],
     queryFn: () => adminApi.listTenants({ q: search || undefined, page, pageSize }),
@@ -68,12 +69,14 @@ export default function AdminPage() {
   const migrateMut = useMutation({
     mutationFn: () => adminApi.migrateTenantSchemas(),
     onSuccess: (r) => {
+      setMigrateErrors(r.errors ?? []);
       if (r.failed > 0) {
         toast.warning(
-          `Migrasi: ${r.patched} berhasil, ${r.failed} gagal. Cek log API.`,
+          `Migrasi: ${r.patched} berhasil, ${r.failed} gagal.`,
         );
         return;
       }
+      setMigrateErrors([]);
       toast.success(`Migrasi schema selesai (${r.patched} tenant).`);
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -140,6 +143,25 @@ export default function AdminPage() {
           {migrateMut.isPending ? "Memigrasi schema…" : "Migrasi schema tenant"}
         </Button>
       </div>
+      {migrateErrors.length > 0 ? (
+        <Card className="mb-4 border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Migrasi schema gagal sebagian</CardTitle>
+            <CardDescription>
+              Di Encore Cloud, jalankan dulu{" "}
+              <code className="text-xs">./scripts/apply-inventory-schema-cloud.sh staging</code>{" "}
+              dari folder api-go (role admin DB), lalu klik Migrasi schema tenant lagi.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
+              {migrateErrors.map((err) => (
+                <li key={err}>{err}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
       {isPlatformOperatorHome(user) && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader className="pb-2">
