@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
 import { AUTH_SESSION_UPDATED } from "@/lib/auth/session-sync";
-import { dispatchInboxRealtimePush } from "@/lib/inbox/realtime-events";
+import { dispatchInboxRealtimePush, dispatchInboxSSEStatus } from "@/lib/inbox/realtime-events";
 import { inboxStreamUrl } from "@/lib/inbox/stream-url";
 
 const MAX_SSE_BACKOFF_MS = 30_000;
@@ -64,8 +64,10 @@ export function useInboxActivityStream(): void {
       es.onmessage = onMessage;
       es.addEventListener("open", () => {
         retryAttempt = 0;
+        dispatchInboxSSEStatus("connected");
       });
       es.onerror = () => {
+        dispatchInboxSSEStatus("disconnected");
         es?.close();
         es = null;
         scheduleReconnect();

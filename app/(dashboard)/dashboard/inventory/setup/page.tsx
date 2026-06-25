@@ -563,6 +563,12 @@ export default function InventorySetupPage() {
                 {rec.source === "ai" ? "AI" : "Aturan sistem"}
               </Badge>
             </CardTitle>
+            {rec.source === "rules" ? (
+              <CardDescription>
+                Rekomendasi dari aturan bisnis — layanan AI sementara tidak tersedia atau tidak dipakai untuk
+                putaran ini.
+              </CardDescription>
+            ) : null}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border bg-muted/40 p-4 text-sm">
