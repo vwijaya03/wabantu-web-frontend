@@ -13,6 +13,7 @@ import { InventoryDataTablePagination } from "@/components/inventory/data-table-
 import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
 import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { WarehouseSelect } from "@/components/inventory/warehouse-select";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -50,6 +51,8 @@ export default function BillsPage() {
   const [searchQ, setSearchQ] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [deleteBillId, setDeleteBillId] = useState<string | null>(null);
+  const [deleteBillNo, setDeleteBillNo] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["inventory", "bills", searchQ, page, pageSize],
@@ -141,7 +144,8 @@ export default function BillsPage() {
                             aria-label={`Hapus ${b.billNo}`}
                             disabled={deleteBillMut.isPending}
                             onClick={() => {
-                              if (confirm(`Hapus ${b.billNo}? Stok akan dikurangi.`)) deleteBillMut.mutate(b.id);
+                              setDeleteBillId(b.id);
+                              setDeleteBillNo(b.billNo);
                             }}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -165,6 +169,26 @@ export default function BillsPage() {
       </Card>
 
       <BillDetailDialog id={detailId} initialEditing={editOnOpen} onClose={() => { setEditOnOpen(false); setDetailId(null); }} />
+
+      <ConfirmDialog
+        open={!!deleteBillId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteBillId(null);
+            setDeleteBillNo("");
+          }
+        }}
+        title="Hapus penerimaan barang?"
+        description={deleteBillNo ? `${deleteBillNo} akan dihapus. Stok akan dikurangi.` : undefined}
+        confirmLabel="Hapus"
+        destructive
+        loading={deleteBillMut.isPending}
+        onConfirm={() => {
+          if (deleteBillId) deleteBillMut.mutate(deleteBillId);
+          setDeleteBillId(null);
+          setDeleteBillNo("");
+        }}
+      />
     </RequireTenantDashboard>
   );
 }
@@ -279,6 +303,7 @@ function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; 
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const [editing, setEditing] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { data: bill } = useQuery({
     queryKey: ["inventory", "bill", id],
     queryFn: () => inventoryApi.getBill(id!),
@@ -294,6 +319,7 @@ function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; 
     onError: (e) => toast.error(toApiError(e).message),
   });
   return (
+    <>
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) { setEditing(false); onClose(); } }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -326,9 +352,7 @@ function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; 
                     variant="destructive"
                     size="sm"
                     disabled={delMut.isPending}
-                    onClick={() => {
-                      if (confirm(`Hapus ${bill.billNo}? Stok akan dikurangi.`)) delMut.mutate();
-                    }}
+                    onClick={() => setDeleteConfirmOpen(true)}
                   >
                     Hapus
                   </Button>
@@ -361,6 +385,21 @@ function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; 
         ) : null}
       </DialogContent>
     </Dialog>
+
+    <ConfirmDialog
+      open={deleteConfirmOpen}
+      onOpenChange={setDeleteConfirmOpen}
+      title="Hapus penerimaan barang?"
+      description={bill ? `${bill.billNo} akan dihapus. Stok akan dikurangi.` : undefined}
+      confirmLabel="Hapus"
+      destructive
+      loading={delMut.isPending}
+      onConfirm={() => {
+        delMut.mutate();
+        setDeleteConfirmOpen(false);
+      }}
+    />
+    </>
   );
 }
 

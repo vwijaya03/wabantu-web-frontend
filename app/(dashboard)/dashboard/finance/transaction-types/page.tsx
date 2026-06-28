@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FinanceSubPageHeader } from "@/components/finance/finance-sub-page-header";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -67,6 +68,8 @@ export default function TransactionTypesPage() {
   const [openCreate, setOpenCreate] = useState(false);
   const [editItem, setEditItem] = useState<TransactionType | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [deleteTypeId, setDeleteTypeId] = useState<string | null>(null);
+  const [deleteTypeLabel, setDeleteTypeLabel] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["finance-transaction-types", search, page],
@@ -251,7 +254,8 @@ export default function TransactionTypesPage() {
                       size="sm"
                       className="text-destructive"
                       onClick={() => {
-                        if (confirm(`Hapus jenis "${t.label}"?`)) deleteMut.mutate(t.id);
+                        setDeleteTypeId(t.id);
+                        setDeleteTypeLabel(t.label);
                       }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -316,6 +320,26 @@ export default function TransactionTypesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTypeId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTypeId(null);
+            setDeleteTypeLabel("");
+          }
+        }}
+        title="Hapus jenis transaksi?"
+        description={deleteTypeLabel ? `Jenis "${deleteTypeLabel}" akan dihapus permanen.` : undefined}
+        confirmLabel="Hapus"
+        destructive
+        loading={deleteMut.isPending}
+        onConfirm={() => {
+          if (deleteTypeId) deleteMut.mutate(deleteTypeId);
+          setDeleteTypeId(null);
+          setDeleteTypeLabel("");
+        }}
+      />
     </>
   );
 }

@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
@@ -43,6 +44,8 @@ export default function PriceTypesPage() {
   const [openCreate, setOpenCreate] = useState(false);
   const [editItem, setEditItem] = useState<PriceType | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [deletePriceTypeId, setDeletePriceTypeId] = useState<string | null>(null);
+  const [deletePriceTypeLabel, setDeletePriceTypeLabel] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["price-types", search, page],
@@ -221,7 +224,8 @@ export default function PriceTypesPage() {
                       size="sm"
                       className="text-destructive"
                       onClick={() => {
-                        if (confirm(`Hapus tipe "${item.label}"?`)) deleteMut.mutate(item.id);
+                        setDeletePriceTypeId(item.id);
+                        setDeletePriceTypeLabel(item.label);
                       }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -293,6 +297,26 @@ export default function PriceTypesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deletePriceTypeId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeletePriceTypeId(null);
+            setDeletePriceTypeLabel("");
+          }
+        }}
+        title="Hapus tipe harga?"
+        description={deletePriceTypeLabel ? `Tipe "${deletePriceTypeLabel}" akan dihapus permanen.` : undefined}
+        confirmLabel="Hapus"
+        destructive
+        loading={deleteMut.isPending}
+        onConfirm={() => {
+          if (deletePriceTypeId) deleteMut.mutate(deletePriceTypeId);
+          setDeletePriceTypeId(null);
+          setDeletePriceTypeLabel("");
+        }}
+      />
     </>
   );
 }

@@ -44,6 +44,16 @@ function nullableStrField(
   return typeof v === "string" ? v : null;
 }
 
+function numField(o: Record<string, unknown>, camel: string, snake: string, fallback: number): number {
+  const v = o[camel] ?? o[snake];
+  if (typeof v === "number" && !Number.isNaN(v)) return v;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v);
+    if (!Number.isNaN(n)) return n;
+  }
+  return fallback;
+}
+
 function normalizeProfile(data: unknown): BusinessProfile {
   const o = unwrapProfilePayload(data);
   const toneRaw = o.tone;
@@ -62,6 +72,16 @@ function normalizeProfile(data: unknown): BusinessProfile {
     greetingTemplate: nullableStrField(o, "greetingTemplate", "greeting_template"),
     tone,
     aiEnabled: o.aiEnabled !== false && o.ai_enabled !== false,
+    paymentVerificationMode:
+      strField(o, "paymentVerificationMode", "payment_verification_mode") === "auto_verify"
+        ? "auto_verify"
+        : "manual",
+    paymentAutoVerifyMinConfidence: numField(
+      o,
+      "paymentAutoVerifyMinConfidence",
+      "payment_auto_verify_min_confidence",
+      0.95,
+    ),
   });
 }
 
@@ -77,6 +97,9 @@ export interface BusinessProfile {
   greetingTemplate: string | null;
   tone: "friendly" | "formal" | "casual";
   aiEnabled: boolean;
+  /** manual = owner verifikasi bukti; auto_verify = OCR + aturan KB. */
+  paymentVerificationMode: "manual" | "auto_verify";
+  paymentAutoVerifyMinConfidence: number;
   /** IANA timezone for dashboard “hari ini” (analytics). */
   reportingTimezone: string;
 }

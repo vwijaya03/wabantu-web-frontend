@@ -14,6 +14,20 @@ export interface ShippingAddress {
   country?: string;
 }
 
+export type PaymentStatus = "unpaid" | "proof_submitted" | "verified" | "rejected";
+
+export interface PaymentProofMeta {
+  amount?: number;
+  bank?: string;
+  accountNumber?: string;
+  accountName?: string;
+  date?: string;
+  confidence?: number;
+  flags?: string[];
+  rejectReason?: string;
+  fileHash?: string;
+}
+
 export interface Order {
   id: string;
   orderNumber?: string;
@@ -36,6 +50,12 @@ export interface Order {
     warehouseId?: string;
   }>;
   status: string;
+  paymentStatus?: PaymentStatus;
+  paymentProofMessageId?: string;
+  paymentProofSubmittedAt?: string;
+  paymentProofVerifiedAt?: string;
+  paymentProofVerifiedBy?: string;
+  paymentProofMeta?: PaymentProofMeta;
   notes?: string;
   total: number;
   subtotal: number;
@@ -107,6 +127,14 @@ export const ordersApi = {
   },
   async cancel(id: string): Promise<Order> {
     const res = await api.patch(`/orders/${id}/cancel`);
+    return res.data;
+  },
+  async verifyPaymentProof(id: string): Promise<Order> {
+    const res = await api.post(`/orders/${id}/payment-proof/verify`);
+    return res.data;
+  },
+  async rejectPaymentProof(id: string, input?: { reason?: string }): Promise<Order> {
+    const res = await api.post(`/orders/${id}/payment-proof/reject`, input ?? {});
     return res.data;
   },
   async remove(id: string): Promise<void> {

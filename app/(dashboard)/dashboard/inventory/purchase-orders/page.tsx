@@ -13,6 +13,7 @@ import { InventoryDataTablePagination } from "@/components/inventory/data-table-
 import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
 import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { WarehouseSelect } from "@/components/inventory/warehouse-select";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -191,6 +192,7 @@ function CreatePOPanel({ onDone }: { onDone: () => void }) {
 function PODetailDialog({ id, canManage, onClose }: { id: string | null; canManage: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { data: po } = useQuery({
     queryKey: ["inventory", "purchase-order", id],
     queryFn: () => inventoryApi.getPurchaseOrder(id!),
@@ -218,6 +220,7 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
   const canEdit = po && po.status === "open" && !hasReceipts;
 
   return (
+    <>
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) { setEditing(false); onClose(); } }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -270,7 +273,7 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
                   variant="destructive"
                   size="sm"
                   disabled={delMut.isPending}
-                  onClick={() => { if (confirm(`Hapus PO ${po.poNo}?`)) delMut.mutate(); }}
+                  onClick={() => setDeleteConfirmOpen(true)}
                 >
                   Hapus PO
                 </Button>
@@ -281,6 +284,21 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
         ) : null}
       </DialogContent>
     </Dialog>
+
+    <ConfirmDialog
+      open={deleteConfirmOpen}
+      onOpenChange={setDeleteConfirmOpen}
+      title="Hapus PO?"
+      description={po ? `PO ${po.poNo} akan dihapus permanen.` : undefined}
+      confirmLabel="Hapus"
+      destructive
+      loading={delMut.isPending}
+      onConfirm={() => {
+        delMut.mutate();
+        setDeleteConfirmOpen(false);
+      }}
+    />
+    </>
   );
 }
 

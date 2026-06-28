@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { inventoryApi, type Warehouse } from "@/lib/api/inventory";
@@ -38,6 +39,8 @@ export default function WarehousesPage() {
   const [searchQ, setSearchQ] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [deleteWarehouseId, setDeleteWarehouseId] = useState<string | null>(null);
+  const [deleteWarehouseName, setDeleteWarehouseName] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["inventory", "warehouses", "list", searchQ, page, pageSize],
@@ -191,9 +194,8 @@ export default function WarehousesPage() {
                               title="Hapus gudang (hanya jika belum dipakai transaksi)"
                               aria-label={`Hapus gudang ${w.name}`}
                               onClick={() => {
-                                if (confirm(`Hapus gudang ${w.name}? Tidak bisa jika sudah dipakai di transaksi stok, PO, atau pesanan.`)) {
-                                  deleteMut.mutate(w.id);
-                                }
+                                setDeleteWarehouseId(w.id);
+                                setDeleteWarehouseName(w.name);
                               }}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -231,6 +233,30 @@ export default function WarehousesPage() {
           }}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={!!deleteWarehouseId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteWarehouseId(null);
+            setDeleteWarehouseName("");
+          }
+        }}
+        title="Hapus gudang?"
+        description={
+          deleteWarehouseName
+            ? `Gudang "${deleteWarehouseName}" akan dihapus. Tidak bisa jika sudah dipakai di transaksi stok, PO, atau pesanan.`
+            : undefined
+        }
+        confirmLabel="Hapus"
+        destructive
+        loading={deleteMut.isPending}
+        onConfirm={() => {
+          if (deleteWarehouseId) deleteMut.mutate(deleteWarehouseId);
+          setDeleteWarehouseId(null);
+          setDeleteWarehouseName("");
+        }}
+      />
     </RequireTenantDashboard>
   );
 }
