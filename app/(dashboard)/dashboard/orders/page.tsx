@@ -276,7 +276,7 @@ export default function OrdersPage() {
   });
   const stockRows = stockOverview?.stock ?? [];
 
-  const orders = data?.orders ?? [];
+  const orders = useMemo(() => data?.orders ?? [], [data]);
   const displayedOrders = useMemo(() => {
     if (paymentFilter === ALL) return orders;
     return orders.filter((o) => (o.paymentStatus ?? "unpaid") === paymentFilter);
