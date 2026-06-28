@@ -136,22 +136,30 @@ export function PaymentProofPanel({
   canManage,
   verifyPending,
   rejectPending,
+  unblockPending,
   onVerify,
   onReject,
+  onUnblock,
 }: {
   order: Order;
   canManage: boolean;
   verifyPending: boolean;
   rejectPending: boolean;
+  unblockPending?: boolean;
   onVerify: () => void;
   onReject: () => void;
+  onUnblock?: () => void;
 }) {
   const status = order.paymentStatus ?? "unpaid";
   const meta = order.paymentProofMeta;
   const hasProof = Boolean(order.paymentProofMessageId);
+  const proofBlocked = Boolean(meta?.proofBlocked);
+  const rejectionCount = meta?.rejectionCount ?? 0;
+  const maxRejections = 5;
 
   const showVerifyReject = canManage && status === "proof_submitted" && hasProof;
   const showReverify = canManage && status === "rejected" && hasProof;
+  const showUnblock = canManage && proofBlocked && onUnblock != null;
   const showMeta = hasPaymentMetaContent(order);
 
   return (
@@ -162,6 +170,16 @@ export function PaymentProofPanel({
           <Badge variant={paymentStatusBadgeVariant(status)}>{paymentStatusBadgeLabel(status)}</Badge>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">{paymentStatusHint(status)}</p>
+        {proofBlocked ? (
+          <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+            <p className="font-medium text-amber-800 dark:text-amber-200">
+              Upload bukti dari pembeli diabaikan ({rejectionCount}/{maxRejections} penolakan)
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              Buka batas jika ingin menerima bukti transfer lagi dari pelanggan.
+            </p>
+          </div>
+        ) : null}
         {status === "rejected" && meta?.rejectReason ? (
           <div className="mt-3 rounded-md border border-destructive/30 bg-background/80 px-3 py-2 text-sm">
             <span className="font-medium text-destructive">Alasan penolakan: </span>
@@ -202,14 +220,21 @@ export function PaymentProofPanel({
         </div>
       )}
 
-      {showVerifyReject || showReverify ? (
+      {showVerifyReject || showReverify || showUnblock ? (
         <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
-          <Button size="sm" disabled={verifyPending} onClick={onVerify}>
-            {showReverify ? "Verifikasi ulang" : "Verifikasi"}
-          </Button>
+          {showVerifyReject || showReverify ? (
+            <Button size="sm" disabled={verifyPending} onClick={onVerify}>
+              {showReverify ? "Verifikasi ulang" : "Verifikasi"}
+            </Button>
+          ) : null}
           {showVerifyReject ? (
             <Button size="sm" variant="outline" disabled={rejectPending} onClick={onReject}>
               Tolak bukti
+            </Button>
+          ) : null}
+          {showUnblock ? (
+            <Button size="sm" variant="outline" disabled={unblockPending} onClick={onUnblock}>
+              Buka batas bukti
             </Button>
           ) : null}
         </div>

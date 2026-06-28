@@ -147,6 +147,7 @@ export default function OrdersPage() {
   const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
   const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
   const [rejectProofOpen, setRejectProofOpen] = useState(false);
+  const [unblockProofOpen, setUnblockProofOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchStatus, setBatchStatus] = useState("processing");
@@ -410,6 +411,16 @@ export default function OrdersPage() {
     mutationFn: (reason?: string) => ordersApi.rejectPaymentProof(editOrder!.id, { reason }),
     onSuccess: (updated) => {
       toast.success("Bukti transfer ditolak");
+      setEditOrder(updated);
+      invalidateOrders();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const unblockPaymentMut = useMutation({
+    mutationFn: () => ordersApi.unblockPaymentProof(editOrder!.id),
+    onSuccess: (updated) => {
+      toast.success("Batas upload bukti dibuka");
       setEditOrder(updated);
       invalidateOrders();
     },
@@ -956,8 +967,10 @@ export default function OrdersPage() {
                 canManage={canManage}
                 verifyPending={verifyPaymentMut.isPending}
                 rejectPending={rejectPaymentMut.isPending}
+                unblockPending={unblockPaymentMut.isPending}
                 onVerify={() => verifyPaymentMut.mutate()}
                 onReject={() => setRejectProofOpen(true)}
+                onUnblock={() => setUnblockProofOpen(true)}
               />
             ) : null}
             <OrderEditForm
@@ -1045,6 +1058,19 @@ export default function OrdersPage() {
         onSubmit={(reason) => {
           rejectPaymentMut.mutate(reason || undefined);
           setRejectProofOpen(false);
+        }}
+      />
+
+      <ConfirmDialog
+        open={unblockProofOpen}
+        onOpenChange={setUnblockProofOpen}
+        title="Buka batas upload bukti?"
+        description="Pelanggan bisa mengirim bukti transfer lagi (counter penolakan direset). Pesan WhatsApp akan dikirim ke pelanggan."
+        confirmLabel="Buka batas bukti"
+        loading={unblockPaymentMut.isPending}
+        onConfirm={() => {
+          unblockPaymentMut.mutate();
+          setUnblockProofOpen(false);
         }}
       />
     </>

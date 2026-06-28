@@ -26,6 +26,9 @@ export interface PaymentProofMeta {
   flags?: string[];
   rejectReason?: string;
   fileHash?: string;
+  rejectionCount?: number;
+  proofBlocked?: boolean;
+  blockedNotified?: boolean;
 }
 
 export interface Order {
@@ -135,6 +138,10 @@ export const ordersApi = {
   },
   async rejectPaymentProof(id: string, input?: { reason?: string }): Promise<Order> {
     const res = await api.post(`/orders/${id}/payment-proof/reject`, input ?? {});
+    return res.data;
+  },
+  async unblockPaymentProof(id: string): Promise<Order> {
+    const res = await api.post(`/orders/${id}/payment-proof/unblock`);
     return res.data;
   },
   async remove(id: string): Promise<void> {
