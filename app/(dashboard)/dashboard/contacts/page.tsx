@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { contactsApi, type Contact } from "@/lib/api/contacts";
@@ -62,6 +63,8 @@ export default function ContactsPage() {
   const [editForm, setEditForm] = useState<ContactForm>(emptyForm);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchStatus, setBatchStatus] = useState("active");
+  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
+  const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["contacts", search, page, pageSize],
@@ -241,9 +244,7 @@ export default function ContactsPage() {
                 <Button
                   variant="destructive"
                   disabled={batchDeleteMut.isPending}
-                  onClick={() => {
-                    if (confirm(`Hapus ${selectedIds.size} kontak terpilih?`)) batchDeleteMut.mutate();
-                  }}
+                  onClick={() => setBatchDeleteOpen(true)}
                 >
                   Hapus Batch
                 </Button>
@@ -315,11 +316,7 @@ export default function ContactsPage() {
                         variant="ghost"
                         size="sm"
                         className="text-destructive"
-                        onClick={() => {
-                          if (confirm(`Hapus kontak ${contact.displayName || contact.phoneNumber}?`)) {
-                            deleteMut.mutate(contact.id);
-                          }
-                        }}
+                        onClick={() => setDeleteContactId(contact.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -399,6 +396,31 @@ export default function ContactsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={batchDeleteOpen}
+        onOpenChange={setBatchDeleteOpen}
+        title={`Hapus ${selectedIds.size} kontak?`}
+        description="Kontak terpilih akan dihapus permanen."
+        confirmLabel="Hapus"
+        destructive
+        loading={batchDeleteMut.isPending}
+        onConfirm={() => batchDeleteMut.mutate()}
+      />
+
+      <ConfirmDialog
+        open={!!deleteContactId}
+        onOpenChange={(open) => !open && setDeleteContactId(null)}
+        title="Hapus kontak?"
+        description="Kontak akan dihapus permanen dari daftar."
+        confirmLabel="Hapus"
+        destructive
+        loading={deleteMut.isPending}
+        onConfirm={() => {
+          if (deleteContactId) deleteMut.mutate(deleteContactId);
+          setDeleteContactId(null);
+        }}
+      />
     </>
   );
 }

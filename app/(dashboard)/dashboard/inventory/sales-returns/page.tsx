@@ -12,6 +12,7 @@ import { InventoryDataTablePagination } from "@/components/inventory/data-table-
 import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
 import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { OrderPicker } from "@/components/inventory/order-picker";
 import { BulkSalesReturnPanel } from "@/components/inventory/bulk-sales-return-panel";
 import { InventoryFormModeSwitch } from "@/components/inventory/inventory-form-mode-switch";
@@ -181,6 +182,7 @@ export default function SalesReturnsPage() {
 
 function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; canManage: boolean; onClose: () => void }) {
   const qc = useQueryClient();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { data: r } = useQuery({
     queryKey: ["inventory", "sales-return", id],
     queryFn: () => inventoryApi.getSalesReturn(id!),
@@ -196,6 +198,7 @@ function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; can
     onError: (e) => toast.error(toApiError(e).message),
   });
   return (
+    <>
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
@@ -210,7 +213,7 @@ function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; can
                   variant="destructive"
                   size="sm"
                   disabled={delMut.isPending}
-                  onClick={() => { if (confirm(`Hapus retur ${r.returnNo}? Stok akan dikurangi.`)) delMut.mutate(); }}
+                  onClick={() => setDeleteConfirmOpen(true)}
                 >
                   Hapus
                 </Button>
@@ -239,5 +242,20 @@ function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; can
         ) : null}
       </DialogContent>
     </Dialog>
+
+    <ConfirmDialog
+      open={deleteConfirmOpen}
+      onOpenChange={setDeleteConfirmOpen}
+      title="Hapus retur?"
+      description={r ? `Retur ${r.returnNo} akan dihapus. Stok akan dikurangi.` : undefined}
+      confirmLabel="Hapus"
+      destructive
+      loading={delMut.isPending}
+      onConfirm={() => {
+        delMut.mutate();
+        setDeleteConfirmOpen(false);
+      }}
+    />
+    </>
   );
 }

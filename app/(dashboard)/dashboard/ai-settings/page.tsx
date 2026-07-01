@@ -61,6 +61,8 @@ const schema = z.object({
   tone: z.enum(["friendly", "formal", "casual"]),
   aiEnabled: z.boolean(),
   reportingTimezone: reportingTimezoneEnum,
+  paymentVerificationMode: z.enum(["manual", "auto_verify"]),
+  paymentAutoVerifyMinConfidence: z.number().min(0).max(1),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -136,6 +138,7 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
 
   const aiEnabled = useWatch({ control, name: "aiEnabled" });
   const tone = useWatch({ control, name: "tone" });
+  const paymentMode = useWatch({ control, name: "paymentVerificationMode" });
   const description = useWatch({ control, name: "description" });
   const productsServices = useWatch({ control, name: "productsServices" });
 
@@ -171,6 +174,62 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
             </Button>
           </CardContent>
         </Card>
+
+        {canAiAssist ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Pembayaran &amp; Bukti Transfer</CardTitle>
+              <CardDescription>
+                Atur verifikasi bukti transfer dari WhatsApp. Mode otomatis memakai
+                vision AI (token) dan FAQ rekening di Knowledge Base.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Field label="Mode verifikasi" error={errors.paymentVerificationMode?.message}>
+                <Controller
+                  name="paymentVerificationMode"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="payment-verification-mode">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="manual">Manual (disarankan)</SelectItem>
+                        <SelectItem value="auto_verify">Otomatis (OCR + aturan)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+              {paymentMode === "auto_verify" ? (
+                <>
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+                    Mode otomatis memakai token vision untuk setiap bukti transfer.
+                    Pastikan FAQ rekening sudah lengkap di{" "}
+                    <Link href="/dashboard/knowledge-base" className="underline">
+                      Knowledge Base
+                    </Link>
+                    .
+                  </div>
+                  <Field
+                    label="Confidence minimum auto-verify (0–1)"
+                    error={errors.paymentAutoVerifyMinConfidence?.message}
+                  >
+                    <Input
+                      id="payment-auto-confidence"
+                      type="number"
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      {...register("paymentAutoVerifyMinConfidence", { valueAsNumber: true })}
+                    />
+                  </Field>
+                </>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card>
           <CardHeader>
@@ -413,6 +472,8 @@ function toFormValues(p: BusinessProfile): FormValues {
     greetingTemplate: p.greetingTemplate ?? "",
     tone: p.tone,
     aiEnabled: p.aiEnabled,
+    paymentVerificationMode: p.paymentVerificationMode ?? "manual",
+    paymentAutoVerifyMinConfidence: p.paymentAutoVerifyMinConfidence ?? 0.95,
     reportingTimezone: isReportingTimezoneId(tzRaw)
       ? tzRaw
       : DEFAULT_REPORTING_TIMEZONE_UI,

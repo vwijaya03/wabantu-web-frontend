@@ -12,6 +12,7 @@ import { InventoryDataTablePagination } from "@/components/inventory/data-table-
 import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
 import { InventoryOpenDetailSuspense } from "@/components/inventory/use-inventory-open-detail";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { OrderPicker } from "@/components/inventory/order-picker";
 import { BulkInvoicePanel } from "@/components/inventory/bulk-invoice-panel";
 import { InventoryFormModeSwitch } from "@/components/inventory/inventory-form-mode-switch";
@@ -146,6 +147,7 @@ export default function InvoicesPage() {
 
 function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; canManage: boolean; onClose: () => void }) {
   const qc = useQueryClient();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { data: inv } = useQuery({
     queryKey: ["inventory", "invoice", id],
     queryFn: () => inventoryApi.getInvoice(id!),
@@ -161,6 +163,7 @@ function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; ca
     onError: (e) => toast.error(toApiError(e).message),
   });
   return (
+    <>
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
@@ -175,7 +178,7 @@ function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; ca
                   variant="destructive"
                   size="sm"
                   disabled={delMut.isPending}
-                  onClick={() => { if (confirm(`Hapus faktur ${inv.invoiceNo}?`)) delMut.mutate(); }}
+                  onClick={() => setDeleteConfirmOpen(true)}
                 >
                   Hapus
                 </Button>
@@ -209,5 +212,20 @@ function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; ca
         ) : null}
       </DialogContent>
     </Dialog>
+
+    <ConfirmDialog
+      open={deleteConfirmOpen}
+      onOpenChange={setDeleteConfirmOpen}
+      title="Hapus faktur?"
+      description={inv ? `Faktur ${inv.invoiceNo} akan dihapus permanen.` : undefined}
+      confirmLabel="Hapus"
+      destructive
+      loading={delMut.isPending}
+      onConfirm={() => {
+        delMut.mutate();
+        setDeleteConfirmOpen(false);
+      }}
+    />
+    </>
   );
 }

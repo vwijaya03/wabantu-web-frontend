@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -62,6 +63,8 @@ export default function CatalogPage() {
   const [createForm, setCreateForm] = useState<CatalogForm>(emptyForm);
   const [editItem, setEditItem] = useState<CatalogItem | null>(null);
   const [editForm, setEditForm] = useState<CatalogForm>(emptyForm);
+  const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
+  const [deleteProductName, setDeleteProductName] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["catalog", search, page, pageSize],
@@ -277,7 +280,8 @@ export default function CatalogPage() {
                             disabled={!canManage}
                             className="text-destructive"
                             onClick={() => {
-                              if (confirm(`Hapus produk "${item.name}"?`)) deleteMut.mutate(item.id);
+                              setDeleteProductId(item.id);
+                              setDeleteProductName(item.name);
                             }}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -329,6 +333,26 @@ export default function CatalogPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteProductId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteProductId(null);
+            setDeleteProductName("");
+          }
+        }}
+        title="Hapus produk?"
+        description={deleteProductName ? `Produk "${deleteProductName}" akan dihapus permanen.` : undefined}
+        confirmLabel="Hapus"
+        destructive
+        loading={deleteMut.isPending}
+        onConfirm={() => {
+          if (deleteProductId) deleteMut.mutate(deleteProductId);
+          setDeleteProductId(null);
+          setDeleteProductName("");
+        }}
+      />
     </>
   );
 }

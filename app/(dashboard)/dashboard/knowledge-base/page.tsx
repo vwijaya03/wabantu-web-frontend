@@ -78,6 +78,20 @@ export default function KnowledgeBasePage() {
         description="Daftar FAQ yang dipakai AI untuk menjawab pelanggan."
       />
 
+      <Card className="mb-6 border-amber-500/30 bg-amber-500/5">
+        <CardContent className="p-5 text-sm">
+          <p className="font-medium">Verifikasi bukti transfer (AI)</p>
+          <p className="mt-1 text-muted-foreground">
+            Agar bukti transfer bisa diverifikasi AI secara otomatis, tambahkan FAQ berisi nomor
+            rekening dan atas nama penerima pembayaran (kategori mis. &quot;payment&quot; atau
+            &quot;rekening&quot;).
+          </p>
+          <Button asChild variant="link" className="mt-2 h-auto p-0">
+            <Link href="/dashboard/ai-settings">Atur mode verifikasi di AI Settings</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card className="mb-6 border-primary/30 bg-primary/5">
         <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">

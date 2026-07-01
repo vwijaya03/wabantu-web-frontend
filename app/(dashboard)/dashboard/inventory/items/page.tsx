@@ -17,6 +17,7 @@ import {
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { InventoryFormModeSwitch } from "@/components/inventory/inventory-form-mode-switch";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
@@ -43,6 +44,7 @@ export default function InventoryItemsPage() {
   const [selected, setSelected] = useState<CatalogItem | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [pageMode, setPageMode] = useState<"single" | "bulk">("single");
+  const [trackAllConfirmOpen, setTrackAllConfirmOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["inventory", "config-items", q],
@@ -126,11 +128,7 @@ export default function InventoryItemsPage() {
               <Button
                 size="sm"
                 disabled={batchMut.isPending}
-                onClick={() => {
-                  if (confirm("Aktifkan lacak stok untuk semua produk katalog? Bundle akan dilewati. Nonaktifkan manual untuk produk jasa.")) {
-                    batchMut.mutate({ all: true, trackStock: true });
-                  }
-                }}
+                onClick={() => setTrackAllConfirmOpen(true)}
               >
                 Lacak semua produk
               </Button>
@@ -188,6 +186,19 @@ export default function InventoryItemsPage() {
       </Card>
 
       <ItemConfigDialog item={selected} canManage={canManage} onClose={() => setSelected(null)} />
+
+      <ConfirmDialog
+        open={trackAllConfirmOpen}
+        onOpenChange={setTrackAllConfirmOpen}
+        title="Lacak stok semua produk?"
+        description="Aktifkan lacak stok untuk semua produk katalog. Bundle akan dilewati. Nonaktifkan manual untuk produk jasa."
+        confirmLabel="Aktifkan"
+        loading={batchMut.isPending}
+        onConfirm={() => {
+          batchMut.mutate({ all: true, trackStock: true });
+          setTrackAllConfirmOpen(false);
+        }}
+      />
     </RequireTenantDashboard>
   );
 }

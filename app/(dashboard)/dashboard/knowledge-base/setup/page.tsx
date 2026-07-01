@@ -290,7 +290,8 @@ export default function KnowledgeBaseSetupPage() {
               Percakapan setup
             </CardTitle>
             <CardDescription>
-              Jawab santai seperti chat WhatsApp. AI tidak akan minta harga SKU atau nomor rekening.
+              Jawab santai seperti chat WhatsApp. Setup umum tidak perlu harga SKU. FAQ rekening
+              untuk verifikasi bukti transfer bisa ditambah manual setelah publish (opsional).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -506,7 +507,10 @@ export default function KnowledgeBaseSetupPage() {
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="si-pay">Cara bayar (tanpa nomor rekening)</Label>
+                <Label htmlFor="si-pay">Cara bayar (metode umum, tanpa nomor rekening)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Untuk auto-verify bukti transfer, tambahkan FAQ rekening terpisah di Knowledge Base.
+                </p>
                 <Input
                   id="si-pay"
                   value={profileEdit.basePricing}

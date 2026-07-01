@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { FileText, MapPin, Mic, Video } from "lucide-react";
 import { inboxApi, type InboxMessage } from "@/lib/api/inbox";
+import { formatOrderNumber } from "@/lib/format-order-number";
 import { cn } from "@/lib/utils";
 
 function InboxMessageImage({ messageId, alt, className }: { messageId: string; alt?: string; className?: string }) {
@@ -51,6 +53,7 @@ const NON_TEXT_LABELS: Record<string, { icon: typeof FileText; label: string }> 
 
 export function InboxMessageBubble({ message }: { message: InboxMessage }) {
   const isOut = message.direction === "out";
+  const isSystem = message.author === "system";
   const body = message.body?.trim() ?? "";
   const nonText = NON_TEXT_LABELS[message.type];
 
@@ -76,6 +79,17 @@ export function InboxMessageBubble({ message }: { message: InboxMessage }) {
     content = <p className="whitespace-pre-wrap">{body || "(pesan non-text)"}</p>;
   }
 
+  if (isSystem) {
+    return (
+      <div className="mx-auto max-w-[90%] rounded-lg border border-dashed bg-muted/50 px-3 py-2 text-center text-xs text-muted-foreground">
+        {content}
+        <p className="mt-1 text-[10px] opacity-70">
+          sistem · {new Date(message.createdAt).toLocaleTimeString("id-ID")}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -84,6 +98,14 @@ export function InboxMessageBubble({ message }: { message: InboxMessage }) {
       )}
     >
       {content}
+      {message.linkedOrderId ? (
+        <Link
+          href={`/dashboard/orders?highlight=${message.linkedOrderId}`}
+          className="mt-2 inline-flex rounded-full border bg-background px-2 py-0.5 text-[11px] font-medium text-primary hover:underline"
+        >
+          Lihat order terkait ({formatOrderNumber(message.linkedOrderId)})
+        </Link>
+      ) : null}
       <p className="mt-1 text-[10px] text-muted-foreground">
         {message.author} · {new Date(message.createdAt).toLocaleTimeString("id-ID")}
       </p>

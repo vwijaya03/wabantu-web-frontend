@@ -54,6 +54,7 @@ import type { PatientExportColumnKey } from "@/lib/events-export";
 import { eventsApi, EVENTS_MAX_PATIENT_EXPORT_ROWS, type Patient } from "@/lib/api/events";
 import { formatEventDateId, formatPatientSlotLabel } from "@/lib/events-format";
 import { toApiError } from "@/lib/api/client";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 20;
@@ -110,6 +111,7 @@ export function EventPatientsTab({
   const [form, setForm] = useState<PatientForm>(emptyPatientForm());
   const [contactId, setContactId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Patient | null>(null);
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportHiddenCols, setExportHiddenCols] = useState<Set<PatientExportColumnKey>>(
     () => new Set(DEFAULT_HIDDEN_PATIENT_EXPORT_COLUMNS),
@@ -351,11 +353,7 @@ export function EventPatientsTab({
                 size="sm"
                 variant="destructive"
                 disabled={deleteBulkMut.isPending}
-                onClick={() => {
-                  if (confirm(`Hapus ${selectedIds.size} pasien terpilih?`)) {
-                    deleteBulkMut.mutate(Array.from(selectedIds));
-                  }
-                }}
+                onClick={() => setBulkDeleteConfirmOpen(true)}
               >
                 Hapus terpilih
               </Button>
@@ -550,6 +548,20 @@ export function EventPatientsTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ConfirmDialog
+        open={bulkDeleteConfirmOpen}
+        onOpenChange={setBulkDeleteConfirmOpen}
+        title="Hapus pasien terpilih?"
+        description={`${selectedIds.size} pasien akan dihapus dari acara.`}
+        confirmLabel="Hapus"
+        destructive
+        loading={deleteBulkMut.isPending}
+        onConfirm={() => {
+          deleteBulkMut.mutate(Array.from(selectedIds));
+          setBulkDeleteConfirmOpen(false);
+        }}
+      />
     </div>
   );
 }

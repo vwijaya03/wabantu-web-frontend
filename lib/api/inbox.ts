@@ -46,6 +46,7 @@ export interface InboxMessage {
   type: "text" | "image" | "audio" | "video" | "document" | "location";
   body: string | null;
   media?: InboxMessageMedia | null;
+  linkedOrderId?: string | null;
   status: "sent" | "delivered" | "read" | "failed";
   createdAt: string;
 }

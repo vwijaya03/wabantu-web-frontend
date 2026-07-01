@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FinanceSubPageHeader } from "@/components/finance/finance-sub-page-header";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,7 @@ export default function RecurringPage() {
   const todayISO = () => todayISOInTimezone(reportingTimezone);
   const [openCreate, setOpenCreate] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [stopRecurringId, setStopRecurringId] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: "",
     type: "expense",
@@ -277,9 +279,7 @@ export default function RecurringPage() {
                         variant="ghost"
                         size="sm"
                         className="text-destructive"
-                        onClick={() => {
-                          if (confirm("Hentikan transaksi berulang ini?")) deleteMut.mutate(r.id);
-                        }}
+                        onClick={() => setStopRecurringId(r.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -420,6 +420,22 @@ export default function RecurringPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!stopRecurringId}
+        onOpenChange={(open) => {
+          if (!open) setStopRecurringId(null);
+        }}
+        title="Hentikan transaksi berulang?"
+        description="Transaksi berulang ini akan dinonaktifkan dan tidak lagi dijadwalkan."
+        confirmLabel="Hentikan"
+        destructive
+        loading={deleteMut.isPending}
+        onConfirm={() => {
+          if (stopRecurringId) deleteMut.mutate(stopRecurringId);
+          setStopRecurringId(null);
+        }}
+      />
     </>
   );
 }

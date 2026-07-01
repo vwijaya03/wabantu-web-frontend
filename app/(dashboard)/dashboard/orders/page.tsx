@@ -17,6 +17,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
+import { PromptDialog } from "@/components/dashboard/prompt-dialog";
+import {
+  PAYMENT_STATUSES,
+  PaymentProofPanel,
+  paymentStatusBadgeLabel,
+  paymentStatusBadgeVariant,
+  paymentStatusHint,
+} from "@/components/orders/payment-proof-panel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -134,6 +143,11 @@ export default function OrdersPage() {
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState(ALL);
+  const [paymentFilter, setPaymentFilter] = useState(ALL);
+  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
+  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
+  const [rejectProofOpen, setRejectProofOpen] = useState(false);
+  const [unblockProofOpen, setUnblockProofOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchStatus, setBatchStatus] = useState("processing");
@@ -263,7 +277,11 @@ export default function OrdersPage() {
   });
   const stockRows = stockOverview?.stock ?? [];
 
-  const orders = data?.orders ?? [];
+  const orders = useMemo(() => data?.orders ?? [], [data]);
+  const displayedOrders = useMemo(() => {
+    if (paymentFilter === ALL) return orders;
+    return orders.filter((o) => (o.paymentStatus ?? "unpaid") === paymentFilter);
+  }, [orders, paymentFilter]);
   const total = data?.total ?? 0;
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total]);
   const visibleIds = orders.map((order) => order.id);
@@ -374,6 +392,36 @@ export default function OrdersPage() {
     onSuccess: () => {
       toast.success("Pesanan diperbarui");
       setEditOrder(null);
+      invalidateOrders();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const verifyPaymentMut = useMutation({
+    mutationFn: () => ordersApi.verifyPaymentProof(editOrder!.id),
+    onSuccess: (updated) => {
+      toast.success("Bukti transfer diverifikasi");
+      setEditOrder(updated);
+      invalidateOrders();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const rejectPaymentMut = useMutation({
+    mutationFn: (reason?: string) => ordersApi.rejectPaymentProof(editOrder!.id, { reason }),
+    onSuccess: (updated) => {
+      toast.success("Bukti transfer ditolak");
+      setEditOrder(updated);
+      invalidateOrders();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const unblockPaymentMut = useMutation({
+    mutationFn: () => ordersApi.unblockPaymentProof(editOrder!.id),
+    onSuccess: (updated) => {
+      toast.success("Batas upload bukti dibuka");
+      setEditOrder(updated);
       invalidateOrders();
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -621,9 +669,6 @@ export default function OrdersPage() {
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <CardTitle>Daftar pesanan ({total})</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Search dan pagination berjalan dari server agar aman untuk data besar.
-              </p>
             </div>
             <div className="flex flex-col gap-2 lg:flex-row">
               <div className="relative min-w-0 lg:w-80">
@@ -654,6 +699,26 @@ export default function OrdersPage() {
                   {ORDER_STATUSES.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={paymentFilter}
+                onValueChange={(value) => {
+                  setPaymentFilter(value);
+                  setPage(1);
+                  setSelectedIds(new Set());
+                }}
+              >
+                <SelectTrigger className="lg:w-52">
+                  <SelectValue placeholder="Status pembayaran" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Semua status bayar</SelectItem>
+                  {PAYMENT_STATUSES.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.filter}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -696,9 +761,7 @@ export default function OrdersPage() {
                 <Button
                   variant="destructive"
                   disabled={!canManage || batchDeleteMut.isPending}
-                  onClick={() => {
-                    if (confirm(`Hapus ${selectedIds.size} pesanan terpilih?`)) batchDeleteMut.mutate();
-                  }}
+                  onClick={() => setBatchDeleteOpen(true)}
                 >
                   Hapus Batch
                 </Button>
@@ -708,9 +771,18 @@ export default function OrdersPage() {
 
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Memuat...</p>
-          ) : orders.length === 0 ? (
+          ) : displayedOrders.length === 0 ? (
             <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-              Belum ada pesanan yang cocok.
+              {orders.length > 0 && paymentFilter !== ALL ? (
+                <>
+                  Tidak ada pesanan dengan status pembayaran ini di halaman ini.
+                  <br />
+                  Ubah filter ke <span className="font-medium text-foreground">Semua status bayar</span> atau coba
+                  halaman lain.
+                </>
+              ) : (
+                "Belum ada pesanan yang cocok."
+              )}
             </div>
           ) : (
             <div className="overflow-hidden rounded-lg border">
@@ -718,12 +790,12 @@ export default function OrdersPage() {
                 <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectVisible} aria-label="Pilih semua pesanan" />
                 <span>Pesanan</span>
                 <span>Pembeli</span>
-                <span>Status</span>
+                <span>Status pesanan</span>
                 <span>Total</span>
                 <span className="text-right">Aksi</span>
               </div>
               <div className="max-h-[640px] divide-y overflow-auto">
-                {orders.map((order) => (
+                {displayedOrders.map((order) => (
                   <div
                     key={order.id}
                     className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[40px_minmax(180px,1fr)_minmax(130px,0.75fr)_120px_130px_90px] lg:items-center"
@@ -771,7 +843,15 @@ export default function OrdersPage() {
                         <p className="mt-1 truncate text-xs text-muted-foreground">{order.contactPhone}</p>
                       ) : null}
                     </div>
-                    <Badge variant={statusBadgeVariant(order.status)}>{statusLabel(order.status)}</Badge>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant={statusBadgeVariant(order.status)}>{statusLabel(order.status)}</Badge>
+                      <Badge
+                        variant={paymentStatusBadgeVariant(order.paymentStatus)}
+                        title={paymentStatusHint(order.paymentStatus)}
+                      >
+                        {paymentStatusBadgeLabel(order.paymentStatus)}
+                      </Badge>
+                    </div>
                     <div>
                       <p>{formatRupiah(order.total)}</p>
                       <p className="text-xs text-muted-foreground">
@@ -787,9 +867,7 @@ export default function OrdersPage() {
                         size="sm"
                         disabled={!canManage}
                         className="text-destructive"
-                        onClick={() => {
-                          if (confirm(`Hapus pesanan ${formatOrderNumber(order.id)}?`)) deleteMut.mutate(order.id);
-                        }}
+                        onClick={() => setDeleteOrderId(order.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -883,6 +961,18 @@ export default function OrdersPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[calc(92vh-180px)] overflow-y-auto px-6 py-4">
+            {editOrder ? (
+              <PaymentProofPanel
+                order={editOrder}
+                canManage={canManage}
+                verifyPending={verifyPaymentMut.isPending}
+                rejectPending={rejectPaymentMut.isPending}
+                unblockPending={unblockPaymentMut.isPending}
+                onVerify={() => verifyPaymentMut.mutate()}
+                onReject={() => setRejectProofOpen(true)}
+                onUnblock={() => setUnblockProofOpen(true)}
+              />
+            ) : null}
             <OrderEditForm
               form={editForm}
               setForm={setEditForm}
@@ -926,6 +1016,63 @@ export default function OrdersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={batchDeleteOpen}
+        onOpenChange={setBatchDeleteOpen}
+        title={`Hapus ${selectedIds.size} pesanan?`}
+        description="Pesanan terpilih akan dihapus permanen dari daftar."
+        confirmLabel="Hapus"
+        destructive
+        loading={batchDeleteMut.isPending}
+        onConfirm={() => batchDeleteMut.mutate()}
+      />
+
+      <ConfirmDialog
+        open={!!deleteOrderId}
+        onOpenChange={(open) => !open && setDeleteOrderId(null)}
+        title="Hapus pesanan?"
+        description={
+          deleteOrderId
+            ? `Pesanan ${formatOrderNumber(deleteOrderId)} akan dihapus permanen.`
+            : undefined
+        }
+        confirmLabel="Hapus"
+        destructive
+        loading={deleteMut.isPending}
+        onConfirm={() => {
+          if (deleteOrderId) deleteMut.mutate(deleteOrderId);
+          setDeleteOrderId(null);
+        }}
+      />
+
+      <PromptDialog
+        open={rejectProofOpen}
+        onOpenChange={setRejectProofOpen}
+        title="Tolak bukti transfer?"
+        description="Opsional: beri alasan agar tim ingat saat follow-up ke pelanggan."
+        placeholder="Alasan penolakan (opsional)"
+        confirmLabel="Tolak bukti"
+        destructive
+        loading={rejectPaymentMut.isPending}
+        onSubmit={(reason) => {
+          rejectPaymentMut.mutate(reason || undefined);
+          setRejectProofOpen(false);
+        }}
+      />
+
+      <ConfirmDialog
+        open={unblockProofOpen}
+        onOpenChange={setUnblockProofOpen}
+        title="Buka batas upload bukti?"
+        description="Pelanggan bisa mengirim bukti transfer lagi (counter penolakan direset). Pesan WhatsApp akan dikirim ke pelanggan."
+        confirmLabel="Buka batas bukti"
+        loading={unblockPaymentMut.isPending}
+        onConfirm={() => {
+          unblockPaymentMut.mutate();
+          setUnblockProofOpen(false);
+        }}
+      />
     </>
   );
 }
