@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/components/providers/auth-provider";
-import { adminApi, type AdminTenant } from "@/lib/api/admin";
+import { adminApi, CURRENT_SCHEMA_PATCH_VERSION, type AdminTenant } from "@/lib/api/admin";
 import { isPlatformOperatorHome } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
 import { resetTenantScopedQueries } from "@/lib/query/platform-console";
@@ -44,6 +44,8 @@ export default function AdminPage() {
   const [deleteTarget, setDeleteTarget] = useState<AdminTenant | null>(null);
   const [confirmSchema, setConfirmSchema] = useState("");
   const [migrateErrors, setMigrateErrors] = useState<string[]>([]);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [selectedTenantIds, setSelectedTenantIds] = useState<Set<string>>(new Set());
   const { data, isLoading } = useQuery({
     queryKey: ["admin-tenants", search, page, pageSize],
     queryFn: () => adminApi.listTenants({ q: search || undefined, page, pageSize }),
@@ -66,21 +68,78 @@ export default function AdminPage() {
     onError: (e) => toast.error(toApiError(e).message),
   });
 
-  const migrateMut = useMutation({
-    mutationFn: () => adminApi.migrateTenantSchemas(),
-    onSuccess: (r) => {
-      setMigrateErrors(r.errors ?? []);
-      if (r.failed > 0) {
+  const migrateJobQuery = useQuery({
+    queryKey: ["admin-migrate-job", activeJobId],
+    queryFn: () => adminApi.getMigrateJob(activeJobId!),
+    enabled: !!activeJobId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (!status || status === "completed" || status === "cancelled") return false;
+      return 2000;
+    },
+  });
+
+  useEffect(() => {
+    const job = migrateJobQuery.data;
+    if (!job || !activeJobId) return;
+    if (job.status === "completed" || job.status === "cancelled") {
+      void qc.invalidateQueries({ queryKey: ["admin-tenants"] });
+      if (job.failedCount > 0) {
+        setMigrateErrors(job.recentErrors ?? []);
         toast.warning(
-          `Migrasi: ${r.patched} berhasil, ${r.failed} gagal.`,
+          `Migrasi selesai: ${job.doneCount} berhasil, ${job.failedCount} gagal.`,
         );
+      } else {
+        setMigrateErrors([]);
+        toast.success(`Migrasi selesai (${job.doneCount} tenant).`);
+      }
+      setActiveJobId(null);
+      setSelectedTenantIds(new Set());
+    }
+  }, [migrateJobQuery.data, activeJobId, qc]);
+
+  const migrateMut = useMutation({
+    mutationFn: (input?: { tenantIds?: string[]; mode?: "behind" | "selected" | "" }) =>
+      adminApi.migrateTenantSchemas(input),
+    onSuccess: (r) => {
+      if (r.async && r.jobId) {
+        setMigrateErrors([]);
+        setActiveJobId(r.jobId);
+        toast.info(`Migrasi di antrian (${r.enqueued ?? 0} tenant)…`);
+        return;
+      }
+      setMigrateErrors(r.errors ?? []);
+      void qc.invalidateQueries({ queryKey: ["admin-tenants"] });
+      if (r.failed > 0) {
+        toast.warning(`Migrasi: ${r.patched} berhasil, ${r.failed} gagal.`);
         return;
       }
       setMigrateErrors([]);
+      setSelectedTenantIds(new Set());
       toast.success(`Migrasi schema selesai (${r.patched} tenant).`);
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
+
+  const toggleTenantSelected = (id: string) => {
+    setSelectedTenantIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllOnPage = () => {
+    setSelectedTenantIds(new Set(tenants.map((t) => t.id)));
+  };
+
+  const clearSelection = () => setSelectedTenantIds(new Set());
+
+  function formatSchemaMigratedAt(value?: string) {
+    if (!value) return "Belum pernah";
+    return new Date(value).toLocaleString("id-ID");
+  }
 
   const planMut = useMutation({
     mutationFn: ({ tenantId, planCode }: { tenantId: string; planCode: "starter" | "business" | "pro" }) =>
@@ -137,12 +196,71 @@ export default function AdminPage() {
         </Button>
         <Button
           variant="secondary"
-          disabled={migrateMut.isPending}
-          onClick={() => migrateMut.mutate()}
+          disabled={migrateMut.isPending || !!activeJobId}
+          onClick={() => migrateMut.mutate({ mode: "behind" })}
         >
-          {migrateMut.isPending ? "Memigrasi schema…" : "Migrasi schema tenant"}
+          {activeJobId ? "Migrasi berjalan…" : "Migrasi tenant tertinggal"}
         </Button>
+        <Button
+          variant="outline"
+          disabled={migrateMut.isPending || !!activeJobId}
+          onClick={() => migrateMut.mutate(undefined)}
+        >
+          Migrasi semua tenant
+        </Button>
+        <Button
+          variant="outline"
+          disabled={migrateMut.isPending || !!activeJobId || selectedTenantIds.size === 0}
+          onClick={() =>
+            migrateMut.mutate({
+              tenantIds: Array.from(selectedTenantIds),
+              mode: "selected",
+            })
+          }
+        >
+          Migrasi terpilih ({selectedTenantIds.size})
+        </Button>
+        {selectedTenantIds.size > 0 ? (
+          <Button variant="ghost" size="sm" onClick={clearSelection}>
+            Bersihkan pilihan
+          </Button>
+        ) : null}
       </div>
+      {activeJobId && migrateJobQuery.data ? (
+        <Card className="mb-4 border-primary/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Progress migrasi schema</CardTitle>
+            <CardDescription>
+              Job {migrateJobQuery.data.jobId.slice(0, 8)}… — patch v
+              {migrateJobQuery.data.patchVersion}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{
+                  width: `${
+                    migrateJobQuery.data.totalCount > 0
+                      ? Math.round(
+                          ((migrateJobQuery.data.doneCount +
+                            migrateJobQuery.data.failedCount) /
+                            migrateJobQuery.data.totalCount) *
+                            100,
+                        )
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {migrateJobQuery.data.doneCount} selesai · {migrateJobQuery.data.failedCount}{" "}
+              gagal · {migrateJobQuery.data.totalCount} total · status:{" "}
+              {migrateJobQuery.data.status}
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
       {migrateErrors.length > 0 ? (
         <Card className="mb-4 border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
           <CardHeader className="pb-2">
@@ -177,10 +295,17 @@ export default function AdminPage() {
         <CardHeader>
           <CardTitle>Tenant ({data?.total ?? 0})</CardTitle>
           <CardDescription>
-            Cari tenant, ubah paket, pantau, atau hapus permanen schema tenant.
+            Cari tenant, ubah paket, pantau, migrasi schema, atau hapus permanen schema tenant.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
+          {tenants.length > 0 ? (
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <Button type="button" variant="ghost" size="sm" onClick={selectAllOnPage}>
+                Pilih semua di halaman ini
+              </Button>
+            </div>
+          ) : null}
           <div className="mb-3 flex flex-col gap-2 sm:flex-row">
             <Input
               value={q}
@@ -227,7 +352,15 @@ export default function AdminPage() {
                   key={t.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded border p-3 text-sm"
                 >
-                  <div>
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-1 size-4 shrink-0 rounded border"
+                      checked={selectedTenantIds.has(t.id)}
+                      onChange={() => toggleTenantSelected(t.id)}
+                      aria-label={`Pilih ${t.companyName}`}
+                    />
+                    <div className="min-w-0">
                     <p className="font-medium">{t.companyName}</p>
                     <p className="text-muted-foreground">
                       {t.ownerEmail || "—"}
@@ -235,6 +368,16 @@ export default function AdminPage() {
                     <p className="font-mono text-xs text-muted-foreground">
                       {t.schemaName}
                     </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Migrasi terakhir: {formatSchemaMigratedAt(t.schemaMigratedAt)} · patch v
+                      {t.schemaPatchVersion ?? 0}
+                      {t.isSchemaBehind ? (
+                        <Badge variant="outline" className="ml-2 text-amber-700">
+                          Tertinggal (v{CURRENT_SCHEMA_PATCH_VERSION})
+                        </Badge>
+                      ) : null}
+                    </p>
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Select
@@ -259,6 +402,16 @@ export default function AdminPage() {
                     <Badge variant={t.isActive ? "default" : "secondary"}>
                       {t.isActive ? "Aktif" : "Nonaktif"}
                     </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={migrateMut.isPending || !!activeJobId || !t.isActive}
+                      onClick={() =>
+                        migrateMut.mutate({ tenantIds: [t.id], mode: "selected" })
+                      }
+                    >
+                      Migrasi
+                    </Button>
                     <Button
                       size="sm"
                       disabled={impMut.isPending || !t.isActive}
