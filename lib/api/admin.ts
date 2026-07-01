@@ -42,6 +42,7 @@ export interface MigrateTenantSchemasResult {
 
 export interface SchemaMigrationJobSummary {
   jobId: string;
+  lane?: string;
   patchVersion: number;
   status: string;
   totalCount: number;
@@ -51,6 +52,40 @@ export interface SchemaMigrationJobSummary {
   createdAt: string;
   completedAt?: string;
   recentErrors?: string[];
+  githubRunId?: number;
+  environment?: string;
+  script?: string;
+}
+
+export interface TriggerCloudDDLInput {
+  environment: "staging" | "production";
+  script?: "tenant" | "inventory" | "all";
+  limit?: number;
+  cursor?: number;
+  runAllWaves?: boolean;
+  workflowRef?: string;
+}
+
+export interface TriggerCloudDDLResult {
+  workflowRunId: number;
+  jobId: string;
+  status: string;
+  statusUrl: string;
+  environment: string;
+  script: string;
+}
+
+export interface CloudDDLRunResult {
+  workflowRunId: number;
+  jobId?: string;
+  lane: string;
+  status: string;
+  conclusion?: string;
+  statusUrl: string;
+  environment?: string;
+  script?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export const adminApi = {
@@ -93,6 +128,14 @@ export const adminApi = {
     const res = await api.get<SchemaMigrationJobSummary>(
       `/admin/migrate-tenant-schemas/jobs/${jobId}`,
     );
+    return res.data;
+  },
+  async triggerCloudDDL(input: TriggerCloudDDLInput): Promise<TriggerCloudDDLResult> {
+    const res = await api.post<TriggerCloudDDLResult>("/admin/trigger-cloud-ddl", input);
+    return res.data;
+  },
+  async getCloudDDLRun(runId: number | string): Promise<CloudDDLRunResult> {
+    const res = await api.get<CloudDDLRunResult>(`/admin/cloud-ddl-runs/${runId}`);
     return res.data;
   },
   async impersonate(tenantId: string): Promise<{ ok: boolean; tenant: AdminTenant }> {
