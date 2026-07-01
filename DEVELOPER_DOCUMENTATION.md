@@ -2,7 +2,7 @@
 
 > **Audience:** Full-stack developers who may be strong in backend (Go, Node, PHP) but **new to Next.js / React 19**.  
 > **Codebase:** `web-frontend/` — Next.js 16 App Router talking to **`api-go/`** only (`/api/v1`, port 4000).  
-> **Companion docs:** [README.md](./README.md) · [APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md) · [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md) · **Finance:** [docs/FINANCE_MODULE.md](./docs/FINANCE_MODULE.md) · **Orders chat:** [docs/ORDER_CUSTOMER_CHAT.md](./docs/ORDER_CUSTOMER_CHAT.md) · Backend: [../api-go/DEVELOPER_DOCUMENTATION.md](../api-go/DEVELOPER_DOCUMENTATION.md) · [../api-go/docs/ORDER_CUSTOMER_CHAT.md](../api-go/docs/ORDER_CUSTOMER_CHAT.md)
+> **Companion docs:** [README.md](./README.md) · [APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md) · [LIMITS_AND_QUOTAS.md](./LIMITS_AND_QUOTAS.md) · **Finance:** [docs/FINANCE_MODULE.md](./docs/FINANCE_MODULE.md) · **Orders chat:** [docs/ORDER_CUSTOMER_CHAT.md](./docs/ORDER_CUSTOMER_CHAT.md) · **Bukti transfer:** [docs-development-shipped/payment-proof-fase2.md](./docs-development-shipped/payment-proof-fase2.md) · Backend: [../api-go/DEVELOPER_DOCUMENTATION.md](../api-go/DEVELOPER_DOCUMENTATION.md) · [../api-go/docs/ORDER_CUSTOMER_CHAT.md](../api-go/docs/ORDER_CUSTOMER_CHAT.md)
 
 **Belum paham React/Next?** Langsung ke **[Bagian 19 — React & Next.js untuk developer baru](#19-react--nextjs-guide-for-developers-new-to-this-stack)**.
 
@@ -415,7 +415,7 @@ export const inboxApi = {
 | `whatsapp.ts` | `/whatsapp/channels`, `/whatsapp/meta/connect/*` |
 | `billing.ts`, `usage.ts`, `payment.ts` | Billing, usage quotas, AI top-up, payments |
 | `workflow.ts` | `/workflows` — `list`, `create`, `update` (PATCH), `remove` (DELETE) |
-| `orders.ts` | `/orders` + batch; katalog list dengan `contactId`; harga item dari `effectiveSellPrice`; pesanan selesai/batal tersinkron ke finance (backend) |
+| `orders.ts` | `/orders` + batch; `paymentStatus` / `paymentProofMeta`; `verifyPaymentProof`, `rejectPaymentProof`, `unblockPaymentProof`; katalog list dengan `contactId`; harga item dari `effectiveSellPrice` |
 | `import.ts` | `/import/preview`, `/import/execute`; halaman import menyediakan template CSV/XLSX produk dan execute selalu mengirim `targetTable=business_catalog_item` untuk import katalog produk |
 | `admin.ts` | `/admin/tenants` search/pagination, impersonation, plan override, tenant delete |
 | `ai-activity.ts` | `/admin/tenant/:id/ai-activity` (+ summary) — super_admin only |
