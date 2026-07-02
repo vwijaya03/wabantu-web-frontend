@@ -1,5 +1,7 @@
 import { api } from "./client";
 
+export const CURRENT_SCHEMA_PATCH_VERSION = 1;
+
 export interface AdminTenant {
   id: string;
   companyName: string;
@@ -8,6 +10,9 @@ export interface AdminTenant {
   isActive: boolean;
   ownerEmail?: string;
   createdAt: string;
+  schemaMigratedAt?: string;
+  schemaPatchVersion: number;
+  isSchemaBehind: boolean;
 }
 
 export interface AdminTenantListParams {
@@ -16,10 +21,36 @@ export interface AdminTenantListParams {
   pageSize?: number;
 }
 
+export interface SchemaMigrationItem {
+  tenantId: string;
+  schemaName: string;
+  ok: boolean;
+  error?: string;
+  schemaMigratedAt?: string;
+  schemaPatchVersion?: number;
+}
+
 export interface MigrateTenantSchemasResult {
+  async?: boolean;
+  jobId?: string;
+  enqueued?: number;
   patched: number;
   failed: number;
   errors?: string[];
+  results?: SchemaMigrationItem[];
+}
+
+export interface SchemaMigrationJobSummary {
+  jobId: string;
+  patchVersion: number;
+  status: string;
+  totalCount: number;
+  doneCount: number;
+  failedCount: number;
+  startedBy?: string;
+  createdAt: string;
+  completedAt?: string;
+  recentErrors?: string[];
 }
 
 export const adminApi = {
@@ -48,9 +79,19 @@ export const adminApi = {
     });
     return res.data;
   },
-  async migrateTenantSchemas(): Promise<MigrateTenantSchemasResult> {
+  async migrateTenantSchemas(input?: {
+    tenantIds?: string[];
+    mode?: "behind" | "selected" | "";
+  }): Promise<MigrateTenantSchemasResult> {
     const res = await api.post<MigrateTenantSchemasResult>(
       "/admin/migrate-tenant-schemas",
+      input ?? {},
+    );
+    return res.data;
+  },
+  async getMigrateJob(jobId: string): Promise<SchemaMigrationJobSummary> {
+    const res = await api.get<SchemaMigrationJobSummary>(
+      `/admin/migrate-tenant-schemas/jobs/${jobId}`,
     );
     return res.data;
   },
