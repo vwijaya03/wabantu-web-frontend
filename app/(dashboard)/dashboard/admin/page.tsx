@@ -45,6 +45,8 @@ export default function AdminPage() {
   const [confirmSchema, setConfirmSchema] = useState("");
   const [migrateErrors, setMigrateErrors] = useState<string[]>([]);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [activeCloudDDLRunId, setActiveCloudDDLRunId] = useState<number | null>(null);
+  const [chainMigrateAfterDDL, setChainMigrateAfterDDL] = useState(false);
   const [selectedTenantIds, setSelectedTenantIds] = useState<Set<string>>(new Set());
   const { data, isLoading } = useQuery({
     queryKey: ["admin-tenants", search, page, pageSize],
@@ -98,6 +100,48 @@ export default function AdminPage() {
     }
   }, [migrateJobQuery.data, activeJobId, qc]);
 
+  const cloudDDLQuery = useQuery({
+    queryKey: ["admin-cloud-ddl-run", activeCloudDDLRunId],
+    queryFn: () => adminApi.getCloudDDLRun(activeCloudDDLRunId!),
+    enabled: activeCloudDDLRunId != null,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (!status || status === "completed") return false;
+      return 3000;
+    },
+  });
+
+  const cloudDDLMut = useMutation({
+    mutationFn: () =>
+      adminApi.triggerCloudDDL({
+        environment: "staging",
+        script: "all",
+        runAllWaves: true,
+      }),
+    onSuccess: (r) => {
+      setMigrateErrors([]);
+      setActiveCloudDDLRunId(r.workflowRunId);
+      toast.info("DDL cloud dijalankan via GitHub Actions…");
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const fullMigrationMut = useMutation({
+    mutationFn: () =>
+      adminApi.triggerCloudDDL({
+        environment: "staging",
+        script: "all",
+        runAllWaves: true,
+      }),
+    onSuccess: (r) => {
+      setMigrateErrors([]);
+      setChainMigrateAfterDDL(true);
+      setActiveCloudDDLRunId(r.workflowRunId);
+      toast.info("Migrasi lengkap: DDL cloud berjalan, lalu app-lane otomatis…");
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
   const migrateMut = useMutation({
     mutationFn: (input?: { tenantIds?: string[]; mode?: "behind" | "selected" | "" }) =>
       adminApi.migrateTenantSchemas(input),
@@ -120,6 +164,24 @@ export default function AdminPage() {
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
+
+  useEffect(() => {
+    const run = cloudDDLQuery.data;
+    if (!run || activeCloudDDLRunId == null) return;
+    if (run.status !== "completed") return;
+
+    if (run.conclusion === "success") {
+      toast.success("DDL cloud selesai — GitHub Actions sukses.");
+      if (chainMigrateAfterDDL) {
+        setChainMigrateAfterDDL(false);
+        migrateMut.mutate({ mode: "behind" });
+      }
+    } else {
+      toast.error(`DDL cloud gagal (${run.conclusion ?? "unknown"}).`);
+      setChainMigrateAfterDDL(false);
+    }
+    setActiveCloudDDLRunId(null);
+  }, [cloudDDLQuery.data, activeCloudDDLRunId, chainMigrateAfterDDL, migrateMut]);
 
   const toggleTenantSelected = (id: string) => {
     setSelectedTenantIds((current) => {
@@ -163,6 +225,13 @@ export default function AdminPage() {
     onError: (e) => toast.error(toApiError(e).message),
   });
 
+  const migrationBusy =
+    migrateMut.isPending ||
+    cloudDDLMut.isPending ||
+    fullMigrationMut.isPending ||
+    !!activeJobId ||
+    activeCloudDDLRunId != null;
+
   if (user?.role !== "super_admin") {
     return (
       <PageHeader
@@ -195,22 +264,36 @@ export default function AdminPage() {
           <Link href="/dashboard/admin/ai-activity">Log aktivitas AI →</Link>
         </Button>
         <Button
+          variant="default"
+          disabled={migrationBusy}
+          onClick={() => fullMigrationMut.mutate()}
+        >
+          Migrasi lengkap (DDL + app)
+        </Button>
+        <Button
           variant="secondary"
-          disabled={migrateMut.isPending || !!activeJobId}
+          disabled={migrationBusy}
+          onClick={() => cloudDDLMut.mutate()}
+        >
+          Jalankan DDL cloud (staging)
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={migrationBusy}
           onClick={() => migrateMut.mutate({ mode: "behind" })}
         >
           {activeJobId ? "Migrasi berjalan…" : "Migrasi tenant tertinggal"}
         </Button>
         <Button
           variant="outline"
-          disabled={migrateMut.isPending || !!activeJobId}
+          disabled={migrationBusy}
           onClick={() => migrateMut.mutate(undefined)}
         >
           Migrasi semua tenant
         </Button>
         <Button
           variant="outline"
-          disabled={migrateMut.isPending || !!activeJobId || selectedTenantIds.size === 0}
+          disabled={migrationBusy || selectedTenantIds.size === 0}
           onClick={() =>
             migrateMut.mutate({
               tenantIds: Array.from(selectedTenantIds),
@@ -226,6 +309,37 @@ export default function AdminPage() {
           </Button>
         ) : null}
       </div>
+      {activeCloudDDLRunId != null && cloudDDLQuery.data ? (
+        <Card className="mb-4 border-blue-300/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Progress DDL cloud (GitHub Actions)</CardTitle>
+            <CardDescription>
+              Run #{cloudDDLQuery.data.workflowRunId} · {cloudDDLQuery.data.script ?? "all"} ·{" "}
+              {cloudDDLQuery.data.environment ?? "staging"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Status: {cloudDDLQuery.data.status}
+              {cloudDDLQuery.data.conclusion
+                ? ` · ${cloudDDLQuery.data.conclusion}`
+                : ""}
+              {chainMigrateAfterDDL ? " · app-lane akan menyusul otomatis" : ""}
+            </p>
+            {cloudDDLQuery.data.statusUrl ? (
+              <Button variant="link" className="h-auto p-0" asChild>
+                <a
+                  href={cloudDDLQuery.data.statusUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Lihat log di GitHub →
+                </a>
+              </Button>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
       {activeJobId && migrateJobQuery.data ? (
         <Card className="mb-4 border-primary/30">
           <CardHeader className="pb-2">
@@ -266,9 +380,9 @@ export default function AdminPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Migrasi schema gagal sebagian</CardTitle>
             <CardDescription>
-              Di Encore Cloud, jalankan dulu{" "}
-              <code className="text-xs">./scripts/apply-inventory-schema-cloud.sh staging</code>{" "}
-              dari folder api-go (role admin DB), lalu klik Migrasi schema tenant lagi.
+              Jika app-lane gagal karena patch cloud belum ada, gunakan tombol{" "}
+              <strong>Jalankan DDL cloud</strong> atau <strong>Migrasi lengkap</strong> di atas
+              (memicu GitHub Actions dengan role admin DB).
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -405,7 +519,7 @@ export default function AdminPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={migrateMut.isPending || !!activeJobId || !t.isActive}
+                      disabled={migrationBusy || !t.isActive}
                       onClick={() =>
                         migrateMut.mutate({ tenantIds: [t.id], mode: "selected" })
                       }
