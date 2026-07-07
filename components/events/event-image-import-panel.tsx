@@ -5,6 +5,14 @@ import { useMutation } from "@tanstack/react-query";
 import { ImageUp, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   eventsImageApi,
@@ -31,6 +39,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 type ImportKind = "staff" | "patients" | "therapies";
+type ImportPresentation = "inline" | "dialog";
 
 export function EventImageImportPanel({
   kind,
@@ -38,19 +47,36 @@ export function EventImageImportPanel({
   title,
   description,
   onCommitted,
+  presentation = "inline",
 }: {
   kind: ImportKind;
   eventId?: string;
   title: string;
   description: string;
   onCommitted: () => void;
+  presentation?: ImportPresentation;
 }) {
+  const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [staffItems, setStaffItems] = useState<StaffImageDraftItem[]>([]);
   const [patientItems, setPatientItems] = useState<PatientImageDraftItem[]>([]);
   const [therapyItems, setTherapyItems] = useState<TherapyImageDraftItem[]>([]);
+
+  const resetDraft = () => {
+    setFiles([]);
+    setFileError(null);
+    setJobId(null);
+    setStaffItems([]);
+    setPatientItems([]);
+    setTherapyItems([]);
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) resetDraft();
+  };
 
   const { data: usage } = useQuery({
     queryKey: ["usage-summary"],
@@ -93,13 +119,9 @@ export function EventImageImportPanel({
     },
     onSuccess: (res) => {
       toast.success(res.message);
-      setFiles([]);
-      setFileError(null);
-      setJobId(null);
-      setStaffItems([]);
-      setPatientItems([]);
-      setTherapyItems([]);
+      resetDraft();
       onCommitted();
+      if (presentation === "dialog") setOpen(false);
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -129,22 +151,16 @@ export function EventImageImportPanel({
 
   const totalBytes = files.reduce((s, f) => s + f.size, 0);
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <ImageUp className="h-4 w-4" />
-          {title}
-        </CardTitle>
-        <CardDescription>{description}</CardDescription>
-        {kind === "patients" ? (
-          <p className="text-xs text-muted-foreground">
-            Kolom <strong>Jam</strong> dari gambar diisi ke slot otomatis saat commit (slot harus sudah di-generate di tab
-            Jadwal).
-          </p>
-        ) : null}
-      </CardHeader>
-      <CardContent className="space-y-4">
+  const patientsHint =
+    kind === "patients" ? (
+      <p className="text-xs text-muted-foreground">
+        Kolom <strong>Jam</strong> dari gambar diisi ke slot otomatis saat commit (slot harus sudah di-generate di tab
+        Jadwal).
+      </p>
+    ) : null;
+
+  const body = (
+    <div className="space-y-4">
         {tokenQuota ? (
           <p className="text-xs text-muted-foreground">
             Sisa kuota token AI bulan ini: {tokenQuota.remaining} / {tokenQuota.limit}
@@ -396,7 +412,44 @@ export function EventImageImportPanel({
             ))}
           </div>
         ) : null}
-      </CardContent>
+    </div>
+  );
+
+  if (presentation === "dialog") {
+    return (
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogTrigger asChild>
+          <Button size="sm" variant="outline">
+            <ImageUp className="mr-1 h-4 w-4" />
+            Import dari gambar
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ImageUp className="h-4 w-4" />
+              {title}
+            </DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+            {patientsHint}
+          </DialogHeader>
+          {body}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ImageUp className="h-4 w-4" />
+          {title}
+        </CardTitle>
+        <CardDescription>{description}</CardDescription>
+        {patientsHint}
+      </CardHeader>
+      <CardContent>{body}</CardContent>
     </Card>
   );
 }

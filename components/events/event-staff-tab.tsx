@@ -470,13 +470,6 @@ export function EventStaffTab({
               Simpan staf acara ini ke roster
             </Button>
           </div>
-          <EventImageImportPanel
-            kind="staff"
-            eventId={eventId}
-            title="Import staf dari gambar"
-            description="Upload screenshot daftar staf/relawan."
-            onCommitted={invalidate}
-          />
         </>
       ) : null}
 
@@ -484,6 +477,16 @@ export function EventStaffTab({
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
           <CardTitle className="text-base">Daftar staf</CardTitle>
           <div className="flex flex-wrap gap-2">
+            {canEdit ? (
+              <EventImageImportPanel
+                presentation="dialog"
+                kind="staff"
+                eventId={eventId}
+                title="Import staf dari gambar"
+                description="Upload screenshot daftar staf/relawan."
+                onCommitted={invalidate}
+              />
+            ) : null}
             <Button size="sm" variant="outline" onClick={() => startExport("staff_list")}>
               <Download className="mr-1 h-4 w-4" />
               Daftar staf (Excel)

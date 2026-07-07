@@ -235,20 +235,20 @@ export function EventPatientsTab({
 
   return (
     <div className="mt-4 space-y-4">
-      {canEdit ? (
-        <EventImageImportPanel
-          kind="patients"
-          eventId={eventId}
-          title="Import pasien dari gambar"
-          description="Upload screenshot daftar pasien."
-          onCommitted={invalidate}
-        />
-      ) : null}
-
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
           <CardTitle className="text-base">Daftar pasien</CardTitle>
           <div className="flex flex-wrap gap-2">
+            {canEdit ? (
+              <EventImageImportPanel
+                presentation="dialog"
+                kind="patients"
+                eventId={eventId}
+                title="Import pasien dari gambar"
+                description="Upload screenshot daftar pasien."
+                onCommitted={invalidate}
+              />
+            ) : null}
             <Button
               size="sm"
               variant="outline"
