@@ -91,6 +91,18 @@ export default function PublicStaffRegisterPage({
     );
   }
 
+  const resetForm = () => {
+    setForm({
+      fullName: "",
+      role: "terapis",
+      therapyIds: [],
+      volunteerRoleId: "",
+      phone: "",
+      notes: "",
+    });
+    setDone(false);
+  };
+
   if (done) {
     return (
       <main className="mx-auto max-w-lg p-6">
@@ -103,8 +115,8 @@ export default function PublicStaffRegisterPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" asChild>
-              <Link href={`/register/${tenantSlug}/${eventSlug}`}>Kembali ke pendaftaran pasien</Link>
+            <Button variant="outline" onClick={resetForm}>
+              Daftar staf lagi
             </Button>
           </CardContent>
         </Card>

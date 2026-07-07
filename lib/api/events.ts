@@ -57,6 +57,7 @@ export interface EventPerson {
   isPencatat?: boolean;
   availableFrom?: string;
   availableUntil?: string;
+  createdAt?: string;
 }
 
 export type UpsertEventPersonBody = {
@@ -135,6 +136,12 @@ export interface DeleteSlotsResult {
 }
 
 export interface DeletePatientsResult {
+  deleted: number;
+  failed: number;
+  errors?: string[];
+}
+
+export interface DeletePeopleResult {
   deleted: number;
   failed: number;
   errors?: string[];
@@ -307,6 +314,11 @@ export const eventsApi = {
 
   deletePerson: (eventId: string, personId: string) =>
     api.delete(`/events/detail/${eventId}/people/${personId}`),
+
+  deletePeopleBulk: (eventId: string, personIds: string[]) =>
+    api
+      .post<DeletePeopleResult>(`/events/detail/${eventId}/people/delete-bulk`, { personIds })
+      .then((r) => r.data),
 
   listAssignments: (
     eventId: string,

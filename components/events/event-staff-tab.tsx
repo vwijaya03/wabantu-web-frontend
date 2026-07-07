@@ -310,6 +310,8 @@ export function EventStaffTab({
   const [editing, setEditing] = useState<EventPerson | null>(null);
   const [form, setForm] = useState<StaffForm>(emptyForm());
   const [deleteTarget, setDeleteTarget] = useState<EventPerson | null>(null);
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const personType = roleFilter !== ALL_ROLES ? ROLE_TO_TYPE[roleFilter] : undefined;
 
@@ -379,6 +381,21 @@ export function EventStaffTab({
     onError: (e) => toast.error(toApiError(e).message),
   });
 
+  const deleteBulkMut = useMutation({
+    mutationFn: (ids: string[]) => eventsApi.deletePeopleBulk(eventId, ids),
+    onSuccess: (res) => {
+      const msg =
+        res.failed > 0
+          ? `${res.deleted} staf dihapus, ${res.failed} gagal`
+          : `${res.deleted} staf dihapus`;
+      toast.success(msg);
+      setSelectedIds(new Set());
+      setBulkDeleteConfirmOpen(false);
+      invalidate();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
   const startExport = (kind: "staff_sheet" | "staff_list") => {
     void eventsApi
       .createExportJob(eventId, { kind, format: "xlsx" })
@@ -403,6 +420,33 @@ export function EventStaffTab({
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
+  const visibleIds = items.map((p) => p.id);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+
+  const toggleSelectVisible = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) {
+        visibleIds.forEach((id) => next.delete(id));
+      } else {
+        visibleIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   return (
     <div className="mt-4 space-y-4">
@@ -489,6 +533,20 @@ export function EventStaffTab({
             </div>
           </DataTableToolbar>
 
+          {canEdit && selectedIds.size > 0 ? (
+            <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <span>{selectedIds.size} staf dipilih</span>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={deleteBulkMut.isPending}
+                onClick={() => setBulkDeleteConfirmOpen(true)}
+              >
+                Hapus terpilih
+              </Button>
+            </div>
+          ) : null}
+
           {isError ? (
             <p className="text-sm text-destructive">Gagal memuat: {toApiError(error).message}</p>
           ) : isLoading ? (
@@ -498,24 +556,45 @@ export function EventStaffTab({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {canEdit ? (
+                      <TableHead className="w-10">
+                        <input
+                          type="checkbox"
+                          checked={allVisibleSelected}
+                          onChange={toggleSelectVisible}
+                          aria-label="Pilih semua staf di halaman ini"
+                        />
+                      </TableHead>
+                    ) : null}
                     <TableHead>Nama</TableHead>
                     <TableHead>Peran</TableHead>
                     <TableHead>Terapi</TableHead>
                     <TableHead>Kehadiran</TableHead>
                     <TableHead>Jam</TableHead>
+                    <TableHead>Terdaftar</TableHead>
                     {canEdit ? <TableHead className="text-right">Aksi</TableHead> : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={canEdit ? 6 : 5} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={canEdit ? 8 : 6} className="h-24 text-center text-muted-foreground">
                         Tidak ada data staf.
                       </TableCell>
                     </TableRow>
                   ) : (
                     items.map((p) => (
                       <TableRow key={p.id}>
+                        {canEdit ? (
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(p.id)}
+                              onChange={() => toggleSelected(p.id)}
+                              aria-label={`Pilih staf ${p.fullName}`}
+                            />
+                          </TableCell>
+                        ) : null}
                         <TableCell className="font-medium">{p.fullName}</TableCell>
                         <TableCell>{staffRoleLabel(personTypeToRole(p.personType))}</TableCell>
                         <TableCell className="max-w-[200px] truncate text-muted-foreground">
@@ -526,6 +605,9 @@ export function EventStaffTab({
                         <TableCell className="text-xs text-muted-foreground">
                           {p.arrivalTime?.slice(0, 5) ?? "—"}
                           {p.departureTime ? ` – ${p.departureTime.slice(0, 5)}` : ""}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {p.createdAt ? new Date(p.createdAt).toLocaleString("id-ID") : "—"}
                         </TableCell>
                         {canEdit ? (
                           <TableCell className="text-right">
@@ -588,6 +670,26 @@ export function EventStaffTab({
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction onClick={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}>
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus staf terpilih?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedIds.size} staf akan dihapus dari acara ini.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteBulkMut.isPending}
+              onClick={() => deleteBulkMut.mutate(Array.from(selectedIds))}
+            >
               Hapus
             </AlertDialogAction>
           </AlertDialogFooter>
