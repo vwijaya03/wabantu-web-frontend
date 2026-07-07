@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,31 +72,35 @@ export default function AdminPage() {
     queryKey: ["admin-migrate-job", activeJobId],
     queryFn: () => adminApi.getMigrateJob(activeJobId!),
     enabled: !!activeJobId,
-    refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      if (!status || status === "completed" || status === "cancelled") return false;
-      return 2000;
-    },
   });
 
-  useEffect(() => {
-    const job = migrateJobQuery.data;
-    if (!job || !activeJobId) return;
-    if (job.status === "completed" || job.status === "cancelled") {
-      void qc.invalidateQueries({ queryKey: ["admin-tenants"] });
-      if (job.failedCount > 0) {
-        setMigrateErrors(job.recentErrors ?? []);
-        toast.warning(
-          `Migrasi selesai: ${job.doneCount} berhasil, ${job.failedCount} gagal.`,
-        );
-      } else {
-        setMigrateErrors([]);
-        toast.success(`Migrasi selesai (${job.doneCount} tenant).`);
+  const pollMigrateJobUntilDone = async (jobId: string) => {
+    try {
+      for (;;) {
+        const job = await adminApi.getMigrateJob(jobId);
+        qc.setQueryData(["admin-migrate-job", jobId], job);
+        if (job.status === "completed" || job.status === "cancelled") {
+          await qc.invalidateQueries({ queryKey: ["admin-tenants"] });
+          if (job.failedCount > 0) {
+            setMigrateErrors(job.recentErrors ?? []);
+            toast.warning(
+              `Migrasi selesai: ${job.doneCount} berhasil, ${job.failedCount} gagal.`,
+            );
+          } else {
+            setMigrateErrors([]);
+            toast.success(`Migrasi selesai (${job.doneCount} tenant).`);
+          }
+          setActiveJobId(null);
+          setSelectedTenantIds(new Set());
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
+    } catch (e) {
+      toast.error(toApiError(e).message);
       setActiveJobId(null);
-      setSelectedTenantIds(new Set());
     }
-  }, [migrateJobQuery.data, activeJobId, qc]);
+  };
 
   const migrateMut = useMutation({
     mutationFn: (input?: { tenantIds?: string[]; mode?: "behind" | "selected" | "" }) =>
@@ -106,6 +110,7 @@ export default function AdminPage() {
         setMigrateErrors([]);
         setActiveJobId(r.jobId);
         toast.info(`Migrasi di antrian (${r.enqueued ?? 0} tenant)…`);
+        void pollMigrateJobUntilDone(r.jobId);
         return;
       }
       setMigrateErrors(r.errors ?? []);
