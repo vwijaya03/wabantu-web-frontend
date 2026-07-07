@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { EventBreakFields } from "@/components/events/event-break-fields";
 import { eventsApi, type EventRow } from "@/lib/api/events";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
@@ -48,6 +49,9 @@ export default function EventsListPage() {
     endTime: "17:00",
     status: "DRAFT" as EventRow["status"],
     importStaffFromRoster: true,
+    hasBreak: false,
+    breakStartTime: "11:30",
+    breakEndTime: "13:00",
   });
 
   const { data, isLoading } = useQuery({
@@ -56,7 +60,14 @@ export default function EventsListPage() {
   });
 
   const createMut = useMutation({
-    mutationFn: () => eventsApi.createEvent(form),
+    mutationFn: () => {
+      const { hasBreak, breakStartTime, breakEndTime, ...rest } = form;
+      return eventsApi.createEvent({
+        ...rest,
+        breakStartTime: hasBreak ? breakStartTime : "",
+        breakEndTime: hasBreak ? breakEndTime : "",
+      });
+    },
     onSuccess: () => {
       toast.success("Acara dibuat");
       void qc.invalidateQueries({ queryKey: ["events"] });
@@ -224,6 +235,14 @@ export default function EventsListPage() {
                 </div>
               </div>
             </div>
+            <EventBreakFields
+              enabled={form.hasBreak}
+              breakStartTime={form.breakStartTime}
+              breakEndTime={form.breakEndTime}
+              onEnabledChange={(hasBreak) => setForm((f) => ({ ...f, hasBreak }))}
+              onBreakStartChange={(breakStartTime) => setForm((f) => ({ ...f, breakStartTime }))}
+              onBreakEndChange={(breakEndTime) => setForm((f) => ({ ...f, breakEndTime }))}
+            />
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"

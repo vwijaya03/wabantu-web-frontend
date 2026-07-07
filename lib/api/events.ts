@@ -15,6 +15,8 @@ export interface EventRow {
   registrationOpenAt?: string;
   registrationCloseAt?: string;
   status: EventStatus;
+  breakStartTime?: string;
+  breakEndTime?: string;
 }
 
 export interface Therapy {
@@ -437,7 +439,11 @@ export const eventsApi = {
     api.get<{ items: TimeSlot[] }>(`/events/detail/${eventId}/slots`, { params }).then((r) => r.data),
 
   generateSlots: (eventId: string, therapyId: string) =>
-    api.post<{ created: number }>(`/events/detail/${eventId}/therapies/${therapyId}/generate-slots`).then((r) => r.data),
+    api
+      .post<{ created: number; warnings?: string[] }>(
+        `/events/detail/${eventId}/therapies/${therapyId}/generate-slots`,
+      )
+      .then((r) => r.data),
 
   deleteSlot: (eventId: string, slotId: string) =>
     api.delete(`/events/detail/${eventId}/slots/${slotId}`),

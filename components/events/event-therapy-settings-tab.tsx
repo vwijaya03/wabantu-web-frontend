@@ -61,11 +61,13 @@ function TherapySettingCard({
   setting,
   eventId,
   disabled,
+  eventBreak,
   onSaved,
 }: {
   setting: EventTherapySetting;
   eventId: string;
   disabled: boolean;
+  eventBreak?: { start: string; end: string };
   onSaved: () => void;
 }) {
   const [dur, setDur] = useState(String(setting.slotDurationMinutes));
@@ -283,6 +285,11 @@ function TherapySettingCard({
               Slot dibagi otomatis dari jam mulai sampai selesai sesuai durasi. Cocok untuk Terapi Shijie dan
               Terapi Energi Dewa.
             </p>
+            {eventBreak ? (
+              <p className="md:col-span-3 text-xs text-amber-800 dark:text-amber-200">
+                Jeda acara: {eventBreak.start}–{eventBreak.end} (slot tidak dibuat di jam ini).
+              </p>
+            ) : null}
           </div>
         )}
 
@@ -300,11 +307,13 @@ export function EventTherapySettingsTab({
   eventId,
   canEdit,
   settings,
+  eventBreak,
   onSaved,
 }: {
   eventId: string;
   canEdit: boolean;
   settings: EventTherapySetting[];
+  eventBreak?: { start: string; end: string };
   onSaved: () => void;
 }) {
   return (
@@ -319,6 +328,7 @@ export function EventTherapySettingsTab({
           setting={s}
           eventId={eventId}
           disabled={!canEdit}
+          eventBreak={eventBreak}
           onSaved={onSaved}
         />
       ))}

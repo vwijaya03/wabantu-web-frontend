@@ -10,6 +10,7 @@ import { EventPatientsTab } from "@/components/events/event-patients-tab";
 import { EventStaffTab } from "@/components/events/event-staff-tab";
 import { EventScheduleTab } from "@/components/events/event-schedule-tab";
 import { EventTherapySettingsTab } from "@/components/events/event-therapy-settings-tab";
+import { EventBreakFields } from "@/components/events/event-break-fields";
 import { EventShareExportCard } from "@/components/events/event-share-export-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -151,6 +152,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editForm, setEditForm] = useState<Partial<EventRow>>({});
+  const [editHasBreak, setEditHasBreak] = useState(false);
 
   const [scheduleTherapy, setScheduleTherapy] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
@@ -192,6 +194,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
     mutationFn: (therapyId: string) => eventsApi.generateSlots(eventId, therapyId),
     onSuccess: (r) => {
       toast.success(`${r.created} slot dibuat`);
+      r.warnings?.forEach((w) => toast.warning(w));
       void qc.invalidateQueries({ queryKey: ["event-schedule", eventId] });
     },
     onError: () => toast.error("Gagal generate slot"),
@@ -220,7 +223,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   });
 
   const updateEventMut = useMutation({
-    mutationFn: () => eventsApi.updateEvent(eventId, editForm as EventRow),
+    mutationFn: () =>
+      eventsApi.updateEvent(eventId, {
+        ...editForm,
+        breakStartTime: editHasBreak ? editForm.breakStartTime : "",
+        breakEndTime: editHasBreak ? editForm.breakEndTime : "",
+      } as EventRow),
     onSuccess: () => {
       toast.success("Acara diperbarui");
       void qc.invalidateQueries({ queryKey: ["event", eventId] });
@@ -261,7 +269,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   }
 
   const openEdit = () => {
-    setEditForm({ ...event });
+    setEditForm({
+      ...event,
+      breakStartTime: event.breakStartTime?.slice(0, 5) ?? "11:30",
+      breakEndTime: event.breakEndTime?.slice(0, 5) ?? "13:00",
+    });
+    setEditHasBreak(Boolean(event.breakStartTime && event.breakEndTime));
     setEditOpen(true);
   };
 
@@ -443,6 +456,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
           eventId={eventId}
           canEdit={isOwner && !archived}
           settings={therapySettings?.items ?? []}
+          eventBreak={
+            event?.breakStartTime && event?.breakEndTime
+              ? {
+                  start: event.breakStartTime.slice(0, 5),
+                  end: event.breakEndTime.slice(0, 5),
+                }
+              : undefined
+          }
           onSaved={() => {
             void qc.invalidateQueries({ queryKey: ["event-therapy-settings", eventId] });
           }}
@@ -527,6 +548,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
                 />
               </div>
             </div>
+            <EventBreakFields
+              enabled={editHasBreak}
+              breakStartTime={editForm.breakStartTime?.slice(0, 5) ?? "11:30"}
+              breakEndTime={editForm.breakEndTime?.slice(0, 5) ?? "13:00"}
+              onEnabledChange={setEditHasBreak}
+              onBreakStartChange={(breakStartTime) => setEditForm((f) => ({ ...f, breakStartTime }))}
+              onBreakEndChange={(breakEndTime) => setEditForm((f) => ({ ...f, breakEndTime }))}
+            />
             <div>
               <Label>Status</Label>
               <Select
