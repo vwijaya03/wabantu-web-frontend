@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { EventImageImportPanel } from "@/components/events/event-image-import-panel";
+import { EventTabRefreshButton } from "@/components/events/event-tab-refresh-button";
 import { DataTablePagination, DataTableToolbar } from "@/components/events/data-table-toolbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -125,7 +128,7 @@ export function EventPatientsTab({
     hasSlot: hasSlot !== ALL ? hasSlot : undefined,
   };
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["event-patients", eventId, filters, page],
     queryFn: () => eventsApi.listPatients(eventId, { ...filters, page, pageSize: PAGE_SIZE }),
   });
@@ -239,6 +242,7 @@ export function EventPatientsTab({
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
           <CardTitle className="text-base">Daftar pasien</CardTitle>
           <div className="flex flex-wrap gap-2">
+            <EventTabRefreshButton onClick={invalidate} isRefreshing={isFetching} />
             {canEdit ? (
               <EventImageImportPanel
                 presentation="dialog"
@@ -327,7 +331,7 @@ export function EventPatientsTab({
                 ))}
               </SelectContent>
             </Select>
-            <Input type="date" className="w-full sm:w-36" value={slotDate} onChange={(e) => { setSlotDate(e.target.value); setPage(1); }} />
+            <DatePicker className="w-full sm:w-36" value={slotDate} onChange={(v) => { setSlotDate(v); setPage(1); }} />
             <Select value={hasSlot} onValueChange={(v) => { setHasSlot(v); setPage(1); }}>
               <SelectTrigger className="w-full sm:w-36">
                 <SelectValue placeholder="Slot" />
@@ -471,7 +475,7 @@ export function EventPatientsTab({
             </div>
             <div>
               <Label>Tanggal lahir</Label>
-              <Input type="date" value={form.birthDate} onChange={(e) => setForm((f) => ({ ...f, birthDate: e.target.value }))} />
+              <DatePicker value={form.birthDate} onChange={(birthDate) => setForm((f) => ({ ...f, birthDate }))} />
             </div>
             <div>
               <Label>Terapi</Label>
@@ -511,7 +515,7 @@ export function EventPatientsTab({
             </div>
             <div>
               <Label>Jam preferensi</Label>
-              <Input type="time" value={form.preferredTime} onChange={(e) => setForm((f) => ({ ...f, preferredTime: e.target.value }))} />
+              <TimePicker value={form.preferredTime} onChange={(preferredTime) => setForm((f) => ({ ...f, preferredTime }))} />
               <p className="text-xs text-muted-foreground">
                 Kolom <strong>Slot</strong> terisi otomatis jika slot sudah di-generate (tab Jadwal) dan jam ini cocok dengan slot tersedia. Simpan ulang pasien jika slot baru dibuat.
               </p>

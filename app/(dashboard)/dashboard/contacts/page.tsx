@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
@@ -457,7 +458,7 @@ function ContactFormFields({
       </div>
       <div>
         <Label>Tanggal lahir</Label>
-        <Input type="date" value={form.birthDate} onChange={(e) => update({ birthDate: e.target.value })} />
+        <DatePicker value={form.birthDate} onChange={(birthDate) => update({ birthDate })} />
         <p className="mt-1 text-xs text-muted-foreground">Dipakai saat mendaftarkan pasien acara dari kontak ini.</p>
       </div>
       <div>

@@ -25,6 +25,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -225,10 +226,9 @@ export default function ChecklistPage() {
         </div>
         <div>
           <Label>Tanggal jatuh tempo</Label>
-          <Input
-            type="date"
+          <DatePicker
             value={form.dueDate}
-            onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
+            onChange={(dueDate) => setForm((f) => ({ ...f, dueDate }))}
           />
           <p className="mt-1 text-xs text-muted-foreground">
             Hari dalam tanggal ini dipakai setiap bulan (mis. tgl 28 → setiap bulan tgl 28).

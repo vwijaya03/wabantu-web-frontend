@@ -15,6 +15,8 @@ import { EventShareExportCard } from "@/components/events/event-share-export-car
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import {
@@ -515,36 +517,32 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label>Mulai</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={editForm.startDate ?? ""}
-                  onChange={(e) => setEditForm((f) => ({ ...f, startDate: e.target.value }))}
+                  onChange={(startDate) => setEditForm((f) => ({ ...f, startDate }))}
                 />
               </div>
               <div>
                 <Label>Selesai</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={editForm.endDate ?? ""}
-                  onChange={(e) => setEditForm((f) => ({ ...f, endDate: e.target.value }))}
+                  onChange={(endDate) => setEditForm((f) => ({ ...f, endDate }))}
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label>Jam mulai</Label>
-                <Input
-                  type="time"
+                <TimePicker
                   value={editForm.startTime?.slice(0, 5) ?? ""}
-                  onChange={(e) => setEditForm((f) => ({ ...f, startTime: e.target.value }))}
+                  onChange={(startTime) => setEditForm((f) => ({ ...f, startTime }))}
                 />
               </div>
               <div>
                 <Label>Jam selesai</Label>
-                <Input
-                  type="time"
+                <TimePicker
                   value={editForm.endTime?.slice(0, 5) ?? ""}
-                  onChange={(e) => setEditForm((f) => ({ ...f, endTime: e.target.value }))}
+                  onChange={(endTime) => setEditForm((f) => ({ ...f, endTime }))}
                 />
               </div>
             </div>

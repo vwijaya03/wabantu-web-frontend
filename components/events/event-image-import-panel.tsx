@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   eventsImageApi,
   type PatientImageDraftItem,
@@ -335,12 +336,11 @@ export function EventImageImportPanel({
                     )
                   }
                 />
-                <Input
-                  type="date"
+                <DatePicker
                   value={row.birthDate}
-                  onChange={(e) =>
+                  onChange={(birthDate) =>
                     setPatientItems((prev) =>
-                      prev.map((r, i) => (i === idx ? { ...r, birthDate: e.target.value } : r)),
+                      prev.map((r, i) => (i === idx ? { ...r, birthDate } : r)),
                     )
                   }
                 />

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -327,10 +328,9 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
 
           <div>
             <Label>Tanggal</Label>
-            <Input
-              type="date"
+            <DatePicker
               value={form.transactionDate}
-              onChange={(e) => setForm((f) => ({ ...f, transactionDate: e.target.value }))}
+              onChange={(transactionDate) => setForm((f) => ({ ...f, transactionDate }))}
             />
           </div>
 

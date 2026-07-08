@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -455,10 +456,9 @@ export default function TransactionsPage() {
               )}
               <div>
                 <Label>Tanggal</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={editForm.transactionDate}
-                  onChange={(e) => setEditForm((f) => ({ ...f, transactionDate: e.target.value }))}
+                  onChange={(transactionDate) => setEditForm((f) => ({ ...f, transactionDate }))}
                 />
               </div>
               <div>
