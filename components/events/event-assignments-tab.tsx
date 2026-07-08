@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { DataTablePagination, DataTableToolbar } from "@/components/events/data-table-toolbar";
-import { ListSortControl } from "@/components/events/list-sort-control";
+import { SortableTableHead } from "@/components/events/sortable-table-head";
 import { EventTabRefreshButton } from "@/components/events/event-tab-refresh-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +45,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { eventsApi, type Assignment } from "@/lib/api/events";
-import { ASSIGNMENT_SORT_DEFAULT, ASSIGNMENT_SORT_OPTIONS } from "@/lib/events-sort";
+import { ASSIGNMENT_SORT_DEFAULT } from "@/lib/events-sort";
 import { staffRoleLabel, personTypeToRole } from "@/lib/events-staff";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
@@ -194,17 +194,7 @@ export function EventAssignmentsTab({
               setPage(1);
             }}
             searchPlaceholder="Cari tugas atau nama staf..."
-          >
-            <ListSortControl
-              options={ASSIGNMENT_SORT_OPTIONS}
-              sortBy={tableSort.sortBy}
-              sortDir={tableSort.sortDir}
-              onChange={(next) => {
-                setTableSort(next);
-                setPage(1);
-              }}
-            />
-          </DataTableToolbar>
+          />
 
           {isError ? (
             <p className="text-sm text-destructive">{toApiError(error).message}</p>
@@ -215,9 +205,33 @@ export function EventAssignmentsTab({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Tugas</TableHead>
-                    <TableHead>Staf</TableHead>
-                    <TableHead>Jam</TableHead>
+                    <SortableTableHead
+                      label="Tugas"
+                      sortKey="taskName"
+                      sort={tableSort}
+                      onSortChange={(next) => {
+                        setTableSort(next);
+                        setPage(1);
+                      }}
+                    />
+                    <SortableTableHead
+                      label="Staf"
+                      sortKey="personName"
+                      sort={tableSort}
+                      onSortChange={(next) => {
+                        setTableSort(next);
+                        setPage(1);
+                      }}
+                    />
+                    <SortableTableHead
+                      label="Jam"
+                      sortKey="startTime"
+                      sort={tableSort}
+                      onSortChange={(next) => {
+                        setTableSort(next);
+                        setPage(1);
+                      }}
+                    />
                     <TableHead>Sesi</TableHead>
                     {canEdit ? <TableHead className="text-right">Aksi</TableHead> : null}
                   </TableRow>

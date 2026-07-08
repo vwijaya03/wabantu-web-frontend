@@ -1,7 +1,6 @@
 "use client";
 
-import { ArrowDownAZ, ArrowUpAZ } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -10,26 +9,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import type { ListSortState, SortDir, SortOption } from "@/lib/events-sort";
 
+/** Filter bar / export: pilih kolom + panah naik/turun (pola spreadsheet). */
 export function ListSortControl({
   options,
   sortBy,
   sortDir,
   onChange,
   className,
+  label = "Urutkan",
+  hideLabel,
 }: {
   options: SortOption[];
   sortBy: string;
   sortDir: SortDir;
   onChange: (next: ListSortState) => void;
   className?: string;
+  label?: string;
+  hideLabel?: boolean;
 }) {
   return (
     <div className={className}>
       <div className="flex flex-wrap items-end gap-2">
-        <div className="min-w-[160px] space-y-1">
-          <Label className="text-xs text-muted-foreground">Urutkan</Label>
+        <div className="min-w-[140px] space-y-1">
+          {!hideLabel ? <Label className="text-xs text-muted-foreground">{label}</Label> : null}
           <Select value={sortBy} onValueChange={(v) => onChange({ sortBy: v, sortDir })}>
             <SelectTrigger className="h-9">
               <SelectValue />
@@ -43,21 +48,34 @@ export function ListSortControl({
             </SelectContent>
           </Select>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-9"
-          onClick={() => onChange({ sortBy, sortDir: sortDir === "asc" ? "desc" : "asc" })}
-          title={sortDir === "asc" ? "Urutan naik (A→Z)" : "Urutan turun (Z→A)"}
+        <div
+          className="flex h-9 flex-col overflow-hidden rounded-md border bg-background"
+          role="group"
+          aria-label="Arah urutan"
         >
-          {sortDir === "asc" ? (
-            <ArrowDownAZ className="mr-1 h-4 w-4" />
-          ) : (
-            <ArrowUpAZ className="mr-1 h-4 w-4" />
-          )}
-          {sortDir === "asc" ? "A→Z" : "Z→A"}
-        </Button>
+          <button
+            type="button"
+            className={cn(
+              "flex flex-1 items-center justify-center px-2 hover:bg-muted",
+              sortDir === "asc" && "bg-muted text-foreground",
+            )}
+            title="Urut naik"
+            onClick={() => onChange({ sortBy, sortDir: "asc" })}
+          >
+            <ChevronUp className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className={cn(
+              "flex flex-1 items-center justify-center border-t px-2 hover:bg-muted",
+              sortDir === "desc" && "bg-muted text-foreground",
+            )}
+            title="Urut turun"
+            onClick={() => onChange({ sortBy, sortDir: "desc" })}
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

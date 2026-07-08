@@ -6,7 +6,7 @@ import { Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { EventImageImportPanel } from "@/components/events/event-image-import-panel";
 import { EventTabRefreshButton } from "@/components/events/event-tab-refresh-button";
 import { ExportSortPanel, resolveExportSort } from "@/components/events/export-sort-panel";
-import { ListSortControl } from "@/components/events/list-sort-control";
+import { SortableTableHead } from "@/components/events/sortable-table-head";
 import { DataTablePagination, DataTableToolbar } from "@/components/events/data-table-toolbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -368,15 +368,6 @@ export function EventPatientsTab({
                 <SelectItem value="false">Belum slot</SelectItem>
               </SelectContent>
             </Select>
-            <ListSortControl
-              options={PATIENT_SORT_OPTIONS}
-              sortBy={tableSort.sortBy}
-              sortDir={tableSort.sortDir}
-              onChange={(next) => {
-                setTableSort(next);
-                setPage(1);
-              }}
-            />
           </DataTableToolbar>
 
           {exportTooMany ? (
@@ -418,11 +409,43 @@ export function EventPatientsTab({
                         />
                       </TableHead>
                     ) : null}
-                    <TableHead>Nama</TableHead>
+                    <SortableTableHead
+                      label="Nama"
+                      sortKey="name"
+                      sort={tableSort}
+                      onSortChange={(next) => {
+                        setTableSort(next);
+                        setPage(1);
+                      }}
+                    />
                     <TableHead>Tgl lahir</TableHead>
-                    <TableHead>Terapi</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Slot</TableHead>
+                    <SortableTableHead
+                      label="Terapi"
+                      sortKey="therapy"
+                      sort={tableSort}
+                      onSortChange={(next) => {
+                        setTableSort(next);
+                        setPage(1);
+                      }}
+                    />
+                    <SortableTableHead
+                      label="Status"
+                      sortKey="status"
+                      sort={tableSort}
+                      onSortChange={(next) => {
+                        setTableSort(next);
+                        setPage(1);
+                      }}
+                    />
+                    <SortableTableHead
+                      label="Slot"
+                      sortKey="slotDate"
+                      sort={tableSort}
+                      onSortChange={(next) => {
+                        setTableSort(next);
+                        setPage(1);
+                      }}
+                    />
                     <TableHead>Keluhan</TableHead>
                     {canEdit ? <TableHead className="text-right">Aksi</TableHead> : null}
                   </TableRow>

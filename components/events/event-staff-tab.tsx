@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { EventImageImportPanel } from "@/components/events/event-image-import-panel";
 import { ExportSortPanel, resolveExportSort } from "@/components/events/export-sort-panel";
-import { ListSortControl } from "@/components/events/list-sort-control";
+import { SortableTableHead } from "@/components/events/sortable-table-head";
 import { EventTabRefreshButton } from "@/components/events/event-tab-refresh-button";
 import { DataTablePagination, DataTableToolbar } from "@/components/events/data-table-toolbar";
 import { TherapyMultiPick } from "@/components/events/therapy-multi-pick";
@@ -59,7 +59,6 @@ import {
   STAFF_EXPORT_SORT_DEFAULT,
   STAFF_EXPORT_SORT_OPTIONS,
   STAFF_SORT_DEFAULT,
-  STAFF_SORT_OPTIONS,
 } from "@/lib/events-sort";
 import { toast } from "sonner";
 
@@ -567,15 +566,6 @@ export function EventStaffTab({
                 </SelectContent>
               </Select>
             </div>
-            <ListSortControl
-              options={STAFF_SORT_OPTIONS}
-              sortBy={tableSort.sortBy}
-              sortDir={tableSort.sortDir}
-              onChange={(next) => {
-                setTableSort(next);
-                setPage(1);
-              }}
-            />
           </DataTableToolbar>
 
           {canEdit && selectedIds.size > 0 ? (
@@ -611,8 +601,24 @@ export function EventStaffTab({
                         />
                       </TableHead>
                     ) : null}
-                    <TableHead>Nama</TableHead>
-                    <TableHead>Peran</TableHead>
+                    <SortableTableHead
+                      label="Nama"
+                      sortKey="name"
+                      sort={tableSort}
+                      onSortChange={(next) => {
+                        setTableSort(next);
+                        setPage(1);
+                      }}
+                    />
+                    <SortableTableHead
+                      label="Peran"
+                      sortKey="personType"
+                      sort={tableSort}
+                      onSortChange={(next) => {
+                        setTableSort(next);
+                        setPage(1);
+                      }}
+                    />
                     <TableHead>Terapi</TableHead>
                     <TableHead>Kehadiran</TableHead>
                     <TableHead>Jam</TableHead>

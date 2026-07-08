@@ -28,9 +28,9 @@ import {
   formatTimeSlotLine,
 } from "@/lib/events-format";
 import { ListSortControl } from "@/components/events/list-sort-control";
+import { SortableTableHead } from "@/components/events/sortable-table-head";
 import {
   SCHEDULE_PATIENT_SORT_DEFAULT,
-  SCHEDULE_PATIENT_SORT_OPTIONS,
   SCHEDULE_SLOT_SORT_DEFAULT,
   SCHEDULE_SLOT_SORT_OPTIONS,
   sortSchedulePatients,
@@ -162,7 +162,13 @@ export function EventScheduleTab({
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-base">Slot waktu</CardTitle>
           {slots.length > 0 ? (
-            <ListSortControl options={SCHEDULE_SLOT_SORT_OPTIONS} sortBy={slotSort.sortBy} sortDir={slotSort.sortDir} onChange={setSlotSort} />
+            <ListSortControl
+              options={SCHEDULE_SLOT_SORT_OPTIONS}
+              sortBy={slotSort.sortBy}
+              sortDir={slotSort.sortDir}
+              onChange={setSlotSort}
+              hideLabel
+            />
           ) : null}
         </CardHeader>
         <CardContent className="space-y-1 text-sm">
@@ -222,14 +228,6 @@ export function EventScheduleTab({
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-base">Pasien terjadwal</CardTitle>
           <div className="flex flex-wrap items-end gap-3">
-            {patients.length > 0 ? (
-              <ListSortControl
-                options={SCHEDULE_PATIENT_SORT_OPTIONS}
-                sortBy={patientSort.sortBy}
-                sortDir={patientSort.sortDir}
-                onChange={setPatientSort}
-              />
-            ) : null}
             <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
             {(Object.keys(COLUMN_LABELS) as ScheduleColumn[]).map((col) => (
               <label key={col} className="flex items-center gap-1">
@@ -247,9 +245,19 @@ export function EventScheduleTab({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Pasien</TableHead>
+                  <SortableTableHead
+                    label="Pasien"
+                    sortKey="name"
+                    sort={patientSort}
+                    onSortChange={setPatientSort}
+                  />
                   <TableHead>Terapi</TableHead>
-                  <TableHead>Jadwal</TableHead>
+                  <SortableTableHead
+                    label="Jadwal"
+                    sortKey="slotTime"
+                    sort={patientSort}
+                    onSortChange={setPatientSort}
+                  />
                   {visibleCols.includes("birthDate") ? <TableHead>Tgl lahir</TableHead> : null}
                   {visibleCols.includes("complaint") ? <TableHead>Keluhan</TableHead> : null}
                   {visibleCols.includes("preferredTime") ? <TableHead>Jam preferensi</TableHead> : null}
