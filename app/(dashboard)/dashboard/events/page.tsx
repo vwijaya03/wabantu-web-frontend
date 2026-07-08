@@ -8,6 +8,8 @@ import { Copy, Plus, Search, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -194,20 +196,17 @@ export default function EventsListPage() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label className="text-xs">Tanggal</Label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     required
                     value={form.startDate}
-                    onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+                    onChange={(startDate) => setForm((f) => ({ ...f, startDate }))}
                   />
                 </div>
                 <div>
                   <Label className="text-xs">Jam</Label>
-                  <Input
-                    type="time"
-                    required
+                  <TimePicker
                     value={form.startTime}
-                    onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value }))}
+                    onChange={(startTime) => setForm((f) => ({ ...f, startTime }))}
                   />
                 </div>
               </div>
@@ -217,20 +216,17 @@ export default function EventsListPage() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label className="text-xs">Tanggal</Label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     required
                     value={form.endDate}
-                    onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+                    onChange={(endDate) => setForm((f) => ({ ...f, endDate }))}
                   />
                 </div>
                 <div>
                   <Label className="text-xs">Jam</Label>
-                  <Input
-                    type="time"
-                    required
+                  <TimePicker
                     value={form.endTime}
-                    onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))}
+                    onChange={(endTime) => setForm((f) => ({ ...f, endTime }))}
                   />
                 </div>
               </div>

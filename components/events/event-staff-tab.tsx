@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { EventExportJobsPanel } from "@/components/events/event-export-jobs-panel";
 import { EventImageImportPanel } from "@/components/events/event-image-import-panel";
+import { EventTabRefreshButton } from "@/components/events/event-tab-refresh-button";
 import { DataTablePagination, DataTableToolbar } from "@/components/events/data-table-toolbar";
 import { TherapyMultiPick } from "@/components/events/therapy-multi-pick";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -214,11 +216,11 @@ function StaffFormFields({
           </div>
           <div>
             <Label>Tersedia dari</Label>
-            <Input type="time" value={form.availableFrom} onChange={(e) => setForm((f) => ({ ...f, availableFrom: e.target.value }))} />
+            <TimePicker value={form.availableFrom} onChange={(availableFrom) => setForm((f) => ({ ...f, availableFrom }))} />
           </div>
           <div>
             <Label>Tersedia sampai</Label>
-            <Input type="time" value={form.availableUntil} onChange={(e) => setForm((f) => ({ ...f, availableUntil: e.target.value }))} />
+            <TimePicker value={form.availableUntil} onChange={(availableUntil) => setForm((f) => ({ ...f, availableUntil }))} />
           </div>
         </>
       ) : null}
@@ -253,11 +255,11 @@ function StaffFormFields({
       ) : null}
       <div>
         <Label>Datang</Label>
-        <Input type="time" value={form.arrivalTime} onChange={(e) => setForm((f) => ({ ...f, arrivalTime: e.target.value }))} />
+        <TimePicker value={form.arrivalTime} onChange={(arrivalTime) => setForm((f) => ({ ...f, arrivalTime }))} />
       </div>
       <div>
         <Label>Pulang</Label>
-        <Input type="time" value={form.departureTime} onChange={(e) => setForm((f) => ({ ...f, departureTime: e.target.value }))} />
+        <TimePicker value={form.departureTime} onChange={(departureTime) => setForm((f) => ({ ...f, departureTime }))} />
       </div>
       <div className="sm:col-span-2">
         <label className="flex items-center gap-2 text-sm">
@@ -315,7 +317,7 @@ export function EventStaffTab({
 
   const personType = roleFilter !== ALL_ROLES ? ROLE_TO_TYPE[roleFilter] : undefined;
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["event-people", eventId, search, roleFilter, page],
     queryFn: () =>
       eventsApi.listPeople(eventId, {
@@ -477,6 +479,7 @@ export function EventStaffTab({
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
           <CardTitle className="text-base">Daftar staf</CardTitle>
           <div className="flex flex-wrap gap-2">
+            <EventTabRefreshButton onClick={invalidate} isRefreshing={isFetching} />
             {canEdit ? (
               <EventImageImportPanel
                 presentation="dialog"

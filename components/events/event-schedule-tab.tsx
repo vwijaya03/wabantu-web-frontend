@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -112,7 +112,7 @@ export function EventScheduleTab({
           </div>
           <div>
             <Label>Tanggal</Label>
-            <Input type="date" value={scheduleDate} onChange={(e) => onScheduleDateChange(e.target.value)} />
+            <DatePicker value={scheduleDate} onChange={onScheduleDateChange} />
           </div>
         </CardContent>
       </Card>

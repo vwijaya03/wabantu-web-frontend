@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
@@ -884,10 +885,9 @@ export default function InvestmentPage() {
             </div>
             <div>
               <Label>Tanggal</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={dividendForm.transactionDate}
-                onChange={(e) => setDividendForm((f) => ({ ...f, transactionDate: e.target.value }))}
+                onChange={(transactionDate) => setDividendForm((f) => ({ ...f, transactionDate }))}
               />
             </div>
             <div>
@@ -1008,10 +1008,9 @@ export default function InvestmentPage() {
             </div>
             <div>
               <Label>Tanggal</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={tradeForm.transactionDate}
-                onChange={(e) => setTradeForm((f) => ({ ...f, transactionDate: e.target.value }))}
+                onChange={(transactionDate) => setTradeForm((f) => ({ ...f, transactionDate }))}
               />
             </div>
             {tradeQty > 0 && tradePrice > 0 && (

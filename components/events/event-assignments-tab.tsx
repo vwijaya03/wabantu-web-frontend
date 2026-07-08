@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { DataTablePagination, DataTableToolbar } from "@/components/events/data-table-toolbar";
+import { EventTabRefreshButton } from "@/components/events/event-tab-refresh-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -105,7 +107,7 @@ export function EventAssignmentsTab({
   const [form, setForm] = useState<AssignmentForm>(emptyAssignmentForm());
   const [deleteTarget, setDeleteTarget] = useState<Assignment | null>(null);
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["event-assignments", eventId, search, page],
     queryFn: () =>
       eventsApi.listAssignments(eventId, { q: search || undefined, page, pageSize: PAGE_SIZE }),
@@ -113,6 +115,8 @@ export function EventAssignmentsTab({
 
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ["event-assignments", eventId] });
+    void qc.invalidateQueries({ queryKey: ["event-people", eventId, "picker"] });
+    void qc.invalidateQueries({ queryKey: ["event-tasks-master"] });
   };
 
   const saveMut = useMutation({
@@ -156,18 +160,21 @@ export function EventAssignmentsTab({
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
           <CardTitle className="text-base">Daftar penugasan</CardTitle>
-          {canEdit ? (
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditing(null);
-                setForm(emptyAssignmentForm());
-                setDialogOpen(true);
-              }}
-            >
-              <Plus className="mr-1 h-4 w-4" /> Tambah penugasan
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <EventTabRefreshButton onClick={invalidate} isRefreshing={isFetching} />
+            {canEdit ? (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditing(null);
+                  setForm(emptyAssignmentForm());
+                  setDialogOpen(true);
+                }}
+              >
+                <Plus className="mr-1 h-4 w-4" /> Tambah penugasan
+              </Button>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <DataTableToolbar
@@ -282,11 +289,11 @@ export function EventAssignmentsTab({
             </div>
             <div>
               <Label>Jam mulai</Label>
-              <Input type="time" value={form.startTime} onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value }))} />
+              <TimePicker value={form.startTime} onChange={(startTime) => setForm((f) => ({ ...f, startTime }))} />
             </div>
             <div>
               <Label>Jam selesai</Label>
-              <Input type="time" value={form.endTime} onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))} />
+              <TimePicker value={form.endTime} onChange={(endTime) => setForm((f) => ({ ...f, endTime }))} />
             </div>
             <div>
               <Label>Sesi (opsional)</Label>

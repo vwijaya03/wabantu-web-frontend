@@ -1,6 +1,6 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Label } from "@/components/ui/label";
 
 export function EventBreakFields({
@@ -38,20 +38,18 @@ export function EventBreakFields({
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label className="text-xs">Mulai jeda</Label>
-            <Input
-              type="time"
+            <TimePicker
               disabled={disabled}
               value={breakStartTime}
-              onChange={(e) => onBreakStartChange(e.target.value)}
+              onChange={onBreakStartChange}
             />
           </div>
           <div>
             <Label className="text-xs">Lanjut kegiatan</Label>
-            <Input
-              type="time"
+            <TimePicker
               disabled={disabled}
               value={breakEndTime}
-              onChange={(e) => onBreakEndChange(e.target.value)}
+              onChange={onBreakEndChange}
             />
           </div>
         </div>

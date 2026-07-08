@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
 import {
@@ -385,10 +386,9 @@ export default function TransactionImportImagePage() {
                   </div>
                   <div className="md:col-span-2">
                     <Label className="text-xs">Tanggal</Label>
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={row.transactionDate}
-                      onChange={(e) => updateItem(idx, { transactionDate: e.target.value })}
+                      onChange={(transactionDate) => updateItem(idx, { transactionDate })}
                     />
                   </div>
                   <div className="md:col-span-2">

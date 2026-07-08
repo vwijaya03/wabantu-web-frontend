@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -205,28 +206,26 @@ function TherapySettingCard({
                 <span className="w-14 text-xs text-muted-foreground">Slot {idx + 1}</span>
                 <div>
                   <Label className="text-xs">Mulai</Label>
-                  <Input
-                    type="time"
-                    className="w-32"
+                  <TimePicker
+                    className="w-36"
                     disabled={disabled}
                     value={slot.startTime?.slice(0, 5) ?? ""}
-                    onChange={(e) =>
+                    onChange={(startTime) =>
                       setSlots((prev) =>
-                        prev.map((s, i) => (i === idx ? { ...s, startTime: e.target.value } : s)),
+                        prev.map((s, i) => (i === idx ? { ...s, startTime } : s)),
                       )
                     }
                   />
                 </div>
                 <div>
                   <Label className="text-xs">Selesai</Label>
-                  <Input
-                    type="time"
-                    className="w-32"
+                  <TimePicker
+                    className="w-36"
                     disabled={disabled}
                     value={slot.endTime?.slice(0, 5) ?? ""}
-                    onChange={(e) =>
+                    onChange={(endTime) =>
                       setSlots((prev) =>
-                        prev.map((s, i) => (i === idx ? { ...s, endTime: e.target.value } : s)),
+                        prev.map((s, i) => (i === idx ? { ...s, endTime } : s)),
                       )
                     }
                   />
@@ -275,11 +274,11 @@ function TherapySettingCard({
             </div>
             <div>
               <Label>Jam mulai jadwal</Label>
-              <Input type="time" value={schedStart} disabled={disabled} onChange={(e) => setSchedStart(e.target.value)} />
+              <TimePicker value={schedStart} disabled={disabled} onChange={setSchedStart} />
             </div>
             <div>
               <Label>Jam selesai jadwal</Label>
-              <Input type="time" value={schedEnd} disabled={disabled} onChange={(e) => setSchedEnd(e.target.value)} />
+              <TimePicker value={schedEnd} disabled={disabled} onChange={setSchedEnd} />
             </div>
             <p className="md:col-span-3 text-xs text-muted-foreground">
               Slot dibagi otomatis dari jam mulai sampai selesai sesuai durasi. Cocok untuk Terapi Shijie dan

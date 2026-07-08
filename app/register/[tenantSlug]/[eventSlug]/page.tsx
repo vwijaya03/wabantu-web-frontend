@@ -16,6 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { eventsApi } from "@/lib/api/events";
+import { formatBirthDateInput, parseBirthDateDdMmYyyy } from "@/lib/date-format";
+
+const BIRTH_DATE_HINT = "Gunakan format tanggal 17/08/1993";
 
 export default function PublicRegisterPage({
   params,
@@ -31,6 +34,14 @@ export default function PublicRegisterPage({
     preferredTime: "",
   });
   const [done, setDone] = useState(false);
+  const [birthDateError, setBirthDateError] = useState("");
+
+  const validateBirthDate = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return BIRTH_DATE_HINT;
+    if (!parseBirthDateDdMmYyyy(trimmed)) return BIRTH_DATE_HINT;
+    return "";
+  };
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["public-event", tenantSlug, eventSlug],
@@ -48,10 +59,10 @@ export default function PublicRegisterPage({
   const availableSlots = slotData?.items ?? [];
 
   const registerMut = useMutation({
-    mutationFn: () =>
+    mutationFn: (birthDate: string) =>
       eventsApi.postPublicRegistration(tenantSlug, eventSlug, {
         fullName: form.fullName,
-        birthDate: form.birthDate,
+        birthDate,
         therapyId: form.therapyId,
         complaint: form.complaint,
         preferredTime: form.preferredTime,
@@ -108,27 +119,41 @@ export default function PublicRegisterPage({
   const closed = data.closed || !data.registrationOpen;
 
   return (
-    <main className="mx-auto max-w-lg p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{data.eventName}</CardTitle>
-          {data.eventDescription ? <CardDescription>{data.eventDescription}</CardDescription> : null}
-          <p className="text-sm text-muted-foreground">
-            {data.startDate} — {data.endDate}
-            {data.location ? ` · ${data.location}` : ""}
-          </p>
-        </CardHeader>
-        <CardContent>
-          {closed ? (
-            <p className="text-center font-medium text-amber-800">
-              {data.message ?? "Pendaftaran telah ditutup."}
-            </p>
-          ) : (
+    <main className="mx-auto max-w-lg space-y-4 p-6">
+      <div>
+        <h1 className="text-2xl font-semibold">{data.eventName}</h1>
+        <p className="text-sm text-muted-foreground">
+          Pendaftaran pasien terapi
+          {data.location ? ` · ${data.location}` : ""}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {data.startDate} — {data.endDate}
+        </p>
+      </div>
+
+      {closed ? (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm">{data.message ?? "Pendaftaran telah ditutup."}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Form pendaftaran pasien</CardTitle>
+            <CardDescription>Isi data diri Anda dengan lengkap.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
             <form
-              className="space-y-4"
+              className="grid gap-3"
               onSubmit={(e) => {
                 e.preventDefault();
-                registerMut.mutate();
+                const err = validateBirthDate(form.birthDate);
+                setBirthDateError(err);
+                if (err) return;
+                const normalized = parseBirthDateDdMmYyyy(form.birthDate.trim());
+                if (!normalized) return;
+                registerMut.mutate(normalized);
               }}
             >
               <div>
@@ -141,13 +166,34 @@ export default function PublicRegisterPage({
                 />
               </div>
               <div>
-                <Label>Tanggal lahir</Label>
+                <Label htmlFor="birthDate">Tanggal lahir</Label>
                 <Input
-                  type="date"
+                  id="birthDate"
                   required
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="17/08/1993"
+                  autoComplete="bday"
+                  maxLength={10}
                   value={form.birthDate}
-                  onChange={(e) => setForm((f) => ({ ...f, birthDate: e.target.value }))}
+                  onChange={(e) => {
+                    setBirthDateError("");
+                    setForm((f) => ({ ...f, birthDate: formatBirthDateInput(e.target.value) }));
+                  }}
+                  onBlur={() => {
+                    if (form.birthDate.trim()) {
+                      setBirthDateError(validateBirthDate(form.birthDate));
+                    }
+                  }}
+                  aria-invalid={!!birthDateError}
+                  aria-describedby="birthDate-hint"
                 />
+                <p id="birthDate-hint" className="mt-1 text-xs text-muted-foreground">
+                  Ketik angka saja — garis miring muncul otomatis, contoh: 17/08/1993
+                </p>
+                {birthDateError ? (
+                  <p className="mt-1 text-sm text-destructive">{birthDateError}</p>
+                ) : null}
               </div>
               <div>
                 <Label>Pilih terapi</Label>
@@ -219,17 +265,21 @@ export default function PublicRegisterPage({
                 className="w-full"
                 disabled={
                   registerMut.isPending ||
+                  !form.fullName.trim() ||
+                  !form.birthDate.trim() ||
+                  !!birthDateError ||
                   !form.therapyId ||
                   availableSlots.length === 0 ||
                   !form.preferredTime
                 }
               >
-                {registerMut.isPending ? "Mengirim..." : "Daftar"}
+                {registerMut.isPending ? "Mengirim..." : "Kirim pendaftaran"}
               </Button>
             </form>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
       <p className="text-center text-xs text-muted-foreground">
         Ingin mendaftar sebagai terapis atau relawan?{" "}
         <Link className="underline" href={`/register/${tenantSlug}/${eventSlug}/staff`}>

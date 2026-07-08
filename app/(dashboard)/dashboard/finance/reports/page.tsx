@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FinanceSubPageHeader } from "@/components/finance/finance-sub-page-header";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { financeApi, formatIDR, type MonthlyComparisonItem } from "@/lib/api/finance";
 import { cn } from "@/lib/utils";
@@ -128,19 +128,11 @@ export default function ReportsPage() {
             <>
               <div className="space-y-2">
                 <Label>Tanggal Mulai</Label>
-                <Input
-                  type="date"
-                  value={customStartDate}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
-                />
+                <DatePicker value={customStartDate} onChange={setCustomStartDate} />
               </div>
               <div className="space-y-2">
                 <Label>Tanggal Selesai</Label>
-                <Input
-                  type="date"
-                  value={customEndDate}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
-                />
+                <DatePicker value={customEndDate} onChange={setCustomEndDate} />
               </div>
             </>
           ) : (

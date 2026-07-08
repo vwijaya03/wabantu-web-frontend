@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -398,10 +399,9 @@ export default function RecurringPage() {
             </div>
             <div>
               <Label>Mulai dari</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.startDate}
-                onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+                onChange={(startDate) => setForm((f) => ({ ...f, startDate }))}
               />
             </div>
           </div>
