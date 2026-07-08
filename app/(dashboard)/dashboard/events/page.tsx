@@ -27,13 +27,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { DataTablePagination } from "@/components/events/data-table-toolbar";
+import { ListSortControl } from "@/components/events/list-sort-control";
 import { EventBreakFields } from "@/components/events/event-break-fields";
 import { eventsApi, type EventRow } from "@/lib/api/events";
+import { EVENT_LIST_SORT_DEFAULT, EVENT_LIST_SORT_OPTIONS } from "@/lib/events-sort";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toast } from "sonner";
 
 const STATUSES = ["DRAFT", "PUBLISHED", "CLOSED", "CANCELLED", "ARCHIVED"] as const;
+const PAGE_SIZE = 50;
+const ALL_STATUS = "__all__";
 
 export default function EventsListPage() {
   const router = useRouter();
@@ -42,6 +47,9 @@ export default function EventsListPage() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState(ALL_STATUS);
+  const [page, setPage] = useState(1);
+  const [tableSort, setTableSort] = useState(EVENT_LIST_SORT_DEFAULT);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     eventName: "",
@@ -57,8 +65,16 @@ export default function EventsListPage() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["events", search],
-    queryFn: () => eventsApi.listEvents({ q: search || undefined, page: 1, pageSize: 50 }),
+    queryKey: ["events", search, statusFilter, tableSort, page],
+    queryFn: () =>
+      eventsApi.listEvents({
+        q: search || undefined,
+        status: statusFilter !== ALL_STATUS ? statusFilter : undefined,
+        sortBy: tableSort.sortBy,
+        sortDir: tableSort.sortDir,
+        page,
+        pageSize: PAGE_SIZE,
+      }),
   });
 
   const createMut = useMutation({
@@ -113,20 +129,54 @@ export default function EventsListPage() {
         }
       />
 
-      <div className="mb-4 flex gap-2">
-        <div className="relative flex-1 max-w-md">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="relative flex-1 max-w-md min-w-[200px]">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             className="pl-8"
             placeholder="Cari acara..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && setSearch(q)}
+            onKeyDown={(e) => e.key === "Enter" && (setSearch(q), setPage(1))}
           />
         </div>
-        <Button variant="secondary" onClick={() => setSearch(q)}>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setSearch(q);
+            setPage(1);
+          }}
+        >
           Cari
         </Button>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => {
+            setStatusFilter(v);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_STATUS}>Semua status</SelectItem>
+            {STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <ListSortControl
+          options={EVENT_LIST_SORT_OPTIONS}
+          sortBy={tableSort.sortBy}
+          sortDir={tableSort.sortDir}
+          onChange={(next) => {
+            setTableSort(next);
+            setPage(1);
+          }}
+        />
       </div>
 
       {isLoading ? (
@@ -174,6 +224,13 @@ export default function EventsListPage() {
           ))}
         </div>
       )}
+
+      <DataTablePagination
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={data?.total ?? 0}
+        onPageChange={setPage}
+      />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

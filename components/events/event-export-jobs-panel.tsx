@@ -55,9 +55,11 @@ function exportFileName(job: EventExportJob) {
 export function EventExportJobsPanel({
   eventId,
   kinds,
+  className,
 }: {
   eventId: string;
   kinds?: EventExportKind[];
+  className?: string;
 }) {
   const { data, refetch, isFetching } = useQuery({
     queryKey: ["event-export-jobs", eventId],
@@ -70,12 +72,9 @@ export function EventExportJobsPanel({
   });
 
   const items = (data?.items ?? []).filter((j) => !kinds?.length || kinds.includes(j.kind));
-  if (items.length === 0) {
-    return null;
-  }
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
         <CardTitle className="text-base">Riwayat export</CardTitle>
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
@@ -84,6 +83,11 @@ export function EventExportJobsPanel({
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
+        {items.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Belum ada export. Generate dari tab Pasien atau Staf — file siap unduh akan muncul di sini.
+          </p>
+        ) : null}
         {items.map((j) => (
           <div key={j.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
             <div className="flex items-center gap-2">

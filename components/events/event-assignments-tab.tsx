@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { DataTablePagination, DataTableToolbar } from "@/components/events/data-table-toolbar";
+import { ListSortControl } from "@/components/events/list-sort-control";
 import { EventTabRefreshButton } from "@/components/events/event-tab-refresh-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +45,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { eventsApi, type Assignment } from "@/lib/api/events";
+import { ASSIGNMENT_SORT_DEFAULT, ASSIGNMENT_SORT_OPTIONS } from "@/lib/events-sort";
 import { staffRoleLabel, personTypeToRole } from "@/lib/events-staff";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
@@ -106,11 +108,18 @@ export function EventAssignmentsTab({
   const [editing, setEditing] = useState<Assignment | null>(null);
   const [form, setForm] = useState<AssignmentForm>(emptyAssignmentForm());
   const [deleteTarget, setDeleteTarget] = useState<Assignment | null>(null);
+  const [tableSort, setTableSort] = useState(ASSIGNMENT_SORT_DEFAULT);
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["event-assignments", eventId, search, page],
+    queryKey: ["event-assignments", eventId, search, tableSort, page],
     queryFn: () =>
-      eventsApi.listAssignments(eventId, { q: search || undefined, page, pageSize: PAGE_SIZE }),
+      eventsApi.listAssignments(eventId, {
+        q: search || undefined,
+        sortBy: tableSort.sortBy,
+        sortDir: tableSort.sortDir,
+        page,
+        pageSize: PAGE_SIZE,
+      }),
   });
 
   const invalidate = () => {
@@ -185,7 +194,17 @@ export function EventAssignmentsTab({
               setPage(1);
             }}
             searchPlaceholder="Cari tugas atau nama staf..."
-          />
+          >
+            <ListSortControl
+              options={ASSIGNMENT_SORT_OPTIONS}
+              sortBy={tableSort.sortBy}
+              sortDir={tableSort.sortDir}
+              onChange={(next) => {
+                setTableSort(next);
+                setPage(1);
+              }}
+            />
+          </DataTableToolbar>
 
           {isError ? (
             <p className="text-sm text-destructive">{toApiError(error).message}</p>

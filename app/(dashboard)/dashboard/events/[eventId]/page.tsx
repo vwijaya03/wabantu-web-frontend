@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, ExternalLink, Pencil, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Copy, Pencil, Trash2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { EventAssignmentsTab } from "@/components/events/event-assignments-tab";
 import { EventPatientsTab } from "@/components/events/event-patients-tab";
 import { EventStaffTab } from "@/components/events/event-staff-tab";
 import { EventScheduleTab } from "@/components/events/event-schedule-tab";
 import { EventTherapySettingsTab } from "@/components/events/event-therapy-settings-tab";
 import { EventBreakFields } from "@/components/events/event-break-fields";
-import { EventShareExportCard } from "@/components/events/event-share-export-card";
+import { EventExportJobsPanel } from "@/components/events/event-export-jobs-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,24 @@ import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toast } from "sonner";
 
 const STATUSES = ["DRAFT", "PUBLISHED", "CLOSED", "CANCELLED", "ARCHIVED"] as const;
+
+const EVENT_TABS = [
+  "dashboard",
+  "patients",
+  "people",
+  "assignments",
+  "therapy",
+  "schedule",
+] as const;
+
+type EventTabId = (typeof EVENT_TABS)[number];
+
+function parseEventTab(value: string | null): EventTabId {
+  if (value && EVENT_TABS.includes(value as EventTabId)) {
+    return value as EventTabId;
+  }
+  return "dashboard";
+}
 
 function EventPublicRegistrationCard({
   tenantSlug,
@@ -147,14 +165,21 @@ function EventPublicRegistrationCard({
 export default function EventDetailPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab = parseEventTab(searchParams.get("tab"));
   const { user } = useAuth();
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
-  const [tab, setTab] = useState("dashboard");
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editForm, setEditForm] = useState<Partial<EventRow>>({});
   const [editHasBreak, setEditHasBreak] = useState(false);
+
+  const setTab = (id: EventTabId) => {
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("tab", id);
+    router.replace(`?${next.toString()}`, { scroll: false });
+  };
 
   const [scheduleTherapy, setScheduleTherapy] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
@@ -296,14 +321,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {tenantSlug && event.status === "PUBLISHED" ? (
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/register/${tenantSlug}/${event.eventSlug}`} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="mr-1 h-4 w-4" />
-                Buka pendaftaran publik
-              </Link>
-            </Button>
-          ) : null}
           {isOwner ? (
             <>
               <Button
@@ -357,7 +374,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
               "rounded-md px-3 py-1.5 text-sm",
               tab === id ? "bg-primary text-primary-foreground" : "bg-muted",
             )}
-            onClick={() => setTab(id)}
+            onClick={() => setTab(id as EventTabId)}
           >
             {label}
           </button>
@@ -426,9 +443,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
               ) : null}
             </CardContent>
           </Card>
-          {isOwner ? (
-            <EventShareExportCard eventId={eventId} therapies={therapies?.items ?? []} />
-          ) : null}
         </div>
       ) : null}
 
@@ -492,6 +506,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
           deleteBulkPending={deleteSlotsBulkMut.isPending}
         />
       ) : null}
+
+      <EventExportJobsPanel eventId={eventId} className="mt-6" />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">

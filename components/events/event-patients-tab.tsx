@@ -5,6 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { EventImageImportPanel } from "@/components/events/event-image-import-panel";
 import { EventTabRefreshButton } from "@/components/events/event-tab-refresh-button";
+import { ExportSortPanel, resolveExportSort } from "@/components/events/export-sort-panel";
+import { ListSortControl } from "@/components/events/list-sort-control";
 import { DataTablePagination, DataTableToolbar } from "@/components/events/data-table-toolbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,13 +49,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ContactPicker } from "@/components/events/contact-picker";
 import type { Contact } from "@/lib/api/contacts";
-import { EventExportJobsPanel } from "@/components/events/event-export-jobs-panel";
 import {
   buildPatientExportFilters,
   DEFAULT_HIDDEN_PATIENT_EXPORT_COLUMNS,
   PatientExportFiltersPanel,
 } from "@/components/events/patient-export-filters-panel";
 import type { PatientExportColumnKey } from "@/lib/events-export";
+import { PATIENT_SORT_DEFAULT, PATIENT_SORT_OPTIONS } from "@/lib/events-sort";
 import { eventsApi, EVENTS_MAX_PATIENT_EXPORT_ROWS, type Patient } from "@/lib/api/events";
 import { formatEventDateId, formatPatientSlotLabel } from "@/lib/events-format";
 import { toApiError } from "@/lib/api/client";
@@ -119,6 +121,9 @@ export function EventPatientsTab({
   const [exportHiddenCols, setExportHiddenCols] = useState<Set<PatientExportColumnKey>>(
     () => new Set(DEFAULT_HIDDEN_PATIENT_EXPORT_COLUMNS),
   );
+  const [tableSort, setTableSort] = useState(PATIENT_SORT_DEFAULT);
+  const [exportSort, setExportSort] = useState(PATIENT_SORT_DEFAULT);
+  const [exportSyncWithTable, setExportSyncWithTable] = useState(true);
 
   const filters = {
     q: search || undefined,
@@ -129,8 +134,15 @@ export function EventPatientsTab({
   };
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["event-patients", eventId, filters, page],
-    queryFn: () => eventsApi.listPatients(eventId, { ...filters, page, pageSize: PAGE_SIZE }),
+    queryKey: ["event-patients", eventId, filters, tableSort, page],
+    queryFn: () =>
+      eventsApi.listPatients(eventId, {
+        ...filters,
+        sortBy: tableSort.sortBy,
+        sortDir: tableSort.sortDir,
+        page,
+        pageSize: PAGE_SIZE,
+      }),
   });
 
   const exportTooMany = (data?.total ?? 0) > EVENTS_MAX_PATIENT_EXPORT_ROWS;
@@ -196,14 +208,19 @@ export function EventPatientsTab({
   });
 
   const startExport = (kind: "patients_pdf" | "patients_xlsx") => {
+    const sort = resolveExportSort(tableSort, exportSort, exportSyncWithTable);
     void eventsApi
       .createExportJob(eventId, {
         kind,
         format: kind === "patients_xlsx" ? "xlsx" : "pdf",
-        filters: buildPatientExportFilters(therapyFilter, exportHiddenCols, filters),
+        filters: buildPatientExportFilters(therapyFilter, exportHiddenCols, {
+          ...filters,
+          sortBy: sort.sortBy,
+          sortDir: sort.sortDir,
+        }),
       })
       .then(() => {
-        toast.success("Export masuk antrian — lihat Riwayat export di bawah");
+        toast.success("Export masuk antrian — lihat Riwayat export di bawah halaman");
         void qc.invalidateQueries({ queryKey: ["event-export-jobs", eventId] });
       })
       .catch((e) => toast.error(toApiError(e).message));
@@ -296,6 +313,15 @@ export function EventPatientsTab({
             showTherapyHint
             className="rounded-lg border bg-muted/30 p-3"
           />
+          <ExportSortPanel
+            options={PATIENT_SORT_OPTIONS}
+            tableSort={tableSort}
+            exportSort={exportSort}
+            syncWithTable={exportSyncWithTable}
+            onExportSortChange={setExportSort}
+            onSyncWithTableChange={setExportSyncWithTable}
+            className="rounded-lg border bg-muted/20 p-3"
+          />
           <DataTableToolbar
             searchValue={q}
             onSearchChange={setQ}
@@ -342,6 +368,15 @@ export function EventPatientsTab({
                 <SelectItem value="false">Belum slot</SelectItem>
               </SelectContent>
             </Select>
+            <ListSortControl
+              options={PATIENT_SORT_OPTIONS}
+              sortBy={tableSort.sortBy}
+              sortDir={tableSort.sortDir}
+              onChange={(next) => {
+                setTableSort(next);
+                setPage(1);
+              }}
+            />
           </DataTableToolbar>
 
           {exportTooMany ? (
@@ -440,8 +475,6 @@ export function EventPatientsTab({
           )}
         </CardContent>
       </Card>
-
-      <EventExportJobsPanel eventId={eventId} kinds={["patients_pdf", "patients_xlsx"]} />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
