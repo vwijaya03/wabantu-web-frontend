@@ -240,16 +240,21 @@ export interface PublicSlotOption {
 export const EVENTS_MAX_PATIENT_EXPORT_ROWS = 2500;
 
 export const eventsApi = {
-  listEvents: (params?: {
-    q?: string;
-    status?: string;
-    sortBy?: string;
-    sortDir?: string;
-    page?: number;
-    pageSize?: number;
-  }) => api.get<{ items: EventRow[]; total: number }>("/events", { params }).then((r) => r.data),
+  listEvents: (
+    params?: {
+      q?: string;
+      status?: string;
+      sortBy?: string;
+      sortDir?: string;
+      page?: number;
+      pageSize?: number;
+    },
+    signal?: AbortSignal,
+  ) =>
+    api.get<{ items: EventRow[]; total: number }>("/events", { params, signal }).then((r) => r.data),
 
-  getEvent: (id: string) => api.get<EventRow>(`/events/detail/${id}`).then((r) => r.data),
+  getEvent: (id: string, signal?: AbortSignal) =>
+    api.get<EventRow>(`/events/detail/${id}`, { signal }).then((r) => r.data),
 
   createEvent: (body: Partial<EventRow>) => api.post<EventRow>("/events", body).then((r) => r.data),
 
@@ -271,8 +276,10 @@ export const eventsApi = {
       }>(`/events/detail/${eventId}/duplicate`, body ?? {})
       .then((r) => r.data),
 
-  getDashboard: (eventId: string) =>
-    api.get<EventDashboard>(`/events/detail/${eventId}/dashboard`).then((r) => r.data),
+  getDashboard: (eventId: string, signal?: AbortSignal) =>
+    api
+      .get<EventDashboard>(`/events/detail/${eventId}/dashboard`, { signal })
+      .then((r) => r.data),
 
   listTherapies: (params?: { q?: string; page?: number; pageSize?: number; activeOnly?: boolean }) =>
     api.get<{ items: Therapy[]; total: number }>("/events/masters/therapies", { params }).then((r) => r.data),
@@ -489,9 +496,16 @@ export const eventsApi = {
   listEventTherapySettings: (eventId: string) =>
     api.get<{ items: EventTherapySetting[] }>(`/events/detail/${eventId}/therapy-settings`).then((r) => r.data),
 
-  getSchedule: (eventId: string, params?: { therapyId?: string; date?: string }) =>
+  getSchedule: (
+    eventId: string,
+    params?: { therapyId?: string; date?: string },
+    signal?: AbortSignal,
+  ) =>
     api
-      .get<{ slots: TimeSlot[]; patients: Patient[] }>(`/events/detail/${eventId}/schedule`, { params })
+      .get<{ slots: TimeSlot[]; patients: Patient[] }>(`/events/detail/${eventId}/schedule`, {
+        params,
+        signal,
+      })
       .then((r) => r.data),
 
   getPublicRegistration: (tenantSlug: string, eventSlug: string) =>

@@ -59,6 +59,14 @@ import { PATIENT_SORT_DEFAULT, PATIENT_SORT_OPTIONS } from "@/lib/events-sort";
 import { eventsApi, EVENTS_MAX_PATIENT_EXPORT_ROWS, type Patient } from "@/lib/api/events";
 import { formatEventDateId, formatPatientSlotLabel } from "@/lib/events-format";
 import { toApiError } from "@/lib/api/client";
+import { useAuth } from "@/components/providers/auth-provider";
+import { tenantContextKey } from "@/lib/auth/tenant-context";
+import {
+  eventDashboardKey,
+  eventExportJobsKey,
+  eventPatientsKey,
+  eventSchedulePrefix,
+} from "@/lib/query/events-query-keys";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { toast } from "sonner";
 
@@ -104,6 +112,8 @@ export function EventPatientsTab({
   therapies: { id: string; therapyName: string }[];
 }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const tenantKey = tenantContextKey(user);
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [therapyFilter, setTherapyFilter] = useState(ALL);
@@ -134,7 +144,7 @@ export function EventPatientsTab({
   };
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["event-patients", eventId, filters, tableSort, page],
+    queryKey: eventPatientsKey(tenantKey, eventId, filters, tableSort, page),
     queryFn: () =>
       eventsApi.listPatients(eventId, {
         ...filters,
@@ -148,9 +158,9 @@ export function EventPatientsTab({
   const exportTooMany = (data?.total ?? 0) > EVENTS_MAX_PATIENT_EXPORT_ROWS;
 
   const invalidate = () => {
-    void qc.invalidateQueries({ queryKey: ["event-patients", eventId] });
-    void qc.invalidateQueries({ queryKey: ["event-dashboard", eventId] });
-    void qc.invalidateQueries({ queryKey: ["event-schedule", eventId] });
+    void qc.invalidateQueries({ queryKey: eventPatientsKey(tenantKey, eventId) });
+    void qc.invalidateQueries({ queryKey: eventDashboardKey(tenantKey, eventId) });
+    void qc.invalidateQueries({ queryKey: eventSchedulePrefix(tenantKey, eventId) });
   };
 
   const saveMut = useMutation({
@@ -221,7 +231,7 @@ export function EventPatientsTab({
       })
       .then(() => {
         toast.success("Export masuk antrian — lihat Riwayat export di bawah halaman");
-        void qc.invalidateQueries({ queryKey: ["event-export-jobs", eventId] });
+        void qc.invalidateQueries({ queryKey: eventExportJobsKey(tenantKey, eventId) });
       })
       .catch((e) => toast.error(toApiError(e).message));
   };

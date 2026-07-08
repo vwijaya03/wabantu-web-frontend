@@ -33,7 +33,9 @@ import { EventBreakFields } from "@/components/events/event-break-fields";
 import { eventsApi, type EventRow } from "@/lib/api/events";
 import { EVENT_LIST_SORT_DEFAULT, EVENT_LIST_SORT_OPTIONS } from "@/lib/events-sort";
 import { useAuth } from "@/components/providers/auth-provider";
-import { canPerformOwnerActions } from "@/lib/api/auth";
+import { canPerformOwnerActions, hasTenantDashboardAccess } from "@/lib/api/auth";
+import { tenantContextKey } from "@/lib/auth/tenant-context";
+import { eventsListKey } from "@/lib/query/events-query-keys";
 import { toast } from "sonner";
 
 const STATUSES = ["DRAFT", "PUBLISHED", "CLOSED", "CANCELLED", "ARCHIVED"] as const;
@@ -43,6 +45,8 @@ const ALL_STATUS = "__all__";
 export default function EventsListPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const tenantKey = tenantContextKey(user);
+  const eventsQueryEnabled = Boolean(user && hasTenantDashboardAccess(user));
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const [q, setQ] = useState("");
@@ -64,17 +68,22 @@ export default function EventsListPage() {
     breakEndTime: "13:00",
   });
 
+  const sortKey = `${tableSort.sortBy}:${tableSort.sortDir}`;
   const { data, isLoading } = useQuery({
-    queryKey: ["events", search, statusFilter, tableSort, page],
-    queryFn: () =>
-      eventsApi.listEvents({
-        q: search || undefined,
-        status: statusFilter !== ALL_STATUS ? statusFilter : undefined,
-        sortBy: tableSort.sortBy,
-        sortDir: tableSort.sortDir,
-        page,
-        pageSize: PAGE_SIZE,
-      }),
+    queryKey: eventsListKey(tenantKey, search, statusFilter, sortKey, page),
+    queryFn: ({ signal }) =>
+      eventsApi.listEvents(
+        {
+          q: search || undefined,
+          status: statusFilter !== ALL_STATUS ? statusFilter : undefined,
+          sortBy: tableSort.sortBy,
+          sortDir: tableSort.sortDir,
+          page,
+          pageSize: PAGE_SIZE,
+        },
+        signal,
+      ),
+    enabled: eventsQueryEnabled,
   });
 
   const createMut = useMutation({
@@ -88,7 +97,7 @@ export default function EventsListPage() {
     },
     onSuccess: () => {
       toast.success("Acara dibuat");
-      void qc.invalidateQueries({ queryKey: ["events"] });
+      void qc.invalidateQueries({ queryKey: ["events", tenantKey] });
       setOpen(false);
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
@@ -101,7 +110,7 @@ export default function EventsListPage() {
       toast.success(
         `Disalin: ${res.peopleCopied} staf, ${res.patientsCopied} pasien`,
       );
-      void qc.invalidateQueries({ queryKey: ["events"] });
+      void qc.invalidateQueries({ queryKey: ["events", tenantKey] });
       router.push(`/dashboard/events/${res.event.id}`);
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>

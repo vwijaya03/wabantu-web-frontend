@@ -48,6 +48,13 @@ import { eventsApi, type Assignment } from "@/lib/api/events";
 import { ASSIGNMENT_SORT_DEFAULT } from "@/lib/events-sort";
 import { staffRoleLabel, personTypeToRole } from "@/lib/events-staff";
 import { toApiError } from "@/lib/api/client";
+import { useAuth } from "@/components/providers/auth-provider";
+import { tenantContextKey } from "@/lib/auth/tenant-context";
+import {
+  eventAssignmentsKey,
+  eventPeopleKey,
+  eventTasksMasterKey,
+} from "@/lib/query/events-query-keys";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 20;
@@ -91,12 +98,14 @@ export function EventAssignmentsTab({
   canEdit: boolean;
 }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const tenantKey = tenantContextKey(user);
   const { data: peopleData } = useQuery({
-    queryKey: ["event-people", eventId, "picker"],
+    queryKey: eventPeopleKey(tenantKey, eventId, "picker"),
     queryFn: () => eventsApi.listPeople(eventId, { page: 1, pageSize: 500 }),
   });
   const { data: tasksData } = useQuery({
-    queryKey: ["event-tasks-master"],
+    queryKey: eventTasksMasterKey(tenantKey),
     queryFn: () => eventsApi.listTasks({ pageSize: 100 }),
   });
   const people = peopleData?.items ?? [];
@@ -111,7 +120,7 @@ export function EventAssignmentsTab({
   const [tableSort, setTableSort] = useState(ASSIGNMENT_SORT_DEFAULT);
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["event-assignments", eventId, search, tableSort, page],
+    queryKey: eventAssignmentsKey(tenantKey, eventId, search, tableSort, page),
     queryFn: () =>
       eventsApi.listAssignments(eventId, {
         q: search || undefined,
@@ -123,9 +132,9 @@ export function EventAssignmentsTab({
   });
 
   const invalidate = () => {
-    void qc.invalidateQueries({ queryKey: ["event-assignments", eventId] });
-    void qc.invalidateQueries({ queryKey: ["event-people", eventId, "picker"] });
-    void qc.invalidateQueries({ queryKey: ["event-tasks-master"] });
+    void qc.invalidateQueries({ queryKey: eventAssignmentsKey(tenantKey, eventId) });
+    void qc.invalidateQueries({ queryKey: eventPeopleKey(tenantKey, eventId, "picker") });
+    void qc.invalidateQueries({ queryKey: eventTasksMasterKey(tenantKey) });
   };
 
   const saveMut = useMutation({
