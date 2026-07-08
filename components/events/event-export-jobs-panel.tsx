@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { eventsApi, type EventExportJob, type EventExportKind } from "@/lib/api/events";
+import { useAuth } from "@/components/providers/auth-provider";
+import { tenantContextKey } from "@/lib/auth/tenant-context";
+import { eventExportJobsKey } from "@/lib/query/events-query-keys";
 import { downloadDataUrl } from "@/lib/download";
 import { cn } from "@/lib/utils";
 
@@ -61,8 +64,10 @@ export function EventExportJobsPanel({
   kinds?: EventExportKind[];
   className?: string;
 }) {
+  const { user } = useAuth();
+  const tenantKey = tenantContextKey(user);
   const { data, refetch, isFetching } = useQuery({
-    queryKey: ["event-export-jobs", eventId],
+    queryKey: eventExportJobsKey(tenantKey, eventId),
     queryFn: () => eventsApi.listExportJobs(eventId),
     refetchInterval: (query) => {
       const items = query.state.data?.items ?? [];

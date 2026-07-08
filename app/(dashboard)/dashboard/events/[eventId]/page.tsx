@@ -46,7 +46,18 @@ import {
 } from "@/components/ui/select";
 import { eventsApi, type EventRow } from "@/lib/api/events";
 import { useAuth } from "@/components/providers/auth-provider";
-import { canPerformOwnerActions } from "@/lib/api/auth";
+import { canPerformOwnerActions, hasTenantDashboardAccess } from "@/lib/api/auth";
+import { toApiError } from "@/lib/api/errors";
+import { tenantContextKey } from "@/lib/auth/tenant-context";
+import {
+  eventDetailKey,
+  eventDashboardKey,
+  eventRolesMasterKey,
+  eventScheduleKey,
+  eventSchedulePrefix,
+  eventTherapiesMasterKey,
+  eventTherapySettingsKey,
+} from "@/lib/query/events-query-keys";
 import { toast } from "sonner";
 
 const STATUSES = ["DRAFT", "PUBLISHED", "CLOSED", "CANCELLED", "ARCHIVED"] as const;
@@ -168,6 +179,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   const searchParams = useSearchParams();
   const tab = parseEventTab(searchParams.get("tab"));
   const { user } = useAuth();
+  const tenantKey = tenantContextKey(user);
+  const eventQueriesEnabled = Boolean(eventId && user && hasTenantDashboardAccess(user));
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
@@ -185,34 +198,50 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   const [scheduleDate, setScheduleDate] = useState("");
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
 
-  const { data: event } = useQuery({
-    queryKey: ["event", eventId],
-    queryFn: () => eventsApi.getEvent(eventId),
+  const {
+    data: event,
+    isError: eventLoadError,
+    error: eventLoadErr,
+    isPending: eventPending,
+    refetch: refetchEvent,
+  } = useQuery({
+    queryKey: eventDetailKey(tenantKey, eventId),
+    queryFn: ({ signal }) => eventsApi.getEvent(eventId, signal),
+    enabled: eventQueriesEnabled,
   });
   const { data: dashboard } = useQuery({
-    queryKey: ["event-dashboard", eventId],
-    queryFn: () => eventsApi.getDashboard(eventId),
+    queryKey: eventDashboardKey(tenantKey, eventId),
+    queryFn: ({ signal }) => eventsApi.getDashboard(eventId, signal),
+    enabled: eventQueriesEnabled,
   });
 
   const { data: schedule } = useQuery({
-    queryKey: ["event-schedule", eventId, scheduleTherapy, scheduleDate],
-    queryFn: () =>
-      eventsApi.getSchedule(eventId, {
-        therapyId: scheduleTherapy || undefined,
-        date: scheduleDate || undefined,
-      }),
+    queryKey: eventScheduleKey(tenantKey, eventId, scheduleTherapy, scheduleDate),
+    queryFn: ({ signal }) =>
+      eventsApi.getSchedule(
+        eventId,
+        {
+          therapyId: scheduleTherapy || undefined,
+          date: scheduleDate || undefined,
+        },
+        signal,
+      ),
+    enabled: eventQueriesEnabled,
   });
   const { data: therapySettings } = useQuery({
-    queryKey: ["event-therapy-settings", eventId],
+    queryKey: eventTherapySettingsKey(tenantKey, eventId),
     queryFn: () => eventsApi.listEventTherapySettings(eventId),
+    enabled: eventQueriesEnabled,
   });
   const { data: therapies } = useQuery({
-    queryKey: ["event-therapies-master"],
+    queryKey: eventTherapiesMasterKey(tenantKey),
     queryFn: () => eventsApi.listTherapies({ activeOnly: true, pageSize: 100 }),
+    enabled: eventQueriesEnabled,
   });
   const { data: roles } = useQuery({
-    queryKey: ["event-roles-master"],
+    queryKey: eventRolesMasterKey(tenantKey),
     queryFn: () => eventsApi.listVolunteerRoles({ pageSize: 100 }),
+    enabled: eventQueriesEnabled,
   });
 
   const archived = event?.status === "ARCHIVED";
@@ -222,7 +251,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
     onSuccess: (r) => {
       toast.success(`${r.created} slot dibuat`);
       r.warnings?.forEach((w) => toast.warning(w));
-      void qc.invalidateQueries({ queryKey: ["event-schedule", eventId] });
+      void qc.invalidateQueries({ queryKey: eventSchedulePrefix(tenantKey, eventId) });
     },
     onError: () => toast.error("Gagal generate slot"),
   });
@@ -230,7 +259,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
     mutationFn: (slotId: string) => eventsApi.deleteSlot(eventId, slotId),
     onSuccess: () => {
       toast.success("Slot dihapus");
-      void qc.invalidateQueries({ queryKey: ["event-schedule", eventId] });
+      void qc.invalidateQueries({ queryKey: eventSchedulePrefix(tenantKey, eventId) });
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
       toast.error(e?.response?.data?.message ?? "Gagal menghapus slot"),
@@ -243,7 +272,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
         toast.error(res.errors.slice(0, 2).join(" | "));
       }
       setSelectedSlotIds([]);
-      void qc.invalidateQueries({ queryKey: ["event-schedule", eventId] });
+      void qc.invalidateQueries({ queryKey: eventSchedulePrefix(tenantKey, eventId) });
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
       toast.error(e?.response?.data?.message ?? "Gagal hapus slot terpilih"),
@@ -258,8 +287,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
       } as EventRow),
     onSuccess: () => {
       toast.success("Acara diperbarui");
-      void qc.invalidateQueries({ queryKey: ["event", eventId] });
-      void qc.invalidateQueries({ queryKey: ["events"] });
+      void qc.invalidateQueries({ queryKey: eventDetailKey(tenantKey, eventId) });
+      void qc.invalidateQueries({ queryKey: ["events", tenantKey] });
       setEditOpen(false);
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
@@ -291,7 +320,19 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   const visibleSlotIds = new Set((schedule?.slots ?? []).map((s) => s.id));
   const visibleSelectedSlotIds = selectedSlotIds.filter((id) => visibleSlotIds.has(id));
 
-  if (!event) {
+  if (eventLoadError) {
+    const apiErr = toApiError(eventLoadErr);
+    return (
+      <div className="space-y-3 p-6">
+        <p className="text-sm text-destructive">{apiErr.message || "Gagal memuat acara"}</p>
+        <Button variant="outline" size="sm" onClick={() => void refetchEvent()}>
+          Coba lagi
+        </Button>
+      </div>
+    );
+  }
+
+  if (eventPending || !event) {
     return <p className="p-6 text-muted-foreground">Memuat acara...</p>;
   }
 
@@ -481,7 +522,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
               : undefined
           }
           onSaved={() => {
-            void qc.invalidateQueries({ queryKey: ["event-therapy-settings", eventId] });
+            void qc.invalidateQueries({ queryKey: eventTherapySettingsKey(tenantKey, eventId) });
           }}
         />
       ) : null}
