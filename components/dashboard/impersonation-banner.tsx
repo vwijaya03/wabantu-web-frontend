@@ -20,8 +20,8 @@ export function ImpersonationBanner() {
   const stopMut = useMutation({
     mutationFn: () => adminApi.stopImpersonation(),
     onSuccess: async () => {
-      await refresh();
       resetQueriesForPlatformConsole(qc);
+      await refresh();
       toast.success("Keluar dari mode pantau tenant");
       router.replace("/dashboard/admin");
     },

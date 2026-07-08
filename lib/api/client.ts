@@ -1,5 +1,6 @@
 import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from "axios";
 import { toApiError } from "@/lib/api/errors";
+import { isTenantContextApiError } from "@/lib/api/tenant-context-error";
 import { isRateLimitError, notifyRateLimitOnce } from "@/lib/api/rate-limit";
 import { clearClientSession, getAccessToken } from "@/lib/auth/session";
 import { clearProfileHint } from "@/lib/auth/profile-hint";
@@ -85,7 +86,8 @@ api.interceptors.response.use(
     if (
       status === 401 &&
       shouldHandleSessionExpired(config?.url, config) &&
-      getAccessToken()
+      getAccessToken() &&
+      !isTenantContextApiError(error)
     ) {
       if (!config?._reauthRetried) {
         const ok = await requestSessionReauth();

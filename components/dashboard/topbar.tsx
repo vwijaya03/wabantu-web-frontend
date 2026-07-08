@@ -52,8 +52,8 @@ export function Topbar() {
   const impMut = useMutation({
     mutationFn: (tenantId: string) => adminApi.impersonate(tenantId),
     onSuccess: async () => {
-      await refresh();
       resetTenantScopedQueries(qc);
+      await refresh();
       toast.success("Memantau tenant — mode internal aktif");
       router.replace("/dashboard");
     },
@@ -63,8 +63,8 @@ export function Topbar() {
   const stopMut = useMutation({
     mutationFn: () => adminApi.stopImpersonation(),
     onSuccess: async () => {
-      await refresh();
       resetQueriesForPlatformConsole(qc);
+      await refresh();
       toast.success("Kembali ke konsol platform");
       router.replace("/dashboard/admin");
     },
