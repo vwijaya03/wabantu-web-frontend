@@ -49,6 +49,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { eventsApi, type EventPerson } from "@/lib/api/events";
 import { toApiError } from "@/lib/api/client";
+import { useAuth } from "@/components/providers/auth-provider";
+import { tenantContextKey } from "@/lib/auth/tenant-context";
+import {
+  eventDashboardKey,
+  eventExportJobsKey,
+  eventPeopleKey,
+  eventStaffRosterKey,
+} from "@/lib/query/events-query-keys";
 import {
   personTypeToRole,
   roleUsesTherapies,
@@ -310,6 +318,8 @@ export function EventStaffTab({
   roles: { id: string; roleName: string }[];
 }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const tenantKey = tenantContextKey(user);
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState(ALL_ROLES);
@@ -327,7 +337,7 @@ export function EventStaffTab({
   const personType = roleFilter !== ALL_ROLES ? ROLE_TO_TYPE[roleFilter] : undefined;
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["event-people", eventId, search, roleFilter, tableSort, page],
+    queryKey: eventPeopleKey(tenantKey, eventId, search, roleFilter, tableSort, page),
     queryFn: () =>
       eventsApi.listPeople(eventId, {
         q: search || undefined,
@@ -340,14 +350,14 @@ export function EventStaffTab({
   });
 
   const { data: rosterData } = useQuery({
-    queryKey: ["event-staff-roster"],
+    queryKey: eventStaffRosterKey(tenantKey),
     queryFn: () => eventsApi.listStaffRoster(),
   });
   const roster = rosterData?.items ?? [];
 
   const invalidate = () => {
-    void qc.invalidateQueries({ queryKey: ["event-people", eventId] });
-    void qc.invalidateQueries({ queryKey: ["event-dashboard", eventId] });
+    void qc.invalidateQueries({ queryKey: eventPeopleKey(tenantKey, eventId) });
+    void qc.invalidateQueries({ queryKey: eventDashboardKey(tenantKey, eventId) });
   };
 
   const importRosterMut = useMutation({
@@ -355,7 +365,7 @@ export function EventStaffTab({
     onSuccess: (res) => {
       toast.success(`${res.added} staf ditambahkan${res.skipped ? `, ${res.skipped} sudah ada` : ""}`);
       invalidate();
-      void qc.invalidateQueries({ queryKey: ["event-staff-roster"] });
+      void qc.invalidateQueries({ queryKey: eventStaffRosterKey(tenantKey) });
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -364,7 +374,7 @@ export function EventStaffTab({
     mutationFn: () => eventsApi.syncStaffRosterFromEvent(eventId),
     onSuccess: (res) => {
       toast.success(`${res.upserted} staf disimpan ke roster`);
-      void qc.invalidateQueries({ queryKey: ["event-staff-roster"] });
+      void qc.invalidateQueries({ queryKey: eventStaffRosterKey(tenantKey) });
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -423,7 +433,7 @@ export function EventStaffTab({
       })
       .then(() => {
         toast.success("Export masuk antrian — lihat Riwayat export di bawah halaman");
-        void qc.invalidateQueries({ queryKey: ["event-export-jobs", eventId] });
+        void qc.invalidateQueries({ queryKey: eventExportJobsKey(tenantKey, eventId) });
       })
       .catch((e) => toast.error(toApiError(e).message));
   };
