@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Pencil, Plus, Trash2 } from "lucide-react";
-import { EventExportJobsPanel } from "@/components/events/event-export-jobs-panel";
 import { EventImageImportPanel } from "@/components/events/event-image-import-panel";
+import { ExportSortPanel, resolveExportSort } from "@/components/events/export-sort-panel";
+import { SortableTableHead } from "@/components/events/sortable-table-head";
 import { EventTabRefreshButton } from "@/components/events/event-tab-refresh-button";
 import { DataTablePagination, DataTableToolbar } from "@/components/events/data-table-toolbar";
 import { TherapyMultiPick } from "@/components/events/therapy-multi-pick";
@@ -54,6 +55,11 @@ import {
   STAFF_ROLES,
   staffRoleLabel,
 } from "@/lib/events-staff";
+import {
+  STAFF_EXPORT_SORT_DEFAULT,
+  STAFF_EXPORT_SORT_OPTIONS,
+  STAFF_SORT_DEFAULT,
+} from "@/lib/events-sort";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 20;
@@ -314,15 +320,20 @@ export function EventStaffTab({
   const [deleteTarget, setDeleteTarget] = useState<EventPerson | null>(null);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [tableSort, setTableSort] = useState(STAFF_SORT_DEFAULT);
+  const [exportSort, setExportSort] = useState(STAFF_EXPORT_SORT_DEFAULT);
+  const [exportSyncWithTable, setExportSyncWithTable] = useState(true);
 
   const personType = roleFilter !== ALL_ROLES ? ROLE_TO_TYPE[roleFilter] : undefined;
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["event-people", eventId, search, roleFilter, page],
+    queryKey: ["event-people", eventId, search, roleFilter, tableSort, page],
     queryFn: () =>
       eventsApi.listPeople(eventId, {
         q: search || undefined,
         personType,
+        sortBy: tableSort.sortBy,
+        sortDir: tableSort.sortDir,
         page,
         pageSize: PAGE_SIZE,
       }),
@@ -399,10 +410,19 @@ export function EventStaffTab({
   });
 
   const startExport = (kind: "staff_sheet" | "staff_list") => {
+    const raw = resolveExportSort(tableSort, exportSort, exportSyncWithTable);
+    const sort =
+      raw.sortBy === "name" || raw.sortBy === "personType"
+        ? raw
+        : STAFF_EXPORT_SORT_DEFAULT;
     void eventsApi
-      .createExportJob(eventId, { kind, format: "xlsx" })
+      .createExportJob(eventId, {
+        kind,
+        format: "xlsx",
+        staffFilters: { sortBy: sort.sortBy, sortDir: sort.sortDir },
+      })
       .then(() => {
-        toast.success("Export masuk antrian — lihat Riwayat export di bawah");
+        toast.success("Export masuk antrian — lihat Riwayat export di bawah halaman");
         void qc.invalidateQueries({ queryKey: ["event-export-jobs", eventId] });
       })
       .catch((e) => toast.error(toApiError(e).message));
@@ -506,6 +526,15 @@ export function EventStaffTab({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          <ExportSortPanel
+            options={STAFF_EXPORT_SORT_OPTIONS}
+            tableSort={tableSort}
+            exportSort={exportSort}
+            syncWithTable={exportSyncWithTable}
+            onExportSortChange={setExportSort}
+            onSyncWithTableChange={setExportSyncWithTable}
+            className="rounded-lg border bg-muted/20 p-3"
+          />
           <DataTableToolbar
             searchValue={q}
             onSearchChange={setQ}
@@ -572,8 +601,24 @@ export function EventStaffTab({
                         />
                       </TableHead>
                     ) : null}
-                    <TableHead>Nama</TableHead>
-                    <TableHead>Peran</TableHead>
+                    <SortableTableHead
+                      label="Nama"
+                      sortKey="name"
+                      sort={tableSort}
+                      onSortChange={(next) => {
+                        setTableSort(next);
+                        setPage(1);
+                      }}
+                    />
+                    <SortableTableHead
+                      label="Peran"
+                      sortKey="personType"
+                      sort={tableSort}
+                      onSortChange={(next) => {
+                        setTableSort(next);
+                        setPage(1);
+                      }}
+                    />
                     <TableHead>Terapi</TableHead>
                     <TableHead>Kehadiran</TableHead>
                     <TableHead>Jam</TableHead>
@@ -635,8 +680,6 @@ export function EventStaffTab({
           )}
         </CardContent>
       </Card>
-
-      <EventExportJobsPanel eventId={eventId} kinds={["staff_sheet", "staff_list"]} />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">

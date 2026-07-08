@@ -84,6 +84,8 @@ export function buildPatientExportFilters(
     status?: string;
     slotDate?: string;
     hasSlot?: string;
+    sortBy?: string;
+    sortDir?: string;
   },
 ): PatientExportFilters & typeof extra {
   return {

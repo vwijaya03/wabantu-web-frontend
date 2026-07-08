@@ -27,6 +27,15 @@ import {
   formatPatientSlotLabel,
   formatTimeSlotLine,
 } from "@/lib/events-format";
+import { ListSortControl } from "@/components/events/list-sort-control";
+import { SortableTableHead } from "@/components/events/sortable-table-head";
+import {
+  SCHEDULE_PATIENT_SORT_DEFAULT,
+  SCHEDULE_SLOT_SORT_DEFAULT,
+  SCHEDULE_SLOT_SORT_OPTIONS,
+  sortSchedulePatients,
+  sortScheduleSlots,
+} from "@/lib/events-sort";
 
 type ScheduleColumn = "birthDate" | "complaint" | "preferredTime" | "status";
 
@@ -73,6 +82,14 @@ export function EventScheduleTab({
   deleteBulkPending: boolean;
 }) {
   const [hiddenCols, setHiddenCols] = useState<Set<ScheduleColumn>>(new Set());
+  const [slotSort, setSlotSort] = useState(SCHEDULE_SLOT_SORT_DEFAULT);
+  const [patientSort, setPatientSort] = useState(SCHEDULE_PATIENT_SORT_DEFAULT);
+
+  const sortedSlots = useMemo(() => sortScheduleSlots(slots, slotSort), [slots, slotSort]);
+  const sortedPatients = useMemo(
+    () => sortSchedulePatients(patients, patientSort),
+    [patients, patientSort],
+  );
 
   const visibleCols = useMemo(
     () => (Object.keys(COLUMN_LABELS) as ScheduleColumn[]).filter((c) => !hiddenCols.has(c)),
@@ -88,7 +105,7 @@ export function EventScheduleTab({
     });
   };
 
-  const allSlotsSelected = slots.length > 0 && selectedSlotIds.length === slots.length;
+  const allSlotsSelected = sortedSlots.length > 0 && selectedSlotIds.length === sortedSlots.length;
 
   return (
     <div className="mt-4 space-y-4">
@@ -142,24 +159,33 @@ export function EventScheduleTab({
       ) : null}
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-base">Slot waktu</CardTitle>
+          {slots.length > 0 ? (
+            <ListSortControl
+              options={SCHEDULE_SLOT_SORT_OPTIONS}
+              sortBy={slotSort.sortBy}
+              sortDir={slotSort.sortDir}
+              onChange={setSlotSort}
+              hideLabel
+            />
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-1 text-sm">
-          {canEdit && slots.length > 0 ? (
+          {canEdit && sortedSlots.length > 0 ? (
             <label className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
               <input
                 type="checkbox"
                 checked={allSlotsSelected}
-                onChange={(e) => onSelectedSlotIdsChange(e.target.checked ? slots.map((s) => s.id) : [])}
+                onChange={(e) => onSelectedSlotIdsChange(e.target.checked ? sortedSlots.map((s) => s.id) : [])}
               />
               Pilih semua slot
             </label>
           ) : null}
-          {slots.length === 0 ? (
+          {sortedSlots.length === 0 ? (
             <p className="text-muted-foreground">Belum ada slot. Generate dari tab ini atau simpan pengaturan terapi dulu.</p>
           ) : (
-            slots.map((s) => (
+            sortedSlots.map((s) => (
               <div key={s.id} className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   {canEdit ? (
@@ -201,25 +227,37 @@ export function EventScheduleTab({
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-base">Pasien terjadwal</CardTitle>
-          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
             {(Object.keys(COLUMN_LABELS) as ScheduleColumn[]).map((col) => (
               <label key={col} className="flex items-center gap-1">
                 <input type="checkbox" checked={!hiddenCols.has(col)} onChange={() => toggleCol(col)} />
                 {COLUMN_LABELS[col]}
               </label>
             ))}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {patients.length === 0 ? (
+          {sortedPatients.length === 0 ? (
             <p className="text-sm text-muted-foreground">Tidak ada pasien untuk filter ini.</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Pasien</TableHead>
+                  <SortableTableHead
+                    label="Pasien"
+                    sortKey="name"
+                    sort={patientSort}
+                    onSortChange={setPatientSort}
+                  />
                   <TableHead>Terapi</TableHead>
-                  <TableHead>Jadwal</TableHead>
+                  <SortableTableHead
+                    label="Jadwal"
+                    sortKey="slotTime"
+                    sort={patientSort}
+                    onSortChange={setPatientSort}
+                  />
                   {visibleCols.includes("birthDate") ? <TableHead>Tgl lahir</TableHead> : null}
                   {visibleCols.includes("complaint") ? <TableHead>Keluhan</TableHead> : null}
                   {visibleCols.includes("preferredTime") ? <TableHead>Jam preferensi</TableHead> : null}
@@ -227,7 +265,7 @@ export function EventScheduleTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {patients.map((p) => (
+                {sortedPatients.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.fullName}</TableCell>
                     <TableCell>{p.therapyName ?? "—"}</TableCell>

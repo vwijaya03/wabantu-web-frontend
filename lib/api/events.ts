@@ -240,8 +240,14 @@ export interface PublicSlotOption {
 export const EVENTS_MAX_PATIENT_EXPORT_ROWS = 2500;
 
 export const eventsApi = {
-  listEvents: (params?: { q?: string; status?: string; page?: number; pageSize?: number }) =>
-    api.get<{ items: EventRow[]; total: number }>("/events", { params }).then((r) => r.data),
+  listEvents: (params?: {
+    q?: string;
+    status?: string;
+    sortBy?: string;
+    sortDir?: string;
+    page?: number;
+    pageSize?: number;
+  }) => api.get<{ items: EventRow[]; total: number }>("/events", { params }).then((r) => r.data),
 
   getEvent: (id: string) => api.get<EventRow>(`/events/detail/${id}`).then((r) => r.data),
 
@@ -302,7 +308,14 @@ export const eventsApi = {
 
   listPeople: (
     eventId: string,
-    params?: { q?: string; personType?: string; page?: number; pageSize?: number },
+    params?: {
+      q?: string;
+      personType?: string;
+      sortBy?: string;
+      sortDir?: string;
+      page?: number;
+      pageSize?: number;
+    },
   ) =>
     api
       .get<{ items: EventPerson[]; total: number }>(`/events/detail/${eventId}/people`, { params })
@@ -324,7 +337,7 @@ export const eventsApi = {
 
   listAssignments: (
     eventId: string,
-    params?: { q?: string; page?: number; pageSize?: number },
+    params?: { q?: string; sortBy?: string; sortDir?: string; page?: number; pageSize?: number },
   ) =>
     api
       .get<{ items: Assignment[]; total: number }>(`/events/detail/${eventId}/assignments`, { params })
@@ -349,6 +362,8 @@ export const eventsApi = {
       status?: string;
       slotDate?: string;
       hasSlot?: string;
+      sortBy?: string;
+      sortDir?: string;
       page?: number;
       pageSize?: number;
     },
@@ -368,8 +383,14 @@ export const eventsApi = {
         status?: string;
         slotDate?: string;
         hasSlot?: string;
+        sortBy?: string;
+        sortDir?: string;
         /** Kolom yang disembunyikan (No & Nama selalu ikut). */
         hiddenColumns?: string[];
+      };
+      staffFilters?: {
+        sortBy?: string;
+        sortDir?: string;
       };
     },
   ) => api.post<EventExportJob>(`/events/detail/${eventId}/export-jobs`, body).then((r) => r.data),
