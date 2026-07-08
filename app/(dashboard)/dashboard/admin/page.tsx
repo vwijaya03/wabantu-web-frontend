@@ -60,8 +60,8 @@ export default function AdminPage() {
   const impMut = useMutation({
     mutationFn: (tenantId: string) => adminApi.impersonate(tenantId),
     onSuccess: async () => {
-      await refresh();
       resetTenantScopedQueries(qc);
+      await refresh();
       toast.success("Memantau tenant — mode internal aktif");
       router.replace("/dashboard");
     },

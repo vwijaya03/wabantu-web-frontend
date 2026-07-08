@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { PromptDialog } from "@/components/dashboard/prompt-dialog";
 import {
@@ -31,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { toApiError } from "@/lib/api/client";
 import { catalogApi, type CatalogItem, type ListCatalogResponse } from "@/lib/api/catalog";
 import { contactsApi, type Contact, type ListContactsResponse } from "@/lib/api/contacts";
@@ -138,6 +140,7 @@ const emptyCreateForm: CreateForm = {
 
 export default function OrdersPage() {
   const { user } = useAuth();
+  const tenantReady = useTenantQueryEnabled();
   const canManage = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const [q, setQ] = useState("");
@@ -185,6 +188,7 @@ export default function OrdersPage() {
         page,
         pageSize,
       }),
+    enabled: tenantReady,
   });
   const { data: contactOptions } = useQuery({
     queryKey: ["order-contact-options", createForm.contactSearch, createContactPage, selectorPageSize],
@@ -258,11 +262,13 @@ export default function OrdersPage() {
   const { data: invSetting } = useQuery({
     queryKey: ["inventory", "setting"],
     queryFn: () => inventoryApi.getSetting(),
+    enabled: tenantReady,
   });
   const inventoryOn = Boolean(invSetting?.setupCompleted);
   const { data: warehousesData } = useQuery({
     queryKey: ["inventory", "warehouses", "all"],
     queryFn: () => inventoryApi.listWarehouses({ all: true }),
+    enabled: tenantReady,
   });
   const warehouses = useMemo(() => warehousesData?.warehouses ?? [], [warehousesData]);
   const hasWarehouses = warehouses.length > 0;
@@ -273,7 +279,7 @@ export default function OrdersPage() {
   const { data: stockOverview } = useQuery({
     queryKey: ["inventory", "stock", "orders-overview"],
     queryFn: () => inventoryApi.listStock({ pageSize: 500 }),
-    enabled: inventoryOn,
+    enabled: tenantReady && inventoryOn,
   });
   const stockRows = stockOverview?.stock ?? [];
 
@@ -645,6 +651,10 @@ export default function OrdersPage() {
   };
 
   return (
+    <RequireTenantDashboard
+      title="Pesanan"
+      description="Kelola pesanan dari WhatsApp atau input manual, termasuk update status satuan dan batch."
+    >
     <>
       <PageHeader
         title="Pesanan"
@@ -1074,6 +1084,7 @@ export default function OrdersPage() {
         }}
       />
     </>
+    </RequireTenantDashboard>
   );
 }
 

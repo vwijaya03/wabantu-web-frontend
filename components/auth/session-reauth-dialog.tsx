@@ -1,8 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,8 +26,6 @@ import {
 import { dispatchAuthSessionUpdated } from "@/lib/auth/session-sync";
 
 export function SessionReauthDialog() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -64,8 +60,6 @@ export function SessionReauthDialog() {
     try {
       const user = await authApi.reauth(password);
       dispatchAuthSessionUpdated(user);
-      await queryClient.invalidateQueries();
-      router.refresh();
       closedBySuccessRef.current = true;
       resolveSessionReauth(true);
       setPassword("");
