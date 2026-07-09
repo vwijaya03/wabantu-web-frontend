@@ -243,6 +243,7 @@ export interface PublicStaffMonitorPerson {
   roleLabel: string;
   therapyNames?: string[] | null;
   isPencatat: boolean;
+  countsTowardMeals: boolean;
   notes?: string;
 }
 
