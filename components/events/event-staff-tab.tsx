@@ -90,6 +90,7 @@ type StaffForm = {
   therapyIds: string[];
   volunteerRoleId: string;
   isPencatat: boolean;
+  countsTowardMeals: boolean;
   saveToRoster: boolean;
   arrivalTime: string;
   departureTime: string;
@@ -105,6 +106,7 @@ const emptyForm = (): StaffForm => ({
   therapyIds: [],
   volunteerRoleId: "",
   isPencatat: false,
+  countsTowardMeals: true,
   saveToRoster: true,
   arrivalTime: "",
   departureTime: "",
@@ -121,6 +123,7 @@ function personToForm(p: EventPerson): StaffForm {
     therapyIds: p.therapyIds ?? (p.therapyId ? [p.therapyId] : []),
     volunteerRoleId: p.volunteerRoleId ?? "",
     isPencatat: p.isPencatat ?? false,
+    countsTowardMeals: p.countsTowardMeals ?? true,
     saveToRoster: true,
     arrivalTime: p.arrivalTime?.slice(0, 5) ?? "",
     departureTime: p.departureTime?.slice(0, 5) ?? "",
@@ -279,6 +282,16 @@ function StaffFormFields({
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
+            checked={form.countsTowardMeals}
+            onChange={(e) => setForm((f) => ({ ...f, countsTowardMeals: e.target.checked }))}
+          />
+          Dihitung untuk konsumsi (makan)
+        </label>
+      </div>
+      <div className="sm:col-span-2">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
             checked={form.saveToRoster}
             onChange={(e) => setForm((f) => ({ ...f, saveToRoster: e.target.checked }))}
           />
@@ -299,6 +312,7 @@ function buildPayload(form: StaffForm, editing: boolean) {
     therapyIds: roleUsesTherapies(form.role) ? form.therapyIds : undefined,
     volunteerRoleId: form.role === "relawan" ? form.volunteerRoleId || undefined : undefined,
     isPencatat: form.role === "relawan" ? form.isPencatat : undefined,
+    countsTowardMeals: form.countsTowardMeals,
     arrivalTime: form.arrivalTime || undefined,
     departureTime: form.departureTime || undefined,
     availableFrom: form.availableFrom || undefined,

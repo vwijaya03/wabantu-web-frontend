@@ -57,6 +57,7 @@ export interface EventPerson {
   therapyNames?: string[];
   volunteerRoleId?: string;
   isPencatat?: boolean;
+  countsTowardMeals?: boolean;
   availableFrom?: string;
   availableUntil?: string;
   createdAt?: string;
@@ -76,6 +77,7 @@ export type UpsertEventPersonBody = {
   therapyIds?: string[];
   volunteerRoleId?: string;
   isPencatat?: boolean;
+  countsTowardMeals?: boolean;
   availableFrom?: string;
   availableUntil?: string;
 };
@@ -234,6 +236,25 @@ export interface PublicSlotOption {
   endTime: string;
   label: string;
   available: number;
+}
+
+export interface PublicStaffMonitorPerson {
+  fullName: string;
+  roleLabel: string;
+  therapyNames: string[];
+  isPencatat: boolean;
+  notes?: string;
+}
+
+export interface PublicStaffMonitorResponse {
+  eventName: string;
+  eventDescription?: string;
+  location?: string;
+  startDate: string;
+  endDate: string;
+  therapyCapacity: { therapyId: string; therapyName: string; current: number; max: number }[];
+  mealConsumptionCount: number;
+  staff: PublicStaffMonitorPerson[];
 }
 
 /** Maksimum baris per export PDF (harus selaras dengan api-go/events). */
@@ -518,6 +539,11 @@ export const eventsApi = {
       .get<PublicStaffEventInfo>(`/public/events/${tenantSlug}/register/${eventSlug}/staff`)
       .then((r) => r.data),
 
+  getPublicStaffMonitor: (tenantSlug: string, eventSlug: string) =>
+    api
+      .get<PublicStaffMonitorResponse>(`/public/events/${tenantSlug}/monitor/${eventSlug}`)
+      .then((r) => r.data),
+
   postPublicStaffRegistration: (
     tenantSlug: string,
     eventSlug: string,
@@ -528,6 +554,7 @@ export const eventsApi = {
       volunteerRoleId?: string;
       phone?: string;
       notes?: string;
+      countsTowardMeals?: boolean;
     },
   ) =>
     api
