@@ -1,8 +1,9 @@
 "use client";
 
-import { use } from "react";
+import { use, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import { Check, RefreshCw, X } from "lucide-react";
+import { SortableTableHead } from "@/components/events/sortable-table-head";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,12 +14,37 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { eventsApi } from "@/lib/api/events";
+import { eventsApi, type PublicStaffMonitorPerson } from "@/lib/api/events";
 import { toApiError } from "@/lib/api/client";
+import type { ListSortState } from "@/lib/events-sort";
 
-function therapyLabel(names: string[], isPencatat: boolean) {
-  const base = names.length > 0 ? names.join(", ") : "—";
+const MONITOR_SORT_DEFAULT: ListSortState = { sortBy: "fullName", sortDir: "asc" };
+
+function therapyLabel(names: string[] | null | undefined, isPencatat: boolean) {
+  const list = names ?? [];
+  const base = list.length > 0 ? list.join(", ") : "—";
   return isPencatat ? `${base} · Pencatat` : base;
+}
+
+function sortMonitorStaff(staff: PublicStaffMonitorPerson[], sort: ListSortState) {
+  const dir = sort.sortDir === "asc" ? 1 : -1;
+  return [...staff].sort((a, b) => {
+    let cmp = 0;
+    switch (sort.sortBy) {
+      case "roleLabel":
+        cmp = a.roleLabel.localeCompare(b.roleLabel, "id");
+        break;
+      case "therapy":
+        cmp = therapyLabel(a.therapyNames, a.isPencatat).localeCompare(
+          therapyLabel(b.therapyNames, b.isPencatat),
+          "id",
+        );
+        break;
+      default:
+        cmp = a.fullName.localeCompare(b.fullName, "id");
+    }
+    return cmp * dir;
+  });
 }
 
 export default function PublicStaffMonitorPage({
@@ -27,6 +53,7 @@ export default function PublicStaffMonitorPage({
   params: Promise<{ tenantSlug: string; eventSlug: string }>;
 }) {
   const { tenantSlug, eventSlug } = use(params);
+  const [tableSort, setTableSort] = useState(MONITOR_SORT_DEFAULT);
 
   const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["public-staff-monitor", tenantSlug, eventSlug],
@@ -34,6 +61,11 @@ export default function PublicStaffMonitorPage({
     staleTime: Infinity,
     retry: false,
   });
+
+  const sortedStaff = useMemo(
+    () => (data ? sortMonitorStaff(data.staff, tableSort) : []),
+    [data, tableSort],
+  );
 
   if (isLoading) {
     return (
@@ -117,25 +149,48 @@ export default function PublicStaffMonitorPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nama</TableHead>
-                <TableHead>Peran</TableHead>
-                <TableHead>Terapi</TableHead>
+                <SortableTableHead
+                  label="Nama"
+                  sortKey="fullName"
+                  sort={tableSort}
+                  onSortChange={setTableSort}
+                />
+                <SortableTableHead
+                  label="Peran"
+                  sortKey="roleLabel"
+                  sort={tableSort}
+                  onSortChange={setTableSort}
+                />
+                <SortableTableHead
+                  label="Terapi"
+                  sortKey="therapy"
+                  sort={tableSort}
+                  onSortChange={setTableSort}
+                />
+                <TableHead className="w-20 text-center">Makan</TableHead>
                 <TableHead>Catatan</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.staff.length === 0 ? (
+              {sortedStaff.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-muted-foreground">
+                  <TableCell colSpan={5} className="text-muted-foreground">
                     Belum ada staf terdaftar.
                   </TableCell>
                 </TableRow>
               ) : (
-                data.staff.map((person) => (
-                  <TableRow key={`${person.fullName}-${person.roleLabel}-${person.therapyNames.join(",")}`}>
+                sortedStaff.map((person, index) => (
+                  <TableRow key={`${person.fullName}-${person.roleLabel}-${index}`}>
                     <TableCell className="font-medium">{person.fullName}</TableCell>
                     <TableCell>{person.roleLabel}</TableCell>
                     <TableCell>{therapyLabel(person.therapyNames, person.isPencatat)}</TableCell>
+                    <TableCell className="text-center">
+                      {person.countsTowardMeals ? (
+                        <Check className="mx-auto size-4 text-green-600" aria-label="Dihitung makan" />
+                      ) : (
+                        <X className="mx-auto size-4 text-red-600" aria-label="Tidak dihitung makan" />
+                      )}
+                    </TableCell>
                     <TableCell className="max-w-xs whitespace-pre-wrap text-muted-foreground">
                       {person.notes?.trim() || "—"}
                     </TableCell>
