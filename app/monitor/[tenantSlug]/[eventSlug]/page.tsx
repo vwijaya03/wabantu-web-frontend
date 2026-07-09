@@ -188,7 +188,7 @@ export default function PublicStaffMonitorPage({
                       {person.countsTowardMeals ? (
                         <Check className="mx-auto size-4 text-green-600" aria-label="Dihitung makan" />
                       ) : (
-                        <X className="mx-auto size-4 text-muted-foreground" aria-label="Tidak dihitung makan" />
+                        <X className="mx-auto size-4 text-red-600" aria-label="Tidak dihitung makan" />
                       )}
                     </TableCell>
                     <TableCell className="max-w-xs whitespace-pre-wrap text-muted-foreground">
