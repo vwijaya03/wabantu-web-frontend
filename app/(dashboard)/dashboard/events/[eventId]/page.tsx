@@ -216,6 +216,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   const [scheduleDate, setScheduleDate] = useState("");
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
 
+  const tabNeedsDashboard = tab === "dashboard";
+  const tabNeedsSchedule = tab === "schedule";
+  const tabNeedsTherapySettings = tab === "therapy";
+  const tabNeedsTherapies = tab === "patients" || tab === "people" || tab === "schedule";
+  const tabNeedsRoles = tab === "people";
+
   const {
     data: event,
     isError: eventLoadError,
@@ -227,13 +233,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
     queryFn: ({ signal }) => eventsApi.getEvent(eventId, signal),
     enabled: eventQueriesEnabled,
   });
-  const { data: dashboard } = useQuery({
+  const { data: dashboard, isPending: dashboardPending } = useQuery({
     queryKey: eventDashboardKey(tenantKey, eventId),
     queryFn: ({ signal }) => eventsApi.getDashboard(eventId, signal),
-    enabled: eventQueriesEnabled,
+    enabled: eventQueriesEnabled && tabNeedsDashboard,
   });
 
-  const { data: schedule } = useQuery({
+  const { data: schedule, isPending: schedulePending } = useQuery({
     queryKey: eventScheduleKey(tenantKey, eventId, scheduleTherapy, scheduleDate),
     queryFn: ({ signal }) =>
       eventsApi.getSchedule(
@@ -244,22 +250,22 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
         },
         signal,
       ),
-    enabled: eventQueriesEnabled,
+    enabled: eventQueriesEnabled && tabNeedsSchedule,
   });
-  const { data: therapySettings } = useQuery({
+  const { data: therapySettings, isPending: therapySettingsPending } = useQuery({
     queryKey: eventTherapySettingsKey(tenantKey, eventId),
     queryFn: () => eventsApi.listEventTherapySettings(eventId),
-    enabled: eventQueriesEnabled,
+    enabled: eventQueriesEnabled && tabNeedsTherapySettings,
   });
   const { data: therapies } = useQuery({
     queryKey: eventTherapiesMasterKey(tenantKey),
     queryFn: () => eventsApi.listTherapies({ activeOnly: true, pageSize: 100 }),
-    enabled: eventQueriesEnabled,
+    enabled: eventQueriesEnabled && tabNeedsTherapies,
   });
   const { data: roles } = useQuery({
     queryKey: eventRolesMasterKey(tenantKey),
     queryFn: () => eventsApi.listVolunteerRoles({ pageSize: 100 }),
-    enabled: eventQueriesEnabled,
+    enabled: eventQueriesEnabled && tabNeedsRoles,
   });
 
   const archived = event?.status === "ARCHIVED";
@@ -442,7 +448,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
 
       {tab === "dashboard" ? (
         <div className="mt-4">
-          {!dashboard && (
+          {dashboardPending && (
             <p className="mb-2 text-sm text-muted-foreground">Memuat ringkasan...</p>
           )}
           {dashboard ? (
@@ -527,26 +533,35 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
       ) : null}
 
       {tab === "therapy" ? (
-        <EventTherapySettingsTab
-          eventId={eventId}
-          canEdit={isOwner && !archived}
-          settings={therapySettings?.items ?? []}
-          eventBreak={
-            event?.breakStartTime && event?.breakEndTime
-              ? {
-                  start: event.breakStartTime.slice(0, 5),
-                  end: event.breakEndTime.slice(0, 5),
-                }
-              : undefined
-          }
-          onSaved={() => {
-            void qc.invalidateQueries({ queryKey: eventTherapySettingsKey(tenantKey, eventId) });
-          }}
-        />
+        <div className="mt-4">
+          {therapySettingsPending ? (
+            <p className="mb-2 text-sm text-muted-foreground">Memuat pengaturan terapi...</p>
+          ) : null}
+          <EventTherapySettingsTab
+            eventId={eventId}
+            canEdit={isOwner && !archived}
+            settings={therapySettings?.items ?? []}
+            eventBreak={
+              event?.breakStartTime && event?.breakEndTime
+                ? {
+                    start: event.breakStartTime.slice(0, 5),
+                    end: event.breakEndTime.slice(0, 5),
+                  }
+                : undefined
+            }
+            onSaved={() => {
+              void qc.invalidateQueries({ queryKey: eventTherapySettingsKey(tenantKey, eventId) });
+            }}
+          />
+        </div>
       ) : null}
 
       {tab === "schedule" ? (
-        <EventScheduleTab
+        <div className="mt-4">
+          {schedulePending ? (
+            <p className="mb-2 text-sm text-muted-foreground">Memuat jadwal...</p>
+          ) : null}
+          <EventScheduleTab
           canEdit={isOwner && !archived}
           therapies={therapies?.items ?? []}
           scheduleTherapy={scheduleTherapy}
@@ -564,6 +579,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
           deleteSlotPending={deleteSlotMut.isPending}
           deleteBulkPending={deleteSlotsBulkMut.isPending}
         />
+        </div>
       ) : null}
 
       <EventExportJobsPanel eventId={eventId} className="mt-6" />
