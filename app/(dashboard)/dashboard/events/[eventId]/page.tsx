@@ -91,6 +91,7 @@ function EventPublicRegistrationCard({
 }) {
   const patientPath = tenantSlug ? `/register/${tenantSlug}/${eventSlug}` : "";
   const staffPath = tenantSlug ? `/register/${tenantSlug}/${eventSlug}/staff` : "";
+  const monitorPath = tenantSlug ? `/monitor/${tenantSlug}/${eventSlug}` : "";
   const published = status === "PUBLISHED";
 
   const copyLink = async (path: string, label: string) => {
@@ -162,11 +163,28 @@ function EventPublicRegistrationCard({
                 </Button>
               ) : null}
             </div>
+            {published && monitorPath ? (
+              <>
+                <p className="pt-2 text-sm font-medium">Pantau daftar staf</p>
+                <code className="block break-all rounded-md bg-muted px-3 py-2 text-xs">{monitorPath}</code>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void copyLink(monitorPath, "Link pantau staf disalin")}
+                  >
+                    Salin link pantau
+                  </Button>
+                </div>
+              </>
+            ) : null}
           </>
         ) : null}
         <p className="text-xs text-muted-foreground">
-          Format: <span className="font-mono">/register/{"{slug-toko}"}/{"{slug-acara}"}</span> · slug
-          acara ini: <strong>{eventSlug}</strong>
+          Format: <span className="font-mono">/register/{"{slug-toko}"}/{"{slug-acara}"}</span> · pantau staf:{" "}
+          <span className="font-mono">/monitor/{"{slug-toko}"}/{"{slug-acara}"}</span> · slug acara ini:{" "}
+          <strong>{eventSlug}</strong>
         </p>
       </CardContent>
     </Card>
