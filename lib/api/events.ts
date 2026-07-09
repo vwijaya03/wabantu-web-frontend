@@ -241,7 +241,7 @@ export interface PublicSlotOption {
 export interface PublicStaffMonitorPerson {
   fullName: string;
   roleLabel: string;
-  therapyNames: string[];
+  therapyNames?: string[] | null;
   isPencatat: boolean;
   notes?: string;
 }

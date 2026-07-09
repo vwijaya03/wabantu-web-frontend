@@ -16,8 +16,9 @@ import {
 import { eventsApi } from "@/lib/api/events";
 import { toApiError } from "@/lib/api/client";
 
-function therapyLabel(names: string[], isPencatat: boolean) {
-  const base = names.length > 0 ? names.join(", ") : "—";
+function therapyLabel(names: string[] | null | undefined, isPencatat: boolean) {
+  const list = names ?? [];
+  const base = list.length > 0 ? list.join(", ") : "—";
   return isPencatat ? `${base} · Pencatat` : base;
 }
 
@@ -131,8 +132,8 @@ export default function PublicStaffMonitorPage({
                   </TableCell>
                 </TableRow>
               ) : (
-                data.staff.map((person) => (
-                  <TableRow key={`${person.fullName}-${person.roleLabel}-${person.therapyNames.join(",")}`}>
+                data.staff.map((person, index) => (
+                  <TableRow key={`${person.fullName}-${person.roleLabel}-${index}`}>
                     <TableCell className="font-medium">{person.fullName}</TableCell>
                     <TableCell>{person.roleLabel}</TableCell>
                     <TableCell>{therapyLabel(person.therapyNames, person.isPencatat)}</TableCell>
