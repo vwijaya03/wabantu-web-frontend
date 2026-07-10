@@ -7,6 +7,7 @@ export interface EventRow {
   eventName: string;
   eventSlug: string;
   eventDescription?: string;
+  cateringOrderNotes?: string;
   location?: string;
   startDate: string;
   endDate: string;
@@ -205,9 +206,12 @@ export interface EventDashboard {
 export interface PublicEventInfo {
   eventName: string;
   eventDescription?: string;
+  cateringOrderNotes?: string;
   location?: string;
   startDate: string;
   endDate: string;
+  startTime: string;
+  endTime: string;
   status: string;
   registrationOpen: boolean;
   message?: string;
@@ -219,9 +223,12 @@ export interface PublicEventInfo {
 export interface PublicStaffEventInfo {
   eventName: string;
   eventDescription?: string;
+  cateringOrderNotes?: string;
   location?: string;
   startDate: string;
   endDate: string;
+  startTime: string;
+  endTime: string;
   status: string;
   registrationOpen: boolean;
   message?: string;
@@ -257,6 +264,8 @@ export interface PublicStaffMonitorResponse {
   location?: string;
   startDate: string;
   endDate: string;
+  startTime: string;
+  endTime: string;
   therapyCapacity: { therapyId: string; therapyName: string; current: number; max: number }[];
   mealConsumptionCount: number;
   staff: PublicStaffMonitorPerson[];

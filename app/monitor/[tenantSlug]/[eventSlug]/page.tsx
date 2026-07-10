@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { eventsApi, type PublicStaffMonitorPerson } from "@/lib/api/events";
 import { toApiError } from "@/lib/api/client";
+import { formatEventDateTimeRange } from "@/lib/events-format";
 import type { ListSortState } from "@/lib/events-sort";
 
 const MONITOR_SORT_DEFAULT: ListSortState = { sortBy: "fullName", sortDir: "asc" };
@@ -106,9 +107,15 @@ export default function PublicStaffMonitorPage({
         <div>
           <h1 className="text-2xl font-semibold">{data.eventName}</h1>
           <p className="text-sm text-muted-foreground">
-            Pantau daftar staf · {data.startDate} — {data.endDate}
+            Pantau daftar staf ·{" "}
+            {formatEventDateTimeRange(data.startDate, data.startTime, data.endDate, data.endTime)}
             {data.location ? ` · ${data.location}` : ""}
           </p>
+          {data.eventDescription?.trim() ? (
+            <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+              {data.eventDescription.trim()}
+            </p>
+          ) : null}
         </div>
         <Button
           type="button"

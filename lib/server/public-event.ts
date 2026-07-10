@@ -1,4 +1,5 @@
 import type { PublicEventInfo, PublicStaffMonitorResponse } from "@/lib/api/events";
+import { formatEventDateTimeRange } from "@/lib/events-format";
 import { env } from "@/lib/env";
 
 type ApiEnvelope<T> = { success?: boolean; data?: T };
@@ -25,15 +26,20 @@ export function buildPublicMonitorTitle(eventName: string, tenantSlug: string): 
 }
 
 export function buildPublicMonitorDescription(
-  event: Pick<PublicStaffMonitorResponse, "location" | "startDate" | "endDate">,
+  event: Pick<
+    PublicStaffMonitorResponse,
+    "location" | "startDate" | "endDate" | "startTime" | "endTime"
+  >,
 ): string {
   const base = "Pantau kehadiran staf dan relawan acara secara real-time.";
   const parts: string[] = [];
-  if (event.startDate && event.endDate) {
-    parts.push(`${event.startDate} — ${event.endDate}`);
-  } else if (event.startDate) {
-    parts.push(event.startDate);
-  }
+  const when = formatEventDateTimeRange(
+    event.startDate,
+    event.startTime,
+    event.endDate,
+    event.endTime,
+  );
+  if (when !== "—") parts.push(when);
   if (event.location?.trim()) {
     parts.push(event.location.trim());
   }
@@ -84,10 +90,12 @@ export async function fetchPublicStaffMonitor(
 export function buildPublicEventDescription(event: PublicEventInfo): string {
   const parts = ["Pendaftaran pasien terapi"];
   if (event.location?.trim()) parts.push(event.location.trim());
-  if (event.startDate && event.endDate) {
-    parts.push(`${event.startDate} — ${event.endDate}`);
-  } else if (event.startDate) {
-    parts.push(event.startDate);
-  }
+  const when = formatEventDateTimeRange(
+    event.startDate,
+    event.startTime,
+    event.endDate,
+    event.endTime,
+  );
+  if (when !== "—") parts.push(when);
   return parts.join(" · ");
 }

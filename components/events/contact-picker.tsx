@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { contactsApi, type Contact } from "@/lib/api/contacts";
+import { formatEventDateId } from "@/lib/events-format";
 import { cn } from "@/lib/utils";
 
 export function ContactPicker({
@@ -82,7 +83,7 @@ export function ContactPicker({
                   <span className="font-medium">{c.displayName || c.phoneNumber}</span>
                   <span className="ml-2 text-xs text-muted-foreground">
                     {c.phoneNumber}
-                    {c.birthDate ? ` · ${c.birthDate}` : ""}
+                    {c.birthDate ? ` · ${formatEventDateId(c.birthDate)}` : ""}
                   </span>
                 </button>
               </li>

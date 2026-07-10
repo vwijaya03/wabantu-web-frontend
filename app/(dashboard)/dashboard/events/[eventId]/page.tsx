@@ -11,6 +11,7 @@ import { EventStaffTab } from "@/components/events/event-staff-tab";
 import { EventScheduleTab } from "@/components/events/event-schedule-tab";
 import { EventTherapySettingsTab } from "@/components/events/event-therapy-settings-tab";
 import { EventBreakFields } from "@/components/events/event-break-fields";
+import { EventCateringOrderPanel } from "@/components/events/event-catering-order-panel";
 import { EventExportJobsPanel } from "@/components/events/event-export-jobs-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,7 +45,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { eventsApi, type EventRow } from "@/lib/api/events";
+import { formatEventDateTimeRange } from "@/lib/events-format";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions, hasTenantDashboardAccess } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/errors";
@@ -381,9 +384,15 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
         <div>
           <h1 className="text-2xl font-semibold">{event.eventName}</h1>
           <p className="text-sm text-muted-foreground">
-            {event.startDate} — {event.endDate} · Status: {event.status}
+            {formatEventDateTimeRange(event.startDate, event.startTime, event.endDate, event.endTime)}
+            {" · "}Status: {event.status}
             {archived ? " · Hanya baca" : ""}
           </p>
+          {event.eventDescription?.trim() ? (
+            <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+              {event.eventDescription.trim()}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           {isOwner ? (
@@ -483,6 +492,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
                 </CardContent>
               </Card>
             </div>
+          ) : null}
+          {isOwner ? (
+            <EventCateringOrderPanel
+              eventId={eventId}
+              event={event}
+              tenantKey={tenantKey}
+              disabled={archived}
+            />
           ) : null}
           <p className="mt-2 text-xs text-muted-foreground">
             Kelola daftar lengkap di tab <button type="button" className="underline" onClick={() => setTab("people")}>Staf</button>.
@@ -603,6 +620,17 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
               <Input
                 value={editForm.location ?? ""}
                 onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Catatan acara</Label>
+              <Textarea
+                rows={4}
+                placeholder={
+                  "Contoh:\n- Makanan tanpa minyak dan tepung, tetapi tidak vegan\n- Sambal dipisah\n- Untuk makanannya Tono, hubungi langsung orangnya"
+                }
+                value={editForm.eventDescription ?? ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, eventDescription: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-2 gap-2">

@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -31,6 +32,7 @@ import { DataTablePagination } from "@/components/events/data-table-toolbar";
 import { ListSortControl } from "@/components/events/list-sort-control";
 import { EventBreakFields } from "@/components/events/event-break-fields";
 import { eventsApi, type EventRow } from "@/lib/api/events";
+import { formatEventDateTimeRange } from "@/lib/events-format";
 import { EVENT_LIST_SORT_DEFAULT, EVENT_LIST_SORT_OPTIONS } from "@/lib/events-sort";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions, hasTenantDashboardAccess } from "@/lib/api/auth";
@@ -57,6 +59,7 @@ export default function EventsListPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     eventName: "",
+    eventDescription: "",
     startDate: "",
     endDate: "",
     startTime: "09:00",
@@ -204,7 +207,7 @@ export default function EventsListPage() {
                   <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-xs">{ev.status}</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {ev.startDate} — {ev.endDate} · {ev.startTime}–{ev.endTime}
+                  {formatEventDateTimeRange(ev.startDate, ev.startTime, ev.endDate, ev.endTime)}
                 </p>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2 text-sm">
@@ -255,6 +258,17 @@ export default function EventsListPage() {
               <Input
                 value={form.eventName}
                 onChange={(e) => setForm((f) => ({ ...f, eventName: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Catatan acara</Label>
+              <Textarea
+                rows={4}
+                placeholder={
+                  "Contoh:\n- Makanan tanpa minyak dan tepung, tetapi tidak vegan\n- Sambal dipisah\n- Untuk makanannya Tono, hubungi langsung orangnya"
+                }
+                value={form.eventDescription}
+                onChange={(e) => setForm((f) => ({ ...f, eventDescription: e.target.value }))}
               />
             </div>
             <div className="space-y-2">
