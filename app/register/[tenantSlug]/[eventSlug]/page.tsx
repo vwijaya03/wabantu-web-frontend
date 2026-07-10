@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { eventsApi } from "@/lib/api/events";
+import { formatEventDateTimeRange } from "@/lib/events-format";
 import { formatBirthDateInput, parseBirthDateDdMmYyyy } from "@/lib/date-format";
 
 const BIRTH_DATE_HINT = "Gunakan format tanggal 17/08/1993";
@@ -127,7 +128,7 @@ export default function PublicRegisterPage({
           {data.location ? ` · ${data.location}` : ""}
         </p>
         <p className="text-xs text-muted-foreground">
-          {data.startDate} — {data.endDate}
+          {formatEventDateTimeRange(data.startDate, data.startTime, data.endDate, data.endTime)}
         </p>
       </div>
 
