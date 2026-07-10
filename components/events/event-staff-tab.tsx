@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { TimePicker } from "@/components/ui/time-picker";
 import { Label } from "@/components/ui/label";
 import {
@@ -92,6 +93,7 @@ type StaffForm = {
   isPencatat: boolean;
   countsTowardMeals: boolean;
   saveToRoster: boolean;
+  notes: string;
   arrivalTime: string;
   departureTime: string;
   availableFrom: string;
@@ -108,6 +110,7 @@ const emptyForm = (): StaffForm => ({
   isPencatat: false,
   countsTowardMeals: true,
   saveToRoster: true,
+  notes: "",
   arrivalTime: "",
   departureTime: "",
   availableFrom: "",
@@ -125,6 +128,7 @@ function personToForm(p: EventPerson): StaffForm {
     isPencatat: p.isPencatat ?? false,
     countsTowardMeals: p.countsTowardMeals ?? true,
     saveToRoster: true,
+    notes: p.notes ?? "",
     arrivalTime: p.arrivalTime?.slice(0, 5) ?? "",
     departureTime: p.departureTime?.slice(0, 5) ?? "",
     availableFrom: p.availableFrom?.slice(0, 5) ?? "",
@@ -139,6 +143,7 @@ function StaffFormFields({
   roles,
   roster,
   showRosterPick,
+  isEditing,
 }: {
   form: StaffForm;
   setForm: React.Dispatch<React.SetStateAction<StaffForm>>;
@@ -146,6 +151,7 @@ function StaffFormFields({
   roles: { id: string; roleName: string }[];
   roster: { id: string; fullName: string; role?: string; therapyNames?: string[] }[];
   showRosterPick: boolean;
+  isEditing: boolean;
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
@@ -268,6 +274,17 @@ function StaffFormFields({
               Pencatat
             </label>
           </div>
+          {isEditing ? (
+            <div className="sm:col-span-2">
+              <Label>Catatan</Label>
+              <Textarea
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="Info tambahan untuk relawan ini"
+                rows={3}
+              />
+            </div>
+          ) : null}
         </>
       ) : null}
       <div>
@@ -312,6 +329,7 @@ function buildPayload(form: StaffForm, editing: boolean) {
     therapyIds: roleUsesTherapies(form.role) ? form.therapyIds : undefined,
     volunteerRoleId: form.role === "relawan" ? form.volunteerRoleId || undefined : undefined,
     isPencatat: form.role === "relawan" ? form.isPencatat : undefined,
+    notes: editing && form.role === "relawan" ? form.notes : undefined,
     countsTowardMeals: form.countsTowardMeals,
     arrivalTime: form.arrivalTime || undefined,
     departureTime: form.departureTime || undefined,
@@ -720,6 +738,7 @@ export function EventStaffTab({
             roles={roles}
             roster={roster}
             showRosterPick={!editing}
+            isEditing={!!editing}
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
