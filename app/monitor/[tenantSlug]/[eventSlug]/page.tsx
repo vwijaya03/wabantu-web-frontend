@@ -26,13 +26,22 @@ function therapyLabel(names: string[] | null | undefined, isPencatat: boolean) {
   return isPencatat ? `${base} · Pencatat` : base;
 }
 
+function monitorRoleLabel(person: PublicStaffMonitorPerson) {
+  const roleName = person.volunteerRoleName?.trim();
+  if (!roleName) {
+    return person.roleLabel;
+  }
+  const base = person.roleLabel.trim() || "Relawan";
+  return `${base} · ${roleName}`;
+}
+
 function sortMonitorStaff(staff: PublicStaffMonitorPerson[], sort: ListSortState) {
   const dir = sort.sortDir === "asc" ? 1 : -1;
   return [...staff].sort((a, b) => {
     let cmp = 0;
     switch (sort.sortBy) {
       case "roleLabel":
-        cmp = a.roleLabel.localeCompare(b.roleLabel, "id");
+        cmp = monitorRoleLabel(a).localeCompare(monitorRoleLabel(b), "id");
         break;
       case "therapy":
         cmp = therapyLabel(a.therapyNames, a.isPencatat).localeCompare(
@@ -182,7 +191,7 @@ export default function PublicStaffMonitorPage({
                 sortedStaff.map((person, index) => (
                   <TableRow key={`${person.fullName}-${person.roleLabel}-${index}`}>
                     <TableCell className="font-medium">{person.fullName}</TableCell>
-                    <TableCell>{person.roleLabel}</TableCell>
+                    <TableCell>{monitorRoleLabel(person)}</TableCell>
                     <TableCell>{therapyLabel(person.therapyNames, person.isPencatat)}</TableCell>
                     <TableCell className="text-center">
                       {person.countsTowardMeals ? (

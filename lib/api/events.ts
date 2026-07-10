@@ -56,6 +56,8 @@ export interface EventPerson {
   therapyIds?: string[];
   therapyNames?: string[];
   volunteerRoleId?: string;
+  /** Nama peran relawan (opsional; dari API bila tersedia). */
+  volunteerRoleName?: string;
   isPencatat?: boolean;
   countsTowardMeals?: boolean;
   availableFrom?: string;
@@ -241,6 +243,8 @@ export interface PublicSlotOption {
 export interface PublicStaffMonitorPerson {
   fullName: string;
   roleLabel: string;
+  /** Nama peran relawan dari DB (opsional; butuh API terbaru). */
+  volunteerRoleName?: string;
   therapyNames?: string[] | null;
   isPencatat: boolean;
   countsTowardMeals: boolean;
