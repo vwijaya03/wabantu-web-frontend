@@ -34,7 +34,7 @@ export function PortfolioPaymentMockup() {
             </div>
 
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <div className="rounded-lg border border-neutral-200/80 bg-white p-3">
                   <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
                     Amount
@@ -71,11 +71,11 @@ export function PortfolioPaymentMockup() {
               <p className="text-xs text-neutral-500">
                 Transfer date: {demoPaymentProof.transferDate}
               </p>
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" className="rounded-full">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <Button size="sm" className="w-full rounded-full sm:w-auto">
                   Verify payment
                 </Button>
-                <Button size="sm" variant="outline" className="rounded-full">
+                <Button size="sm" variant="outline" className="w-full rounded-full sm:w-auto">
                   Reject
                 </Button>
               </div>

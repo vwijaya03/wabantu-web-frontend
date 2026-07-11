@@ -27,7 +27,7 @@ export function PortfolioDashboardChrome({
 }: PortfolioDashboardChromeProps) {
   return (
     <div
-      className={`overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-[0_20px_60px_-24px_rgba(0,0,0,0.25)] ${
+      className={`max-w-full overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-[0_20px_60px_-24px_rgba(0,0,0,0.25)] ${
         compact ? "text-[11px]" : "text-sm"
       }`}
     >

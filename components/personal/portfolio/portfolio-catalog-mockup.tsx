@@ -46,40 +46,61 @@ export function PortfolioCatalogMockup() {
             Daftar produk ({demoCatalogItems.length})
           </p>
           <div className="overflow-hidden rounded-xl border border-neutral-200/80 bg-white">
-            <div className="grid grid-cols-[1.4fr_0.8fr_0.8fr] gap-2 border-b border-neutral-200/80 bg-neutral-50/80 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+            <div className="hidden grid-cols-[1.4fr_0.8fr_0.8fr] gap-2 border-b border-neutral-200/80 bg-neutral-50/80 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-neutral-500 md:grid">
               <span>Produk</span>
               <span>SKU</span>
               <span className="text-right">Harga</span>
             </div>
             <div className="divide-y divide-neutral-200/60">
               {demoCatalogItems.map((item) => (
-                <div
-                  key={item.sku}
-                  className="grid grid-cols-[1.4fr_0.8fr_0.8fr] gap-2 px-4 py-3"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-neutral-900">{item.name}</p>
+                <div key={item.sku}>
+                  <div className="hidden grid-cols-[1.4fr_0.8fr_0.8fr] gap-2 px-4 py-3 md:grid">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-neutral-900">{item.name}</p>
+                        <Badge
+                          variant={item.isActive ? "success" : "secondary"}
+                          className="text-[10px]"
+                        >
+                          {item.isActive ? "Aktif" : "Nonaktif"}
+                        </Badge>
+                      </div>
+                      {item.description ? (
+                        <p className="mt-1 line-clamp-2 text-xs text-neutral-500">
+                          {item.description}
+                        </p>
+                      ) : null}
+                    </div>
+                    <p className="font-mono text-xs text-neutral-600">{item.sku}</p>
+                    <p className="text-right font-medium text-neutral-900">
+                      {formatPortfolioRupiah(item.price)}
+                      <span className="block text-xs font-normal text-neutral-500">
+                        / {item.unit}
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 px-4 py-3 md:hidden">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-neutral-900">{item.name}</p>
+                        <p className="font-mono text-xs text-neutral-600">{item.sku}</p>
+                      </div>
                       <Badge
                         variant={item.isActive ? "success" : "secondary"}
-                        className="text-[10px]"
+                        className="shrink-0 text-[10px]"
                       >
                         {item.isActive ? "Aktif" : "Nonaktif"}
                       </Badge>
                     </div>
                     {item.description ? (
-                      <p className="mt-1 line-clamp-2 text-xs text-neutral-500">
-                        {item.description}
-                      </p>
+                      <p className="line-clamp-2 text-xs text-neutral-500">{item.description}</p>
                     ) : null}
+                    <p className="font-medium text-neutral-900">
+                      {formatPortfolioRupiah(item.price)}
+                      <span className="text-xs font-normal text-neutral-500"> / {item.unit}</span>
+                    </p>
                   </div>
-                  <p className="font-mono text-xs text-neutral-600">{item.sku}</p>
-                  <p className="text-right font-medium text-neutral-900">
-                    {formatPortfolioRupiah(item.price)}
-                    <span className="block text-xs font-normal text-neutral-500">
-                      / {item.unit}
-                    </span>
-                  </p>
                 </div>
               ))}
             </div>

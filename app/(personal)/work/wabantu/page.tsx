@@ -120,10 +120,8 @@ export default function WabantuPortfolioPage() {
                     {surface.title}
                   </h3>
                   <p className="mt-2 max-w-2xl text-neutral-600">{surface.description}</p>
-                  <div className="mt-6 overflow-x-auto">
-                    <div className="min-w-[720px]">
-                      <Mockup />
-                    </div>
+                  <div className="mt-6 max-w-full">
+                    <Mockup />
                   </div>
                 </article>
               );

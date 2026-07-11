@@ -12,8 +12,12 @@ export function PortfolioInboxMockup({ compact = false }: PortfolioInboxMockupPr
 
   return (
     <PortfolioDashboardChrome activeNav="inbox" compact={compact}>
-      <div className={`grid h-full ${compact ? "grid-cols-1" : "grid-cols-[minmax(0,280px)_1fr]"}`}>
-        <div className="border-b border-neutral-200/80 bg-neutral-50/50 sm:border-b-0 sm:border-r">
+      <div
+        className={`grid h-full ${
+          compact ? "grid-cols-1" : "grid-cols-1 md:grid-cols-[minmax(0,280px)_1fr]"
+        }`}
+      >
+        <div className="border-b border-neutral-200/80 bg-neutral-50/50 md:border-b-0 md:border-r">
           <div className="border-b border-neutral-200/80 px-3 py-3">
             <p className="font-semibold text-neutral-900">Inbox</p>
             <p className="text-xs text-neutral-500">3 conversations</p>
