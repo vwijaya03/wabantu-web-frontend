@@ -1,7 +1,5 @@
-import Link from "next/link";
-
 import { PortfolioInboxMockup } from "@/components/personal/portfolio/portfolio-inbox-mockup";
-import { wabantuAuthor, wabantuHero } from "@/lib/portfolio/wabantu";
+import { wabantuHero } from "@/lib/portfolio/wabantu";
 
 export function PortfolioHero() {
   return (
@@ -26,12 +24,6 @@ export function PortfolioHero() {
             >
               {wabantuHero.ctaProductLabel}
             </a>
-            <Link
-              href={wabantuAuthor.resumeHref}
-              className="inline-flex rounded-full border border-neutral-300 px-6 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-50"
-            >
-              View resume
-            </Link>
           </div>
         </div>
 

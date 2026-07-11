@@ -15,7 +15,7 @@ export type PortfolioHighlight = {
 };
 
 export const wabantuHero = {
-  eyebrow: "Independent product · Case study",
+  eyebrow: "Pitch deck · Live product",
   title: "WABantu",
   subtitle: "WhatsApp AI that helps Indonesian SMBs answer customers, take orders, and verify payments — without hiring extra staff.",
   ctaProduct: "https://wabantu-web-frontend.vercel.app",
@@ -131,5 +131,4 @@ export const wabantuScopeNote =
 
 export const wabantuAuthor = {
   name: "Viko Wijaya",
-  resumeHref: "/resume",
 };

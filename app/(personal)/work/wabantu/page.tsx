@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import {
   Bot,
   CreditCard,
@@ -29,12 +28,12 @@ import "@/styles/portfolio.css";
 const capabilityIcons = [Bot, ShoppingCart, UserRound, CreditCard, Radio];
 
 export const metadata: Metadata = {
-  title: "WABantu — Case Study by Viko Wijaya",
+  title: "WABantu — Pitch Deck",
   description:
-    "Case study: WABantu — WhatsApp AI commerce for Indonesian SMBs. Catalog answers, guided orders, payment proof verification, and multi-tenant architecture.",
+    "WABantu pitch deck — WhatsApp AI commerce for Indonesian SMBs. Catalog answers, guided orders, payment proof verification, and multi-tenant architecture.",
   robots: { index: true, follow: true },
   openGraph: {
-    title: "WABantu — Case Study by Viko Wijaya",
+    title: "WABantu — Pitch Deck",
     description:
       "WhatsApp AI that turns conversations into catalog answers, orders, and verified payments.",
     type: "article",
@@ -171,12 +170,6 @@ export default function WabantuPortfolioPage() {
             >
               {wabantuHero.ctaProductLabel}
             </a>
-            <Link
-              href={wabantuAuthor.resumeHref}
-              className="inline-flex rounded-full border border-neutral-300 px-6 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-50"
-            >
-              Back to resume
-            </Link>
           </div>
         </div>
       </section>
