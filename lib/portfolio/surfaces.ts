@@ -9,7 +9,7 @@ export type PortfolioSurfaceConfig = {
   id: string;
   title: string;
   description: string;
-  Mockup: ComponentType;
+  Mockup: ComponentType<{ deck?: boolean }>;
 };
 
 export const portfolioSurfaces: PortfolioSurfaceConfig[] = [
@@ -31,7 +31,7 @@ export const portfolioSurfaces: PortfolioSurfaceConfig[] = [
     id: "catalog",
     title: "Catalog",
     description:
-      "Product form and list view — the data source for accurate quotes and order matching in chat.",
+      "Product form and list view, the data source for accurate quotes and order matching in chat.",
     Mockup: PortfolioCatalogMockup,
   },
   {

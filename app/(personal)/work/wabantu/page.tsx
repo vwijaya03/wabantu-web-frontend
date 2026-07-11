@@ -9,18 +9,21 @@ import {
 } from "lucide-react";
 
 import { PortfolioArchitectureDiagram } from "@/components/personal/portfolio/portfolio-architecture-diagram";
+import { PortfolioExportBar } from "@/components/personal/portfolio/portfolio-export-bar";
 import { PortfolioFlowDiagram } from "@/components/personal/portfolio/portfolio-flow-diagram";
+import { PortfolioIconBox } from "@/components/personal/portfolio/portfolio-icon-box";
 import { PortfolioHero } from "@/components/personal/portfolio/portfolio-hero";
 import { PortfolioTechStack } from "@/components/personal/portfolio/portfolio-tech-stack";
 import { portfolioSurfaces } from "@/lib/portfolio/surfaces";
 import {
-  wabantuAuthor,
   wabantuCapabilities,
   wabantuHero,
   wabantuHighlights,
+  wabantuExplore,
   wabantuProblem,
   wabantuScopeNote,
   wabantuSolution,
+  wabantuSurfacesIntro,
 } from "@/lib/portfolio/wabantu";
 
 import "@/styles/portfolio.css";
@@ -28,12 +31,12 @@ import "@/styles/portfolio.css";
 const capabilityIcons = [Bot, ShoppingCart, UserRound, CreditCard, Radio];
 
 export const metadata: Metadata = {
-  title: "WABantu — Pitch Deck",
+  title: "WABantu · Portfolio",
   description:
-    "WABantu pitch deck — WhatsApp AI commerce for Indonesian SMBs. Catalog answers, guided orders, payment proof verification, and multi-tenant architecture.",
+    "WABantu learning project and portfolio. WhatsApp AI commerce for Indonesian SMBs with catalog answers, guided orders, payment proof verification, and multi-tenant architecture.",
   robots: { index: true, follow: true },
   openGraph: {
-    title: "WABantu — Pitch Deck",
+    title: "WABantu · Portfolio",
     description:
       "WhatsApp AI that turns conversations into catalog answers, orders, and verified payments.",
     type: "article",
@@ -43,6 +46,7 @@ export const metadata: Metadata = {
 export default function WabantuPortfolioPage() {
   return (
     <div className="portfolio-page font-[family-name:var(--font-portfolio)]">
+      <PortfolioExportBar />
       <PortfolioHero />
 
       <section className="portfolio-section border-t border-neutral-100 px-4 py-20 sm:px-6">
@@ -89,9 +93,7 @@ export default function WabantuPortfolioPage() {
                   key={cap.title}
                   className="rounded-2xl border border-neutral-200/80 bg-white p-6 shadow-sm"
                 >
-                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100">
-                    <Icon className="h-5 w-5 text-neutral-700" strokeWidth={1.5} />
-                  </div>
+                  <PortfolioIconBox Icon={Icon} variant="capability" className="mb-3" />
                   <h3 className="text-lg font-semibold text-neutral-900">{cap.title}</h3>
                   <p className="mt-2 leading-relaxed text-neutral-600">{cap.description}</p>
                 </div>
@@ -107,8 +109,7 @@ export default function WabantuPortfolioPage() {
             Product surfaces
           </h2>
           <p className="mt-4 max-w-2xl text-lg text-neutral-600">
-            UI mockups recreated from production dashboard patterns — dummy data only, no tenant
-            login required.
+            {wabantuSurfacesIntro}
           </p>
           <div className="mt-12 space-y-16">
             {portfolioSurfaces.map((surface) => {
@@ -156,10 +157,10 @@ export default function WabantuPortfolioPage() {
       <section className="portfolio-section border-t border-neutral-100 px-4 py-24 sm:px-6">
         <div className="mx-auto max-w-[980px] text-center">
           <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-            Explore the product
+            {wabantuExplore.title}
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-lg text-neutral-600">
-            Built by {wabantuAuthor.name} as an independent full-stack product.
+            {wabantuExplore.subtitle}
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <a

@@ -1,12 +1,4 @@
-import { wabantuArchitecture } from "@/lib/portfolio/wabantu";
-
-const layers = [
-  { id: "whatsapp", label: "WhatsApp Cloud API", sub: "Inbound webhooks" },
-  { id: "encore", label: "Encore services", sub: "Auth, inbox, orders, jobs" },
-  { id: "postgres", label: "PostgreSQL", sub: "System + t_* tenant schemas" },
-  { id: "redis", label: "Redis", sub: "Sessions, SSE, rate limits" },
-  { id: "dashboard", label: "Next.js dashboard", sub: "Vercel" },
-];
+import { wabantuArchitecture, wabantuArchitectureLayers } from "@/lib/portfolio/wabantu";
 
 export function PortfolioArchitectureDiagram() {
   return (
@@ -18,7 +10,7 @@ export function PortfolioArchitectureDiagram() {
 
         <div className="mt-10 max-w-full">
           <div className="flex flex-col items-stretch gap-3 rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-sm sm:p-6 md:flex-row md:items-center md:justify-between">
-            {layers.map((layer, index) => (
+            {wabantuArchitectureLayers.map((layer, index) => (
               <div
                 key={layer.id}
                 className="flex flex-col items-center gap-2 md:flex-1 md:flex-row md:gap-3"
@@ -27,7 +19,7 @@ export function PortfolioArchitectureDiagram() {
                   <p className="text-sm font-semibold text-neutral-900">{layer.label}</p>
                   <p className="mt-1 text-[11px] text-neutral-500">{layer.sub}</p>
                 </div>
-                {index < layers.length - 1 ? (
+                {index < wabantuArchitectureLayers.length - 1 ? (
                   <span aria-hidden className="text-neutral-300 md:shrink-0">
                     <span className="md:hidden">↓</span>
                     <span className="hidden md:inline">→</span>

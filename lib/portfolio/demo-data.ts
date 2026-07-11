@@ -93,7 +93,7 @@ export const demoMessages: DemoMessage[] = [
     id: "m2",
     direction: "out",
     author: "ai",
-    body: "Yes — Linen Shirt (L) is in stock. Would you like to order?",
+    body: "Yes, Linen Shirt (L) is in stock. Would you like to order?",
   },
   {
     id: "m3",

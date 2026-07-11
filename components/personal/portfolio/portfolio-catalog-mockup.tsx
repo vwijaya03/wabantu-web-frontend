@@ -5,13 +5,22 @@ import {
   formatPortfolioRupiah,
 } from "@/lib/portfolio/demo-data";
 
-export function PortfolioCatalogMockup() {
+export function PortfolioCatalogMockup({ deck = false }: { deck?: boolean }) {
   const featured = demoCatalogItems[0];
+  const items = deck ? demoCatalogItems.slice(0, 2) : demoCatalogItems;
 
   return (
-    <PortfolioDashboardChrome activeNav="catalog">
-      <div className="grid gap-0 lg:grid-cols-[minmax(0,300px)_1fr]">
-        <div className="border-b border-neutral-200/80 bg-white p-4 lg:border-b-0 lg:border-r">
+    <PortfolioDashboardChrome activeNav="catalog" deck={deck}>
+      <div
+        className={`grid gap-0 ${
+          deck ? "grid-cols-[minmax(0,220px)_1fr]" : "lg:grid-cols-[minmax(0,300px)_1fr]"
+        }`}
+      >
+        <div
+          className={`border-b border-neutral-200/80 bg-white p-4 ${
+            deck ? "border-b-0 border-r p-3" : "lg:border-b-0 lg:border-r"
+          }`}
+        >
           <p className="mb-3 font-semibold text-neutral-900">Tambah produk</p>
           <div className="space-y-3">
             <div>
@@ -41,20 +50,28 @@ export function PortfolioCatalogMockup() {
           </div>
         </div>
 
-        <div className="p-4">
-          <p className="mb-3 font-semibold text-neutral-900">
-            Daftar produk ({demoCatalogItems.length})
+        <div className={deck ? "p-3" : "p-4"}>
+          <p className={`font-semibold text-neutral-900 ${deck ? "mb-2" : "mb-3"}`}>
+            Daftar produk ({items.length})
           </p>
           <div className="overflow-hidden rounded-xl border border-neutral-200/80 bg-white">
-            <div className="hidden grid-cols-[1.4fr_0.8fr_0.8fr] gap-2 border-b border-neutral-200/80 bg-neutral-50/80 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-neutral-500 md:grid">
+            <div
+              className={`grid grid-cols-[1.4fr_0.8fr_0.8fr] gap-2 border-b border-neutral-200/80 bg-neutral-50/80 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-neutral-500 ${
+                deck ? "" : "hidden md:grid"
+              }`}
+            >
               <span>Produk</span>
               <span>SKU</span>
               <span className="text-right">Harga</span>
             </div>
             <div className="divide-y divide-neutral-200/60">
-              {demoCatalogItems.map((item) => (
+              {items.map((item) => (
                 <div key={item.sku}>
-                  <div className="hidden grid-cols-[1.4fr_0.8fr_0.8fr] gap-2 px-4 py-3 md:grid">
+                  <div
+                    className={`grid grid-cols-[1.4fr_0.8fr_0.8fr] gap-2 px-4 py-3 ${
+                      deck ? "" : "hidden md:grid"
+                    }`}
+                  >
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-neutral-900">{item.name}</p>
@@ -80,6 +97,7 @@ export function PortfolioCatalogMockup() {
                     </p>
                   </div>
 
+                  {deck ? null : (
                   <div className="space-y-2 px-4 py-3 md:hidden">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -101,6 +119,7 @@ export function PortfolioCatalogMockup() {
                       <span className="text-xs font-normal text-neutral-500"> / {item.unit}</span>
                     </p>
                   </div>
+                  )}
                 </div>
               ))}
             </div>
