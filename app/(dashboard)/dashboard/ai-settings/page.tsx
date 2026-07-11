@@ -62,7 +62,7 @@ const schema = z.object({
   aiEnabled: z.boolean(),
   reportingTimezone: reportingTimezoneEnum,
   paymentVerificationMode: z.enum(["manual", "auto_verify"]),
-  paymentAutoVerifyMinConfidence: z.number().min(0).max(1),
+  paymentAutoVerifyMinConfidence: z.number().min(0).max(0.99),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -213,17 +213,20 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
                     .
                   </div>
                   <Field
-                    label="Confidence minimum auto-verify (0–1)"
+                    label="Confidence minimum auto-verify (0–0.99)"
                     error={errors.paymentAutoVerifyMinConfidence?.message}
                   >
                     <Input
                       id="payment-auto-confidence"
                       type="number"
                       min={0}
-                      max={1}
+                      max={0.99}
                       step={0.01}
                       {...register("paymentAutoVerifyMinConfidence", { valueAsNumber: true })}
                     />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Rekomendasi 0.95. Nilai 1 atau terlalu tinggi membuat auto-verify hampir tidak pernah lolos.
+                    </p>
                   </Field>
                 </>
               ) : null}
@@ -473,7 +476,10 @@ function toFormValues(p: BusinessProfile): FormValues {
     tone: p.tone,
     aiEnabled: p.aiEnabled,
     paymentVerificationMode: p.paymentVerificationMode ?? "manual",
-    paymentAutoVerifyMinConfidence: p.paymentAutoVerifyMinConfidence ?? 0.95,
+    paymentAutoVerifyMinConfidence:
+      p.paymentAutoVerifyMinConfidence != null && p.paymentAutoVerifyMinConfidence < 1
+        ? p.paymentAutoVerifyMinConfidence
+        : 0.95,
     reportingTimezone: isReportingTimezoneId(tzRaw)
       ? tzRaw
       : DEFAULT_REPORTING_TIMEZONE_UI,

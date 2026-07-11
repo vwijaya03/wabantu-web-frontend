@@ -71,7 +71,7 @@ const NON_TEXT_LABELS: Record<string, { icon: typeof FileText; label: string }> 
 
 export function InboxMessageBubble({ message }: { message: InboxMessage }) {
   const isOut = message.direction === "out";
-  const isSystem = message.author === "system";
+  const isSystem = message.author === "system" && !isOut;
   const body = message.body?.trim() ?? "";
   const nonText = NON_TEXT_LABELS[message.type];
 
