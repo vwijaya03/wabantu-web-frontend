@@ -23,10 +23,10 @@ import { PromptDialog } from "@/components/dashboard/prompt-dialog";
 import {
   PAYMENT_STATUSES,
   PaymentProofPanel,
-  paymentStatusBadgeLabel,
   paymentStatusBadgeVariant,
   paymentStatusHint,
 } from "@/components/orders/payment-proof-panel";
+import { isPaymentProofDoubtful, paymentProofListBadgeLabel } from "@/lib/payment-proof";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -857,9 +857,13 @@ export default function OrdersPage() {
                       <Badge variant={statusBadgeVariant(order.status)}>{statusLabel(order.status)}</Badge>
                       <Badge
                         variant={paymentStatusBadgeVariant(order.paymentStatus)}
-                        title={paymentStatusHint(order.paymentStatus)}
+                        title={
+                          isPaymentProofDoubtful(order.paymentStatus, order.paymentProofMeta?.flags)
+                            ? "OCR/AI tidak yakin — verifikasi manual diperlukan"
+                            : paymentStatusHint(order.paymentStatus)
+                        }
                       >
-                        {paymentStatusBadgeLabel(order.paymentStatus)}
+                        {paymentProofListBadgeLabel(order.paymentStatus, order.paymentProofMeta?.flags)}
                       </Badge>
                     </div>
                     <div>

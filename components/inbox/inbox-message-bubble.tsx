@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { FileText, MapPin, Mic, Video } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { inboxApi, type InboxMessage } from "@/lib/api/inbox";
 import { formatOrderNumber } from "@/lib/format-order-number";
 import { cn } from "@/lib/utils";
@@ -10,6 +11,7 @@ import { cn } from "@/lib/utils";
 function InboxMessageImage({ messageId, alt, className }: { messageId: string; alt?: string; className?: string }) {
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -38,9 +40,28 @@ function InboxMessageImage({ messageId, alt, className }: { messageId: string; a
   if (!src) {
     return <p className="text-xs text-muted-foreground">Memuat gambar…</p>;
   }
+  const imageAlt = alt || "Gambar WhatsApp";
+
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- blob URL from authenticated API
-    <img src={src} alt={alt || "Gambar WhatsApp"} className={cn("max-h-64 rounded-md object-contain", className)} />
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element -- blob URL from authenticated API */}
+      <img
+        src={src}
+        alt={imageAlt}
+        className={cn("max-h-64 cursor-pointer rounded-md object-contain", className)}
+        onClick={() => setLightboxOpen(true)}
+      />
+      <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+        <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-[100vw] max-w-[100vw] items-center justify-center border-0 bg-black/90 p-4 shadow-none sm:rounded-none [&>button]:text-white [&>button]:opacity-80 [&>button]:hover:opacity-100">
+          <DialogTitle className="sr-only">{imageAlt}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Pratinjau gambar pesan WhatsApp dalam layar penuh
+          </DialogDescription>
+          {/* eslint-disable-next-line @next/next/no-img-element -- same blob URL as thumbnail */}
+          <img src={src} alt={imageAlt} className="max-h-[90dvh] max-w-[90vw] object-contain" />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -53,7 +74,7 @@ const NON_TEXT_LABELS: Record<string, { icon: typeof FileText; label: string }> 
 
 export function InboxMessageBubble({ message }: { message: InboxMessage }) {
   const isOut = message.direction === "out";
-  const isSystem = message.author === "system";
+  const isSystem = message.author === "system" && !isOut;
   const body = message.body?.trim() ?? "";
   const nonText = NON_TEXT_LABELS[message.type];
 

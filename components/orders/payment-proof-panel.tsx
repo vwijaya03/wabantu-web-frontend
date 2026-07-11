@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { inboxApi } from "@/lib/api/inbox";
 import type { Order } from "@/lib/api/orders";
 import { cn } from "@/lib/utils";
+import {
+  formatPaymentProofFlags,
+  isPaymentProofDoubtful,
+  paymentProofPanelHint,
+} from "@/lib/payment-proof";
 
 function formatRupiah(value: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(
@@ -161,15 +166,33 @@ export function PaymentProofPanel({
   const showReverify = canManage && status === "rejected" && hasProof;
   const showUnblock = canManage && proofBlocked && onUnblock != null;
   const showMeta = hasPaymentMetaContent(order);
+  const doubtful = isPaymentProofDoubtful(status, meta?.flags);
+  const doubtReasons = formatPaymentProofFlags(meta?.flags);
 
   return (
     <div className="mb-6 rounded-lg border p-4">
       <div className={cn("rounded-lg border px-4 py-3", paymentStatusBannerClass(status))}>
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-semibold">Bukti transfer</p>
-          <Badge variant={paymentStatusBadgeVariant(status)}>{paymentStatusBadgeLabel(status)}</Badge>
+          <Badge variant={paymentStatusBadgeVariant(status)}>
+            {doubtful ? "Diragukan AI" : paymentStatusBadgeLabel(status)}
+          </Badge>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">{paymentStatusHint(status)}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{paymentProofPanelHint(status, meta?.flags)}</p>
+        {doubtful ? (
+          <div className="mt-3 rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm">
+            <p className="font-medium text-amber-900 dark:text-amber-100">
+              Pembayaran diragukan — hasil OCR/AI tidak lolos auto-verify
+            </p>
+            {doubtReasons.length > 0 ? (
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-muted-foreground">
+                {doubtReasons.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
         {proofBlocked ? (
           <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
             <p className="font-medium text-amber-800 dark:text-amber-200">
@@ -214,7 +237,9 @@ export function PaymentProofPanel({
               <MetaRow label="Keyakinan OCR">{(meta.confidence * 100).toFixed(0)}%</MetaRow>
             ) : null}
             {meta?.flags && meta.flags.length > 0 ? (
-              <MetaRow label="Catatan sistem">{meta.flags.join(", ")}</MetaRow>
+              <MetaRow label="Catatan sistem">
+                <span className="text-muted-foreground">{formatPaymentProofFlags(meta.flags).join(" · ")}</span>
+              </MetaRow>
             ) : null}
           </div>
         </div>
