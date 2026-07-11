@@ -34,6 +34,7 @@ export default function PublicStaffRegisterPage({
     volunteerRoleId: "",
     phone: "",
     notes: "",
+    countsTowardMeals: true,
   });
   const [done, setDone] = useState(false);
 
@@ -53,6 +54,7 @@ export default function PublicStaffRegisterPage({
         volunteerRoleId: form.role === "relawan" ? form.volunteerRoleId : undefined,
         phone: form.phone || undefined,
         notes: form.notes || undefined,
+        countsTowardMeals: form.countsTowardMeals,
       }),
     onSuccess: () => setDone(true),
     onError: (e) => toast.error(toApiError(e).message),
@@ -99,6 +101,7 @@ export default function PublicStaffRegisterPage({
       volunteerRoleId: "",
       phone: "",
       notes: "",
+      countsTowardMeals: true,
     });
     setDone(false);
   };
@@ -204,6 +207,14 @@ export default function PublicStaffRegisterPage({
               <Label>Catatan (opsional)</Label>
               <Textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.countsTowardMeals}
+                onChange={(e) => setForm((f) => ({ ...f, countsTowardMeals: e.target.checked }))}
+              />
+              Dihitung untuk konsumsi (makan)
+            </label>
             <Button
               className="w-full"
               disabled={

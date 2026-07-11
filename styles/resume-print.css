@@ -1,0 +1,63 @@
+/* ATS-friendly print stylesheet for /resume */
+
+@media print {
+  @page {
+    margin: 0.6in;
+    size: letter;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11pt;
+    line-height: 1.35;
+  }
+
+  .print\:hidden,
+  header,
+  .resume-export-bar {
+    display: none !important;
+  }
+
+  .resume-classic {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .resume-header {
+    border-bottom-color: #000 !important;
+  }
+
+  .resume-section-title {
+    color: #000 !important;
+    page-break-after: avoid;
+  }
+
+  article {
+    page-break-inside: avoid;
+  }
+
+  a {
+    color: #000 !important;
+    text-decoration: none !important;
+  }
+
+  .resume-contact-list a {
+    pointer-events: none;
+  }
+
+  .resume-contact-value,
+  .resume-contact-label {
+    color: #000 !important;
+  }
+
+  h1,
+  h2,
+  h3,
+  p,
+  li {
+    color: #000 !important;
+  }
+}

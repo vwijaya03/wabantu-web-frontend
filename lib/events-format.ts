@@ -1,3 +1,8 @@
+import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+
+import { parseDateValue } from "@/lib/date-format";
+
 const ID_MONTHS = [
   "Januari",
   "Februari",
@@ -24,6 +29,44 @@ export function formatEventDateId(value: string | null | undefined): string {
   const year = parseInt(m[1], 10);
   if (month < 1 || month > 12) return raw;
   return `${day} ${ID_MONTHS[month - 1]} ${year}`;
+}
+
+/** ISO date → "Minggu, 12 Juli 2026" */
+export function formatEventDateIdWithWeekday(value: string | null | undefined): string {
+  const d = parseDateValue((value ?? "").trim());
+  if (!d) return formatEventDateId(value);
+  return format(d, "EEEE, d MMMM yyyy", { locale: idLocale });
+}
+
+/**
+ * Event schedule label → "12 Juli 2026 09:00 — 17:00" (same day)
+ * or "12 Juli 2026 09:00 — 13 Juli 2026 17:00" (multi-day).
+ */
+export function formatEventDateTimeRange(
+  startDate?: string | null,
+  startTime?: string | null,
+  endDate?: string | null,
+  endTime?: string | null,
+): string {
+  const sd = (startDate ?? "").trim();
+  const ed = (endDate ?? "").trim() || sd;
+  const st = formatEventTimeHm(startTime);
+  const et = formatEventTimeHm(endTime);
+  const startPart = formatEventDateId(sd);
+  const endPart = formatEventDateId(ed);
+  if (startPart === "—") return "—";
+  if (!st && !et) {
+    if (sd === ed || !ed) return startPart;
+    return `${startPart} — ${endPart}`;
+  }
+  if (sd === ed || startPart === endPart) {
+    if (st && et) return `${startPart} ${st} — ${et}`;
+    if (st) return `${startPart} ${st}`;
+    return startPart;
+  }
+  const startFull = st ? `${startPart} ${st}` : startPart;
+  const endFull = et ? `${endPart} ${et}` : endPart;
+  return `${startFull} — ${endFull}`;
 }
 
 export function formatEventTimeHm(value: string | null | undefined): string {

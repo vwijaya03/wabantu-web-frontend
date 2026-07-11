@@ -29,6 +29,9 @@ const ignoredDirs = new Set([
   "build",
 ]);
 
+// Agent-only markdown — not product docs (avoids raw HTML comment blocks in /dashboard/docs).
+const ignoredFiles = new Set(["AGENTS.md", "CLAUDE.md"]);
+
 function listMarkdownFiles(dir) {
   const entries = readdirSync(dir).sort((a, b) => a.localeCompare(b));
   const files = [];
@@ -41,7 +44,7 @@ function listMarkdownFiles(dir) {
       }
       continue;
     }
-    if (entry.toLowerCase().endsWith(".md")) {
+    if (entry.toLowerCase().endsWith(".md") && !ignoredFiles.has(entry)) {
       files.push(fullPath);
     }
   }
@@ -124,10 +127,14 @@ function slugify(value, index) {
   return slug || `section-${index + 1}`;
 }
 
+function stripHtmlComments(content) {
+  return content.replace(/<!--[\s\S]*?-->/g, "").trim();
+}
+
 function createDoc(source, filePath) {
   const relativePath = path.relative(source.root, filePath).replaceAll(path.sep, "/");
   const stat = statSync(filePath);
-  const content = readFileSync(filePath, "utf8");
+  const content = stripHtmlComments(readFileSync(filePath, "utf8"));
   const title = titleFromMarkdown(content, path.basename(filePath));
   const text = plainText(content);
   const id = createHash("sha1").update(`${source.key}:${relativePath}`).digest("hex").slice(0, 12);

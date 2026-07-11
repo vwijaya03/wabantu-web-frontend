@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { FileText, MapPin, Mic, Video } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { inboxApi, type InboxMessage } from "@/lib/api/inbox";
 import { formatOrderNumber } from "@/lib/format-order-number";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,9 @@ function InboxMessageImage({ messageId, alt, className }: { messageId: string; a
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
         <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-[100vw] max-w-[100vw] items-center justify-center border-0 bg-black/90 p-4 shadow-none sm:rounded-none [&>button]:text-white [&>button]:opacity-80 [&>button]:hover:opacity-100">
           <DialogTitle className="sr-only">{imageAlt}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Pratinjau gambar pesan WhatsApp dalam layar penuh
+          </DialogDescription>
           {/* eslint-disable-next-line @next/next/no-img-element -- same blob URL as thumbnail */}
           <img src={src} alt={imageAlt} className="max-h-[90dvh] max-w-[90vw] object-contain" />
         </DialogContent>

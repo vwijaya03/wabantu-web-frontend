@@ -11,6 +11,7 @@ import { EventStaffTab } from "@/components/events/event-staff-tab";
 import { EventScheduleTab } from "@/components/events/event-schedule-tab";
 import { EventTherapySettingsTab } from "@/components/events/event-therapy-settings-tab";
 import { EventBreakFields } from "@/components/events/event-break-fields";
+import { EventCateringOrderPanel } from "@/components/events/event-catering-order-panel";
 import { EventExportJobsPanel } from "@/components/events/event-export-jobs-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,7 +45,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { eventsApi, type EventRow } from "@/lib/api/events";
+import { formatEventDateTimeRange } from "@/lib/events-format";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions, hasTenantDashboardAccess } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/errors";
@@ -91,6 +94,7 @@ function EventPublicRegistrationCard({
 }) {
   const patientPath = tenantSlug ? `/register/${tenantSlug}/${eventSlug}` : "";
   const staffPath = tenantSlug ? `/register/${tenantSlug}/${eventSlug}/staff` : "";
+  const monitorPath = tenantSlug ? `/monitor/${tenantSlug}/${eventSlug}` : "";
   const published = status === "PUBLISHED";
 
   const copyLink = async (path: string, label: string) => {
@@ -162,11 +166,28 @@ function EventPublicRegistrationCard({
                 </Button>
               ) : null}
             </div>
+            {published && monitorPath ? (
+              <>
+                <p className="pt-2 text-sm font-medium">Pantau daftar staf</p>
+                <code className="block break-all rounded-md bg-muted px-3 py-2 text-xs">{monitorPath}</code>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void copyLink(monitorPath, "Link pantau staf disalin")}
+                  >
+                    Salin link pantau
+                  </Button>
+                </div>
+              </>
+            ) : null}
           </>
         ) : null}
         <p className="text-xs text-muted-foreground">
-          Format: <span className="font-mono">/register/{"{slug-toko}"}/{"{slug-acara}"}</span> · slug
-          acara ini: <strong>{eventSlug}</strong>
+          Format: <span className="font-mono">/register/{"{slug-toko}"}/{"{slug-acara}"}</span> · pantau staf:{" "}
+          <span className="font-mono">/monitor/{"{slug-toko}"}/{"{slug-acara}"}</span> · slug acara ini:{" "}
+          <strong>{eventSlug}</strong>
         </p>
       </CardContent>
     </Card>
@@ -198,6 +219,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   const [scheduleDate, setScheduleDate] = useState("");
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
 
+  const tabNeedsDashboard = tab === "dashboard";
+  const tabNeedsSchedule = tab === "schedule";
+  const tabNeedsTherapySettings = tab === "therapy";
+  const tabNeedsTherapies = tab === "patients" || tab === "people" || tab === "schedule";
+  const tabNeedsRoles = tab === "people";
+
   const {
     data: event,
     isError: eventLoadError,
@@ -209,13 +236,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
     queryFn: ({ signal }) => eventsApi.getEvent(eventId, signal),
     enabled: eventQueriesEnabled,
   });
-  const { data: dashboard } = useQuery({
+  const { data: dashboard, isPending: dashboardPending } = useQuery({
     queryKey: eventDashboardKey(tenantKey, eventId),
     queryFn: ({ signal }) => eventsApi.getDashboard(eventId, signal),
-    enabled: eventQueriesEnabled,
+    enabled: eventQueriesEnabled && tabNeedsDashboard,
   });
 
-  const { data: schedule } = useQuery({
+  const { data: schedule, isPending: schedulePending } = useQuery({
     queryKey: eventScheduleKey(tenantKey, eventId, scheduleTherapy, scheduleDate),
     queryFn: ({ signal }) =>
       eventsApi.getSchedule(
@@ -226,22 +253,22 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
         },
         signal,
       ),
-    enabled: eventQueriesEnabled,
+    enabled: eventQueriesEnabled && tabNeedsSchedule,
   });
-  const { data: therapySettings } = useQuery({
+  const { data: therapySettings, isPending: therapySettingsPending } = useQuery({
     queryKey: eventTherapySettingsKey(tenantKey, eventId),
     queryFn: () => eventsApi.listEventTherapySettings(eventId),
-    enabled: eventQueriesEnabled,
+    enabled: eventQueriesEnabled && tabNeedsTherapySettings,
   });
   const { data: therapies } = useQuery({
     queryKey: eventTherapiesMasterKey(tenantKey),
     queryFn: () => eventsApi.listTherapies({ activeOnly: true, pageSize: 100 }),
-    enabled: eventQueriesEnabled,
+    enabled: eventQueriesEnabled && tabNeedsTherapies,
   });
   const { data: roles } = useQuery({
     queryKey: eventRolesMasterKey(tenantKey),
     queryFn: () => eventsApi.listVolunteerRoles({ pageSize: 100 }),
-    enabled: eventQueriesEnabled,
+    enabled: eventQueriesEnabled && tabNeedsRoles,
   });
 
   const archived = event?.status === "ARCHIVED";
@@ -357,9 +384,15 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
         <div>
           <h1 className="text-2xl font-semibold">{event.eventName}</h1>
           <p className="text-sm text-muted-foreground">
-            {event.startDate} — {event.endDate} · Status: {event.status}
+            {formatEventDateTimeRange(event.startDate, event.startTime, event.endDate, event.endTime)}
+            {" · "}Status: {event.status}
             {archived ? " · Hanya baca" : ""}
           </p>
+          {event.eventDescription?.trim() ? (
+            <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+              {event.eventDescription.trim()}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           {isOwner ? (
@@ -424,7 +457,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
 
       {tab === "dashboard" ? (
         <div className="mt-4">
-          {!dashboard && (
+          {dashboardPending && (
             <p className="mb-2 text-sm text-muted-foreground">Memuat ringkasan...</p>
           )}
           {dashboard ? (
@@ -459,6 +492,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
                 </CardContent>
               </Card>
             </div>
+          ) : null}
+          {isOwner ? (
+            <EventCateringOrderPanel
+              eventId={eventId}
+              event={event}
+              tenantKey={tenantKey}
+              disabled={archived}
+            />
           ) : null}
           <p className="mt-2 text-xs text-muted-foreground">
             Kelola daftar lengkap di tab <button type="button" className="underline" onClick={() => setTab("people")}>Staf</button>.
@@ -509,26 +550,35 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
       ) : null}
 
       {tab === "therapy" ? (
-        <EventTherapySettingsTab
-          eventId={eventId}
-          canEdit={isOwner && !archived}
-          settings={therapySettings?.items ?? []}
-          eventBreak={
-            event?.breakStartTime && event?.breakEndTime
-              ? {
-                  start: event.breakStartTime.slice(0, 5),
-                  end: event.breakEndTime.slice(0, 5),
-                }
-              : undefined
-          }
-          onSaved={() => {
-            void qc.invalidateQueries({ queryKey: eventTherapySettingsKey(tenantKey, eventId) });
-          }}
-        />
+        <div className="mt-4">
+          {therapySettingsPending ? (
+            <p className="mb-2 text-sm text-muted-foreground">Memuat pengaturan terapi...</p>
+          ) : null}
+          <EventTherapySettingsTab
+            eventId={eventId}
+            canEdit={isOwner && !archived}
+            settings={therapySettings?.items ?? []}
+            eventBreak={
+              event?.breakStartTime && event?.breakEndTime
+                ? {
+                    start: event.breakStartTime.slice(0, 5),
+                    end: event.breakEndTime.slice(0, 5),
+                  }
+                : undefined
+            }
+            onSaved={() => {
+              void qc.invalidateQueries({ queryKey: eventTherapySettingsKey(tenantKey, eventId) });
+            }}
+          />
+        </div>
       ) : null}
 
       {tab === "schedule" ? (
-        <EventScheduleTab
+        <div className="mt-4">
+          {schedulePending ? (
+            <p className="mb-2 text-sm text-muted-foreground">Memuat jadwal...</p>
+          ) : null}
+          <EventScheduleTab
           canEdit={isOwner && !archived}
           therapies={therapies?.items ?? []}
           scheduleTherapy={scheduleTherapy}
@@ -546,6 +596,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
           deleteSlotPending={deleteSlotMut.isPending}
           deleteBulkPending={deleteSlotsBulkMut.isPending}
         />
+        </div>
       ) : null}
 
       <EventExportJobsPanel eventId={eventId} className="mt-6" />
@@ -569,6 +620,17 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
               <Input
                 value={editForm.location ?? ""}
                 onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Catatan acara</Label>
+              <Textarea
+                rows={4}
+                placeholder={
+                  "Contoh:\n- Makanan tanpa minyak dan tepung, tetapi tidak vegan\n- Sambal dipisah\n- Untuk makanannya Tono, hubungi langsung orangnya"
+                }
+                value={editForm.eventDescription ?? ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, eventDescription: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-2 gap-2">

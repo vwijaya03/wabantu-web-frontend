@@ -7,6 +7,7 @@ export interface EventRow {
   eventName: string;
   eventSlug: string;
   eventDescription?: string;
+  cateringOrderNotes?: string;
   location?: string;
   startDate: string;
   endDate: string;
@@ -56,7 +57,10 @@ export interface EventPerson {
   therapyIds?: string[];
   therapyNames?: string[];
   volunteerRoleId?: string;
+  /** Nama peran relawan (opsional; dari API bila tersedia). */
+  volunteerRoleName?: string;
   isPencatat?: boolean;
+  countsTowardMeals?: boolean;
   availableFrom?: string;
   availableUntil?: string;
   createdAt?: string;
@@ -76,6 +80,7 @@ export type UpsertEventPersonBody = {
   therapyIds?: string[];
   volunteerRoleId?: string;
   isPencatat?: boolean;
+  countsTowardMeals?: boolean;
   availableFrom?: string;
   availableUntil?: string;
 };
@@ -201,9 +206,12 @@ export interface EventDashboard {
 export interface PublicEventInfo {
   eventName: string;
   eventDescription?: string;
+  cateringOrderNotes?: string;
   location?: string;
   startDate: string;
   endDate: string;
+  startTime: string;
+  endTime: string;
   status: string;
   registrationOpen: boolean;
   message?: string;
@@ -215,9 +223,12 @@ export interface PublicEventInfo {
 export interface PublicStaffEventInfo {
   eventName: string;
   eventDescription?: string;
+  cateringOrderNotes?: string;
   location?: string;
   startDate: string;
   endDate: string;
+  startTime: string;
+  endTime: string;
   status: string;
   registrationOpen: boolean;
   message?: string;
@@ -234,6 +245,30 @@ export interface PublicSlotOption {
   endTime: string;
   label: string;
   available: number;
+}
+
+export interface PublicStaffMonitorPerson {
+  fullName: string;
+  roleLabel: string;
+  /** Nama peran relawan dari DB (opsional; butuh API terbaru). */
+  volunteerRoleName?: string;
+  therapyNames?: string[] | null;
+  isPencatat: boolean;
+  countsTowardMeals: boolean;
+  notes?: string;
+}
+
+export interface PublicStaffMonitorResponse {
+  eventName: string;
+  eventDescription?: string;
+  location?: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  therapyCapacity: { therapyId: string; therapyName: string; current: number; max: number }[];
+  mealConsumptionCount: number;
+  staff: PublicStaffMonitorPerson[];
 }
 
 /** Maksimum baris per export PDF (harus selaras dengan api-go/events). */
@@ -518,6 +553,11 @@ export const eventsApi = {
       .get<PublicStaffEventInfo>(`/public/events/${tenantSlug}/register/${eventSlug}/staff`)
       .then((r) => r.data),
 
+  getPublicStaffMonitor: (tenantSlug: string, eventSlug: string) =>
+    api
+      .get<PublicStaffMonitorResponse>(`/public/events/${tenantSlug}/monitor/${eventSlug}`)
+      .then((r) => r.data),
+
   postPublicStaffRegistration: (
     tenantSlug: string,
     eventSlug: string,
@@ -528,6 +568,7 @@ export const eventsApi = {
       volunteerRoleId?: string;
       phone?: string;
       notes?: string;
+      countsTowardMeals?: boolean;
     },
   ) =>
     api
