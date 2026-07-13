@@ -267,6 +267,7 @@ export default function AdminAITriagePage() {
   const [scanTo, setScanTo] = useState(defaultScanWindow().to);
   const [scanConversationId, setScanConversationId] = useState("");
   const [activeLLMScanId, setActiveLLMScanId] = useState<string | null>(null);
+  const [llmShowOnlyFlagged, setLlmShowOnlyFlagged] = useState(false);
 
   const { data: tenantsData, isLoading: tenantsLoading } = useQuery({
     queryKey: ["admin-tenants"],
@@ -385,20 +386,24 @@ export default function AdminAITriagePage() {
 
   const flaggedFindings =
     llmScanData?.scan.findings?.filter((f) => f.flagged) ?? [];
+  const allFindings = llmScanData?.scan.findings ?? [];
+  const displayedFindings = llmShowOnlyFlagged ? flaggedFindings : allFindings;
 
   const runLLMScan = () => {
     if (!effectiveTenantId) {
       toast.error("Pilih tenant terlebih dahulu");
       return;
     }
-    if (!scanFrom || !scanTo) {
-      toast.error("Isi rentang waktu");
+    if (!scanFrom) {
+      toast.error("Isi rentang waktu dari");
       return;
     }
+    const nowTo = formatDatetimeLocal(new Date());
+    setScanTo(nowTo);
     createLLMScanMut.mutate({
       tenantId: effectiveTenantId,
       from: toRFC3339(scanFrom),
-      to: toRFC3339(scanTo),
+      to: toRFC3339(nowTo),
       conversationId: scanConversationId.trim() || undefined,
     });
   };
@@ -599,6 +604,9 @@ export default function AdminAITriagePage() {
                   value={scanTo}
                   onChange={(e) => setScanTo(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Otomatis di-set ke waktu sekarang saat scan dimulai.
+                </p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">
@@ -634,17 +642,48 @@ export default function AdminAITriagePage() {
                 {llmScanData.scan.errorText ? (
                   <p className="text-sm text-destructive">{llmScanData.scan.errorText}</p>
                 ) : null}
-                {llmScanData.scan.status === "done" && flaggedFindings.length === 0 ? (
+                {llmScanData.scan.status === "done" && allFindings.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Tidak ada balasan yang diflag bermasalah pada rentang ini.
+                    Tidak ada turn AI dalam rentang ini.
                   </p>
                 ) : null}
-                {flaggedFindings.length > 0 ? (
+                {llmScanData.scan.status === "done" &&
+                allFindings.length > 0 &&
+                flaggedFindings.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {allFindings.length} turn dipindai — tidak ada yang diflag bermasalah.
+                  </p>
+                ) : null}
+                {allFindings.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant={llmShowOnlyFlagged ? "outline" : "secondary"}
+                        size="sm"
+                        onClick={() => setLlmShowOnlyFlagged(false)}
+                      >
+                        Semua turn ({allFindings.length})
+                      </Button>
+                      <Button
+                        variant={llmShowOnlyFlagged ? "secondary" : "outline"}
+                        size="sm"
+                        onClick={() => setLlmShowOnlyFlagged(true)}
+                      >
+                        Hanya flagged ({flaggedFindings.length})
+                      </Button>
+                    </div>
+                    {displayedFindings.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        Tidak ada baris flagged — gunakan &quot;Semua turn&quot; untuk melihat hasil
+                        penuh.
+                      </p>
+                    ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[900px] text-left text-sm">
+                    <table className="w-full min-w-[960px] text-left text-sm">
                       <thead>
                         <tr className="border-b text-muted-foreground">
                           <th className="pb-2 pr-3 font-medium">Waktu</th>
+                          <th className="pb-2 pr-3 font-medium">Status</th>
                           <th className="pb-2 pr-3 font-medium">Severity</th>
                           <th className="pb-2 pr-3 font-medium">Pesan masuk</th>
                           <th className="pb-2 pr-3 font-medium">Balasan AI</th>
@@ -653,10 +692,21 @@ export default function AdminAITriagePage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {flaggedFindings.map((f) => (
-                          <tr key={f.id} className="border-b border-border/60 align-top">
+                        {displayedFindings.map((f) => (
+                          <tr
+                            key={f.id}
+                            className={cn(
+                              "border-b border-border/60 align-top",
+                              f.flagged && "bg-destructive/5",
+                            )}
+                          >
                             <td className="py-2 pr-3 text-xs whitespace-nowrap">
                               {formatTime(f.inboundAt)}
+                            </td>
+                            <td className="py-2 pr-3">
+                              <Badge variant={f.flagged ? "destructive" : "outline"}>
+                                {f.flagged ? "Flagged" : "OK"}
+                              </Badge>
                             </td>
                             <td className="py-2 pr-3">
                               <Badge variant={severityVariant(f.severity)}>
@@ -673,6 +723,7 @@ export default function AdminAITriagePage() {
                               {f.reason || "—"}
                             </td>
                             <td className="py-2">
+                              {f.flagged ? (
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -682,11 +733,16 @@ export default function AdminAITriagePage() {
                                 <Play className="mr-1 h-3.5 w-3.5" />
                                 Jalankan loop
                               </Button>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                    )}
                   </div>
                 ) : null}
               </div>
