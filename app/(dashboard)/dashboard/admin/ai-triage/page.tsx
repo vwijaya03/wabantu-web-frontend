@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ExternalLink, Loader2, Play, Sparkles } from "lucide-react";
+import { Copy, ExternalLink, Loader2, Play, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -125,9 +125,33 @@ function isJobActive(status: AITriageJobStatus): boolean {
   return status === "pending" || status === "running";
 }
 
-function truncateId(id: string, len = 8): string {
-  if (id.length <= len) return id;
-  return `${id.slice(0, len)}…`;
+function CopyableMono({ value, label }: { value: string; label: string }) {
+  if (!value) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} disalin`);
+    } catch {
+      toast.error("Gagal menyalin");
+    }
+  };
+  return (
+    <div className="flex items-start gap-1">
+      <code className="max-w-[240px] break-all text-[11px] leading-snug">{value}</code>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 shrink-0"
+        onClick={copy}
+        title={`Salin ${label}`}
+      >
+        <Copy className="h-3 w-3" />
+      </Button>
+    </div>
+  );
 }
 
 function JobStatusPanel({ job }: { job: AITriageJob }) {
@@ -143,7 +167,7 @@ function JobStatusPanel({ job }: { job: AITriageJob }) {
           <Badge variant={jobStatusVariant(job.status)}>{jobStatusLabel(job.status)}</Badge>
         </div>
         <CardDescription>
-          Job <span className="font-mono">{truncateId(job.id, 12)}</span>
+          Job <CopyableMono value={job.id} label="Job ID" />
           {isJobActive(job.status) ? " — memperbarui otomatis setiap 3 detik" : null}
         </CardDescription>
       </CardHeader>
@@ -204,8 +228,8 @@ function JobStatusPanel({ job }: { job: AITriageJob }) {
             <p className="text-xs font-medium text-muted-foreground">Detail mismatch</p>
             {deterministicMismatches.slice(0, 5).map((m) => (
               <div key={m.inboundId} className="rounded border px-3 py-2 text-xs">
-                <p className="font-mono text-muted-foreground">{truncateId(m.inboundId, 12)}</p>
-                <p className="mt-1 line-clamp-2">{m.userText || "—"}</p>
+                <CopyableMono value={m.inboundId} label="Inbound ID" />
+                <p className="mt-1 whitespace-pre-wrap break-words">{m.userText || "—"}</p>
                 <p className="mt-1">
                   <Badge variant="outline" className="mr-1">
                     {m.actualPath || "—"}
@@ -475,35 +499,41 @@ export default function AdminAITriagePage() {
                 Belum ada aktivitas AI 1 jam terakhir untuk tenant ini.
               </p>
             ) : (
-              <table className="w-full min-w-[800px] text-left text-sm">
+              <table className="w-full min-w-[1100px] text-left text-sm">
                 <thead>
                   <tr className="border-b text-muted-foreground">
                     <th className="pb-2 pr-3 font-medium">Waktu</th>
+                    <th className="pb-2 pr-3 font-medium">Pesan masuk</th>
                     <th className="pb-2 pr-3 font-medium">Path</th>
                     <th className="pb-2 pr-3 font-medium">Reason</th>
-                    <th className="pb-2 pr-3 font-medium">Conversation</th>
-                    <th className="pb-2 pr-3 font-medium">Inbound</th>
+                    <th className="pb-2 pr-3 font-medium">Conversation ID</th>
+                    <th className="pb-2 pr-3 font-medium">Inbound ID</th>
                     <th className="pb-2 pr-3 font-medium">Review</th>
                     <th className="pb-2 font-medium">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(anomaliesData?.anomalies ?? []).map((row, i) => (
-                    <tr key={`${row.createdAt}-${row.inboundId ?? i}`} className="border-b border-border/60">
+                    <tr key={`${row.createdAt}-${row.inboundId ?? i}`} className="border-b border-border/60 align-top">
                       <td className="py-2 pr-3 whitespace-nowrap text-xs">
                         {formatTime(row.createdAt)}
+                      </td>
+                      <td className="py-2 pr-3 max-w-[280px] text-xs whitespace-pre-wrap break-words">
+                        {row.userText || (
+                          <span className="text-muted-foreground italic">Tidak tersedia</span>
+                        )}
                       </td>
                       <td className="py-2 pr-3">
                         <Badge variant="outline">{row.path || "—"}</Badge>
                       </td>
-                      <td className="py-2 pr-3 max-w-[200px] truncate text-xs text-muted-foreground">
+                      <td className="py-2 pr-3 max-w-[160px] text-xs text-muted-foreground whitespace-pre-wrap break-words">
                         {row.reason || "—"}
                       </td>
-                      <td className="py-2 pr-3 font-mono text-xs">
-                        {row.conversationId ? truncateId(row.conversationId, 12) : "—"}
+                      <td className="py-2 pr-3">
+                        <CopyableMono value={row.conversationId ?? ""} label="Conversation ID" />
                       </td>
-                      <td className="py-2 pr-3 font-mono text-xs">
-                        {row.inboundId ? truncateId(row.inboundId, 12) : "—"}
+                      <td className="py-2 pr-3">
+                        <CopyableMono value={row.inboundId ?? ""} label="Inbound ID" />
                       </td>
                       <td className="py-2 pr-3">
                         {row.reviewSuggested ? (
