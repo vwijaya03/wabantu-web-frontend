@@ -199,6 +199,9 @@ export default function AdminPage() {
         <Button variant="outline" asChild>
           <Link href="/dashboard/admin/ai-activity">Log aktivitas AI →</Link>
         </Button>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard/admin/ai-triage">AI Triage Loop →</Link>
+        </Button>
         <Button
           variant="secondary"
           disabled={migrateMut.isPending || !!activeJobId}
