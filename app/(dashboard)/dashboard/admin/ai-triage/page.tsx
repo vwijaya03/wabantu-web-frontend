@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Copy, ExternalLink, Loader2, Play } from "lucide-react";
+import { Copy, ExternalLink, Loader2, Play, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,55 @@ import {
   type AITriageAnomaly,
   type AITriageJob,
   type AITriageJobStatus,
+  type AITriageLLMFinding,
+  type AITriageLLMScanStatus,
 } from "@/lib/api/ai-triage";
 import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
-const TRIAGE_TABS = ["mencurigakan", "investigasi"] as const;
+const TRIAGE_TABS = ["mencurigakan", "ai-review", "investigasi"] as const;
 type TriageTabId = (typeof TRIAGE_TABS)[number];
+
+function formatDatetimeLocal(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function defaultScanWindow(): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date(to.getTime() - 60 * 60 * 1000);
+  return { from: formatDatetimeLocal(from), to: formatDatetimeLocal(to) };
+}
+
+function toRFC3339(dtLocal: string): string {
+  return new Date(dtLocal).toISOString();
+}
+
+function llmScanStatusLabel(status: AITriageLLMScanStatus): string {
+  switch (status) {
+    case "pending":
+      return "Menunggu";
+    case "running":
+      return "Memindai";
+    case "done":
+      return "Selesai";
+    case "failed":
+      return "Gagal";
+    default:
+      return status;
+  }
+}
+
+function severityVariant(severity?: string): "default" | "secondary" | "destructive" | "outline" {
+  switch (severity?.toLowerCase()) {
+    case "high":
+      return "destructive";
+    case "medium":
+      return "secondary";
+    default:
+      return "outline";
+  }
+}
 
 function parseTriageTab(value: string | null): TriageTabId {
   if (value && TRIAGE_TABS.includes(value as TriageTabId)) {
@@ -220,6 +263,10 @@ export default function AdminAITriagePage() {
   const [conversationId, setConversationId] = useState(searchParams.get("conversationId") ?? "");
   const [inboundId, setInboundId] = useState(searchParams.get("inboundId") ?? "");
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [scanFrom, setScanFrom] = useState(defaultScanWindow().from);
+  const [scanTo, setScanTo] = useState(defaultScanWindow().to);
+  const [scanConversationId, setScanConversationId] = useState("");
+  const [activeLLMScanId, setActiveLLMScanId] = useState<string | null>(null);
 
   const { data: tenantsData, isLoading: tenantsLoading } = useQuery({
     queryKey: ["admin-tenants"],
@@ -249,6 +296,32 @@ export default function AdminAITriagePage() {
     refetchInterval: (query) => {
       const status = query.state.data?.job.status;
       return status && isJobActive(status) ? 3000 : false;
+    },
+  });
+
+  const { data: llmScanData } = useQuery({
+    queryKey: ["admin-ai-triage-llm-scan", activeLLMScanId],
+    queryFn: () => aiTriageAdminApi.getLLMScan(activeLLMScanId!),
+    enabled: user?.role === "super_admin" && Boolean(activeLLMScanId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.scan.status;
+      return status === "pending" || status === "running" ? 3000 : false;
+    },
+  });
+
+  const createLLMScanMut = useMutation({
+    mutationFn: aiTriageAdminApi.createLLMScan,
+    onSuccess: (res) => {
+      setActiveLLMScanId(res.scan.id);
+      toast.success("Scan AI dimulai");
+    },
+    onError: (e) => {
+      const err = toApiError(e);
+      if (err.code === "resource_exhausted") {
+        toast.error("Antrian scan penuh — maks. 2 bersamaan");
+        return;
+      }
+      toast.error(err.message);
     },
   });
 
@@ -305,6 +378,38 @@ export default function AdminAITriagePage() {
     createJobMut.isPending ||
     (jobData?.job != null && isJobActive(jobData.job.status));
 
+  const llmScanBusy =
+    createLLMScanMut.isPending ||
+    (llmScanData?.scan != null &&
+      (llmScanData.scan.status === "pending" || llmScanData.scan.status === "running"));
+
+  const flaggedFindings =
+    llmScanData?.scan.findings?.filter((f) => f.flagged) ?? [];
+
+  const runLLMScan = () => {
+    if (!effectiveTenantId) {
+      toast.error("Pilih tenant terlebih dahulu");
+      return;
+    }
+    if (!scanFrom || !scanTo) {
+      toast.error("Isi rentang waktu");
+      return;
+    }
+    createLLMScanMut.mutate({
+      tenantId: effectiveTenantId,
+      from: toRFC3339(scanFrom),
+      to: toRFC3339(scanTo),
+      conversationId: scanConversationId.trim() || undefined,
+    });
+  };
+
+  const runLoopFromFinding = (f: AITriageLLMFinding) => {
+    runLoop({
+      conversationId: f.conversationId,
+      inboundId: f.inboundId,
+    });
+  };
+
   if (user?.role !== "super_admin") {
     return (
       <PageHeader
@@ -359,6 +464,7 @@ export default function AdminAITriagePage() {
         {(
           [
             ["mencurigakan", "Mencurigakan"],
+            ["ai-review", "AI Review"],
             ["investigasi", "Investigasi"],
           ] as const
         ).map(([id, label]) => (
@@ -458,6 +564,133 @@ export default function AdminAITriagePage() {
                 </tbody>
               </table>
             )}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {tab === "ai-review" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              AI Review (LLM judge)
+            </CardTitle>
+            <CardDescription>
+              Pindai pasangan pesan masuk + balasan AI dalam rentang waktu (maks. 6 jam, 30 turn).
+              Haiku menilai apakah balasan bermasalah — tidak menggantikan loop routing deterministik.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Dari</p>
+                <input
+                  type="datetime-local"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={scanFrom}
+                  onChange={(e) => setScanFrom(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Sampai</p>
+                <input
+                  type="datetime-local"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={scanTo}
+                  onChange={(e) => setScanTo(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Conversation ID (opsional)
+                </p>
+                <Input
+                  value={scanConversationId}
+                  onChange={(e) => setScanConversationId(e.target.value)}
+                  placeholder="Batasi ke satu percakapan"
+                  className="font-mono text-sm"
+                />
+              </div>
+            </div>
+            <Button disabled={llmScanBusy} onClick={runLLMScan}>
+              {createLLMScanMut.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              Scan dengan AI
+            </Button>
+
+            {llmScanData?.scan ? (
+              <div className="rounded-md border p-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-medium">Status scan:</span>
+                  <Badge variant="outline">{llmScanStatusLabel(llmScanData.scan.status)}</Badge>
+                  <span className="text-muted-foreground">
+                    {llmScanData.scan.turnsChecked} turn · {llmScanData.scan.findingsCount} flagged
+                    · {llmScanData.scan.inputTokens + llmScanData.scan.outputTokens} token
+                  </span>
+                </div>
+                {llmScanData.scan.errorText ? (
+                  <p className="text-sm text-destructive">{llmScanData.scan.errorText}</p>
+                ) : null}
+                {llmScanData.scan.status === "done" && flaggedFindings.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Tidak ada balasan yang diflag bermasalah pada rentang ini.
+                  </p>
+                ) : null}
+                {flaggedFindings.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[900px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b text-muted-foreground">
+                          <th className="pb-2 pr-3 font-medium">Waktu</th>
+                          <th className="pb-2 pr-3 font-medium">Severity</th>
+                          <th className="pb-2 pr-3 font-medium">Pesan masuk</th>
+                          <th className="pb-2 pr-3 font-medium">Balasan AI</th>
+                          <th className="pb-2 pr-3 font-medium">Alasan</th>
+                          <th className="pb-2 font-medium">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {flaggedFindings.map((f) => (
+                          <tr key={f.id} className="border-b border-border/60 align-top">
+                            <td className="py-2 pr-3 text-xs whitespace-nowrap">
+                              {formatTime(f.inboundAt)}
+                            </td>
+                            <td className="py-2 pr-3">
+                              <Badge variant={severityVariant(f.severity)}>
+                                {f.severity || "—"} · {f.category || "—"}
+                              </Badge>
+                            </td>
+                            <td className="py-2 pr-3 max-w-[200px] text-xs whitespace-pre-wrap break-words">
+                              {f.userText || "—"}
+                            </td>
+                            <td className="py-2 pr-3 max-w-[240px] text-xs whitespace-pre-wrap break-words">
+                              {f.replyText || "—"}
+                            </td>
+                            <td className="py-2 pr-3 max-w-[200px] text-xs text-muted-foreground">
+                              {f.reason || "—"}
+                            </td>
+                            <td className="py-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={loopBusy}
+                                onClick={() => runLoopFromFinding(f)}
+                              >
+                                <Play className="mr-1 h-3.5 w-3.5" />
+                                Jalankan loop
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
