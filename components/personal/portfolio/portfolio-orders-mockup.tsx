@@ -26,11 +26,11 @@ const paymentVariant: Record<string, "warning" | "success" | "destructive" | "se
   rejected: "destructive",
 };
 
-export function PortfolioOrdersMockup() {
+export function PortfolioOrdersMockup({ deck = false }: { deck?: boolean }) {
   return (
-    <PortfolioDashboardChrome activeNav="orders">
-      <div className="p-4">
-        <div className="mb-4 flex items-center justify-between">
+    <PortfolioDashboardChrome activeNav="orders" deck={deck}>
+      <div className={deck ? "p-3" : "p-4"}>
+        <div className={`flex items-center justify-between ${deck ? "mb-2" : "mb-4"}`}>
           <div>
             <p className="font-semibold text-neutral-900">Daftar pesanan</p>
             <p className="text-xs text-neutral-500">{demoOrders.length} orders shown</p>
@@ -38,7 +38,11 @@ export function PortfolioOrdersMockup() {
         </div>
 
         <div className="overflow-hidden rounded-xl border border-neutral-200/80 bg-white">
-          <div className="hidden grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-2 border-b border-neutral-200/80 bg-neutral-50/80 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-neutral-500 md:grid">
+          <div
+            className={`grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-2 border-b border-neutral-200/80 bg-neutral-50/80 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-neutral-500 ${
+              deck ? "" : "hidden md:grid"
+            }`}
+          >
             <span>Pesanan</span>
             <span>Pembeli</span>
             <span>Status</span>
@@ -47,7 +51,11 @@ export function PortfolioOrdersMockup() {
           <div className="divide-y divide-neutral-200/60">
             {demoOrders.map((order) => (
               <div key={order.id}>
-                <div className="hidden grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-2 px-4 py-3 md:grid">
+                <div
+                  className={`grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-2 px-4 py-3 ${
+                    deck ? "" : "hidden md:grid"
+                  }`}
+                >
                   <div>
                     <p className="font-medium text-neutral-900">
                       {order.orderNumber}
@@ -86,6 +94,7 @@ export function PortfolioOrdersMockup() {
                   </div>
                 </div>
 
+                {deck ? null : (
                 <div className="space-y-3 px-4 py-3 md:hidden">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -124,6 +133,7 @@ export function PortfolioOrdersMockup() {
                     </Badge>
                   </div>
                 </div>
+                )}
               </div>
             ))}
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
@@ -40,17 +40,22 @@ function buildCateringMessage(
   return lines.join("\n");
 }
 
-export function EventCateringOrderPanel({ eventId, event, tenantKey, disabled }: Props) {
+export function EventCateringOrderPanel(props: Props) {
+  return (
+    <EventCateringOrderPanelInner
+      key={`${props.eventId}:${props.event.cateringOrderNotes ?? ""}`}
+      {...props}
+    />
+  );
+}
+
+function EventCateringOrderPanelInner({ eventId, event, tenantKey, disabled }: Props) {
   const qc = useQueryClient();
   const [itemName, setItemName] = useState("wedang pokak");
   const [quantity, setQuantity] = useState("2 Botol");
   const [size, setSize] = useState("1,5 Liter");
   const [orderNotes, setOrderNotes] = useState("tanpa gula semua ya");
   const [savedMessage, setSavedMessage] = useState(event.cateringOrderNotes ?? "");
-
-  useEffect(() => {
-    setSavedMessage(event.cateringOrderNotes ?? "");
-  }, [event.cateringOrderNotes]);
 
   const saveMut = useMutation({
     mutationFn: (cateringOrderNotes: string) =>

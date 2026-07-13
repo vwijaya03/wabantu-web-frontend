@@ -5,19 +5,29 @@ import { demoConversations, demoMessages } from "@/lib/portfolio/demo-data";
 
 type PortfolioInboxMockupProps = {
   compact?: boolean;
+  deck?: boolean;
 };
 
-export function PortfolioInboxMockup({ compact = false }: PortfolioInboxMockupProps) {
+export function PortfolioInboxMockup({ compact = false, deck = false }: PortfolioInboxMockupProps) {
   const selected = demoConversations.find((c) => c.selected) ?? demoConversations[0];
+  const messages = deck ? demoMessages.slice(0, 3) : demoMessages;
 
   return (
-    <PortfolioDashboardChrome activeNav="inbox" compact={compact}>
+    <PortfolioDashboardChrome activeNav="inbox" compact={compact} deck={deck}>
       <div
         className={`grid h-full ${
-          compact ? "grid-cols-1" : "grid-cols-1 md:grid-cols-[minmax(0,280px)_1fr]"
+          deck
+            ? "grid-cols-[minmax(0,220px)_1fr]"
+            : compact
+              ? "grid-cols-1"
+              : "grid-cols-1 md:grid-cols-[minmax(0,280px)_1fr]"
         }`}
       >
-        <div className="border-b border-neutral-200/80 bg-neutral-50/50 md:border-b-0 md:border-r">
+        <div
+          className={`border-b border-neutral-200/80 bg-neutral-50/50 ${
+            deck ? "border-b-0 border-r" : "md:border-b-0 md:border-r"
+          }`}
+        >
           <div className="border-b border-neutral-200/80 px-3 py-3">
             <p className="font-semibold text-neutral-900">Inbox</p>
             <p className="text-xs text-neutral-500">3 conversations</p>
@@ -26,7 +36,7 @@ export function PortfolioInboxMockup({ compact = false }: PortfolioInboxMockupPr
             {demoConversations.map((convo) => (
               <div
                 key={convo.id}
-                className={`px-3 py-3 ${
+                className={`px-3 py-3 ${deck ? "py-3.5" : ""} ${
                   convo.selected
                     ? "border-l-2 border-l-emerald-600 bg-white"
                     : "border-l-2 border-l-transparent"
@@ -56,7 +66,7 @@ export function PortfolioInboxMockup({ compact = false }: PortfolioInboxMockupPr
           </div>
         </div>
 
-        <div className="flex min-h-[240px] flex-col bg-white">
+        <div className={`flex flex-col bg-white ${deck ? "min-h-[280px]" : "min-h-[240px]"}`}>
           <div className="flex items-center justify-between border-b border-neutral-200/80 px-4 py-3">
             <div>
               <p className="font-semibold text-neutral-900">{selected.name}</p>
@@ -67,7 +77,7 @@ export function PortfolioInboxMockup({ compact = false }: PortfolioInboxMockupPr
             </Badge>
           </div>
           <div className="flex-1 space-y-3 overflow-hidden bg-neutral-50/40 p-4">
-            {demoMessages.map((msg) => (
+            {messages.map((msg) => (
               <PortfolioMessageBubble key={msg.id} message={msg} />
             ))}
           </div>
