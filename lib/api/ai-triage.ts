@@ -76,4 +76,56 @@ export const aiTriageAdminApi = {
     const res = await api.get(`/admin/ai-triage/jobs/${id}`);
     return res.data;
   },
+
+  async createLLMScan(params: CreateAITriageLLMScanParams): Promise<{ scan: AITriageLLMScan }> {
+    const res = await api.post("/admin/ai-triage/llm-scans", params);
+    return res.data;
+  },
+
+  async getLLMScan(id: string): Promise<{ scan: AITriageLLMScan }> {
+    const res = await api.get(`/admin/ai-triage/llm-scans/${id}`);
+    return res.data;
+  },
 };
+
+export type AITriageLLMScanStatus = "pending" | "running" | "done" | "failed";
+
+export interface AITriageLLMFinding {
+  id: string;
+  conversationId: string;
+  inboundId: string;
+  userText?: string;
+  replyText?: string;
+  path?: string;
+  flagged: boolean;
+  severity?: string;
+  category?: string;
+  reason?: string;
+  inboundAt: string;
+}
+
+export interface AITriageLLMScan {
+  id: string;
+  tenantId: string;
+  tenantSchema: string;
+  conversationId?: string;
+  from: string;
+  to: string;
+  status: AITriageLLMScanStatus;
+  turnsChecked: number;
+  findingsCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  errorText?: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  findings?: AITriageLLMFinding[];
+}
+
+export interface CreateAITriageLLMScanParams {
+  tenantId: string;
+  from: string;
+  to: string;
+  conversationId?: string;
+}
