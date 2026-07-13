@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Copy, ExternalLink, Loader2, Play, Sparkles } from "lucide-react";
+import { Copy, ExternalLink, Flag, Loader2, Play, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,11 +27,13 @@ import {
   type AITriageJobStatus,
   type AITriageLLMFinding,
   type AITriageLLMScanStatus,
+  type AITriageReport,
+  type AITriageReportStatus,
 } from "@/lib/api/ai-triage";
 import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
-const TRIAGE_TABS = ["mencurigakan", "ai-review", "investigasi"] as const;
+const TRIAGE_TABS = ["mencurigakan", "ai-review", "laporan", "investigasi"] as const;
 type TriageTabId = (typeof TRIAGE_TABS)[number];
 
 function formatDatetimeLocal(d: Date): string {
@@ -72,6 +74,36 @@ function severityVariant(severity?: string): "default" | "secondary" | "destruct
       return "secondary";
     default:
       return "outline";
+  }
+}
+
+function reportCategoryLabel(category?: string): string {
+  switch (category) {
+    case "wrong_answer":
+      return "Jawaban salah";
+    case "bug":
+      return "Bug";
+    case "rude":
+      return "Tidak sopan";
+    case "off_topic":
+      return "Off-topic";
+    case "other":
+      return "Lainnya";
+    default:
+      return category || "—";
+  }
+}
+
+function reportStatusLabel(status: AITriageReportStatus): string {
+  switch (status) {
+    case "open":
+      return "Menunggu";
+    case "confirmed":
+      return "Dikonfirmasi";
+    case "dismissed":
+      return "Diabaikan";
+    default:
+      return status;
   }
 }
 
@@ -268,6 +300,7 @@ export default function AdminAITriagePage() {
   const [scanConversationId, setScanConversationId] = useState("");
   const [activeLLMScanId, setActiveLLMScanId] = useState<string | null>(null);
   const [llmShowOnlyFlagged, setLlmShowOnlyFlagged] = useState(false);
+  const [reportStatusFilter, setReportStatusFilter] = useState<AITriageReportStatus | "all">("open");
 
   const { data: tenantsData, isLoading: tenantsLoading } = useQuery({
     queryKey: ["admin-tenants"],
@@ -288,6 +321,34 @@ export default function AdminAITriagePage() {
     queryKey: ["admin-ai-triage-anomalies", effectiveTenantId],
     queryFn: () => aiTriageAdminApi.listAnomalies(effectiveTenantId, { limit: 50 }),
     enabled: user?.role === "super_admin" && Boolean(effectiveTenantId),
+  });
+
+  const { data: reportsData, isLoading: reportsLoading, refetch: refetchReports } = useQuery({
+    queryKey: ["admin-ai-triage-reports", effectiveTenantId, reportStatusFilter],
+    queryFn: () =>
+      aiTriageAdminApi.listReports({
+        tenantId: effectiveTenantId || undefined,
+        status: reportStatusFilter === "all" ? "" : reportStatusFilter,
+        limit: 50,
+      }),
+    enabled: user?.role === "super_admin" && tab === "laporan",
+  });
+
+  const updateReportMut = useMutation({
+    mutationFn: ({
+      id,
+      status,
+      reviewNote,
+    }: {
+      id: string;
+      status: "confirmed" | "dismissed";
+      reviewNote?: string;
+    }) => aiTriageAdminApi.updateReport(id, { status, reviewNote }),
+    onSuccess: () => {
+      toast.success("Status laporan diperbarui");
+      void refetchReports();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
   });
 
   const { data: jobData } = useQuery({
@@ -346,6 +407,13 @@ export default function AdminAITriagePage() {
     const next = new URLSearchParams(searchParams.toString());
     next.set("tab", id);
     router.replace(`?${next.toString()}`, { scroll: false });
+  };
+
+  const runLoopFromReport = (row: AITriageReport) => {
+    runLoop({
+      conversationId: row.conversationId,
+      inboundId: row.inboundId,
+    });
   };
 
   const runLoop = (params: { conversationId: string; inboundId?: string }) => {
@@ -470,6 +538,7 @@ export default function AdminAITriagePage() {
           [
             ["mencurigakan", "Mencurigakan"],
             ["ai-review", "AI Review"],
+            ["laporan", "Laporan"],
             ["investigasi", "Investigasi"],
           ] as const
         ).map(([id, label]) => (
@@ -747,6 +816,143 @@ export default function AdminAITriagePage() {
                 ) : null}
               </div>
             ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {tab === "laporan" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Flag className="h-4 w-4" />
+              Laporan balasan AI
+            </CardTitle>
+            <CardDescription>
+              Laporan manual dari Inbox (tenant staff / superadmin). Review, konfirmasi, atau jalankan
+              loop investigasi.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["open", "Menunggu"],
+                  ["confirmed", "Dikonfirmasi"],
+                  ["dismissed", "Diabaikan"],
+                  ["all", "Semua"],
+                ] as const
+              ).map(([id, label]) => (
+                <Button
+                  key={id}
+                  variant={reportStatusFilter === id ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => setReportStatusFilter(id)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+            {reportsLoading ? (
+              <p className="text-sm text-muted-foreground">Memuat…</p>
+            ) : (reportsData?.reports ?? []).length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                Tidak ada laporan untuk filter ini.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1100px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b text-muted-foreground">
+                      <th className="pb-2 pr-3 font-medium">Waktu</th>
+                      <th className="pb-2 pr-3 font-medium">Tenant</th>
+                      <th className="pb-2 pr-3 font-medium">Kategori</th>
+                      <th className="pb-2 pr-3 font-medium">Status</th>
+                      <th className="pb-2 pr-3 font-medium">Pesan masuk</th>
+                      <th className="pb-2 pr-3 font-medium">Balasan AI</th>
+                      <th className="pb-2 pr-3 font-medium">Judge</th>
+                      <th className="pb-2 font-medium">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(reportsData?.reports ?? []).map((row) => (
+                      <tr
+                        key={row.id}
+                        className={cn(
+                          "border-b border-border/60 align-top",
+                          row.status === "open" && "bg-destructive/5",
+                        )}
+                      >
+                        <td className="py-2 pr-3 text-xs whitespace-nowrap">
+                          {formatTime(row.createdAt)}
+                        </td>
+                        <td className="py-2 pr-3 text-xs">
+                          {row.tenantName || row.tenantSchema}
+                        </td>
+                        <td className="py-2 pr-3 text-xs">
+                          {reportCategoryLabel(row.category)}
+                        </td>
+                        <td className="py-2 pr-3">
+                          <Badge variant={row.status === "open" ? "destructive" : "outline"}>
+                            {reportStatusLabel(row.status)}
+                          </Badge>
+                        </td>
+                        <td className="py-2 pr-3 max-w-[180px] text-xs whitespace-pre-wrap break-words">
+                          {row.userText || "—"}
+                        </td>
+                        <td className="py-2 pr-3 max-w-[200px] text-xs whitespace-pre-wrap break-words">
+                          {row.replyText || "—"}
+                        </td>
+                        <td className="py-2 pr-3 max-w-[160px] text-xs text-muted-foreground">
+                          {row.judgeFlagged == null
+                            ? "Memproses…"
+                            : row.judgeFlagged
+                              ? `${row.judgeCategory || "flagged"}`
+                              : "OK"}
+                          {row.judgeReason ? (
+                            <span className="block text-[10px] opacity-80">{row.judgeReason}</span>
+                          ) : null}
+                        </td>
+                        <td className="py-2 space-y-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={loopBusy}
+                            onClick={() => runLoopFromReport(row)}
+                          >
+                            <Play className="mr-1 h-3.5 w-3.5" />
+                            Loop
+                          </Button>
+                          {row.status === "open" ? (
+                            <div className="flex flex-col gap-1">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                disabled={updateReportMut.isPending}
+                                onClick={() =>
+                                  updateReportMut.mutate({ id: row.id, status: "confirmed" })
+                                }
+                              >
+                                Konfirmasi
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={updateReportMut.isPending}
+                                onClick={() =>
+                                  updateReportMut.mutate({ id: row.id, status: "dismissed" })
+                                }
+                              >
+                                Abaikan
+                              </Button>
+                            </div>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : null}

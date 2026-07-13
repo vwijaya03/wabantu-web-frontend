@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { FileText, MapPin, Mic, Video } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { InboxMessageReportButton } from "@/components/inbox/inbox-message-report-button";
 import { inboxApi, type InboxMessage } from "@/lib/api/inbox";
 import { formatOrderNumber } from "@/lib/format-order-number";
 import { cn } from "@/lib/utils";
@@ -75,6 +76,8 @@ const NON_TEXT_LABELS: Record<string, { icon: typeof FileText; label: string }> 
 export function InboxMessageBubble({ message }: { message: InboxMessage }) {
   const isOut = message.direction === "out";
   const isSystem = message.author === "system" && !isOut;
+  const isReportable =
+    isOut && (message.author === "ai" || message.author === "system");
   const body = message.body?.trim() ?? "";
   const nonText = NON_TEXT_LABELS[message.type];
 
@@ -127,9 +130,15 @@ export function InboxMessageBubble({ message }: { message: InboxMessage }) {
           Lihat order terkait ({formatOrderNumber(message.linkedOrderId)})
         </Link>
       ) : null}
-      <p className="mt-1 text-[10px] text-muted-foreground">
-        {message.author} · {new Date(message.createdAt).toLocaleTimeString("id-ID")}
-      </p>
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[10px] text-muted-foreground">
+          {isReportable ? (
+            <span className="mr-1 font-medium uppercase tracking-wide text-primary/80">AI</span>
+          ) : null}
+          {message.author} · {new Date(message.createdAt).toLocaleTimeString("id-ID")}
+        </p>
+        {isReportable ? <InboxMessageReportButton messageId={message.id} /> : null}
+      </div>
     </div>
   );
 }
