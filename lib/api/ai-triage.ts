@@ -87,7 +87,57 @@ export const aiTriageAdminApi = {
     const res = await api.get(`/admin/ai-triage/llm-scans/${id}`);
     return res.data;
   },
+
+  async listReports(params?: {
+    tenantId?: string;
+    status?: AITriageReportStatus | "";
+    limit?: number;
+  }): Promise<{ reports: AITriageReport[] }> {
+    const res = await api.get("/admin/ai-triage/reports", { params });
+    return res.data;
+  },
+
+  async getReport(id: string): Promise<{ report: AITriageReport }> {
+    const res = await api.get(`/admin/ai-triage/reports/${id}`);
+    return res.data;
+  },
+
+  async updateReport(
+    id: string,
+    params: { status: "confirmed" | "dismissed"; reviewNote?: string },
+  ): Promise<{ report: AITriageReport }> {
+    const res = await api.patch(`/admin/ai-triage/reports/${id}`, params);
+    return res.data;
+  },
 };
+
+export type AITriageReportStatus = "open" | "confirmed" | "dismissed";
+
+export interface AITriageReport {
+  id: string;
+  tenantId: string;
+  tenantSchema: string;
+  conversationId: string;
+  inboundId?: string;
+  outboundMessageId: string;
+  userText?: string;
+  replyText?: string;
+  path?: string;
+  category: string;
+  reporterNote?: string;
+  status: AITriageReportStatus;
+  reportedBy: string;
+  reporterRole: string;
+  judgeFlagged?: boolean;
+  judgeCategory?: string;
+  judgeReason?: string;
+  reviewedBy?: string;
+  reviewNote?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  tenantName?: string;
+}
 
 export type AITriageLLMScanStatus = "pending" | "running" | "done" | "failed";
 
