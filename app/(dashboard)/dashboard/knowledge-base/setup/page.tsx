@@ -73,11 +73,20 @@ function phaseIndex(phase: string, ready: boolean): number {
   return 0;
 }
 
+function scrollChatContainer(el: HTMLDivElement | null, force = false) {
+  if (!el) return;
+  const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 96;
+  if (force || nearBottom) {
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
 export default function KnowledgeBaseSetupPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const { user } = useAuth();
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const stickChatToBottomRef = useRef(true);
 
   const [session, setSession] = useState<SetupInterviewSession | null>(null);
   const [input, setInput] = useState("");
@@ -161,8 +170,20 @@ export default function KnowledgeBaseSetupPage() {
   }, [canSetup]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [session?.messages.length, sendMut.isPending]);
+    const el = chatScrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      stickChatToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 96;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const messageCount = session?.messages.length ?? 0;
+
+  useEffect(() => {
+    scrollChatContainer(chatScrollRef.current, stickChatToBottomRef.current);
+  }, [messageCount, sendMut.isPending]);
 
   const quotaBanner =
     session?.quotaNotice ??
@@ -193,6 +214,7 @@ export default function KnowledgeBaseSetupPage() {
     const msg = text.trim();
     if (!msg || !session) return;
     setInput("");
+    stickChatToBottomRef.current = true;
     sendMut.mutate(msg);
   };
 
@@ -296,6 +318,7 @@ export default function KnowledgeBaseSetupPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div
+              ref={chatScrollRef}
               className="flex max-h-[420px] min-h-[280px] flex-col gap-3 overflow-y-auto rounded-lg border bg-muted/20 p-4"
               role="log"
               aria-live="polite"
@@ -348,7 +371,6 @@ export default function KnowledgeBaseSetupPage() {
                   AI mengetik…
                 </div>
               ) : null}
-              <div ref={chatEndRef} />
             </div>
 
             {!showReview ? (
