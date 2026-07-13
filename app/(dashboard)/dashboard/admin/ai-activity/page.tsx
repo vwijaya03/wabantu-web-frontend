@@ -112,6 +112,17 @@ export default function AdminAIActivityPage() {
           />
         </div>
         <Button variant="outline" asChild>
+          <Link
+            href={
+              effectiveTenantId
+                ? `/dashboard/admin/ai-triage?tenantId=${effectiveTenantId}`
+                : "/dashboard/admin/ai-triage"
+            }
+          >
+            AI Triage Loop →
+          </Link>
+        </Button>
+        <Button variant="outline" asChild>
           <Link href="/dashboard/admin">← Konsol platform</Link>
         </Button>
       </div>

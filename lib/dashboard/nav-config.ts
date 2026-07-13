@@ -185,6 +185,7 @@ export const PLATFORM_NAV_SECTION: NavSection = {
   items: [
     { href: "/dashboard/admin", label: "Admin", icon: Shield },
     { href: "/dashboard/admin/ai-activity", label: "AI Activity", icon: Sparkles },
+    { href: "/dashboard/admin/ai-triage", label: "AI Triage", icon: Wrench },
     { href: "/dashboard/docs", label: "Dokumentasi", icon: BookOpen },
   ],
 };
