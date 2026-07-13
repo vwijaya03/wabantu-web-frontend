@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Copy, ExternalLink, Flag, Loader2, Play, Sparkles } from "lucide-react";
+import { Copy, ExternalLink, Flag, Loader2, Play, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -186,7 +186,15 @@ function CopyableMono({ value, label }: { value: string; label: string }) {
   );
 }
 
-function JobStatusPanel({ job }: { job: AITriageJob }) {
+function JobStatusPanel({
+  job,
+  onRefresh,
+  isRefreshing,
+}: {
+  job: AITriageJob;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+}) {
   const analysis = job.analysis;
   const deterministicMismatches =
     analysis?.mismatches?.filter((m) => !m.skipped && m.actualPath !== m.expectedPath) ?? [];
@@ -194,13 +202,30 @@ function JobStatusPanel({ job }: { job: AITriageJob }) {
   return (
     <Card className="mt-6 border-primary/30">
       <CardHeader className="pb-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <CardTitle className="text-base">Status loop triage</CardTitle>
-          <Badge variant={jobStatusVariant(job.status)}>{jobStatusLabel(job.status)}</Badge>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle className="text-base">Status loop triage</CardTitle>
+            <Badge variant={jobStatusVariant(job.status)}>{jobStatusLabel(job.status)}</Badge>
+          </div>
+          {onRefresh ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-3.5 w-3.5" />
+              )}
+              Perbarui
+            </Button>
+          ) : null}
         </div>
         <CardDescription>
           Job <CopyableMono value={job.id} label="Job ID" />
-          {isJobActive(job.status) ? " — memperbarui otomatis setiap 3 detik" : null}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
@@ -351,24 +376,24 @@ export default function AdminAITriagePage() {
     onError: (e) => toast.error(toApiError(e).message),
   });
 
-  const { data: jobData } = useQuery({
+  const {
+    data: jobData,
+    refetch: refetchJob,
+    isFetching: isJobFetching,
+  } = useQuery({
     queryKey: ["admin-ai-triage-job", activeJobId],
     queryFn: () => aiTriageAdminApi.getJob(activeJobId!),
     enabled: user?.role === "super_admin" && Boolean(activeJobId),
-    refetchInterval: (query) => {
-      const status = query.state.data?.job.status;
-      return status && isJobActive(status) ? 3000 : false;
-    },
   });
 
-  const { data: llmScanData } = useQuery({
+  const {
+    data: llmScanData,
+    refetch: refetchLLMScan,
+    isFetching: isLLMScanFetching,
+  } = useQuery({
     queryKey: ["admin-ai-triage-llm-scan", activeLLMScanId],
     queryFn: () => aiTriageAdminApi.getLLMScan(activeLLMScanId!),
     enabled: user?.role === "super_admin" && Boolean(activeLLMScanId),
-    refetchInterval: (query) => {
-      const status = query.state.data?.scan.status;
-      return status === "pending" || status === "running" ? 3000 : false;
-    },
   });
 
   const createLLMScanMut = useMutation({
@@ -700,13 +725,29 @@ export default function AdminAITriagePage() {
 
             {llmScanData?.scan ? (
               <div className="rounded-md border p-4 space-y-3">
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="font-medium">Status scan:</span>
-                  <Badge variant="outline">{llmScanStatusLabel(llmScanData.scan.status)}</Badge>
-                  <span className="text-muted-foreground">
-                    {llmScanData.scan.turnsChecked} turn · {llmScanData.scan.findingsCount} flagged
-                    · {llmScanData.scan.inputTokens + llmScanData.scan.outputTokens} token
-                  </span>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">Status scan:</span>
+                    <Badge variant="outline">{llmScanStatusLabel(llmScanData.scan.status)}</Badge>
+                    <span className="text-muted-foreground">
+                      {llmScanData.scan.turnsChecked} turn · {llmScanData.scan.findingsCount} flagged
+                      · {llmScanData.scan.inputTokens + llmScanData.scan.outputTokens} token
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void refetchLLMScan()}
+                    disabled={isLLMScanFetching}
+                  >
+                    {isLLMScanFetching ? (
+                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                    )}
+                    Perbarui
+                  </Button>
                 </div>
                 {llmScanData.scan.errorText ? (
                   <p className="text-sm text-destructive">{llmScanData.scan.errorText}</p>
@@ -1002,7 +1043,13 @@ export default function AdminAITriagePage() {
         </Card>
       ) : null}
 
-      {jobData?.job ? <JobStatusPanel job={jobData.job} /> : null}
+      {jobData?.job ? (
+        <JobStatusPanel
+          job={jobData.job}
+          onRefresh={() => void refetchJob()}
+          isRefreshing={isJobFetching}
+        />
+      ) : null}
     </>
   );
 }
