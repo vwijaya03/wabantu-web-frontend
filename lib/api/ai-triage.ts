@@ -7,6 +7,7 @@ export interface AITriageAnomaly {
   reason?: string;
   conversationId?: string;
   inboundId?: string;
+  userText?: string;
   createdAt: string;
   reviewSuggested: boolean;
 }
