@@ -157,6 +157,77 @@ function isJobActive(status: AITriageJobStatus): boolean {
   return status === "pending" || status === "running";
 }
 
+function groupByConversationId<T extends { conversationId: string }>(
+  items: T[],
+): { conversationId: string; items: T[] }[] {
+  const map = new Map<string, T[]>();
+  for (const item of items) {
+    const id = item.conversationId?.trim();
+    if (!id) continue;
+    const arr = map.get(id) ?? [];
+    arr.push(item);
+    map.set(id, arr);
+  }
+  return Array.from(map.entries()).map(([conversationId, grouped]) => ({
+    conversationId,
+    items: grouped,
+  }));
+}
+
+function regressionCaseCount(
+  mismatches: { skipped?: boolean; actualPath?: string; expectedPath?: string; userText?: string }[],
+): number {
+  return mismatches.filter(
+    (m) => !m.skipped && Boolean(m.expectedPath) && Boolean(m.userText),
+  ).length;
+}
+
+function ConversationLoopBar({
+  groups,
+  itemLabel,
+  busy,
+  pending,
+  onRun,
+  helpText,
+}: {
+  groups: { conversationId: string; items: unknown[] }[];
+  itemLabel: string;
+  busy: boolean;
+  pending: boolean;
+  onRun: (conversationId: string) => void;
+  helpText?: string;
+}) {
+  if (groups.length === 0) return null;
+  return (
+    <div className="mb-4 space-y-2 rounded-md border bg-muted/30 p-3">
+      <p className="text-xs font-medium text-muted-foreground">
+        Loop routing per percakapan ({groups.length} percakapan)
+      </p>
+      {helpText ? (
+        <p className="text-xs text-muted-foreground">{helpText}</p>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        {groups.map((g) => (
+          <Button
+            key={g.conversationId}
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() => onRun(g.conversationId)}
+          >
+            {pending ? (
+              <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Play className="mr-1 h-3.5 w-3.5" />
+            )}
+            Jalankan loop ({g.items.length} {itemLabel})
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function CopyableMono({ value, label }: { value: string; label: string }) {
   if (!value) {
     return <span className="text-muted-foreground">—</span>;
@@ -198,6 +269,7 @@ function JobStatusPanel({
   const analysis = job.analysis;
   const deterministicMismatches =
     analysis?.mismatches?.filter((m) => !m.skipped && m.actualPath !== m.expectedPath) ?? [];
+  const regressionCases = analysis ? regressionCaseCount(analysis.mismatches ?? []) : 0;
 
   return (
     <Card className="mt-6 border-primary/30">
@@ -230,7 +302,7 @@ function JobStatusPanel({
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         {analysis ? (
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <div className="rounded border px-3 py-2">
               <p className="text-xs text-muted-foreground">Pesan dimuat</p>
               <p className="font-medium">{analysis.messagesLoaded}</p>
@@ -252,7 +324,17 @@ function JobStatusPanel({
                   : null}
               </p>
             </div>
+            <div className="rounded border px-3 py-2">
+              <p className="text-xs text-muted-foreground">Regression case</p>
+              <p className="font-medium">{regressionCases}</p>
+            </div>
           </div>
+        ) : null}
+
+        {analysis && regressionCases === 0 ? (
+          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-900 dark:text-amber-100">
+            Tidak ada routing mismatch deterministik — loop tidak menghasilkan regression test.
+          </p>
         ) : null}
 
         {job.errorText ? (
@@ -325,6 +407,7 @@ export default function AdminAITriagePage() {
   const [scanConversationId, setScanConversationId] = useState("");
   const [activeLLMScanId, setActiveLLMScanId] = useState<string | null>(null);
   const [llmShowOnlyFlagged, setLlmShowOnlyFlagged] = useState(false);
+  const [investigateFocusOneTurn, setInvestigateFocusOneTurn] = useState(false);
   const [reportStatusFilter, setReportStatusFilter] = useState<AITriageReportStatus | "all">("open");
 
   const { data: tenantsData, isLoading: tenantsLoading } = useQuery({
@@ -434,11 +517,8 @@ export default function AdminAITriagePage() {
     router.replace(`?${next.toString()}`, { scroll: false });
   };
 
-  const runLoopFromReport = (row: AITriageReport) => {
-    runLoop({
-      conversationId: row.conversationId,
-      inboundId: row.inboundId,
-    });
+  const runLoopForConversation = (conversationId: string) => {
+    runLoop({ conversationId });
   };
 
   const runLoop = (params: { conversationId: string; inboundId?: string }) => {
@@ -457,16 +537,24 @@ export default function AdminAITriagePage() {
     });
   };
 
-  const runLoopFromAnomaly = (row: AITriageAnomaly) => {
-    if (!row.conversationId) {
-      toast.error("Baris ini tidak punya conversationId");
-      return;
-    }
-    runLoop({
-      conversationId: row.conversationId,
-      inboundId: row.inboundId,
-    });
-  };
+  const reviewableAnomalies = useMemo(
+    () =>
+      (anomaliesData?.anomalies ?? []).filter(
+        (row) => row.reviewSuggested && Boolean(row.conversationId?.trim()),
+      ),
+    [anomaliesData?.anomalies],
+  );
+  const anomalyConversationGroups = useMemo(
+    () => groupByConversationId(reviewableAnomalies),
+    [reviewableAnomalies],
+  );
+
+  const reportConversationGroups = useMemo(() => {
+    const withConversation = (reportsData?.reports ?? []).filter((row) =>
+      Boolean(row.conversationId?.trim()),
+    );
+    return groupByConversationId(withConversation);
+  }, [reportsData?.reports]);
 
   const loopBusy =
     createJobMut.isPending ||
@@ -481,6 +569,11 @@ export default function AdminAITriagePage() {
     llmScanData?.scan.findings?.filter((f) => f.flagged) ?? [];
   const allFindings = llmScanData?.scan.findings ?? [];
   const displayedFindings = llmShowOnlyFlagged ? flaggedFindings : allFindings;
+
+  const flaggedConversationGroups = useMemo(
+    () => groupByConversationId(flaggedFindings),
+    [flaggedFindings],
+  );
 
   const runLLMScan = () => {
     if (!effectiveTenantId) {
@@ -498,13 +591,6 @@ export default function AdminAITriagePage() {
       from: toRFC3339(scanFrom),
       to: toRFC3339(nowTo),
       conversationId: scanConversationId.trim() || undefined,
-    });
-  };
-
-  const runLoopFromFinding = (f: AITriageLLMFinding) => {
-    runLoop({
-      conversationId: f.conversationId,
-      inboundId: f.inboundId,
     });
   };
 
@@ -586,8 +672,8 @@ export default function AdminAITriagePage() {
           <CardHeader>
             <CardTitle>Aktivitas AI terbaru</CardTitle>
             <CardDescription>
-              Event ai_activity 1 jam terakhir per tenant. Tombol loop hanya untuk baris dengan
-              path deterministik (reviewSuggested).
+              Event ai_activity 1 jam terakhir per tenant. Jalankan loop per percakapan untuk
+              menganalisis semua turn routing deterministik sekaligus.
             </CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto">
@@ -598,7 +684,15 @@ export default function AdminAITriagePage() {
                 Belum ada aktivitas AI 1 jam terakhir untuk tenant ini.
               </p>
             ) : (
-              <table className="w-full min-w-[1100px] text-left text-sm">
+              <>
+                <ConversationLoopBar
+                  groups={anomalyConversationGroups}
+                  itemLabel="baris"
+                  busy={loopBusy}
+                  pending={createJobMut.isPending}
+                  onRun={runLoopForConversation}
+                />
+              <table className="w-full min-w-[1000px] text-left text-sm">
                 <thead>
                   <tr className="border-b text-muted-foreground">
                     <th className="pb-2 pr-3 font-medium">Waktu</th>
@@ -607,8 +701,7 @@ export default function AdminAITriagePage() {
                     <th className="pb-2 pr-3 font-medium">Reason</th>
                     <th className="pb-2 pr-3 font-medium">Conversation ID</th>
                     <th className="pb-2 pr-3 font-medium">Inbound ID</th>
-                    <th className="pb-2 pr-3 font-medium">Review</th>
-                    <th className="pb-2 font-medium">Aksi</th>
+                    <th className="pb-2 font-medium">Review</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -641,27 +734,11 @@ export default function AdminAITriagePage() {
                           <span className="text-xs text-muted-foreground">LLM</span>
                         )}
                       </td>
-                      <td className="py-2">
-                        {row.reviewSuggested && row.conversationId ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={loopBusy}
-                            onClick={() => runLoopFromAnomaly(row)}
-                          >
-                            {createJobMut.isPending ? (
-                              <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Play className="mr-1 h-3.5 w-3.5" />
-                            )}
-                            Jalankan loop
-                          </Button>
-                        ) : null}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </>
             )}
           </CardContent>
         </Card>
@@ -676,7 +753,8 @@ export default function AdminAITriagePage() {
             </CardTitle>
             <CardDescription>
               Pindai pasangan pesan masuk + balasan AI dalam rentang waktu (maks. 6 jam, 30 turn).
-              Haiku menilai apakah balasan bermasalah — tidak menggantikan loop routing deterministik.
+              Haiku menilai apakah balasan bermasalah. Loop routing memeriksa path deterministik
+              seluruh percakapan — bukan memperbaiki isi balasan LLM (harga salah, hallucination).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -788,8 +866,17 @@ export default function AdminAITriagePage() {
                         penuh.
                       </p>
                     ) : (
+                  <div className="space-y-3">
+                    <ConversationLoopBar
+                      groups={flaggedConversationGroups}
+                      itemLabel="flagged"
+                      busy={loopBusy}
+                      pending={createJobMut.isPending}
+                      onRun={runLoopForConversation}
+                      helpText="Satu loop menganalisis semua turn routing dalam percakapan. Tidak memperbaiki isi balasan yang diflag LLM judge."
+                    />
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[960px] text-left text-sm">
+                    <table className="w-full min-w-[880px] text-left text-sm">
                       <thead>
                         <tr className="border-b text-muted-foreground">
                           <th className="pb-2 pr-3 font-medium">Waktu</th>
@@ -797,8 +884,7 @@ export default function AdminAITriagePage() {
                           <th className="pb-2 pr-3 font-medium">Severity</th>
                           <th className="pb-2 pr-3 font-medium">Pesan masuk</th>
                           <th className="pb-2 pr-3 font-medium">Balasan AI</th>
-                          <th className="pb-2 pr-3 font-medium">Alasan</th>
-                          <th className="pb-2 font-medium">Aksi</th>
+                          <th className="pb-2 font-medium">Alasan</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -832,25 +918,11 @@ export default function AdminAITriagePage() {
                             <td className="py-2 pr-3 max-w-[200px] text-xs text-muted-foreground">
                               {f.reason || "—"}
                             </td>
-                            <td className="py-2">
-                              {f.flagged ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={loopBusy}
-                                onClick={() => runLoopFromFinding(f)}
-                              >
-                                <Play className="mr-1 h-3.5 w-3.5" />
-                                Jalankan loop
-                              </Button>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">—</span>
-                              )}
-                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                  </div>
                   </div>
                     )}
                   </div>
@@ -901,7 +973,14 @@ export default function AdminAITriagePage() {
               </p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1100px] text-left text-sm">
+                <ConversationLoopBar
+                  groups={reportConversationGroups}
+                  itemLabel="laporan"
+                  busy={loopBusy}
+                  pending={createJobMut.isPending}
+                  onRun={runLoopForConversation}
+                />
+                <table className="w-full min-w-[1000px] text-left text-sm">
                   <thead>
                     <tr className="border-b text-muted-foreground">
                       <th className="pb-2 pr-3 font-medium">Waktu</th>
@@ -954,15 +1033,6 @@ export default function AdminAITriagePage() {
                           ) : null}
                         </td>
                         <td className="py-2 space-y-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={loopBusy}
-                            onClick={() => runLoopFromReport(row)}
-                          >
-                            <Play className="mr-1 h-3.5 w-3.5" />
-                            Loop
-                          </Button>
                           {row.status === "open" ? (
                             <div className="flex flex-col gap-1">
                               <Button
@@ -1003,8 +1073,8 @@ export default function AdminAITriagePage() {
           <CardHeader>
             <CardTitle>Investigasi manual</CardTitle>
             <CardDescription>
-              Masukkan conversationId (wajib) dan inboundId opsional untuk fokus pada pesan masuk
-              tertentu.
+              Masukkan conversationId (wajib). Secara default loop menganalisis seluruh percakapan.
+              Centang &quot;Hanya turn ini&quot; untuk fokus pada satu pesan masuk (debug).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 max-w-lg">
@@ -1026,18 +1096,32 @@ export default function AdminAITriagePage() {
                 onChange={(e) => setInboundId(e.target.value)}
                 placeholder="UUID pesan masuk — anchor window"
                 className="font-mono text-sm"
+                disabled={!investigateFocusOneTurn}
               />
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={investigateFocusOneTurn}
+                onChange={(e) => setInvestigateFocusOneTurn(e.target.checked)}
+              />
+              Hanya turn ini (fokus satu inbound)
+            </label>
             <Button
               disabled={loopBusy || !conversationId.trim()}
-              onClick={() => runLoop({ conversationId, inboundId })}
+              onClick={() =>
+                runLoop({
+                  conversationId,
+                  inboundId: investigateFocusOneTurn ? inboundId : undefined,
+                })
+              }
             >
               {createJobMut.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Play className="mr-2 h-4 w-4" />
               )}
-              Jalankan loop
+              {investigateFocusOneTurn ? "Jalankan loop (1 turn)" : "Jalankan loop percakapan"}
             </Button>
           </CardContent>
         </Card>
