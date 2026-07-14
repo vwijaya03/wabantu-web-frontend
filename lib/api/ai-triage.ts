@@ -36,6 +36,27 @@ export interface TriageFixHints {
   testUsesFixture: string;
 }
 
+export interface TriageSimulatorSnapshot {
+  tenantSchema?: string;
+  profile: {
+    businessName: string;
+    tone?: string | null;
+    aiEnabled?: boolean;
+  };
+  catalog: Array<{
+    id: string;
+    externalCode?: string;
+    name: string;
+    sellPrice?: number;
+    sellUnit?: string;
+  }>;
+  kb?: Array<{
+    question: string;
+    answer: string;
+    category?: string | null;
+  }>;
+}
+
 export interface AnalyzeConversationResult {
   tenantSchema: string;
   conversationId: string;
@@ -47,6 +68,7 @@ export interface AnalyzeConversationResult {
   hasDeterministicMismatch: boolean;
   regressionFailures?: TriageRegressionFailure[];
   fixHints?: TriageFixHints;
+  simulatorSnapshot?: TriageSimulatorSnapshot;
   cursorAgentId?: string;
   cursorFixGithubRunUrl?: string;
 }
