@@ -419,6 +419,7 @@ export const inboxApi = {
 | `import.ts` | `/import/preview`, `/import/execute`; halaman import menyediakan template CSV/XLSX produk dan execute selalu mengirim `targetTable=business_catalog_item` untuk import katalog produk |
 | `admin.ts` | `/admin/tenants` search/pagination, impersonation, plan override, tenant delete |
 | `ai-activity.ts` | `/admin/tenant/:id/ai-activity` (+ summary) — super_admin only |
+| `ai-triage.ts` | `/admin/ai-triage/*` — loop engineering: anomalies, jobs, LLM scan, reports, **Fix dengan AI** |
 
 Types are **TypeScript interfaces** mirroring api-go JSON (camelCase).
 
@@ -587,7 +588,7 @@ api-go `AuthenticateHTTP` accepts this (see api-go auth docs).
 ## Role checks
 
 - **Owner-only** actions: buttons disabled or hidden via `user.role === "owner"` (from `useAuth()`).
-- **Super admin:** `/dashboard/admin` (konsol platform); tenant menu setelah **Pantau** (`hasTenantDashboardAccess`). Konsol admin mendukung search/pagination tenant, override paket, dan delete tenant permanen dengan konfirmasi schema. `usePlan` tidak memanggil billing overview tanpa konteks tenant. `RequireTenantDashboard` + sidebar grup **Platform** vs menu tenant.
+- **Super admin:** `/dashboard/admin` (konsol platform); tenant menu setelah **Pantau** (`hasTenantDashboardAccess`). Konsol admin mendukung search/pagination tenant, override paket, dan delete tenant permanen dengan konfirmasi schema. **`/dashboard/admin/ai-triage`** — loop engineering: jalankan loop per percakapan, lihat mismatch + regression failures, **Fix dengan AI** (Composer). Analysis job menyertakan `simulatorSnapshot` (katalog tenant) agar test GHA konsisten dengan analyze. `usePlan` tidak memanggil billing overview tanpa konteks tenant. `RequireTenantDashboard` + sidebar grup **Platform** vs menu tenant.
 
 **Note:** Real enforcement is on **api-go** (`tag:owner`); UI checks are UX only.
 

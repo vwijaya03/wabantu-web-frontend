@@ -153,6 +153,7 @@ Checklist “lengkapi profil” / “≥5 FAQ” / kartu “AI status”: `lib/b
 | `/dashboard/finance/reports` | `lib/api/finance.ts` | perbandingan bulanan + export CSV/PDF |
 | `/dashboard/docs` | static `public/generated-docs/docs-index.json` | Docs Hub internal — fuzzy search README/.md dari `api-go` + `web-frontend` |
 | `/dashboard/admin/ai-activity` | `lib/api/ai-activity.ts` | log AI per tenant — **super_admin** only |
+| `/dashboard/admin/ai-triage` | `lib/api/ai-triage.ts` | loop engineering — analyze routing, draft PR, Fix dengan AI |
 | `/dashboard/admin` | `lib/api/admin.ts` | super admin only — search/pagination tenant, pantau, override paket, delete tenant |
 
 Nav: `components/dashboard/sidebar-nav.tsx` · Plan: `hooks/use-plan.ts`.
