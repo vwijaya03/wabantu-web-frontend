@@ -22,12 +22,9 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi } from "@/lib/api/admin";
 import {
   aiTriageAdminApi,
-  type AITriageAnomaly,
   type AITriageJob,
   type AITriageJobStatus,
-  type AITriageLLMFinding,
   type AITriageLLMScanStatus,
-  type AITriageReport,
   type AITriageReportStatus,
 } from "@/lib/api/ai-triage";
 import { toApiError } from "@/lib/api/client";
@@ -157,7 +154,7 @@ function isJobActive(status: AITriageJobStatus): boolean {
   return status === "pending" || status === "running";
 }
 
-function groupByConversationId<T extends { conversationId: string }>(
+function groupByConversationId<T extends { conversationId?: string }>(
   items: T[],
 ): { conversationId: string; items: T[] }[] {
   const map = new Map<string, T[]>();
@@ -565,8 +562,10 @@ export default function AdminAITriagePage() {
     (llmScanData?.scan != null &&
       (llmScanData.scan.status === "pending" || llmScanData.scan.status === "running"));
 
-  const flaggedFindings =
-    llmScanData?.scan.findings?.filter((f) => f.flagged) ?? [];
+  const flaggedFindings = useMemo(
+    () => llmScanData?.scan.findings?.filter((f) => f.flagged) ?? [],
+    [llmScanData?.scan.findings],
+  );
   const allFindings = llmScanData?.scan.findings ?? [];
   const displayedFindings = llmShowOnlyFlagged ? flaggedFindings : allFindings;
 
