@@ -19,6 +19,21 @@ export interface TriageMismatch {
   expectedPath?: string;
   skipped?: boolean;
   skipReason?: string;
+  priorTurns?: string[];
+  turnIndex?: number;
+}
+
+export interface TriageRegressionFailure {
+  caseName: string;
+  gotPath: string;
+  wantPath: string;
+  replyPreview?: string;
+}
+
+export interface TriageFixHints {
+  likelyFiles: string[];
+  catalogSource: string;
+  testUsesFixture: string;
 }
 
 export interface AnalyzeConversationResult {
@@ -30,9 +45,19 @@ export interface AnalyzeConversationResult {
   turnsSkipped: number;
   mismatches: TriageMismatch[];
   hasDeterministicMismatch: boolean;
+  regressionFailures?: TriageRegressionFailure[];
+  fixHints?: TriageFixHints;
+  cursorAgentId?: string;
+  cursorFixGithubRunUrl?: string;
 }
 
-export type AITriageJobStatus = "pending" | "running" | "pr_ready" | "failed";
+export type AITriageJobStatus =
+  | "pending"
+  | "running"
+  | "pr_ready"
+  | "pr_ready_needs_fix"
+  | "fix_running"
+  | "failed";
 
 export interface AITriageJob {
   id: string;
@@ -75,6 +100,11 @@ export const aiTriageAdminApi = {
 
   async getJob(id: string): Promise<{ job: AITriageJob }> {
     const res = await api.get(`/admin/ai-triage/jobs/${id}`);
+    return res.data;
+  },
+
+  async requestAiFix(id: string): Promise<{ job: AITriageJob }> {
+    const res = await api.post(`/admin/ai-triage/jobs/${id}/ai-fix`);
     return res.data;
   },
 

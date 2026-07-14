@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Copy, ExternalLink, Flag, Loader2, Play, RefreshCw, Sparkles } from "lucide-react";
+import { Copy, ExternalLink, Flag, Loader2, Play, RefreshCw, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -130,6 +130,10 @@ function jobStatusLabel(status: AITriageJobStatus): string {
       return "Berjalan";
     case "pr_ready":
       return "PR siap";
+    case "pr_ready_needs_fix":
+      return "PR perlu fix";
+    case "fix_running":
+      return "Fix AI berjalan";
     case "failed":
       return "Gagal";
     default:
@@ -141,6 +145,10 @@ function jobStatusVariant(status: AITriageJobStatus): "default" | "secondary" | 
   switch (status) {
     case "pr_ready":
       return "default";
+    case "pr_ready_needs_fix":
+      return "secondary";
+    case "fix_running":
+      return "secondary";
     case "failed":
       return "destructive";
     case "running":
@@ -151,7 +159,19 @@ function jobStatusVariant(status: AITriageJobStatus): "default" | "secondary" | 
 }
 
 function isJobActive(status: AITriageJobStatus): boolean {
-  return status === "pending" || status === "running";
+  return status === "pending" || status === "running" || status === "fix_running";
+}
+
+function canRequestAiFix(job: AITriageJob): boolean {
+  if (job.status === "fix_running") return false;
+  if (job.status !== "pr_ready_needs_fix" && job.status !== "failed") return false;
+  const analysis = job.analysis;
+  if (!analysis) return false;
+  const mismatches = analysis.mismatches?.filter(
+    (m) => !m.skipped && m.expectedPath && m.userText,
+  );
+  if ((mismatches?.length ?? 0) > 0) return true;
+  return (analysis.regressionFailures?.length ?? 0) > 0;
 }
 
 function groupByConversationId<T extends { conversationId?: string }>(
@@ -258,15 +278,21 @@ function JobStatusPanel({
   job,
   onRefresh,
   isRefreshing,
+  onAiFix,
+  aiFixPending,
 }: {
   job: AITriageJob;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  onAiFix?: () => void;
+  aiFixPending?: boolean;
 }) {
   const analysis = job.analysis;
   const deterministicMismatches =
     analysis?.mismatches?.filter((m) => !m.skipped && m.actualPath !== m.expectedPath) ?? [];
+  const regressionFailures = analysis?.regressionFailures ?? [];
   const regressionCases = analysis ? regressionCaseCount(analysis.mismatches ?? []) : 0;
+  const showAiFix = canRequestAiFix(job);
 
   return (
     <Card className="mt-6 border-primary/30">
@@ -341,6 +367,16 @@ function JobStatusPanel({
         ) : null}
 
         <div className="flex flex-wrap gap-2">
+          {showAiFix && onAiFix ? (
+            <Button size="sm" disabled={aiFixPending} onClick={onAiFix}>
+              {aiFixPending ? (
+                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Wand2 className="mr-2 h-3.5 w-3.5" />
+              )}
+              Fix dengan AI
+            </Button>
+          ) : null}
           {job.githubRunUrl ? (
             <Button variant="outline" size="sm" asChild>
               <a href={job.githubRunUrl} target="_blank" rel="noopener noreferrer">
@@ -357,7 +393,53 @@ function JobStatusPanel({
               </a>
             </Button>
           ) : null}
+          {analysis?.cursorFixGithubRunUrl ? (
+            <Button variant="outline" size="sm" asChild>
+              <a href={analysis.cursorFixGithubRunUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-2 h-3.5 w-3.5" />
+                Cursor fix run
+              </a>
+            </Button>
+          ) : null}
         </div>
+
+        {analysis?.cursorAgentId ? (
+          <p className="text-xs text-muted-foreground">
+            Cursor agent: <CopyableMono value={analysis.cursorAgentId} label="Agent ID" />
+          </p>
+        ) : null}
+
+        {analysis?.fixHints ? (
+          <p className="text-xs text-muted-foreground">
+            File target: {analysis.fixHints.likelyFiles.join(", ")} · catalog:{" "}
+            {analysis.fixHints.catalogSource} · test: {analysis.fixHints.testUsesFixture}
+          </p>
+        ) : null}
+
+        {regressionFailures.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">
+              Regression gagal ({regressionFailures.length})
+            </p>
+            {regressionFailures.slice(0, 8).map((f) => (
+              <div key={f.caseName} className="rounded border px-3 py-2 text-xs">
+                <p className="font-mono font-medium">{f.caseName}</p>
+                <p className="mt-1">
+                  <Badge variant="outline" className="mr-1">
+                    {f.gotPath}
+                  </Badge>
+                  →
+                  <Badge variant="secondary" className="ml-1">
+                    {f.wantPath}
+                  </Badge>
+                </p>
+                {f.replyPreview ? (
+                  <p className="mt-1 text-muted-foreground line-clamp-2">{f.replyPreview}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         {deterministicMismatches.length > 0 ? (
           <div className="space-y-2">
@@ -366,6 +448,11 @@ function JobStatusPanel({
               <div key={m.inboundId} className="rounded border px-3 py-2 text-xs">
                 <CopyableMono value={m.inboundId} label="Inbound ID" />
                 <p className="mt-1 whitespace-pre-wrap break-words">{m.userText || "—"}</p>
+                {m.priorTurns && m.priorTurns.length > 0 ? (
+                  <p className="mt-1 text-muted-foreground">
+                    Konteks: {m.priorTurns.length} turn sebelumnya
+                  </p>
+                ) : null}
                 <p className="mt-1">
                   <Badge variant="outline" className="mr-1">
                     {m.actualPath || "—"}
@@ -502,6 +589,22 @@ export default function AdminAITriagePage() {
       const err = toApiError(e);
       if (err.code === "resource_exhausted") {
         toast.error("Antrian penuh — maks. 3 job triage bersamaan");
+        return;
+      }
+      toast.error(err.message);
+    },
+  });
+
+  const aiFixMut = useMutation({
+    mutationFn: aiTriageAdminApi.requestAiFix,
+    onSuccess: (res) => {
+      setActiveJobId(res.job.id);
+      toast.success("Fix AI (Composer 2.5) dimulai via GitHub Actions");
+    },
+    onError: (e) => {
+      const err = toApiError(e);
+      if (err.code === "resource_exhausted") {
+        toast.error("Antrian penuh — tunggu job lain selesai");
         return;
       }
       toast.error(err.message);
@@ -1131,6 +1234,12 @@ export default function AdminAITriagePage() {
           job={jobData.job}
           onRefresh={() => void refetchJob()}
           isRefreshing={isJobFetching}
+          onAiFix={
+            canRequestAiFix(jobData.job)
+              ? () => aiFixMut.mutate(jobData.job.id)
+              : undefined
+          }
+          aiFixPending={aiFixMut.isPending}
         />
       ) : null}
     </>
