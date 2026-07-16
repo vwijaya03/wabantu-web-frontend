@@ -21,6 +21,6 @@
 
 ## Fix dengan AI
 
-Tombol muncul saat `pr_ready_needs_fix` atau `failed` dengan mismatch. Dispatch workflow `ai-triage-cursor-fix.yml` (Composer 2.5). Butuh secret `CURSOR_API_KEY` di repo api-go.
+Tombol muncul saat `pr_ready_needs_fix` atau `failed` dengan mismatch. Dispatch workflow `ai-triage-cursor-fix.yml` (Composer 2.5). Maks **2 percobaan** per job (`cursorFixAttempts`); setelah itu patch manual di draft PR. Butuh secret `CURSOR_API_KEY` di repo api-go.
 
 Dokumen lengkap: `api-go/docs/AI_TRIAGE_LOOP_NEXT_DEV.md`

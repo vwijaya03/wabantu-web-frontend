@@ -167,6 +167,7 @@ function canRequestAiFix(job: AITriageJob): boolean {
   if (job.status !== "pr_ready_needs_fix" && job.status !== "failed") return false;
   const analysis = job.analysis;
   if (!analysis) return false;
+  if ((analysis.cursorFixAttempts ?? 0) >= 2) return false;
   const mismatches = analysis.mismatches?.filter(
     (m) => !m.skipped && m.expectedPath && m.userText,
   );
@@ -363,6 +364,20 @@ function JobStatusPanel({
         {job.errorText ? (
           <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive">
             {job.errorText}
+          </p>
+        ) : null}
+
+        {(analysis?.cursorFixAttempts ?? 0) >= 2 &&
+        (job.status === "pr_ready_needs_fix" || job.status === "failed") ? (
+          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-900 dark:text-amber-100">
+            Fix dengan AI sudah dicoba {analysis?.cursorFixAttempts ?? 0}× — lanjutkan patch manual di
+            draft PR.
+          </p>
+        ) : null}
+
+        {(analysis?.cursorFixAttempts ?? 0) > 0 && (analysis?.cursorFixAttempts ?? 0) < 2 ? (
+          <p className="text-xs text-muted-foreground">
+            Fix AI: {analysis?.cursorFixAttempts ?? 0}/2 percobaan digunakan (best-effort).
           </p>
         ) : null}
 

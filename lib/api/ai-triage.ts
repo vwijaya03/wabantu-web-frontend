@@ -71,6 +71,7 @@ export interface AnalyzeConversationResult {
   simulatorSnapshot?: TriageSimulatorSnapshot;
   cursorAgentId?: string;
   cursorFixGithubRunUrl?: string;
+  cursorFixAttempts?: number;
 }
 
 export type AITriageJobStatus =
