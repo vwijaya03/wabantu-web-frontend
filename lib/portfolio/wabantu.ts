@@ -60,7 +60,7 @@ export const wabantuFlowSteps: FlowStep[] = [
     id: "webhook",
     title: "WhatsApp webhook",
     description:
-      "Inbound messages from Meta Cloud API are verified, normalized, and stored per tenant conversation.",
+      "Inbound messages from Meta Cloud API are verified, normalized, and stored in the business inbox.",
   },
   {
     id: "routing",
@@ -90,7 +90,7 @@ export const wabantuFlowSteps: FlowStep[] = [
     id: "payment",
     title: "Payment proof",
     description:
-      "Transfer screenshots can be linked to orders; vision OCR supports manual review or tenant-configured auto-verify.",
+      "Transfer screenshots can be linked to orders; vision OCR supports manual review or configurable auto-verify.",
   },
 ];
 
@@ -125,15 +125,15 @@ export const wabantuFlowIntro =
   "From inbound WhatsApp message to verified order, the path the product optimizes for.";
 
 export const wabantuTechStackIntro =
-  "Built as a production multi-tenant SaaS, not a demo chatbot wrapper.";
+  "Built as a production SaaS, not a demo chatbot wrapper.";
 
 export const wabantuSurfacesIntro =
-  "UI mockups recreated from production dashboard patterns. Dummy data only, no tenant login required.";
+  "UI mockups recreated from production dashboard patterns. Dummy data only, no login required.";
 
 export const wabantuArchitectureLayers = [
   { id: "whatsapp", label: "WhatsApp Cloud API", sub: "Inbound webhooks" },
   { id: "encore", label: "Encore services", sub: "Auth, inbox, orders, jobs" },
-  { id: "postgres", label: "PostgreSQL", sub: "System + t_* tenant schemas" },
+  { id: "postgres", label: "PostgreSQL", sub: "Conversations, orders, catalog" },
   { id: "redis", label: "Redis", sub: "Sessions, SSE, rate limits" },
   { id: "dashboard", label: "Next.js dashboard", sub: "Vercel" },
 ] as const;
@@ -141,7 +141,7 @@ export const wabantuArchitectureLayers = [
 export const wabantuArchitecture = {
   title: "Architecture",
   points: [
-    "Multi-tenant isolation with per-tenant PostgreSQL schemas (t_<slug>).",
+    "Each business keeps its own conversations, orders, and catalog data isolated from others.",
     "Encore.go services for auth, webhook, AI jobs, orders, and inbox APIs.",
     "Redis for sessions, rate limits, and inbox live updates.",
     "Pub/Sub for async AI work, media persistence, and background imports.",
@@ -159,9 +159,9 @@ export const wabantuTechStack: TechStackItem[] = [
 
 export const wabantuHighlights: PortfolioHighlight[] = [
   {
-    title: "Tenant-safe by design",
+    title: "Business data isolation",
     description:
-      "Every business runs in an isolated schema. Conversations, orders, and catalog data do not cross tenants.",
+      "Each business account keeps its own conversations, orders, and catalog — data does not mix between accounts.",
   },
   {
     title: "Production-minded AI",

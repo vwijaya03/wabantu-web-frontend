@@ -33,7 +33,7 @@ const capabilityIcons = [Bot, ShoppingCart, UserRound, CreditCard, Radio];
 export const metadata: Metadata = {
   title: "WABantu · Portfolio",
   description:
-    "WABantu learning project and portfolio. WhatsApp AI commerce for Indonesian SMBs with catalog answers, guided orders, payment proof verification, and multi-tenant architecture.",
+    "WABantu learning project and portfolio. WhatsApp AI commerce for Indonesian SMBs with catalog answers, guided orders, and payment proof verification.",
   robots: { index: true, follow: true },
   openGraph: {
     title: "WABantu · Portfolio",
