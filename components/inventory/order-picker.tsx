@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ordersApi, type Order } from "@/lib/api/orders";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 function orderLabel(o: Order): string {
   const num = o.orderNumber || o.id.slice(0, 8);
@@ -21,12 +23,13 @@ export function OrderPicker({
   onChange: (o: Order | null) => void;
   placeholder?: string;
 }) {
+  const tenantKey = useTenantKey();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
 
   const { data, isFetching } = useQuery({
-    queryKey: ["orders", "picker", q],
-    queryFn: () => ordersApi.list({ q, pageSize: 8 }),
+    queryKey: tenantQueryKey(tenantKey, "orders", "picker", q),
+    queryFn: ({ signal }) => ordersApi.list({ q, pageSize: 8 }, signal),
     enabled: open && q.trim().length >= 1,
     staleTime: 15_000,
   });

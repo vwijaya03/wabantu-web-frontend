@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { apiGetConfig } from "./read-options";
 
 export const INBOX_UNREAD_QUERY_KEY = ["inbox-unread-summary"] as const;
 
@@ -141,8 +142,8 @@ export const inboxApi = {
     return res.data;
   },
 
-  async getContact(contactId: string): Promise<InboxContact> {
-    const res = await api.get<InboxContact>(`/inbox/contacts/${contactId}`);
+  async getContact(contactId: string, signal?: AbortSignal): Promise<InboxContact> {
+    const res = await api.get<InboxContact>(`/inbox/contacts/${contactId}`, apiGetConfig(undefined, signal));
     return res.data;
   },
 

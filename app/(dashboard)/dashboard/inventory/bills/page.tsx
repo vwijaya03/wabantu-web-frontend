@@ -31,6 +31,8 @@ import {
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { Pencil, Trash2 } from "lucide-react";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 type BillDraftLine = {
   item: PickedItem | null;
@@ -42,6 +44,7 @@ type BillDraftLine = {
 
 export default function BillsPage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const [creating, setCreating] = useState(false);
@@ -55,8 +58,8 @@ export default function BillsPage() {
   const [deleteBillNo, setDeleteBillNo] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "bills", searchQ, page, pageSize],
-    queryFn: () => inventoryApi.listBills({ q: searchQ || undefined, page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "bills", searchQ, page, pageSize),
+    queryFn: ({ signal }) => inventoryApi.listBills({ q: searchQ || undefined, page, pageSize }, signal),
   });
   const bills = data?.bills ?? [];
 
@@ -64,7 +67,7 @@ export default function BillsPage() {
     mutationFn: (id: string) => inventoryApi.deleteBill(id),
     onSuccess: () => {
       toast.success("Penerimaan dihapus — stok dikurangi");
-      void qc.invalidateQueries({ queryKey: ["inventory"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -80,9 +83,9 @@ export default function BillsPage() {
         <CreateBillPanel
           onDone={() => {
             setCreating(false);
-            void qc.invalidateQueries({ queryKey: ["inventory", "bills"] });
-            void qc.invalidateQueries({ queryKey: ["inventory", "stock"] });
-            void qc.invalidateQueries({ queryKey: ["inventory", "purchase-orders"] });
+            invalidateTenantQueries(qc, tenantKey, "inventory", "bills");
+            invalidateTenantQueries(qc, tenantKey, "inventory", "stock");
+            invalidateTenantQueries(qc, tenantKey, "inventory", "purchase-orders");
           }}
         />
       ) : null}
@@ -194,14 +197,15 @@ export default function BillsPage() {
 }
 
 function CreateBillPanel({ onDone }: { onDone: () => void }) {
+  const tenantKey = useTenantKey();
   const [poId, setPoId] = useState("");
   const [supplierName, setSupplierName] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
   const [lines, setLines] = useState<BillDraftLine[]>([{ item: null, qty: "", unitCost: "", batchNo: "" }]);
 
   const { data: poData } = useQuery({
-    queryKey: ["inventory", "purchase-orders", "open"],
-    queryFn: () => inventoryApi.listPurchaseOrders({ pageSize: 50 }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "purchase-orders", "open"),
+    queryFn: ({ signal }) => inventoryApi.listPurchaseOrders({ pageSize: 50 }, signal),
   });
   const openPOs = (poData?.purchaseOrders ?? []).filter((p) => p.status === "open" || p.status === "partial");
 
@@ -300,13 +304,14 @@ function CreateBillPanel({ onDone }: { onDone: () => void }) {
 
 function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; initialEditing?: boolean; onClose: () => void }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const [editing, setEditing] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { data: bill } = useQuery({
-    queryKey: ["inventory", "bill", id],
-    queryFn: () => inventoryApi.getBill(id!),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "bill", id),
+    queryFn: ({ signal }) => inventoryApi.getBill(id!, signal),
     enabled: Boolean(id),
   });
   const delMut = useMutation({
@@ -314,7 +319,7 @@ function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; 
     onSuccess: () => {
       toast.success("Penerimaan dihapus — stok dikurangi");
       onClose();
-      void qc.invalidateQueries({ queryKey: ["inventory"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -334,8 +339,8 @@ function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; 
               onSaved={() => {
                 setEditing(false);
                 void qc.invalidateQueries({ queryKey: ["inventory", "bill", id] });
-                void qc.invalidateQueries({ queryKey: ["inventory", "bills"] });
-                void qc.invalidateQueries({ queryKey: ["inventory", "stock"] });
+                invalidateTenantQueries(qc, tenantKey, "inventory", "bills");
+                invalidateTenantQueries(qc, tenantKey, "inventory", "stock");
               }}
             />
           ) : (

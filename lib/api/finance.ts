@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { apiGetConfig } from "./read-options";
 
 // ---- SHARED TYPES ----
 
@@ -327,11 +328,14 @@ export interface AuditEntry {
 
 export const financeApi = {
   // Dashboard
-  dashboard: (period?: string) =>
-    api.get<DashboardSummary>("/finance/dashboard", { params: period ? { period } : {} }).then((r) => r.data),
+  dashboard: (period?: string, signal?: AbortSignal) =>
+    api
+      .get<DashboardSummary>("/finance/dashboard", apiGetConfig(period ? { period } : undefined, signal))
+      .then((r) => r.data),
 
   // Wallets
-  listWallets: () => api.get<{ wallets: Wallet[] }>("/finance/wallets").then((r) => r.data),
+  listWallets: (signal?: AbortSignal) =>
+    api.get<{ wallets: Wallet[] }>("/finance/wallets", apiGetConfig(undefined, signal)).then((r) => r.data),
   createWallet: (d: CreateWalletInput) =>
     api.post<Wallet>("/finance/wallets", d).then((r) => r.data),
   updateWallet: (id: string, d: UpdateWalletInput) =>
@@ -340,21 +344,27 @@ export const financeApi = {
     api.delete<{ ok: boolean }>(`/finance/wallets/${id}`).then((r) => r.data),
 
   // Categories
-  listCategories: () => api.get<{ categories: Category[] }>("/finance/categories").then((r) => r.data),
+  listCategories: (signal?: AbortSignal) =>
+    api
+      .get<{ categories: Category[] }>("/finance/categories", apiGetConfig(undefined, signal))
+      .then((r) => r.data),
   createCategory: (d: Partial<Category>) =>
     api.post<Category>("/finance/categories", d).then((r) => r.data),
   deleteCategory: (id: string) =>
     api.delete<{ ok: boolean }>(`/finance/categories/${id}`).then((r) => r.data),
 
   // Transaction types
-  listTransactionTypes: (params?: {
-    q?: string;
-    page?: number;
-    pageSize?: number;
-    activeOnly?: boolean;
-  }) =>
+  listTransactionTypes: (
+    params?: {
+      q?: string;
+      page?: number;
+      pageSize?: number;
+      activeOnly?: boolean;
+    },
+    signal?: AbortSignal,
+  ) =>
     api
-      .get<{ items: TransactionType[]; total: number }>("/finance/transaction-types", { params })
+      .get<{ items: TransactionType[]; total: number }>("/finance/transaction-types", apiGetConfig(params, signal))
       .then((r) => r.data),
   createTransactionType: (d: {
     code: string;
@@ -379,8 +389,10 @@ export const financeApi = {
     api.delete<{ ok: boolean }>(`/finance/transaction-types/${id}`).then((r) => r.data),
 
   // Transactions
-  listTransactions: (params?: Record<string, string | number | undefined>) =>
-    api.get<{ items: Transaction[]; total: number }>("/finance/transactions", { params }).then((r) => r.data),
+  listTransactions: (params?: Record<string, string | number | undefined>, signal?: AbortSignal) =>
+    api
+      .get<{ items: Transaction[]; total: number }>("/finance/transactions", apiGetConfig(params, signal))
+      .then((r) => r.data),
   createTransaction: (d: CreateTransactionInput) =>
     api.post<Transaction>("/finance/transactions", d).then((r) => r.data),
   updateTransaction: (id: string, d: Partial<Transaction>) =>
@@ -393,36 +405,48 @@ export const financeApi = {
   // Approval
   approveTransaction: (id: string, action: "approve" | "reject", reason?: string) =>
     api.post<Transaction>("/finance/transactions/approve", { id, action, reason }).then((r) => r.data),
-  getApprovalSetting: () => api.get<ApprovalSetting>("/finance/approval-setting").then((r) => r.data),
+  getApprovalSetting: (signal?: AbortSignal) =>
+    api.get<ApprovalSetting>("/finance/approval-setting", apiGetConfig(undefined, signal)).then((r) => r.data),
   updateApprovalSetting: (d: ApprovalSetting) =>
     api.put<ApprovalSetting>("/finance/approval-setting", d).then((r) => r.data),
 
   // Period lock
   lockPeriod: (period: string, note?: string) =>
     api.post<{ ok: boolean }>("/finance/period-lock", { period, note }).then((r) => r.data),
-  listLockedPeriods: () => api.get<{ periods: string[] }>("/finance/locked-periods").then((r) => r.data),
+  listLockedPeriods: (signal?: AbortSignal) =>
+    api.get<{ periods: string[] }>("/finance/locked-periods", apiGetConfig(undefined, signal)).then((r) => r.data),
 
   // Budgets
-  listBudgets: (period?: string) =>
-    api.get<{ budgets: Budget[]; period: string }>("/finance/budgets", { params: period ? { period } : {} }).then((r) => r.data),
+  listBudgets: (period?: string, signal?: AbortSignal) =>
+    api
+      .get<{ budgets: Budget[]; period: string }>("/finance/budgets", apiGetConfig(period ? { period } : undefined, signal))
+      .then((r) => r.data),
   upsertBudget: (d: { categoryId: string; period: string; amount: number }) =>
     api.post<Budget>("/finance/budgets", d).then((r) => r.data),
   deleteBudget: (id: string) =>
     api.delete<{ ok: boolean }>(`/finance/budgets/${id}`).then((r) => r.data),
-  budgetSummary: (period?: string) =>
-    api.get<BudgetSummary>("/finance/budgets/summary", { params: period ? { period } : {} }).then((r) => r.data),
-  categorySpending: (period?: string) =>
-    api.get<{ items: CategorySpendingItem[]; period: string }>("/finance/reports/category-spending", {
-      params: period ? { period } : {},
-    }).then((r) => r.data),
-  monthlyComparison: (months?: number) =>
-    api.get<{ items: MonthlyComparisonItem[] }>("/finance/reports/monthly-comparison", {
-      params: months ? { months } : {},
-    }).then((r) => r.data),
+  budgetSummary: (period?: string, signal?: AbortSignal) =>
+    api
+      .get<BudgetSummary>("/finance/budgets/summary", apiGetConfig(period ? { period } : undefined, signal))
+      .then((r) => r.data),
+  categorySpending: (period?: string, signal?: AbortSignal) =>
+    api
+      .get<{ items: CategorySpendingItem[]; period: string }>(
+        "/finance/reports/category-spending",
+        apiGetConfig(period ? { period } : undefined, signal),
+      )
+      .then((r) => r.data),
+  monthlyComparison: (months?: number, signal?: AbortSignal) =>
+    api
+      .get<{ items: MonthlyComparisonItem[] }>(
+        "/finance/reports/monthly-comparison",
+        apiGetConfig(months ? { months } : undefined, signal),
+      )
+      .then((r) => r.data),
 
   // Investment
-  portfolio: (params?: { search?: string; page?: number; pageSize?: number }) =>
-    api.get<PortfolioSummary>("/finance/investments/portfolio", { params }).then((r) => r.data),
+  portfolio: (params?: { search?: string; page?: number; pageSize?: number }, signal?: AbortSignal) =>
+    api.get<PortfolioSummary>("/finance/investments/portfolio", apiGetConfig(params, signal)).then((r) => r.data),
   createAsset: (d: { name: string; ticker?: string; type: string; unitName: string; walletId: string; notes?: string }) =>
     api.post<AssetWithPortfolio>("/finance/investments/assets", d).then((r) => r.data),
   updateAsset: (
@@ -468,7 +492,7 @@ export const financeApi = {
         d
       )
       .then((r) => r.data),
-  listAssetTrades: (assetId: string) =>
+  listAssetTrades: (assetId: string, signal?: AbortSignal) =>
     api
       .get<{
         items: {
@@ -482,15 +506,16 @@ export const financeApi = {
           description?: string;
           status: string;
         }[];
-      }>(`/finance/investments/assets/${assetId}/trades`)
+      }>(`/finance/investments/assets/${assetId}/trades`, apiGetConfig(undefined, signal))
       .then((r) => r.data),
   deleteAssetTrade: (assetId: string, txnId: string) =>
     api.delete<{ ok: boolean }>(`/finance/investments/assets/${assetId}/trades/${txnId}`).then((r) => r.data),
-  assetPriceHistory: (assetId: string) =>
-    api.get(`/finance/investments/assets/${assetId}/prices`).then((r) => r.data),
+  assetPriceHistory: (assetId: string, signal?: AbortSignal) =>
+    api.get(`/finance/investments/assets/${assetId}/prices`, apiGetConfig(undefined, signal)).then((r) => r.data),
 
   // Recurring
-  listRecurring: () => api.get<{ items: Recurring[] }>("/finance/recurring").then((r) => r.data),
+  listRecurring: (signal?: AbortSignal) =>
+    api.get<{ items: Recurring[] }>("/finance/recurring", apiGetConfig(undefined, signal)).then((r) => r.data),
   createRecurring: (d: CreateRecurringInput) =>
     api.post<Recurring>("/finance/recurring", d).then((r) => r.data),
   deleteRecurring: (id: string) =>
@@ -505,17 +530,25 @@ export const financeApi = {
       .then((r) => r.data),
 
   // Checklist (tagihan bulanan + template)
-  listChecklistTemplates: () =>
-    api.get<{ templates: ChecklistTemplate[] }>("/finance/checklist/templates").then((r) => r.data),
-  listChecklistTemplatesPaginated: (params?: {
-    q?: string;
-    page?: number;
-    pageSize?: number;
-    frequency?: string;
-    activeOnly?: boolean;
-  }) =>
+  listChecklistTemplates: (signal?: AbortSignal) =>
     api
-      .get<{ items: ChecklistTemplate[]; total: number }>("/finance/checklist/templates/manage", { params })
+      .get<{ templates: ChecklistTemplate[] }>("/finance/checklist/templates", apiGetConfig(undefined, signal))
+      .then((r) => r.data),
+  listChecklistTemplatesPaginated: (
+    params?: {
+      q?: string;
+      page?: number;
+      pageSize?: number;
+      frequency?: string;
+      activeOnly?: boolean;
+    },
+    signal?: AbortSignal,
+  ) =>
+    api
+      .get<{ items: ChecklistTemplate[]; total: number }>(
+        "/finance/checklist/templates/manage",
+        apiGetConfig(params, signal),
+      )
       .then((r) => r.data),
   createChecklistTemplate: (d: CreateChecklistTemplateInput) =>
     api.post<ChecklistTemplate>("/finance/checklist/templates", d).then((r) => r.data),
@@ -523,28 +556,38 @@ export const financeApi = {
     api.patch<ChecklistTemplate>(`/finance/checklist/templates/${id}`, d).then((r) => r.data),
   deleteChecklistTemplate: (id: string) =>
     api.delete<{ ok: boolean }>(`/finance/checklist/templates/${id}`).then((r) => r.data),
-  getMonthlyBilling: (period: string) =>
+  getMonthlyBilling: (period: string, signal?: AbortSignal) =>
     api
-      .get<MonthlyBillingResponse>("/finance/checklist/monthly", { params: { period } })
+      .get<MonthlyBillingResponse>("/finance/checklist/monthly", apiGetConfig({ period }, signal))
       .then((r) => r.data),
   toggleMonthlyBillingItem: (itemId: string, checked: boolean) =>
     api
       .post<ToggleMonthlyBillingResponse>("/finance/checklist/monthly/toggle", { itemId, checked })
       .then((r) => r.data),
-  todayChecklist: () =>
-    api.get<{ items: ChecklistItem[]; date: string; pending: number }>("/finance/checklist/today").then((r) => r.data),
+  todayChecklist: (signal?: AbortSignal) =>
+    api
+      .get<{ items: ChecklistItem[]; date: string; pending: number }>(
+        "/finance/checklist/today",
+        apiGetConfig(undefined, signal),
+      )
+      .then((r) => r.data),
   checklistAction: (itemId: string, action: "done" | "skip", note?: string, transactionId?: string) =>
     api.post<ChecklistItem>("/finance/checklist/action", { itemId, action, note, transactionId }).then((r) => r.data),
 
   // Reports
   createReportJob: (d: { type: string; startDate: string; endDate: string; format: "pdf" | "csv"; period?: string }) =>
     api.post<ReportJob>("/finance/reports/export", d).then((r) => r.data),
-  getReportJob: (id: string) => api.get<ReportJob>(`/finance/reports/jobs/${id}`).then((r) => r.data),
-  listReportJobs: () => api.get<{ items: ReportJob[] }>("/finance/reports/jobs").then((r) => r.data),
+  getReportJob: (id: string, signal?: AbortSignal) =>
+    api.get<ReportJob>(`/finance/reports/jobs/${id}`, apiGetConfig(undefined, signal)).then((r) => r.data),
+  listReportJobs: (signal?: AbortSignal) =>
+    api.get<{ items: ReportJob[] }>("/finance/reports/jobs", apiGetConfig(undefined, signal)).then((r) => r.data),
 
   // Audit
-  auditLog: (params?: { entityType?: string; entityId?: string; limit?: number }) =>
-    api.get<{ items: AuditEntry[] }>("/finance/audit-log", { params }).then((r) => r.data),
+  auditLog: (
+    params?: { entityType?: string; entityId?: string; limit?: number },
+    signal?: AbortSignal,
+  ) =>
+    api.get<{ items: AuditEntry[] }>("/finance/audit-log", apiGetConfig(params, signal)).then((r) => r.data),
 };
 
 // ---- HELPERS ----

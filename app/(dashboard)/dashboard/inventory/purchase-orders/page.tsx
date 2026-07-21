@@ -30,6 +30,8 @@ import {
 } from "@/components/inventory/inventory-table";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 type DraftLine = { item: PickedItem | null; qtyOrdered: string; unitCost: string };
 
@@ -53,6 +55,7 @@ function poStatusBadge(status: string) {
 
 export default function PurchaseOrdersPage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const [creating, setCreating] = useState(false);
@@ -63,8 +66,8 @@ export default function PurchaseOrdersPage() {
   const [pageSize, setPageSize] = useState(25);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "purchase-orders", searchQ, page, pageSize],
-    queryFn: () => inventoryApi.listPurchaseOrders({ q: searchQ || undefined, page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "purchase-orders", searchQ, page, pageSize),
+    queryFn: ({ signal }) => inventoryApi.listPurchaseOrders({ q: searchQ || undefined, page, pageSize }, signal),
   });
   const orders = data?.purchaseOrders ?? [];
 
@@ -75,7 +78,7 @@ export default function PurchaseOrdersPage() {
         {canManage ? <Button onClick={() => setCreating((v) => !v)}>{creating ? "Tutup" : "Buat PO"}</Button> : null}
       </div>
 
-      {creating ? <CreatePOPanel onDone={() => { setCreating(false); void qc.invalidateQueries({ queryKey: ["inventory", "purchase-orders"] }); }} /> : null}
+      {creating ? <CreatePOPanel onDone={() => { setCreating(false); invalidateTenantQueries(qc, tenantKey, "inventory", "purchase-orders"); }} /> : null}
 
       <InventoryOpenDetailSuspense setDetailId={setDetailId} />
 
@@ -191,16 +194,17 @@ function CreatePOPanel({ onDone }: { onDone: () => void }) {
 
 function PODetailDialog({ id, canManage, onClose }: { id: string | null; canManage: boolean; onClose: () => void }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const [editing, setEditing] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { data: po } = useQuery({
-    queryKey: ["inventory", "purchase-order", id],
-    queryFn: () => inventoryApi.getPurchaseOrder(id!),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "purchase-order", id),
+    queryFn: ({ signal }) => inventoryApi.getPurchaseOrder(id!, signal),
     enabled: Boolean(id),
   });
 
   const refresh = () => {
-    void qc.invalidateQueries({ queryKey: ["inventory", "purchase-orders"] });
+    invalidateTenantQueries(qc, tenantKey, "inventory", "purchase-orders");
     void qc.invalidateQueries({ queryKey: ["inventory", "purchase-order", id] });
   };
   const closeMut = useMutation({ mutationFn: () => inventoryApi.closePurchaseOrder(id!), onSuccess: () => { toast.success("PO ditutup"); refresh(); }, onError: (e) => toast.error(toApiError(e).message) });
@@ -210,7 +214,7 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
     onSuccess: () => {
       toast.success("PO dihapus");
       onClose();
-      void qc.invalidateQueries({ queryKey: ["inventory", "purchase-orders"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory", "purchase-orders");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });

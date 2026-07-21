@@ -16,15 +16,18 @@ import {
   inventoryGuideComplete,
   nextInventoryGuideStep,
 } from "@/lib/inventory/getting-started";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export default function InventoryGuidePage() {
+  const tenantKey = useTenantKey();
   const { data: setting } = useQuery({
-    queryKey: ["inventory", "setting"],
-    queryFn: () => inventoryApi.getSetting(),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "setting"),
+    queryFn: ({ signal }) => inventoryApi.getSetting(signal),
   });
   const { data: stockData } = useQuery({
-    queryKey: ["inventory", "stock", "guide"],
-    queryFn: () => inventoryApi.listStock({ pageSize: 1 }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "stock", "guide"),
+    queryFn: ({ signal }) => inventoryApi.listStock({ pageSize: 1 }, signal),
   });
 
   const stockTotal = stockData?.total ?? 0;

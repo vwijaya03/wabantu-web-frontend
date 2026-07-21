@@ -20,11 +20,14 @@ import {
   todayISOInTimezone,
 } from "@/lib/finance/utils";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 type ReportRange = "monthly" | "custom" | "all_time";
 
 export default function ReportsPage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const reportingTimezone = useReportingTimezone();
   const currentPeriod = currentFinancePeriod(reportingTimezone);
   const monthOptions = financeMonthOptions(reportingTimezone, 12);
@@ -36,18 +39,18 @@ export default function ReportsPage() {
   const [customEndDate, setCustomEndDate] = useState(() => todayISOInTimezone(reportingTimezone));
 
   const { data: comparison } = useQuery({
-    queryKey: ["finance-monthly-comparison"],
-    queryFn: () => financeApi.monthlyComparison(6),
+    queryKey: tenantQueryKey(tenantKey, "finance-monthly-comparison"),
+    queryFn: ({ signal }) => financeApi.monthlyComparison(6, signal),
   });
 
   const { data: categorySpending } = useQuery({
-    queryKey: ["finance-category-spending", effectivePeriod],
-    queryFn: () => financeApi.categorySpending(effectivePeriod),
+    queryKey: tenantQueryKey(tenantKey, "finance-category-spending", effectivePeriod),
+    queryFn: ({ signal }) => financeApi.categorySpending(effectivePeriod, signal),
   });
 
   const { data: jobs, refetch: refetchJobs, isFetching: isFetchingJobs } = useQuery({
-    queryKey: ["finance-report-jobs"],
-    queryFn: () => financeApi.listReportJobs(),
+    queryKey: tenantQueryKey(tenantKey, "finance-report-jobs"),
+    queryFn: ({ signal }) => financeApi.listReportJobs(signal),
   });
 
   const exportMut = useMutation({

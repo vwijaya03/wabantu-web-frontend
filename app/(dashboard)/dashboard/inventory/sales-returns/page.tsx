@@ -31,9 +31,12 @@ import {
 import { type Order } from "@/lib/api/orders";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export default function SalesReturnsPage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const [order, setOrder] = useState<Order | null>(null);
@@ -47,8 +50,8 @@ export default function SalesReturnsPage() {
   const [createMode, setCreateMode] = useState<"single" | "bulk">("single");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "sales-returns", searchQ, page, pageSize],
-    queryFn: () => inventoryApi.listSalesReturns({ q: searchQ || undefined, page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "sales-returns", searchQ, page, pageSize),
+    queryFn: ({ signal }) => inventoryApi.listSalesReturns({ q: searchQ || undefined, page, pageSize }, signal),
   });
   const returns = data?.salesReturns ?? [];
 
@@ -66,8 +69,8 @@ export default function SalesReturnsPage() {
     onSuccess: (r) => {
       toast.success(`Retur ${r.returnNo} tersimpan — stok kembali`);
       reset();
-      void qc.invalidateQueries({ queryKey: ["inventory", "sales-returns"] });
-      void qc.invalidateQueries({ queryKey: ["inventory", "stock"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory", "sales-returns");
+      invalidateTenantQueries(qc, tenantKey, "inventory", "stock");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -182,10 +185,11 @@ export default function SalesReturnsPage() {
 
 function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; canManage: boolean; onClose: () => void }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { data: r } = useQuery({
-    queryKey: ["inventory", "sales-return", id],
-    queryFn: () => inventoryApi.getSalesReturn(id!),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "sales-return", id),
+    queryFn: ({ signal }) => inventoryApi.getSalesReturn(id!, signal),
     enabled: Boolean(id),
   });
   const delMut = useMutation({
@@ -193,7 +197,7 @@ function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; can
     onSuccess: () => {
       toast.success("Retur dihapus — stok disesuaikan");
       onClose();
-      void qc.invalidateQueries({ queryKey: ["inventory"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });

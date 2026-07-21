@@ -28,6 +28,8 @@ import { priceTypesApi, type PriceType } from "@/lib/api/price-types";
 import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const pageSize = 25;
 
@@ -55,6 +57,7 @@ const emptyForm: CatalogForm = {
 
 export default function CatalogPage() {
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const canManage = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const [q, setQ] = useState("");
@@ -67,12 +70,12 @@ export default function CatalogPage() {
   const [deleteProductName, setDeleteProductName] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["catalog", search, page, pageSize],
-    queryFn: () => catalogApi.list({ q: search || undefined, page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "catalog", search, page, pageSize),
+    queryFn: ({ signal }) => catalogApi.list({ q: search || undefined, page, pageSize }, signal),
   });
   const { data: priceTypesData } = useQuery({
-    queryKey: ["price-types", "catalog-form"],
-    queryFn: () => priceTypesApi.list({ pageSize: 50 }),
+    queryKey: tenantQueryKey(tenantKey, "price-types", "catalog-form"),
+    queryFn: ({ signal }) => priceTypesApi.list({ pageSize: 50 }, signal),
   });
   const priceTypes = (priceTypesData?.items ?? []).filter((pt) => pt.isActive);
 

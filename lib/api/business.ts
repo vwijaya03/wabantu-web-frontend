@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { apiGetConfig } from "./read-options";
 import { DEFAULT_REPORTING_TIMEZONE_UI } from "@/lib/reporting-timezones";
 
 /** Accept camelCase or snake_case; prefer first non-empty (avoid `"" ?? snake` ignoring snake). */
@@ -120,8 +121,8 @@ export interface ProfileAISuggestResult {
 }
 
 export const businessApi = {
-  async get(): Promise<BusinessProfile> {
-    const res = await api.get<unknown>("/business/profile");
+  async get(signal?: AbortSignal): Promise<BusinessProfile> {
+    const res = await api.get<unknown>("/business/profile", apiGetConfig(undefined, signal));
     return normalizeProfile(res.data);
   },
   async update(input: UpdateBusinessProfileInput): Promise<BusinessProfile> {

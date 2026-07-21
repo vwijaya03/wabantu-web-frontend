@@ -25,6 +25,8 @@ import { contactsApi, type Contact } from "@/lib/api/contacts";
 import { priceTypesApi } from "@/lib/api/price-types";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const pageSize = 25;
 
@@ -55,6 +57,7 @@ const emptyForm: ContactForm = {
 
 export default function ContactsPage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -68,12 +71,12 @@ export default function ContactsPage() {
   const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["contacts", search, page, pageSize],
-    queryFn: () => contactsApi.list({ q: search || undefined, page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "contacts", search, page, pageSize),
+    queryFn: ({ signal }) => contactsApi.list({ q: search || undefined, page, pageSize }, signal),
   });
   const { data: priceTypesData } = useQuery({
-    queryKey: ["price-types", "contacts-form"],
-    queryFn: () => priceTypesApi.list({ pageSize: 50 }),
+    queryKey: tenantQueryKey(tenantKey, "price-types", "contacts-form"),
+    queryFn: ({ signal }) => priceTypesApi.list({ pageSize: 50 }, signal),
   });
   const priceTypes = (priceTypesData?.items ?? []).filter((pt) => pt.isActive);
   const defaultPriceType = useMemo(

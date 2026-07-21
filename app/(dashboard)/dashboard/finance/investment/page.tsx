@@ -52,6 +52,8 @@ import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
 import { formatFinanceDate, invalidateFinanceCaches, NO_WALLET, todayISOInTimezone } from "@/lib/finance/utils";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 import {
   CUSTOM_UNIT,
   defaultUnitNameForType,
@@ -123,6 +125,7 @@ function assetFieldHints(type: string) {
 
 export default function InvestmentPage() {
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const canManage = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const reportingTimezone = useReportingTimezone();
@@ -170,18 +173,18 @@ export default function InvestmentPage() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["finance-portfolio", search, page],
-    queryFn: () => financeApi.portfolio({ search: search || undefined, page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "finance-portfolio", search, page),
+    queryFn: ({ signal }) => financeApi.portfolio({ search: search || undefined, page, pageSize }, signal),
   });
 
   const { data: wallets } = useQuery({
-    queryKey: ["finance-wallets"],
-    queryFn: () => financeApi.listWallets(),
+    queryKey: tenantQueryKey(tenantKey, "finance-wallets"),
+    queryFn: ({ signal }) => financeApi.listWallets(signal),
   });
 
   const { data: tradesData, isLoading: tradesLoading } = useQuery({
-    queryKey: ["finance-asset-trades", tradeHistoryAssetId],
-    queryFn: () => financeApi.listAssetTrades(tradeHistoryAssetId!),
+    queryKey: tenantQueryKey(tenantKey, "finance-asset-trades", tradeHistoryAssetId),
+    queryFn: ({ signal }) => financeApi.listAssetTrades(tradeHistoryAssetId!, signal),
     enabled: !!tradeHistoryAssetId,
   });
 
