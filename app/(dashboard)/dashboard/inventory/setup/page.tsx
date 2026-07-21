@@ -39,6 +39,8 @@ import { COSTING_METHOD_GUIDES } from "@/lib/inventory/costing-guide";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const QUICK_REPLIES = [
   "Jual frozen food, stok cepat keluar",
@@ -122,6 +124,7 @@ function draftLabel(map: Record<string, string>, value: string): string {
 
 export default function InventorySetupPage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const chatScrollRef = useRef<HTMLDivElement>(null);
@@ -135,8 +138,8 @@ export default function InventorySetupPage() {
   const [methodApplied, setMethodApplied] = useState(false);
 
   const { data: setting } = useQuery({
-    queryKey: ["inventory", "setting"],
-    queryFn: () => inventoryApi.getSetting(),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "setting"),
+    queryFn: ({ signal }) => inventoryApi.getSetting(signal),
   });
 
   const startMut = useMutation({
@@ -180,7 +183,7 @@ export default function InventorySetupPage() {
       setMethodApplied(false);
       setSession(null);
       setStep(3);
-      void qc.invalidateQueries({ queryKey: ["inventory", "setting"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory", "setting");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -190,7 +193,7 @@ export default function InventorySetupPage() {
     onSuccess: () => {
       toast.success("Metode HPP diterapkan");
       setMethodApplied(true);
-      void qc.invalidateQueries({ queryKey: ["inventory", "setting"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory", "setting");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -199,7 +202,7 @@ export default function InventorySetupPage() {
     mutationFn: () => inventoryApi.completeSetup(),
     onSuccess: () => {
       toast.success("Setup persediaan selesai! Fitur stok aktif.");
-      void qc.invalidateQueries({ queryKey: ["inventory", "setting"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory", "setting");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });

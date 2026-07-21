@@ -37,6 +37,8 @@ import {
   todayISOInTimezone,
 } from "@/lib/finance/utils";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 interface Props {
   open: boolean;
@@ -82,6 +84,7 @@ function buildCategoryGroups(categories: Category[]) {
 
 export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const canManage = canPerformOwnerActions(user);
   const reportingTimezone = useReportingTimezone();
 
@@ -97,20 +100,20 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
   const [loading, setLoading] = useState(false);
 
   const { data: walletsData } = useQuery({
-    queryKey: ["finance-wallets"],
-    queryFn: () => financeApi.listWallets(),
+    queryKey: tenantQueryKey(tenantKey, "finance-wallets"),
+    queryFn: ({ signal }) => financeApi.listWallets(signal),
     enabled: open,
   });
 
   const { data: categoriesData } = useQuery({
-    queryKey: ["finance-categories"],
-    queryFn: () => financeApi.listCategories(),
+    queryKey: tenantQueryKey(tenantKey, "finance-categories"),
+    queryFn: ({ signal }) => financeApi.listCategories(signal),
     enabled: open,
   });
 
   const { data: typesData } = useQuery({
-    queryKey: ["finance-transaction-types", "picker"],
-    queryFn: () => financeApi.listTransactionTypes({ activeOnly: true, pageSize: 100 }),
+    queryKey: tenantQueryKey(tenantKey, "finance-transaction-types", "picker"),
+    queryFn: ({ signal }) => financeApi.listTransactionTypes({ activeOnly: true, pageSize: 100 }, signal),
     enabled: open,
   });
 

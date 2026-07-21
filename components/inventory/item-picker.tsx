@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { catalogApi } from "@/lib/api/catalog";
 import { cn } from "@/lib/utils";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export interface PickedItem {
   id: string;
@@ -22,12 +24,13 @@ export function ItemPicker({
   onChange: (item: PickedItem | null) => void;
   placeholder?: string;
 }) {
+  const tenantKey = useTenantKey();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
 
   const { data, isFetching } = useQuery({
-    queryKey: ["catalog", "picker", q],
-    queryFn: () => catalogApi.list({ q, pageSize: 8, activeOnly: true }),
+    queryKey: tenantQueryKey(tenantKey, "catalog", "picker", q),
+    queryFn: ({ signal }) => catalogApi.list({ q, pageSize: 8, activeOnly: true }, signal),
     enabled: open && q.trim().length >= 1,
     staleTime: 30_000,
   });

@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { apiGetConfig } from "./read-options";
 
 export interface CatalogItemPrice {
   priceTypeId: string;
@@ -52,8 +53,8 @@ export interface CatalogInput {
 export type CatalogUpdateInput = Partial<Omit<CatalogInput, "externalCode">>;
 
 export const catalogApi = {
-  async list(params: ListCatalogParams = {}): Promise<ListCatalogResponse> {
-    const res = await api.get("/business/catalog", { params });
+  async list(params: ListCatalogParams = {}, signal?: AbortSignal): Promise<ListCatalogResponse> {
+    const res = await api.get("/business/catalog", apiGetConfig(params, signal));
     return res.data;
   },
   async create(input: CatalogInput): Promise<CatalogItem> {

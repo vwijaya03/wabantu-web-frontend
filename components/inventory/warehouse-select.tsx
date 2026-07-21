@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { inventoryApi } from "@/lib/api/inventory";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export function WarehouseSelect({
   value,
@@ -18,9 +20,10 @@ export function WarehouseSelect({
   className?: string;
   disabled?: boolean;
 }) {
+  const tenantKey = useTenantKey();
   const { data } = useQuery({
-    queryKey: ["inventory", "warehouses", "all"],
-    queryFn: () => inventoryApi.listWarehouses({ all: true }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "warehouses", "all"),
+    queryFn: ({ signal }) => inventoryApi.listWarehouses({ all: true }, signal),
     staleTime: 60_000,
   });
   const warehouses = (data?.warehouses ?? []).filter((w) => w.id !== exclude && !w.isDeleted && w.isActive);

@@ -12,20 +12,23 @@ import { canPerformOwnerActions } from "@/lib/api/auth";
 import { inventoryApi, COSTING_METHOD_LABELS, type CostingMethod } from "@/lib/api/inventory";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export default function InventorySettingsPage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
 
   const { data: setting } = useQuery({
-    queryKey: ["inventory", "setting"],
-    queryFn: () => inventoryApi.getSetting(),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "setting"),
+    queryFn: ({ signal }) => inventoryApi.getSetting(signal),
   });
 
   const update = useMutation({
     mutationFn: (input: Parameters<typeof inventoryApi.updateSetting>[0]) => inventoryApi.updateSetting(input),
-    onSuccess: () => { toast.success("Pengaturan disimpan"); void qc.invalidateQueries({ queryKey: ["inventory", "setting"] }); },
+    onSuccess: () => { toast.success("Pengaturan disimpan"); invalidateTenantQueries(qc, tenantKey, "inventory", "setting"); },
     onError: (e) => toast.error(toApiError(e).message),
   });
 

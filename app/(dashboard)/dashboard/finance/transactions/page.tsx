@@ -61,6 +61,8 @@ import {
 } from "@/lib/finance/utils";
 import { AddTransactionSheet } from "@/components/finance/add-transaction-sheet";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const FILTER_ALL = "__all__";
 const pageSize = 30;
@@ -80,6 +82,7 @@ function txnTitle(txn: Transaction, txnTypes: TransactionType[]) {
 
 export default function TransactionsPage() {
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const searchParams = useSearchParams();
@@ -109,27 +112,30 @@ export default function TransactionsPage() {
   const effectivePeriod = filters.period || currentPeriod;
 
   const { data: txnTypesData } = useQuery({
-    queryKey: ["finance-transaction-types", "filter"],
-    queryFn: () => financeApi.listTransactionTypes({ pageSize: 100 }),
+    queryKey: tenantQueryKey(tenantKey, "finance-transaction-types", "filter"),
+    queryFn: ({ signal }) => financeApi.listTransactionTypes({ pageSize: 100 }, signal),
   });
   const txnTypes = txnTypesData?.items ?? [];
 
   const { data: categories } = useQuery({
-    queryKey: ["finance-categories"],
-    queryFn: () => financeApi.listCategories(),
+    queryKey: tenantQueryKey(tenantKey, "finance-categories"),
+    queryFn: ({ signal }) => financeApi.listCategories(signal),
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["finance-transactions", filters, effectivePeriod, search],
-    queryFn: () =>
-      financeApi.listTransactions({
-        type: filters.type || undefined,
-        status: filters.status || undefined,
-        period: effectivePeriod,
-        search: search || undefined,
-        page: filters.page,
-        pageSize,
-      }),
+    queryKey: tenantQueryKey(tenantKey, "finance-transactions", filters, effectivePeriod, search),
+    queryFn: ({ signal }) =>
+      financeApi.listTransactions(
+        {
+          type: filters.type || undefined,
+          status: filters.status || undefined,
+          period: effectivePeriod,
+          search: search || undefined,
+          page: filters.page,
+          pageSize,
+        },
+        signal,
+      ),
   });
 
   const approveMut = useMutation({

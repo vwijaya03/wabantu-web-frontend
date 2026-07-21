@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { contactsApi, type Contact } from "@/lib/api/contacts";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 import { formatEventDateId } from "@/lib/events-format";
 import { cn } from "@/lib/utils";
 
@@ -21,10 +23,12 @@ export function ContactPicker({
 }) {
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
+  const tenantKey = useTenantKey();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["contacts-picker", search],
-    queryFn: () => contactsApi.list({ q: search || undefined, page: 1, pageSize: 20 }),
+    queryKey: tenantQueryKey(tenantKey, "contacts-picker", search),
+    queryFn: ({ signal }) =>
+      contactsApi.list({ q: search || undefined, page: 1, pageSize: 20 }, signal),
     enabled: search.length >= 1,
   });
 

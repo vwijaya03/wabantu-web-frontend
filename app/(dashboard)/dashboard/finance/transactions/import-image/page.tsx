@@ -44,6 +44,8 @@ import { invalidateFinanceCaches } from "@/lib/finance/utils";
 import { cn } from "@/lib/utils";
 import { ImageUp, MinusCircle, PlusCircle, Sparkles, Upload, X } from "lucide-react";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 function applyWalletCategoryHints(
   rows: TransactionImageDraftItem[],
@@ -60,6 +62,7 @@ function applyWalletCategoryHints(
 
 export default function TransactionImportImagePage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [preview, setPreview] = useState<TransactionImagePreview | null>(null);
@@ -70,16 +73,16 @@ export default function TransactionImportImagePage() {
     queryFn: () => usageApi.summary(),
   });
   const { data: walletsData } = useQuery({
-    queryKey: ["finance-wallets"],
-    queryFn: () => financeApi.listWallets(),
+    queryKey: tenantQueryKey(tenantKey, "finance-wallets"),
+    queryFn: ({ signal }) => financeApi.listWallets(signal),
   });
   const { data: categoriesData } = useQuery({
-    queryKey: ["finance-categories"],
-    queryFn: () => financeApi.listCategories(),
+    queryKey: tenantQueryKey(tenantKey, "finance-categories"),
+    queryFn: ({ signal }) => financeApi.listCategories(signal),
   });
   const { data: txnTypesData } = useQuery({
-    queryKey: ["finance-transaction-types", "import"],
-    queryFn: () => financeApi.listTransactionTypes({ pageSize: 100 }),
+    queryKey: tenantQueryKey(tenantKey, "finance-transaction-types", "import"),
+    queryFn: ({ signal }) => financeApi.listTransactionTypes({ pageSize: 100 }, signal),
   });
 
   const wallets = walletsData?.wallets ?? [];

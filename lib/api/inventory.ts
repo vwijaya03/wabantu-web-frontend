@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { apiGetConfig } from "./read-options";
 
 // ---------- types ----------
 
@@ -238,8 +239,8 @@ export interface SalesReturn {
 
 export const inventoryApi = {
   // setting / setup
-  async getSetting(): Promise<InventorySetting> {
-    return (await api.get("/inventory/setting")).data;
+  async getSetting(signal?: AbortSignal): Promise<InventorySetting> {
+    return (await api.get("/inventory/setting", apiGetConfig(undefined, signal))).data;
   },
   async updateSetting(input: Partial<Pick<InventorySetting, "defaultCostingMethod" | "blockNegativeStock" | "purchasePostsExpense">>): Promise<InventorySetting> {
     return (await api.patch("/inventory/setting", input)).data;
@@ -249,13 +250,13 @@ export const inventoryApi = {
   },
 
   // warehouses
-  async listWarehouses(params?: { q?: string; page?: number; pageSize?: number; all?: boolean }): Promise<{
+  async listWarehouses(params?: { q?: string; page?: number; pageSize?: number; all?: boolean }, signal?: AbortSignal): Promise<{
     warehouses: Warehouse[];
     total: number;
     page: number;
     pageSize: number;
   }> {
-    return (await api.get("/inventory/warehouses", { params })).data;
+    return (await api.get("/inventory/warehouses", apiGetConfig(params, signal))).data;
   },
   async createWarehouse(input: { name: string; code?: string; customerLabel?: string; address?: string; note?: string }): Promise<Warehouse> {
     return (await api.post("/inventory/warehouses", input)).data;
@@ -271,18 +272,18 @@ export const inventoryApi = {
   },
 
   // stock + movements
-  async listStock(params: { warehouseId?: string; catalogItemId?: string; q?: string; page?: number; pageSize?: number } = {}): Promise<{ stock: StockRow[]; total: number; page: number; pageSize: number }> {
-    return (await api.get("/inventory/stock", { params })).data;
+  async listStock(params: { warehouseId?: string; catalogItemId?: string; q?: string; page?: number; pageSize?: number } = {}, signal?: AbortSignal): Promise<{ stock: StockRow[]; total: number; page: number; pageSize: number }> {
+    return (await api.get("/inventory/stock", apiGetConfig(params, signal))).data;
   },
-  async listMovements(params: { catalogItemId?: string; warehouseId?: string; type?: string; q?: string; page?: number; pageSize?: number } = {}): Promise<{ movements: MovementRow[]; total: number; page: number; pageSize: number }> {
-    return (await api.get("/inventory/movements", { params })).data;
+  async listMovements(params: { catalogItemId?: string; warehouseId?: string; type?: string; q?: string; page?: number; pageSize?: number } = {}, signal?: AbortSignal): Promise<{ movements: MovementRow[]; total: number; page: number; pageSize: number }> {
+    return (await api.get("/inventory/movements", apiGetConfig(params, signal))).data;
   },
 
-  async listStockTransactions(params: { kind?: string; q?: string; page?: number; pageSize?: number } = {}): Promise<{ transactions: StockTransaction[]; total: number; page: number; pageSize: number }> {
-    return (await api.get("/inventory/stock-transactions", { params })).data;
+  async listStockTransactions(params: { kind?: string; q?: string; page?: number; pageSize?: number } = {}, signal?: AbortSignal): Promise<{ transactions: StockTransaction[]; total: number; page: number; pageSize: number }> {
+    return (await api.get("/inventory/stock-transactions", apiGetConfig(params, signal))).data;
   },
-  async getStockTransaction(id: string): Promise<StockTransaction> {
-    return (await api.get(`/inventory/stock-transactions/${id}`)).data;
+  async getStockTransaction(id: string, signal?: AbortSignal): Promise<StockTransaction> {
+    return (await api.get(`/inventory/stock-transactions/${id}`, apiGetConfig(undefined, signal))).data;
   },
   async deleteStockTransaction(id: string): Promise<void> {
     await api.delete(`/inventory/stock-transactions/${id}`);
@@ -309,19 +310,19 @@ export const inventoryApi = {
   },
 
   // bundles
-  async getBundle(catalogItemId: string): Promise<{ catalogItemId: string; isBundle: boolean; components: BundleComponentRow[] }> {
-    return (await api.get(`/inventory/bundles/${catalogItemId}/components`)).data;
+  async getBundle(catalogItemId: string, signal?: AbortSignal): Promise<{ catalogItemId: string; isBundle: boolean; components: BundleComponentRow[] }> {
+    return (await api.get(`/inventory/bundles/${catalogItemId}/components`, apiGetConfig(undefined, signal))).data;
   },
   async setBundle(catalogItemId: string, components: Array<{ childCatalogItemId: string; qty: number }>): Promise<{ catalogItemId: string; isBundle: boolean; components: BundleComponentRow[] }> {
     return (await api.put(`/inventory/bundles/${catalogItemId}/components`, { components })).data;
   },
 
   // purchase orders
-  async listPurchaseOrders(params: { status?: string; q?: string; page?: number; pageSize?: number } = {}): Promise<{ purchaseOrders: PurchaseOrder[]; total: number; page: number; pageSize: number }> {
-    return (await api.get("/inventory/purchase-orders", { params })).data;
+  async listPurchaseOrders(params: { status?: string; q?: string; page?: number; pageSize?: number } = {}, signal?: AbortSignal): Promise<{ purchaseOrders: PurchaseOrder[]; total: number; page: number; pageSize: number }> {
+    return (await api.get("/inventory/purchase-orders", apiGetConfig(params, signal))).data;
   },
-  async getPurchaseOrder(id: string): Promise<PurchaseOrder> {
-    return (await api.get(`/inventory/purchase-orders/${id}`)).data;
+  async getPurchaseOrder(id: string, signal?: AbortSignal): Promise<PurchaseOrder> {
+    return (await api.get(`/inventory/purchase-orders/${id}`, apiGetConfig(undefined, signal))).data;
   },
   async createPurchaseOrder(input: { supplierName?: string; contactId?: string; warehouseId?: string; transactionDate?: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; description?: string; qtyOrdered: number; unitCost: number }> }): Promise<PurchaseOrder> {
     return (await api.post("/inventory/purchase-orders", input)).data;
@@ -340,11 +341,11 @@ export const inventoryApi = {
   },
 
   // bills
-  async listBills(params: { q?: string; page?: number; pageSize?: number } = {}): Promise<{ bills: Bill[]; total: number; page: number; pageSize: number }> {
-    return (await api.get("/inventory/bills", { params })).data;
+  async listBills(params: { q?: string; page?: number; pageSize?: number } = {}, signal?: AbortSignal): Promise<{ bills: Bill[]; total: number; page: number; pageSize: number }> {
+    return (await api.get("/inventory/bills", apiGetConfig(params, signal))).data;
   },
-  async getBill(id: string): Promise<Bill> {
-    return (await api.get(`/inventory/bills/${id}`)).data;
+  async getBill(id: string, signal?: AbortSignal): Promise<Bill> {
+    return (await api.get(`/inventory/bills/${id}`, apiGetConfig(undefined, signal))).data;
   },
   async deleteBill(id: string): Promise<void> {
     await api.delete(`/inventory/bills/${id}`);
@@ -357,22 +358,22 @@ export const inventoryApi = {
   },
 
   // invoices + returns
-  async listInvoices(params: { q?: string; page?: number; pageSize?: number } = {}): Promise<{ invoices: Invoice[]; total: number; page: number; pageSize: number }> {
-    return (await api.get("/inventory/invoices", { params })).data;
+  async listInvoices(params: { q?: string; page?: number; pageSize?: number } = {}, signal?: AbortSignal): Promise<{ invoices: Invoice[]; total: number; page: number; pageSize: number }> {
+    return (await api.get("/inventory/invoices", apiGetConfig(params, signal))).data;
   },
-  async getInvoice(id: string): Promise<Invoice> {
-    return (await api.get(`/inventory/invoices/${id}`)).data;
+  async getInvoice(id: string, signal?: AbortSignal): Promise<Invoice> {
+    return (await api.get(`/inventory/invoices/${id}`, apiGetConfig(undefined, signal))).data;
   },
   async createInvoiceFromOrder(orderId: string): Promise<Invoice> {
     return (await api.post(`/inventory/invoices/from-order/${orderId}`)).data;
   },
-  async listEligibleInvoiceOrders(params: { q?: string; page?: number; pageSize?: number } = {}): Promise<{
+  async listEligibleInvoiceOrders(params: { q?: string; page?: number; pageSize?: number } = {}, signal?: AbortSignal): Promise<{
     orders: Array<{ id: string; status: string; subtotal: number; contactDisplayName?: string; contactPhone?: string }>;
     total: number;
     page: number;
     pageSize: number;
   }> {
-    return (await api.get("/inventory/invoice-eligible/orders", { params })).data;
+    return (await api.get("/inventory/invoice-eligible/orders", apiGetConfig(params, signal))).data;
   },
   async batchCreateInvoices(orderIds: string[]): Promise<{
     processed: number;
@@ -384,21 +385,21 @@ export const inventoryApi = {
   async deleteInvoice(id: string): Promise<void> {
     await api.delete(`/inventory/invoices/${id}`);
   },
-  async listSalesReturns(params: { q?: string; page?: number; pageSize?: number } = {}): Promise<{ salesReturns: SalesReturn[]; total: number; page: number; pageSize: number }> {
-    return (await api.get("/inventory/sales-returns", { params })).data;
+  async listSalesReturns(params: { q?: string; page?: number; pageSize?: number } = {}, signal?: AbortSignal): Promise<{ salesReturns: SalesReturn[]; total: number; page: number; pageSize: number }> {
+    return (await api.get("/inventory/sales-returns", apiGetConfig(params, signal))).data;
   },
-  async getSalesReturn(id: string): Promise<SalesReturn> {
-    return (await api.get(`/inventory/sales-returns/${id}`)).data;
+  async getSalesReturn(id: string, signal?: AbortSignal): Promise<SalesReturn> {
+    return (await api.get(`/inventory/sales-returns/${id}`, apiGetConfig(undefined, signal))).data;
   },
   async createSalesReturn(input: { orderId: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; qty: number }> }): Promise<SalesReturn> {
     return (await api.post("/inventory/sales-returns", input)).data;
   },
-  async getReturnableOrderLines(orderId: string): Promise<{
+  async getReturnableOrderLines(orderId: string, signal?: AbortSignal): Promise<{
     orderId: string;
     status: string;
     lines: Array<{ catalogItemId: string; itemName: string; warehouseId?: string; qtySold: number; qtyReturned: number; qtyReturnable: number }>;
   }> {
-    return (await api.get(`/inventory/return-eligible-lines/${orderId}`)).data;
+    return (await api.get(`/inventory/return-eligible-lines/${orderId}`, apiGetConfig(undefined, signal))).data;
   },
   async batchCreateSalesReturns(orders: Array<{ orderId: string; note?: string; lines: Array<{ catalogItemId: string; warehouseId?: string; qty: number }> }>): Promise<{
     processed: number;
@@ -426,16 +427,16 @@ export const inventoryApi = {
   }> {
     return (await api.post("/inventory/wizard/recommend", answers)).data;
   },
-  async listConfigItems(params: { q?: string; page?: number; pageSize?: number } = {}): Promise<{
+  async listConfigItems(params: { q?: string; page?: number; pageSize?: number } = {}, signal?: AbortSignal): Promise<{
     items: ConfigCatalogItem[];
     total: number;
     page: number;
     pageSize: number;
   }> {
-    return (await api.get("/inventory/config-items", { params })).data;
+    return (await api.get("/inventory/config-items", apiGetConfig(params, signal))).data;
   },
-  async getSku(catalogItemId: string): Promise<SkuConfig> {
-    return (await api.get(`/inventory/skus/${catalogItemId}`)).data;
+  async getSku(catalogItemId: string, signal?: AbortSignal): Promise<SkuConfig> {
+    return (await api.get(`/inventory/skus/${catalogItemId}`, apiGetConfig(undefined, signal))).data;
   },
   async updateSku(catalogItemId: string, input: Partial<{ trackStock: boolean; costingMethod: string; trackBatch: boolean; trackSerial: boolean; trackExpiry: boolean; baseUom: string }>): Promise<SkuConfig> {
     return (await api.patch(`/inventory/skus/${catalogItemId}`, input)).data;

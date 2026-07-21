@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { apiGetConfig } from "./read-options";
 
 export interface PriceType {
   id: string;
@@ -35,8 +36,8 @@ export type PriceTypeUpdateInput = Partial<
 >;
 
 export const priceTypesApi = {
-  async list(params: ListPriceTypesParams = {}): Promise<ListPriceTypesResponse> {
-    const res = await api.get<ListPriceTypesResponse>("/business/price-types", { params });
+  async list(params: ListPriceTypesParams = {}, signal?: AbortSignal): Promise<ListPriceTypesResponse> {
+    const res = await api.get<ListPriceTypesResponse>("/business/price-types", apiGetConfig(params, signal));
     return res.data;
   },
   async create(input: PriceTypeInput): Promise<PriceType> {

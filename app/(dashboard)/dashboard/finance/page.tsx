@@ -28,6 +28,8 @@ import { canPerformOwnerActions } from "@/lib/api/auth";
 import { formatFinanceDate, invalidateFinanceCaches } from "@/lib/finance/utils";
 import { WalletIconBadge, resolveWalletAccent } from "@/lib/finance/wallet-icons";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const baseNavCards = [
   { href: "/dashboard/finance/transactions", label: "Transaksi", icon: BookOpen, desc: "Catat pemasukan & pengeluaran" },
@@ -43,6 +45,7 @@ const baseNavCards = [
 export default function FinancePage() {
   const [openAdd, setOpenAdd] = useState(false);
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const qc = useQueryClient();
   const canManage = canPerformOwnerActions(user);
   const reportingTimezone = useReportingTimezone();
@@ -55,24 +58,24 @@ export default function FinancePage() {
     isError: dashboardError,
     refetch: refetchDashboard,
   } = useQuery({
-    queryKey: ["finance-dashboard"],
-    queryFn: () => financeApi.dashboard(),
+    queryKey: tenantQueryKey(tenantKey, "finance-dashboard"),
+    queryFn: ({ signal }) => financeApi.dashboard(undefined, signal),
   });
 
   const { data: recentData } = useQuery({
-    queryKey: ["finance-transactions-recent"],
-    queryFn: () => financeApi.listTransactions({ pageSize: 5 }),
+    queryKey: tenantQueryKey(tenantKey, "finance-transactions-recent"),
+    queryFn: ({ signal }) => financeApi.listTransactions({ pageSize: 5 }, signal),
   });
 
   const { data: txnTypesData } = useQuery({
-    queryKey: ["finance-transaction-types", "dashboard"],
-    queryFn: () => financeApi.listTransactionTypes({ pageSize: 100 }),
+    queryKey: tenantQueryKey(tenantKey, "finance-transaction-types", "dashboard"),
+    queryFn: ({ signal }) => financeApi.listTransactionTypes({ pageSize: 100 }, signal),
   });
   const txnTypes = txnTypesData?.items ?? [];
 
   const { data: checklist } = useQuery({
-    queryKey: ["finance-checklist-today"],
-    queryFn: () => financeApi.todayChecklist(),
+    queryKey: tenantQueryKey(tenantKey, "finance-checklist-today"),
+    queryFn: ({ signal }) => financeApi.todayChecklist(signal),
   });
 
   const pendingChecklist = checklist?.pending ?? 0;

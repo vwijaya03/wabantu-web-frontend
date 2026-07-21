@@ -12,6 +12,8 @@ import { WarehouseSelect } from "@/components/inventory/warehouse-select";
 import { inventoryApi, formatIDR, type StockTransaction } from "@/lib/api/inventory";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const KIND_LABELS: Record<StockTransaction["kind"], string> = {
   adjustment: "Penyesuaian",
@@ -32,9 +34,10 @@ export function StockTransactionEditDialog({
   onClose: () => void;
 }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const { data: txn, isLoading } = useQuery({
-    queryKey: ["inventory", "stock-transaction", id],
-    queryFn: () => inventoryApi.getStockTransaction(id!),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "stock-transaction", id),
+    queryFn: ({ signal }) => inventoryApi.getStockTransaction(id!, signal),
     enabled: Boolean(id),
   });
 

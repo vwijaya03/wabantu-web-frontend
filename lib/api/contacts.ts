@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { apiGetConfig } from "./read-options";
 
 export interface Contact {
   id: string;
@@ -39,8 +40,8 @@ export type ContactUpdateInput = Partial<Omit<ContactInput, "phoneNumber" | "pri
 };
 
 export const contactsApi = {
-  async list(params: ListContactsParams = {}): Promise<ListContactsResponse> {
-    const res = await api.get("/inbox/contacts", { params });
+  async list(params: ListContactsParams = {}, signal?: AbortSignal): Promise<ListContactsResponse> {
+    const res = await api.get("/inbox/contacts", apiGetConfig(params, signal));
     return res.data;
   },
   async create(input: ContactInput): Promise<Contact> {

@@ -18,6 +18,8 @@ import { StockTransactionEditDialog } from "@/components/inventory/stock-transac
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { inventoryApi, formatIDR, formatStockQty, movementTypeLabel } from "@/lib/api/inventory";
 import { toApiError } from "@/lib/api/client";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 import {
   InventoryTable,
   InventoryTableBody,
@@ -29,6 +31,7 @@ import {
 } from "@/components/inventory/inventory-table";
 
 function MovementsContent() {
+  const tenantKey = useTenantKey();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialItemId = searchParams.get("catalogItemId") ?? "";
@@ -56,15 +59,15 @@ function MovementsContent() {
   }, [router, searchParams]);
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["inventory", "movements", catalogItemId, warehouseId, type, searchQ, page, pageSize],
-    queryFn: () => inventoryApi.listMovements({
+    queryKey: tenantQueryKey(tenantKey, "inventory", "movements", catalogItemId, warehouseId, type, searchQ, page, pageSize),
+    queryFn: ({ signal }) => inventoryApi.listMovements({
       catalogItemId,
       warehouseId: warehouseId || undefined,
       type: type || undefined,
       q: searchQ || undefined,
       page,
       pageSize,
-    }),
+    }, signal),
     enabled: Boolean(catalogItemId),
     retry: 1,
   });

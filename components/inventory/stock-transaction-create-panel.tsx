@@ -20,6 +20,8 @@ import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker"
 import { inventoryApi, formatStockQty, type Warehouse } from "@/lib/api/inventory";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -61,14 +63,18 @@ function WhSelect({
 }
 
 function useItemStock(itemId: string | undefined, warehouseId: string) {
+  const tenantKey = useTenantKey();
   const { data } = useQuery({
-    queryKey: ["inventory", "stock", "lookup", warehouseId, itemId],
-    queryFn: () =>
-      inventoryApi.listStock({
-        warehouseId,
-        catalogItemId: itemId,
-        pageSize: 1,
-      }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "stock", "lookup", warehouseId, itemId),
+    queryFn: ({ signal }) =>
+      inventoryApi.listStock(
+        {
+          warehouseId,
+          catalogItemId: itemId,
+          pageSize: 1,
+        },
+        signal,
+      ),
     enabled: Boolean(itemId && warehouseId),
     staleTime: 30_000,
   });
