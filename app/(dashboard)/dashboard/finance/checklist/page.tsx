@@ -41,6 +41,8 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { formatFinanceDate, invalidateFinanceCaches } from "@/lib/finance/utils";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 import { toApiError } from "@/lib/api/client";
 
 function currentPeriod(): string {
@@ -68,6 +70,7 @@ const emptyForm = {
 
 export default function ChecklistPage() {
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const reportingTimezone = useReportingTimezone();
@@ -91,32 +94,35 @@ export default function ChecklistPage() {
   }, [period]);
 
   const { data: billing, isLoading: billingLoading } = useQuery({
-    queryKey: ["finance-monthly-billing", period],
-    queryFn: () => financeApi.getMonthlyBilling(period),
+    queryKey: tenantQueryKey(tenantKey, "finance-monthly-billing", period),
+    queryFn: ({ signal }) => financeApi.getMonthlyBilling(period, signal),
   });
 
   const { data: templatesData, isLoading: templatesLoading } = useQuery({
-    queryKey: ["finance-checklist-templates-manage", search, page],
-    queryFn: () =>
-      financeApi.listChecklistTemplatesPaginated({
-        q: search || undefined,
-        page,
-        pageSize,
-        frequency: "monthly",
-        activeOnly: false,
-      }),
+    queryKey: tenantQueryKey(tenantKey, "finance-checklist-templates-manage", search, page),
+    queryFn: ({ signal }) =>
+      financeApi.listChecklistTemplatesPaginated(
+        {
+          q: search || undefined,
+          page,
+          pageSize,
+          frequency: "monthly",
+          activeOnly: false,
+        },
+        signal,
+      ),
     enabled: tab === "templates" && isOwner,
   });
 
   const { data: wallets } = useQuery({
-    queryKey: ["finance-wallets"],
-    queryFn: () => financeApi.listWallets(),
+    queryKey: tenantQueryKey(tenantKey, "finance-wallets"),
+    queryFn: ({ signal }) => financeApi.listWallets(signal),
     enabled: isOwner && (openCreate || !!editItem),
   });
 
   const { data: categories } = useQuery({
-    queryKey: ["finance-categories"],
-    queryFn: () => financeApi.listCategories(),
+    queryKey: tenantQueryKey(tenantKey, "finance-categories"),
+    queryFn: ({ signal }) => financeApi.listCategories(signal),
     enabled: isOwner && (openCreate || !!editItem),
   });
 

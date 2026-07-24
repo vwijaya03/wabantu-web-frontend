@@ -35,6 +35,8 @@ import {
 } from "@/components/inventory/inventory-table";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export type StockTxnKind = StockTransaction["kind"];
 
@@ -50,6 +52,7 @@ export type StockTransactionKindPageConfig = {
 
 export function StockTransactionKindPage({ config }: { config: StockTransactionKindPageConfig }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const { kind, title, description, helpTopic, createTitle, CreatePanel, renderDetail } = config;
@@ -65,14 +68,15 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
   const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
 
   const { data: whData } = useQuery({
-    queryKey: ["inventory", "warehouses", "all"],
-    queryFn: () => inventoryApi.listWarehouses({ all: true }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "warehouses", "all"),
+    queryFn: ({ signal }) => inventoryApi.listWarehouses({ all: true }, signal),
   });
   const warehouses = whData?.warehouses ?? [];
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["inventory", "stock-transactions", kind, searchQ, page, pageSize],
-    queryFn: () => inventoryApi.listStockTransactions({ kind, q: searchQ || undefined, page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "stock-transactions", kind, searchQ, page, pageSize),
+    queryFn: ({ signal }) =>
+      inventoryApi.listStockTransactions({ kind, q: searchQ || undefined, page, pageSize }, signal),
     retry: 1,
   });
 
@@ -100,7 +104,7 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
   };
 
   const refresh = () => {
-    void qc.invalidateQueries({ queryKey: ["inventory", "stock-transactions", kind] });
+    invalidateTenantQueries(qc, tenantKey, "inventory", "stock-transactions", kind);
     setSelected(new Set());
   };
 

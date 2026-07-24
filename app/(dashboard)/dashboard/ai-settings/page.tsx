@@ -42,8 +42,8 @@ import {
   reportingTimezoneSelectLabel,
   reportingTimezoneTriggerLabel,
 } from "@/lib/reporting-timezones";
-
-const PROFILE_KEY = ["business-profile"] as const;
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const reportingTimezoneEnum = z.enum(
   REPORTING_TIMEZONE_IDS as unknown as [string, ...string[]],
@@ -67,9 +67,10 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function AiSettingsPage() {
+  const tenantKey = useTenantKey();
   const { data: profile, isPending, isError, error, refetch } = useQuery({
-    queryKey: PROFILE_KEY,
-    queryFn: businessApi.get,
+    queryKey: tenantQueryKey(tenantKey, "business-profile"),
+    queryFn: ({ signal }) => businessApi.get(signal),
   });
 
   return (
@@ -108,6 +109,7 @@ export default function AiSettingsPage() {
 
 function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const { user } = useAuth();
   const canAiAssist = canPerformOwnerActions(user);
 
@@ -130,7 +132,7 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
   const saveMut = useMutation({
     mutationFn: businessApi.update,
     onSuccess: (updated) => {
-      qc.setQueryData(PROFILE_KEY, updated);
+      qc.setQueryData(tenantQueryKey(tenantKey, "business-profile"), updated);
       toast.success("Profil disimpan");
     },
     onError: (err) => toast.error(toApiError(err).message),

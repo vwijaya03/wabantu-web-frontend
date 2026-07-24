@@ -20,6 +20,8 @@ import {
 import { downloadCSV } from "@/lib/inventory/csv";
 import { cn } from "@/lib/utils";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 type Tab = "valuation" | "margin";
 
@@ -50,11 +52,12 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
 }
 
 function ValuationReport() {
+  const tenantKey = useTenantKey();
   const [page, setPage] = useState(1);
   const pageSize = 100;
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "stock", "report", page, pageSize],
-    queryFn: () => inventoryApi.listStock({ page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "stock", "report", page, pageSize),
+    queryFn: ({ signal }) => inventoryApi.listStock({ page, pageSize }, signal),
   });
   const rows = data?.stock ?? [];
   const total = data?.total ?? 0;
@@ -138,9 +141,10 @@ function ValuationReport() {
 }
 
 function MarginReport() {
+  const tenantKey = useTenantKey();
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "invoices", "report"],
-    queryFn: () => inventoryApi.listInvoices({ pageSize: 200 }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "invoices", "report"),
+    queryFn: ({ signal }) => inventoryApi.listInvoices({ pageSize: 200 }, signal),
   });
   const invoices = data?.invoices ?? [];
 

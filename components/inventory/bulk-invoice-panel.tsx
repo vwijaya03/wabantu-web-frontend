@@ -21,6 +21,8 @@ import {
 } from "@/components/inventory/inventory-table";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const MAX_BATCH = 100;
 
@@ -33,6 +35,7 @@ function orderStatusLabel(status: string) {
 
 export function BulkInvoicePanel({ embedded = false }: { embedded?: boolean }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const [q, setQ] = useState("");
   const [searchQ, setSearchQ] = useState("");
   const [page, setPage] = useState(1);
@@ -41,8 +44,9 @@ export function BulkInvoicePanel({ embedded = false }: { embedded?: boolean }) {
   const [batchResult, setBatchResult] = useState<Awaited<ReturnType<typeof inventoryApi.batchCreateInvoices>> | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "invoices", "eligible", searchQ, page, pageSize],
-    queryFn: () => inventoryApi.listEligibleInvoiceOrders({ q: searchQ || undefined, page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "invoices", "eligible", searchQ, page, pageSize),
+    queryFn: ({ signal }) =>
+      inventoryApi.listEligibleInvoiceOrders({ q: searchQ || undefined, page, pageSize }, signal),
   });
   const orders = useMemo(() => data?.orders ?? [], [data?.orders]);
   const visibleIds = useMemo(() => orders.map((o) => o.id), [orders]);
@@ -80,8 +84,8 @@ export function BulkInvoicePanel({ embedded = false }: { embedded?: boolean }) {
       setBatchResult(res);
       if (res.processed > 0) {
         toast.success(`${res.processed} faktur dibuat`);
-        void qc.invalidateQueries({ queryKey: ["inventory", "invoices"] });
-        void qc.invalidateQueries({ queryKey: ["inventory", "invoices", "eligible"] });
+        invalidateTenantQueries(qc, tenantKey, "inventory", "invoices");
+        invalidateTenantQueries(qc, tenantKey, "inventory", "invoices", "eligible");
       }
       if (res.failed > 0) toast.error(`${res.failed} pesanan gagal`);
       setSelected(new Set());

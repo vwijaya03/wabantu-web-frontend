@@ -33,6 +33,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 import { toApiError } from "@/lib/api/client";
 import { catalogApi, type CatalogItem, type ListCatalogResponse } from "@/lib/api/catalog";
 import { contactsApi, type Contact, type ListContactsResponse } from "@/lib/api/contacts";
@@ -140,6 +142,7 @@ const emptyCreateForm: CreateForm = {
 
 export default function OrdersPage() {
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
   const canManage = canPerformOwnerActions(user);
   const qc = useQueryClient();
@@ -180,73 +183,88 @@ export default function OrdersPage() {
   });
 
   const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ["orders", search, status, page, pageSize],
-    queryFn: () =>
-      ordersApi.list({
-        q: search || undefined,
-        status: status === ALL ? undefined : status,
-        page,
-        pageSize,
-      }),
+    queryKey: tenantQueryKey(tenantKey, "orders", search, status, page, pageSize),
+    queryFn: ({ signal }) =>
+      ordersApi.list(
+        {
+          q: search || undefined,
+          status: status === ALL ? undefined : status,
+          page,
+          pageSize,
+        },
+        signal,
+      ),
     enabled: tenantReady,
   });
   const { data: contactOptions } = useQuery({
-    queryKey: ["order-contact-options", createForm.contactSearch, createContactPage, selectorPageSize],
-    queryFn: () =>
-      contactsApi.list({
-        q: createForm.contactSearch || undefined,
-        page: createContactPage,
-        pageSize: selectorPageSize,
-      }),
+    queryKey: tenantQueryKey(tenantKey, "order-contact-options", createForm.contactSearch, createContactPage, selectorPageSize),
+    queryFn: ({ signal }) =>
+      contactsApi.list(
+        {
+          q: createForm.contactSearch || undefined,
+          page: createContactPage,
+          pageSize: selectorPageSize,
+        },
+        signal,
+      ),
     enabled: createOpen,
   });
   const { data: editContactOptions } = useQuery({
-    queryKey: ["order-edit-contact-options", editForm.contactSearch, editContactPage, selectorPageSize],
-    queryFn: () =>
-      contactsApi.list({
-        q: editForm.contactSearch || undefined,
-        page: editContactPage,
-        pageSize: selectorPageSize,
-      }),
+    queryKey: tenantQueryKey(tenantKey, "order-edit-contact-options", editForm.contactSearch, editContactPage, selectorPageSize),
+    queryFn: ({ signal }) =>
+      contactsApi.list(
+        {
+          q: editForm.contactSearch || undefined,
+          page: editContactPage,
+          pageSize: selectorPageSize,
+        },
+        signal,
+      ),
     enabled: Boolean(editOrder),
   });
   const { data: editResolvedContact } = useQuery({
-    queryKey: ["order-edit-resolved-contact", editOrder?.contactId],
-    queryFn: () => inboxApi.getContact(editOrder!.contactId),
+    queryKey: tenantQueryKey(tenantKey, "order-edit-resolved-contact", editOrder?.contactId),
+    queryFn: ({ signal }) => inboxApi.getContact(editOrder!.contactId, signal),
     enabled: Boolean(editOrder?.contactId),
   });
   const { data: catalogOptions } = useQuery({
-    queryKey: ["order-catalog-options", createForm.catalogSearch, createForm.contactId, createCatalogPage, selectorPageSize],
-    queryFn: () =>
-      catalogApi.list({
-        q: createForm.catalogSearch || undefined,
-        page: createCatalogPage,
-        pageSize: selectorPageSize,
-        activeOnly: true,
-        contactId: optionalString(createForm.contactId),
-      }),
+    queryKey: tenantQueryKey(tenantKey, "order-catalog-options", createForm.catalogSearch, createForm.contactId, createCatalogPage, selectorPageSize),
+    queryFn: ({ signal }) =>
+      catalogApi.list(
+        {
+          q: createForm.catalogSearch || undefined,
+          page: createCatalogPage,
+          pageSize: selectorPageSize,
+          activeOnly: true,
+          contactId: optionalString(createForm.contactId),
+        },
+        signal,
+      ),
     enabled: createOpen,
   });
   const { data: editCatalogOptions } = useQuery({
-    queryKey: ["order-edit-catalog-options", editForm.catalogSearch, editForm.contactId, editCatalogPage, selectorPageSize],
-    queryFn: () =>
-      catalogApi.list({
-        q: editForm.catalogSearch || undefined,
-        page: editCatalogPage,
-        pageSize: selectorPageSize,
-        activeOnly: true,
-        contactId: optionalString(editForm.contactId),
-      }),
+    queryKey: tenantQueryKey(tenantKey, "order-edit-catalog-options", editForm.catalogSearch, editForm.contactId, editCatalogPage, selectorPageSize),
+    queryFn: ({ signal }) =>
+      catalogApi.list(
+        {
+          q: editForm.catalogSearch || undefined,
+          page: editCatalogPage,
+          pageSize: selectorPageSize,
+          activeOnly: true,
+          contactId: optionalString(editForm.contactId),
+        },
+        signal,
+      ),
     enabled: Boolean(editOrder),
   });
   const { data: priceTypesData } = useQuery({
-    queryKey: ["price-types", "orders"],
-    queryFn: () => priceTypesApi.list({ pageSize: 50 }),
+    queryKey: tenantQueryKey(tenantKey, "price-types", "orders"),
+    queryFn: ({ signal }) => priceTypesApi.list({ pageSize: 50 }, signal),
     enabled: createOpen || Boolean(editOrder),
   });
   const { data: walletsData } = useQuery({
-    queryKey: ["finance-wallets", "orders"],
-    queryFn: () => financeApi.listWallets(),
+    queryKey: tenantQueryKey(tenantKey, "finance-wallets", "orders"),
+    queryFn: ({ signal }) => financeApi.listWallets(signal),
     enabled: createOpen || Boolean(editOrder),
   });
   const walletOptions = useMemo(
@@ -260,14 +278,14 @@ export default function OrdersPage() {
 
   // Inventory: flag orders whose tracked items lack enough stock (exception-only badge).
   const { data: invSetting } = useQuery({
-    queryKey: ["inventory", "setting"],
-    queryFn: () => inventoryApi.getSetting(),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "setting"),
+    queryFn: ({ signal }) => inventoryApi.getSetting(signal),
     enabled: tenantReady,
   });
   const inventoryOn = Boolean(invSetting?.setupCompleted);
   const { data: warehousesData } = useQuery({
-    queryKey: ["inventory", "warehouses", "all"],
-    queryFn: () => inventoryApi.listWarehouses({ all: true }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "warehouses", "all"),
+    queryFn: ({ signal }) => inventoryApi.listWarehouses({ all: true }, signal),
     enabled: tenantReady,
   });
   const warehouses = useMemo(() => warehousesData?.warehouses ?? [], [warehousesData]);
@@ -277,8 +295,8 @@ export default function OrdersPage() {
     return warehouses.find((w) => w.isDefault)?.id ?? warehouses[0]?.id ?? "";
   }, [warehouses]);
   const { data: stockOverview } = useQuery({
-    queryKey: ["inventory", "stock", "orders-overview"],
-    queryFn: () => inventoryApi.listStock({ pageSize: 500 }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "stock", "orders-overview"),
+    queryFn: ({ signal }) => inventoryApi.listStock({ pageSize: 500 }, signal),
     enabled: tenantReady && inventoryOn,
   });
   const stockRows = stockOverview?.stock ?? [];

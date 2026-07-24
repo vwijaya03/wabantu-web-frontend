@@ -28,9 +28,12 @@ import {
 } from "@/components/inventory/inventory-table";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export default function WarehousesPage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const [creating, setCreating] = useState(false);
@@ -43,15 +46,15 @@ export default function WarehousesPage() {
   const [deleteWarehouseName, setDeleteWarehouseName] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "warehouses", "list", searchQ, page, pageSize],
-    queryFn: () => inventoryApi.listWarehouses({ q: searchQ || undefined, page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "warehouses", "list", searchQ, page, pageSize),
+    queryFn: ({ signal }) => inventoryApi.listWarehouses({ q: searchQ || undefined, page, pageSize }, signal),
   });
 
   const reactivateMut = useMutation({
     mutationFn: (id: string) => inventoryApi.reactivateWarehouse(id),
     onSuccess: () => {
       toast.success("Gudang diaktifkan kembali");
-      void qc.invalidateQueries({ queryKey: ["inventory", "warehouses"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory", "warehouses");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -60,7 +63,7 @@ export default function WarehousesPage() {
     mutationFn: (id: string) => inventoryApi.deleteWarehouse(id),
     onSuccess: () => {
       toast.success("Gudang dihapus");
-      void qc.invalidateQueries({ queryKey: ["inventory", "warehouses"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory", "warehouses");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -82,7 +85,7 @@ export default function WarehousesPage() {
       </div>
 
       {creating && canManage ? (
-        <CreateWarehousePanel onDone={() => { setCreating(false); void qc.invalidateQueries({ queryKey: ["inventory", "warehouses"] }); }} />
+        <CreateWarehousePanel onDone={() => { setCreating(false); invalidateTenantQueries(qc, tenantKey, "inventory", "warehouses"); }} />
       ) : null}
 
       <Card className="mt-6">
@@ -229,7 +232,7 @@ export default function WarehousesPage() {
           onClose={() => setEditWh(null)}
           onSaved={() => {
             setEditWh(null);
-            void qc.invalidateQueries({ queryKey: ["inventory", "warehouses"] });
+            invalidateTenantQueries(qc, tenantKey, "inventory", "warehouses");
           }}
         />
       ) : null}

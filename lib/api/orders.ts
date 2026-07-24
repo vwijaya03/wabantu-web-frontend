@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { apiGetConfig } from "./read-options";
 
 export interface ShippingAddress {
   name?: string;
@@ -108,8 +109,8 @@ export interface UpdateOrderInput {
 }
 
 export const ordersApi = {
-  async list(params: ListOrdersParams = {}): Promise<ListOrdersResponse> {
-    const res = await api.get("/orders", { params });
+  async list(params: ListOrdersParams = {}, signal?: AbortSignal): Promise<ListOrdersResponse> {
+    const res = await api.get("/orders", apiGetConfig(params, signal));
     return res.data;
   },
   async create(input: CreateOrderInput): Promise<Order> {

@@ -21,27 +21,30 @@ import {
   InventoryTableRow,
 } from "@/components/inventory/inventory-table";
 import { cn } from "@/lib/utils";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export default function InventoryStockPage() {
+  const tenantKey = useTenantKey();
   const [q, setQ] = useState("");
   const [searchQ, setSearchQ] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
 
   const { data: setting } = useQuery({
-    queryKey: ["inventory", "setting"],
-    queryFn: () => inventoryApi.getSetting(),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "setting"),
+    queryFn: ({ signal }) => inventoryApi.getSetting(signal),
   });
   const { data: warehousesData } = useQuery({
-    queryKey: ["inventory", "warehouses", "all"],
-    queryFn: () => inventoryApi.listWarehouses({ all: true }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "warehouses", "all"),
+    queryFn: ({ signal }) => inventoryApi.listWarehouses({ all: true }, signal),
   });
   const { data: stockOverview } = useQuery({
-    queryKey: ["inventory", "stock", "overview-total"],
-    queryFn: () => inventoryApi.listStock({ page: 1, pageSize: 1 }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "stock", "overview-total"),
+    queryFn: ({ signal }) => inventoryApi.listStock({ page: 1, pageSize: 1 }, signal),
   });
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "stock", searchQ, warehouseId],
-    queryFn: () => inventoryApi.listStock({ q: searchQ, warehouseId, pageSize: 100 }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "stock", searchQ, warehouseId),
+    queryFn: ({ signal }) => inventoryApi.listStock({ q: searchQ, warehouseId, pageSize: 100 }, signal),
   });
 
   const warehouses = warehousesData?.warehouses ?? [];

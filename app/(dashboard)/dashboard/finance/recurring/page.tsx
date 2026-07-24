@@ -35,6 +35,8 @@ import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
 import { formatFinanceDate, NO_WALLET, todayISOInTimezone } from "@/lib/finance/utils";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 type RecurringFrequency = Recurring["frequency"];
 type RecurringMode = Recurring["mode"];
@@ -46,6 +48,7 @@ function canCloneToBilling(r: Recurring): boolean {
 
 export default function RecurringPage() {
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const canManage = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const reportingTimezone = useReportingTimezone();
@@ -64,18 +67,18 @@ export default function RecurringPage() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["finance-recurring"],
-    queryFn: () => financeApi.listRecurring(),
+    queryKey: tenantQueryKey(tenantKey, "finance-recurring"),
+    queryFn: ({ signal }) => financeApi.listRecurring(signal),
   });
 
   const { data: wallets } = useQuery({
-    queryKey: ["finance-wallets"],
-    queryFn: () => financeApi.listWallets(),
+    queryKey: tenantQueryKey(tenantKey, "finance-wallets"),
+    queryFn: ({ signal }) => financeApi.listWallets(signal),
   });
 
   const { data: txnTypesData } = useQuery({
-    queryKey: ["finance-transaction-types", "recurring"],
-    queryFn: () => financeApi.listTransactionTypes({ activeOnly: true, pageSize: 100 }),
+    queryKey: tenantQueryKey(tenantKey, "finance-transaction-types", "recurring"),
+    queryFn: ({ signal }) => financeApi.listTransactionTypes({ activeOnly: true, pageSize: 100 }, signal),
   });
   const txnTypes = (txnTypesData?.items ?? []).filter(
     (t) => t.isActive && (!t.ownerOnly || canManage),

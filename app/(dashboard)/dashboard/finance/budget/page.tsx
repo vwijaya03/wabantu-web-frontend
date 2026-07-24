@@ -18,11 +18,14 @@ import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
 import { currentFinancePeriod, financeMonthOptions } from "@/lib/finance/utils";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const NO_CATEGORY = "__no_category__";
 
 export default function BudgetPage() {
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const reportingTimezone = useReportingTimezone();
@@ -35,18 +38,18 @@ export default function BudgetPage() {
   const [form, setForm] = useState({ categoryId: "", amount: "" });
 
   const { data: budgetData, isLoading } = useQuery({
-    queryKey: ["finance-budgets", effectivePeriod],
-    queryFn: () => financeApi.listBudgets(effectivePeriod),
+    queryKey: tenantQueryKey(tenantKey, "finance-budgets", effectivePeriod),
+    queryFn: ({ signal }) => financeApi.listBudgets(effectivePeriod, signal),
   });
 
   const { data: categories } = useQuery({
-    queryKey: ["finance-categories"],
-    queryFn: () => financeApi.listCategories(),
+    queryKey: tenantQueryKey(tenantKey, "finance-categories"),
+    queryFn: ({ signal }) => financeApi.listCategories(signal),
   });
 
   const { data: summary } = useQuery({
-    queryKey: ["finance-budget-summary", effectivePeriod],
-    queryFn: () => financeApi.budgetSummary(effectivePeriod),
+    queryKey: tenantQueryKey(tenantKey, "finance-budget-summary", effectivePeriod),
+    queryFn: ({ signal }) => financeApi.budgetSummary(effectivePeriod, signal),
   });
 
   const upsertMut = useMutation({

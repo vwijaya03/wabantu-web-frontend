@@ -31,9 +31,12 @@ import {
 import { type Order } from "@/lib/api/orders";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export default function InvoicesPage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const [order, setOrder] = useState<Order | null>(null);
@@ -45,8 +48,8 @@ export default function InvoicesPage() {
   const [createMode, setCreateMode] = useState<"single" | "bulk">("single");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "invoices", searchQ, page, pageSize],
-    queryFn: () => inventoryApi.listInvoices({ q: searchQ || undefined, page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "invoices", searchQ, page, pageSize),
+    queryFn: ({ signal }) => inventoryApi.listInvoices({ q: searchQ || undefined, page, pageSize }, signal),
   });
   const invoices = data?.invoices ?? [];
 
@@ -55,7 +58,7 @@ export default function InvoicesPage() {
     onSuccess: (inv) => {
       toast.success(`Faktur ${inv.invoiceNo} dibuat`);
       setOrder(null);
-      void qc.invalidateQueries({ queryKey: ["inventory", "invoices"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory", "invoices");
       setDetailId(inv.id);
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -147,10 +150,11 @@ export default function InvoicesPage() {
 
 function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; canManage: boolean; onClose: () => void }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { data: inv } = useQuery({
-    queryKey: ["inventory", "invoice", id],
-    queryFn: () => inventoryApi.getInvoice(id!),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "invoice", id),
+    queryFn: ({ signal }) => inventoryApi.getInvoice(id!, signal),
     enabled: Boolean(id),
   });
   const delMut = useMutation({
@@ -158,7 +162,7 @@ function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; ca
     onSuccess: () => {
       toast.success("Faktur dihapus");
       onClose();
-      void qc.invalidateQueries({ queryKey: ["inventory", "invoices"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory", "invoices");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });

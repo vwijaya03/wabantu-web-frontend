@@ -24,6 +24,8 @@ import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
 import { priceTypesApi, type PriceType } from "@/lib/api/price-types";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const pageSize = 20;
 
@@ -36,6 +38,7 @@ const emptyForm = {
 
 export default function PriceTypesPage() {
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const canManage = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const [q, setQ] = useState("");
@@ -48,8 +51,8 @@ export default function PriceTypesPage() {
   const [deletePriceTypeLabel, setDeletePriceTypeLabel] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["price-types", search, page],
-    queryFn: () => priceTypesApi.list({ q: search || undefined, page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "price-types", search, page),
+    queryFn: ({ signal }) => priceTypesApi.list({ q: search || undefined, page, pageSize }, signal),
     enabled: canManage,
   });
 

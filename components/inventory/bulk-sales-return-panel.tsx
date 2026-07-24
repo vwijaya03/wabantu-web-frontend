@@ -20,6 +20,8 @@ import {
 } from "@/components/inventory/inventory-table";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const MAX_BATCH = 100;
 
@@ -36,6 +38,7 @@ type ReviewOrder = {
 
 export function BulkSalesReturnPanel({ embedded = false }: { embedded?: boolean }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const [step, setStep] = useState<"select" | "review">("select");
   const [q, setQ] = useState("");
   const [searchQ, setSearchQ] = useState("");
@@ -46,8 +49,9 @@ export function BulkSalesReturnPanel({ embedded = false }: { embedded?: boolean 
   const [batchResult, setBatchResult] = useState<Awaited<ReturnType<typeof inventoryApi.batchCreateSalesReturns>> | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "sales-returns", "eligible", searchQ, page, pageSize],
-    queryFn: () => inventoryApi.listEligibleInvoiceOrders({ q: searchQ || undefined, page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "sales-returns", "eligible", searchQ, page, pageSize),
+    queryFn: ({ signal }) =>
+      inventoryApi.listEligibleInvoiceOrders({ q: searchQ || undefined, page, pageSize }, signal),
     enabled: step === "select",
   });
   const orders = useMemo(() => data?.orders ?? [], [data?.orders]);
@@ -115,8 +119,8 @@ export function BulkSalesReturnPanel({ embedded = false }: { embedded?: boolean 
       setBatchResult(res);
       if (res.processed > 0) {
         toast.success(`${res.processed} retur dibuat`);
-        void qc.invalidateQueries({ queryKey: ["inventory", "sales-returns"] });
-        void qc.invalidateQueries({ queryKey: ["inventory", "stock"] });
+        invalidateTenantQueries(qc, tenantKey, "inventory", "sales-returns");
+        invalidateTenantQueries(qc, tenantKey, "inventory", "stock");
       }
       if (res.failed > 0) toast.error(`${res.failed} retur gagal`);
       setStep("select");

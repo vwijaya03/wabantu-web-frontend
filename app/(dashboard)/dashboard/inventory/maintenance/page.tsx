@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -203,9 +205,10 @@ function BackfillMaintenanceSection() {
 }
 
 function ValuationCard() {
+  const tenantKey = useTenantKey();
   const { data } = useQuery({
-    queryKey: ["inventory", "stock", "valuation"],
-    queryFn: () => inventoryApi.listStock({ pageSize: 200 }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "stock", "valuation"),
+    queryFn: ({ signal }) => inventoryApi.listStock({ pageSize: 200 }, signal),
   });
   const rows = data?.stock ?? [];
   const byWarehouse = new Map<string, number>();

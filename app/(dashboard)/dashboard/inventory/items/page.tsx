@@ -35,9 +35,12 @@ import {
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { HelpCircle } from "lucide-react";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export default function InventoryItemsPage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const [q, setQ] = useState("");
@@ -47,8 +50,8 @@ export default function InventoryItemsPage() {
   const [trackAllConfirmOpen, setTrackAllConfirmOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", "config-items", q],
-    queryFn: () => inventoryApi.listConfigItems({ q, pageSize: 50 }),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "config-items", q),
+    queryFn: ({ signal }) => inventoryApi.listConfigItems({ q, pageSize: 50 }, signal),
   });
   const items: ConfigCatalogItem[] = data?.items ?? [];
   const visibleIds = items.map((it) => it.id);
@@ -77,7 +80,7 @@ export default function InventoryItemsPage() {
           : `${res.updated} produk dinonaktifkan lacak stoknya`,
       );
       setChecked(new Set());
-      void qc.invalidateQueries({ queryKey: ["inventory", "config-items"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory", "config-items");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -205,16 +208,17 @@ export default function InventoryItemsPage() {
 
 function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | null; canManage: boolean; onClose: () => void }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const id = item?.id ?? "";
 
   const { data: sku } = useQuery({
-    queryKey: ["inventory", "sku", id],
-    queryFn: () => inventoryApi.getSku(id),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "sku", id),
+    queryFn: ({ signal }) => inventoryApi.getSku(id, signal),
     enabled: Boolean(id),
   });
   const { data: bundle } = useQuery({
-    queryKey: ["inventory", "bundle", id],
-    queryFn: () => inventoryApi.getBundle(id),
+    queryKey: tenantQueryKey(tenantKey, "inventory", "bundle", id),
+    queryFn: ({ signal }) => inventoryApi.getBundle(id, signal),
     enabled: Boolean(id),
   });
 

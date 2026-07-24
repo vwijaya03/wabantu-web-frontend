@@ -31,6 +31,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const FLOWS: { value: TransactionType["flow"]; label: string }[] = [
   { value: "income", label: "Pemasukan (saldo +)" },
@@ -57,6 +59,7 @@ const emptyForm = {
 
 export default function TransactionTypesPage() {
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const canManage = canPerformOwnerActions(user);
   const qc = useQueryClient();
 
@@ -72,9 +75,9 @@ export default function TransactionTypesPage() {
   const [deleteTypeLabel, setDeleteTypeLabel] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["finance-transaction-types", search, page],
-    queryFn: () =>
-      financeApi.listTransactionTypes({ q: search || undefined, page, pageSize }),
+    queryKey: tenantQueryKey(tenantKey, "finance-transaction-types", search, page),
+    queryFn: ({ signal }) =>
+      financeApi.listTransactionTypes({ q: search || undefined, page, pageSize }, signal),
     enabled: canManage,
   });
 

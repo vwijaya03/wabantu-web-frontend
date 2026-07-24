@@ -27,6 +27,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { invalidateFinanceCaches } from "@/lib/finance/utils";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 import {
   WALLET_TYPE_COLORS,
   WALLET_ICON_MAP,
@@ -231,6 +233,7 @@ function WalletFormFields({
 
 export default function WalletsPage() {
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const [q, setQ] = useState("");
@@ -241,8 +244,8 @@ export default function WalletsPage() {
   const [form, setForm] = useState(emptyForm());
 
   const { data, isLoading } = useQuery({
-    queryKey: ["finance-wallets"],
-    queryFn: () => financeApi.listWallets(),
+    queryKey: tenantQueryKey(tenantKey, "finance-wallets"),
+    queryFn: ({ signal }) => financeApi.listWallets(signal),
   });
 
   const createMut = useMutation({

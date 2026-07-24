@@ -35,9 +35,12 @@ import {
   formatAvgFirstResponse,
   formatOpenRateCard,
 } from "@/lib/format/analytics-overview";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export default function DashboardOverviewPage() {
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const router = useRouter();
   const tenantReady = hasTenantDashboardAccess(user);
 
@@ -58,8 +61,8 @@ export default function DashboardOverviewPage() {
     enabled: tenantReady,
   });
   const { data: businessProfile } = useQuery({
-    queryKey: ["business-profile"],
-    queryFn: () => businessApi.get(),
+    queryKey: tenantQueryKey(tenantKey, "business-profile"),
+    queryFn: ({ signal }) => businessApi.get(signal),
     enabled: tenantReady,
   });
   const { data: kbList } = useQuery({
