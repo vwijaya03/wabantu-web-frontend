@@ -104,7 +104,8 @@ function EventCateringOrderPanelInner({ eventId, event, tenantKey, disabled }: P
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Pesan catering</CardTitle>
         <CardDescription>
-          Buat teks pesan untuk vendor (mis. wedang pokak), simpan per acara, dan salin ke WhatsApp.
+          Buat teks pesan untuk vendor (mis. wedang pokak), simpan per acara, dan salin ke WhatsApp. Pesan
+          tersimpan terpisah dari Catatan acara — bisa dilihat/diubah di Edit acara → Pesan catering.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
