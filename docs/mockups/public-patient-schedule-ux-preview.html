@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mockup UX — Link publik & Jadwal lansia (Shadcn)</title>
+    <style>
+      /*
+       * Preview statis yang meniru token + pola komponen Shadcn di web-frontend:
+       * components/ui/{button,card,table}.tsx + app/globals.css (:root).
+       * Bukan file Figma — buka di browser.
+       */
+      :root {
+        --background: oklch(1 0 0);
+        --foreground: oklch(0.141 0.005 285.823);
+        --card: oklch(1 0 0);
+        --card-foreground: oklch(0.141 0.005 285.823);
+        --primary: oklch(0.62 0.16 158);
+        --primary-foreground: oklch(0.98 0.005 156);
+        --secondary: oklch(0.967 0.001 286.375);
+        --secondary-foreground: oklch(0.21 0.006 285.885);
+        --muted: oklch(0.967 0.001 286.375);
+        --muted-foreground: oklch(0.552 0.016 285.938);
+        --accent: oklch(0.967 0.001 286.375);
+        --accent-foreground: oklch(0.21 0.006 285.885);
+        --border: oklch(0.92 0.004 286.32);
+        --input: oklch(0.92 0.004 286.32);
+        --ring: oklch(0.62 0.16 158);
+        --radius: 0.625rem;
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+          Arial, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        background: var(--background);
+        color: var(--foreground);
+        padding: 1.5rem;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .page-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        letter-spacing: -0.025em;
+        margin: 0 0 0.375rem;
+      }
+
+      .page-note {
+        color: var(--muted-foreground);
+        font-size: 0.875rem;
+        margin: 0 0 1.5rem;
+        max-width: 72ch;
+      }
+
+      .page-note code {
+        font-size: 0.8125rem;
+        background: var(--muted);
+        border: 1px solid var(--border);
+        border-radius: calc(var(--radius) - 4px);
+        padding: 0.1rem 0.35rem;
+      }
+
+      .grid {
+        display: grid;
+        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        align-items: start;
+      }
+
+      /* Card — components/ui/card.tsx */
+      .card {
+        border-radius: calc(var(--radius) + 4px); /* rounded-xl */
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--card-foreground);
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      }
+
+      .card-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+        padding: 1.5rem;
+        padding-bottom: 0.5rem;
+      }
+
+      .card-title {
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: -0.025em;
+        font-size: 1rem; /* text-base like dashboard Link publik */
+      }
+
+      .card-title-lg {
+        font-size: 1.125rem; /* text-lg */
+      }
+
+      .card-description {
+        font-size: 0.875rem;
+        color: var(--muted-foreground);
+      }
+
+      .card-content {
+        padding: 1.5rem;
+        padding-top: 0.75rem;
+      }
+
+      .card-content.tight {
+        padding-top: 0.5rem;
+      }
+
+      .eyebrow {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        margin-bottom: 0.75rem;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      /* List rows — divide-y + border like event detail */
+      .link-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: var(--radius); /* rounded-md */
+        overflow: hidden;
+      }
+
+      .link-list li {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        border-top: 1px solid var(--border);
+      }
+
+      .link-list li:first-child {
+        border-top: 0;
+      }
+
+      .link-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--foreground);
+        min-width: 0;
+      }
+
+      .actions {
+        display: flex;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      /* Button — components/ui/button.tsx */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        white-space: nowrap;
+        border-radius: var(--radius);
+        font-size: 0.875rem;
+        font-weight: 500;
+        height: 2rem; /* size sm: h-8 */
+        padding: 0 0.75rem;
+        cursor: default;
+        border: 1px solid transparent;
+        transition: background-color 0.15s, color 0.15s;
+      }
+
+      .btn svg {
+        width: 0.875rem;
+        height: 0.875rem;
+        flex-shrink: 0;
+      }
+
+      .btn-outline {
+        border-color: var(--input);
+        background: var(--background);
+        color: var(--foreground);
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      }
+
+      .btn-secondary {
+        background: var(--secondary);
+        color: var(--secondary-foreground);
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      }
+
+      .btn-lg {
+        height: 2.75rem; /* size lg: h-11 */
+        padding: 0 2rem;
+        font-size: 1rem;
+        border-radius: var(--radius);
+      }
+
+      .btn-lg svg {
+        width: 1rem;
+        height: 1rem;
+      }
+
+      .hint {
+        margin: 0.75rem 0 0;
+        font-size: 0.75rem;
+        color: var(--muted-foreground);
+      }
+
+      /* Jadwal page chrome */
+      .jadwal-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+
+      .jadwal-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .jadwal-title {
+        margin: 0;
+        font-size: 1.875rem; /* text-3xl */
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        color: var(--foreground);
+        line-height: 1.2;
+      }
+
+      .jadwal-sub {
+        margin: 0.25rem 0 0;
+        font-size: 1.125rem; /* text-lg */
+        color: var(--muted-foreground);
+      }
+
+      /* Table — components/ui/table.tsx */
+      .table-wrap {
+        position: relative;
+        width: 100%;
+        overflow: auto;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        caption-side: bottom;
+        font-size: 1rem;
+      }
+
+      thead {
+        background: color-mix(in oklch, var(--muted) 50%, transparent);
+      }
+
+      thead tr {
+        border-bottom: 1px solid var(--border);
+      }
+
+      th {
+        height: 3rem;
+        padding: 0 1rem;
+        text-align: left;
+        vertical-align: middle;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--muted-foreground);
+      }
+
+      tbody tr {
+        border-bottom: 1px solid var(--border);
+      }
+
+      tbody tr:last-child {
+        border-bottom: 0;
+      }
+
+      td {
+        padding: 1rem;
+        vertical-align: middle;
+        color: var(--foreground);
+        font-size: 1.125rem; /* text-lg elderly */
+      }
+
+      td.name {
+        font-weight: 600;
+      }
+
+      td.time {
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .card-content.table-pad {
+        padding: 0 0 1.5rem;
+      }
+
+      @media (min-width: 640px) {
+        .card-content.table-pad {
+          padding: 0 1.5rem 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1 class="page-title">Mockup UX — Link publik ringkas + Jadwal ramah lansia</h1>
+    <p class="page-note">
+      Preview statis (bukan Figma). Token warna &amp; struktur meniru Shadcn di codebase WABantu
+      (<code>components/ui/button|card|table</code>, <code>text-muted-foreground</code>,
+      <code>border-border</code>, variant <code>outline</code>/<code>secondary</code>,
+      <code>size=&quot;lg&quot;</code> untuk tipografi lansia). Buka file ini di browser.
+    </p>
+
+    <div class="grid">
+      <!-- Dashboard: Link publik -->
+      <section>
+        <p class="eyebrow">Dashboard · detail acara · Card</p>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Link publik</div>
+            <div class="card-description">toko-sehat / terapi-energi-2-agt</div>
+          </div>
+          <div class="card-content tight">
+            <ul class="link-list">
+              <li>
+                <span class="link-label">Pasien</span>
+                <div class="actions">
+                  <button type="button" class="btn btn-outline">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                    </svg>
+                    Salin
+                  </button>
+                  <button type="button" class="btn btn-secondary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M15 3h6v6" />
+                      <path d="M10 14 21 3" />
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    </svg>
+                    Buka
+                  </button>
+                </div>
+              </li>
+              <li>
+                <span class="link-label">Terapis &amp; relawan</span>
+                <div class="actions">
+                  <button type="button" class="btn btn-outline">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                    </svg>
+                    Salin
+                  </button>
+                  <button type="button" class="btn btn-secondary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M15 3h6v6" />
+                      <path d="M10 14 21 3" />
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    </svg>
+                    Buka
+                  </button>
+                </div>
+              </li>
+              <li>
+                <span class="link-label">Pantau staf</span>
+                <div class="actions">
+                  <button type="button" class="btn btn-outline">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                    </svg>
+                    Salin
+                  </button>
+                  <button type="button" class="btn btn-secondary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M15 3h6v6" />
+                      <path d="M10 14 21 3" />
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    </svg>
+                    Buka
+                  </button>
+                </div>
+              </li>
+              <li>
+                <span class="link-label">Jadwal pasien</span>
+                <div class="actions">
+                  <button type="button" class="btn btn-outline">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                    </svg>
+                    Salin
+                  </button>
+                  <button type="button" class="btn btn-secondary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M15 3h6v6" />
+                      <path d="M10 14 21 3" />
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    </svg>
+                    Buka
+                  </button>
+                </div>
+              </li>
+            </ul>
+            <p class="hint">
+              Salin menyalin URL penuh ke clipboard — URL tidak ditampilkan sebagai teks panjang.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Publik: /jadwal -->
+      <section>
+        <p class="eyebrow">Publik · /jadwal/{tenant}/{event} · Card + Table</p>
+        <div class="jadwal-shell">
+          <div class="jadwal-toolbar">
+            <div>
+              <h2 class="jadwal-title">Terapi Energi 2 Agustus 2026</h2>
+              <p class="jadwal-sub">Jadwal pasien terjadwal</p>
+            </div>
+            <button type="button" class="btn btn-outline btn-lg">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M8 16H3v5" />
+              </svg>
+              Muat ulang
+            </button>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title card-title-lg">Pasien (3)</div>
+            </div>
+            <div class="card-content table-pad">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Pasien</th>
+                      <th>Terapi</th>
+                      <th>Jadwal</th>
+                      <th>Jam preferensi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="name">Siti Aminah</td>
+                      <td>Terapi 5 Elemen</td>
+                      <td>2 Agustus 2026 09:00–09:30</td>
+                      <td class="time">09:00</td>
+                    </tr>
+                    <tr>
+                      <td class="name">Lilik Supatmi</td>
+                      <td>Terapi Shijie</td>
+                      <td>2 Agustus 2026 09:30–10:00</td>
+                      <td class="time">09:30</td>
+                    </tr>
+                    <tr>
+                      <td class="name">Budi Santoso</td>
+                      <td>Terapi 5 Elemen</td>
+                      <td>2 Agustus 2026 10:00–10:30</td>
+                      <td class="time">10:00</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

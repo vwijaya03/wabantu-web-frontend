@@ -15,6 +15,8 @@ Panduan untuk **owner toko** dan tim operasional yang mengelola acara terapi (pe
 | Kontak (data pasien) | `/dashboard/contacts` |
 | Master terapi / tugas / peran relawan | `/dashboard/events/masters` |
 | Pendaftaran publik pasien | `/register/{slug-toko}/{slug-acara}` |
+| Jadwal pasien publik | `/jadwal/{slug-toko}/{slug-acara}` |
+| Pantau staf publik | `/monitor/{slug-toko}/{slug-acara}` |
 
 Hanya **owner** (atau super admin yang memantau tenant) yang bisa mengubah data. Staff bisa melihat sesuai kebijakan auth tenant.
 
@@ -189,12 +191,36 @@ Master tugas di `/dashboard/events/masters`.
 
 1. Acara status **PUBLISHED**.
 2. **Generate slot** dulu di tab **Jadwal** (wajib sebelum pendaftaran bisa memilih jam).
-3. Di detail acara, kartu **Link pendaftaran pasien** → salin URL.
-4. Format: `https://domain-anda/register/{slug-toko}/{slug-acara}`.
+3. Di detail acara, kartu **Link publik** → baris **Pasien** → **Salin** (atau **Buka**).
+4. Format URL (disalin ke clipboard): `https://domain-anda/register/{slug-toko}/{slug-acara}`.
 
 Pasien memilih **terapi** lalu **jam** dari daftar slot yang masih ada kuota. Jika slot penuh, jam tersebut tidak muncul dan pendaftaran ditolak.
 
 Pasien dari dashboard (tab Pasien): isi **Jam preferensi** → kolom **Slot** terisi setelah slot di-generate dan jam cocok (simpan ulang jika slot baru dibuat).
+
+---
+
+## Jadwal pasien publik
+
+Halaman baca-saja untuk menyebarkan jadwal pasien yang sudah **CONFIRMED** dan punya slot.
+
+1. Acara status **PUBLISHED**.
+2. Di detail acara, kartu **Link publik** → baris **Jadwal pasien** → **Salin** (atau **Buka**).
+3. Format URL (disalin ke clipboard): `https://domain-anda/jadwal/{slug-toko}/{slug-acara}`.
+
+| Kolom yang tampil | Tidak ditampilkan (privacy) |
+|-------------------|-----------------------------|
+| Pasien, Terapi, Jadwal, Jam preferensi | Tanggal lahir, keluhan, status reservasi, UUID internal |
+
+**Urutan baris:** jam preferensi naik (ASC); yang tanpa jam preferensi di akhir.
+
+**UX halaman:** tipografi lebih besar dan kontras lebih kuat agar mudah dibaca (termasuk pengguna lansia).
+
+**Metadata browser / preview link:** judul tab = **nama acara saja** (tanpa “WABantu”, tanpa nama toko). Jika acara tidak ditemukan: judul fallback `Jadwal Pasien`.
+
+Error di halaman publik (jadwal & monitor) menampilkan pesan aman saja — teks teknis database tidak pernah ditampilkan.
+
+Mockup UX (preview): `docs/mockups/public-patient-schedule-ux-preview.html` dan gambar `docs/mockups/public-patient-schedule-ux-mockup.png`.
 
 ---
 
@@ -234,6 +260,10 @@ Alur: upload → preview hasil AI → edit baris jika perlu → **Commit** ke ac
 | `components/events/data-table-toolbar.tsx` | Search + pagination |
 | `lib/api/events.ts` | Client API |
 | `lib/events-staff.ts` | Label peran, helper terapi |
+| `app/jadwal/[tenantSlug]/[eventSlug]/` | Halaman jadwal pasien publik |
+| `app/monitor/[tenantSlug]/[eventSlug]/` | Halaman pantau staf publik |
+| `lib/public-event-error.ts` | Pesan error aman untuk halaman publik |
+| `lib/server/public-event.ts` | Fetch metadata + URL absolut halaman publik |
 
 ---
 

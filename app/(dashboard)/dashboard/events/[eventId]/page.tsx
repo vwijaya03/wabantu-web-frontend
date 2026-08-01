@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Pencil, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { EventAssignmentsTab } from "@/components/events/event-assignments-tab";
 import { EventPatientsTab } from "@/components/events/event-patients-tab";
@@ -14,7 +14,13 @@ import { EventBreakFields } from "@/components/events/event-break-fields";
 import { EventCateringOrderPanel } from "@/components/events/event-catering-order-panel";
 import { EventExportJobsPanel } from "@/components/events/event-export-jobs-panel";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
@@ -95,6 +101,7 @@ function EventPublicRegistrationCard({
   const patientPath = tenantSlug ? `/register/${tenantSlug}/${eventSlug}` : "";
   const staffPath = tenantSlug ? `/register/${tenantSlug}/${eventSlug}/staff` : "";
   const monitorPath = tenantSlug ? `/monitor/${tenantSlug}/${eventSlug}` : "";
+  const jadwalPath = tenantSlug ? `/jadwal/${tenantSlug}/${eventSlug}` : "";
   const published = status === "PUBLISHED";
 
   const copyLink = async (path: string, label: string) => {
@@ -108,12 +115,66 @@ function EventPublicRegistrationCard({
     }
   };
 
+  type PublicLinkRow = {
+    key: string;
+    label: string;
+    path: string;
+    copyMessage: string;
+    canOpen: boolean;
+  };
+
+  const linkRows: PublicLinkRow[] = patientPath
+    ? [
+        {
+          key: "patient",
+          label: "Pasien",
+          path: patientPath,
+          copyMessage: "Link pendaftaran pasien disalin",
+          canOpen: published,
+        },
+        {
+          key: "staff",
+          label: "Terapis & relawan",
+          path: staffPath,
+          copyMessage: "Link pendaftaran staf disalin",
+          canOpen: published,
+        },
+        ...(published && monitorPath
+          ? [
+              {
+                key: "monitor",
+                label: "Pantau staf",
+                path: monitorPath,
+                copyMessage: "Link pantau staf disalin",
+                canOpen: true,
+              },
+            ]
+          : []),
+        ...(published && jadwalPath
+          ? [
+              {
+                key: "jadwal",
+                label: "Jadwal pasien",
+                path: jadwalPath,
+                copyMessage: "Link jadwal pasien disalin",
+                canOpen: true,
+              },
+            ]
+          : []),
+      ]
+    : [];
+
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Link pendaftaran publik</CardTitle>
+        <CardTitle className="text-base">Link publik</CardTitle>
+        {tenantSlug ? (
+          <CardDescription>
+            {tenantSlug} / {eventSlug}
+          </CardDescription>
+        ) : null}
       </CardHeader>
-      <CardContent className="space-y-2 text-sm">
+      <CardContent className="space-y-3 text-sm">
         {!tenantSlug ? (
           <p className="text-amber-800 dark:text-amber-200">
             Slug toko tidak terdeteksi. Pastikan Anda login sebagai owner toko (bukan hanya konsol
@@ -126,69 +187,42 @@ function EventPublicRegistrationCard({
             &quot;Edit acara&quot; agar pasien bisa mendaftar lewat link ini.
           </p>
         ) : null}
-        {patientPath ? (
-          <>
-            <p className="text-sm font-medium">Pasien</p>
-            <code className="block break-all rounded-md bg-muted px-3 py-2 text-xs">{patientPath}</code>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => void copyLink(patientPath, "Link pendaftaran pasien disalin")}
+        {linkRows.length > 0 ? (
+          <ul className="divide-y divide-border rounded-md border border-border">
+            {linkRows.map((row) => (
+              <li
+                key={row.key}
+                className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 sm:flex-nowrap"
               >
-                Salin link pasien
-              </Button>
-              {published ? (
-                <Button size="sm" variant="secondary" asChild>
-                  <Link href={patientPath} target="_blank" rel="noopener noreferrer">
-                    Buka pendaftaran pasien
-                  </Link>
-                </Button>
-              ) : null}
-            </div>
-            <p className="pt-2 text-sm font-medium">Terapis & relawan</p>
-            <code className="block break-all rounded-md bg-muted px-3 py-2 text-xs">{staffPath}</code>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => void copyLink(staffPath, "Link pendaftaran staf disalin")}
-              >
-                Salin link staf
-              </Button>
-              {published ? (
-                <Button size="sm" variant="secondary" asChild>
-                  <Link href={staffPath} target="_blank" rel="noopener noreferrer">
-                    Buka pendaftaran staf
-                  </Link>
-                </Button>
-              ) : null}
-            </div>
-            {published && monitorPath ? (
-              <>
-                <p className="pt-2 text-sm font-medium">Pantau daftar staf</p>
-                <code className="block break-all rounded-md bg-muted px-3 py-2 text-xs">{monitorPath}</code>
-                <div className="flex flex-wrap gap-2 pt-1">
+                <span className="min-w-0 font-medium text-foreground">{row.label}</span>
+                <div className="flex shrink-0 flex-wrap gap-2">
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => void copyLink(monitorPath, "Link pantau staf disalin")}
+                    onClick={() => void copyLink(row.path, row.copyMessage)}
                   >
-                    Salin link pantau
+                    <Copy className="size-3.5" />
+                    Salin
                   </Button>
+                  {row.canOpen ? (
+                    <Button size="sm" variant="secondary" asChild>
+                      <Link href={row.path} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="size-3.5" />
+                        Buka
+                      </Link>
+                    </Button>
+                  ) : null}
                 </div>
-              </>
-            ) : null}
-          </>
+              </li>
+            ))}
+          </ul>
         ) : null}
-        <p className="text-xs text-muted-foreground">
-          Format: <span className="font-mono">/register/{"{slug-toko}"}/{"{slug-acara}"}</span> · pantau staf:{" "}
-          <span className="font-mono">/monitor/{"{slug-toko}"}/{"{slug-acara}"}</span> · slug acara ini:{" "}
-          <strong>{eventSlug}</strong>
-        </p>
+        {linkRows.length > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Salin menyalin URL penuh ke clipboard — URL tidak ditampilkan sebagai teks panjang.
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -309,6 +343,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
     mutationFn: () =>
       eventsApi.updateEvent(eventId, {
         ...editForm,
+        // Pastikan field terpisah tidak hilang saat partial form state.
+        eventDescription: editForm.eventDescription ?? "",
+        cateringOrderNotes: editForm.cateringOrderNotes ?? "",
         breakStartTime: editHasBreak ? editForm.breakStartTime : "",
         breakEndTime: editHasBreak ? editForm.breakEndTime : "",
       } as EventRow),
@@ -605,7 +642,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit acara</DialogTitle>
-            <DialogDescription>Ubah nama, tanggal, jam, dan status acara.</DialogDescription>
+            <DialogDescription>
+              Ubah nama, tanggal, jam, catatan acara, pesanan catering, dan status.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">
             <div>
@@ -624,6 +663,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
             </div>
             <div>
               <Label>Catatan acara</Label>
+              <p className="mb-1 text-xs text-muted-foreground">
+                Catatan internal (diet, kontak, dll.) — tampil di header acara. Beda dari pesanan catering ke
+                vendor.
+              </p>
               <Textarea
                 rows={4}
                 placeholder={
@@ -631,6 +674,18 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
                 }
                 value={editForm.eventDescription ?? ""}
                 onChange={(e) => setEditForm((f) => ({ ...f, eventDescription: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Pesanan Catering</Label>
+              <p className="mb-1 text-xs text-muted-foreground">
+                Teks yang disimpan dari panel Pesanan Catering (dashboard) — siap disalin ke WhatsApp vendor.
+              </p>
+              <Textarea
+                rows={5}
+                placeholder="Belum ada pesan. Buat lewat panel Pesanan Catering di tab Dashboard, atau ketik di sini."
+                value={editForm.cateringOrderNotes ?? ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, cateringOrderNotes: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-2 gap-2">

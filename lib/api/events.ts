@@ -261,6 +261,8 @@ export interface PublicStaffMonitorPerson {
 export interface PublicStaffMonitorResponse {
   eventName: string;
   eventDescription?: string;
+  /** Pesanan catering acara (terpisah dari deskripsi). */
+  cateringOrderNotes?: string;
   location?: string;
   startDate: string;
   endDate: string;
@@ -269,6 +271,18 @@ export interface PublicStaffMonitorResponse {
   therapyCapacity: { therapyId: string; therapyName: string; current: number; max: number }[];
   mealConsumptionCount: number;
   staff: PublicStaffMonitorPerson[];
+}
+
+export interface PublicPatientScheduleRow {
+  fullName: string;
+  therapyName: string;
+  slotLabel: string;
+  preferredTime: string;
+}
+
+export interface PublicPatientScheduleResponse {
+  eventName: string;
+  patients: PublicPatientScheduleRow[];
 }
 
 /** Maksimum baris per export PDF (harus selaras dengan api-go/events). */
@@ -556,6 +570,13 @@ export const eventsApi = {
   getPublicStaffMonitor: (tenantSlug: string, eventSlug: string) =>
     api
       .get<PublicStaffMonitorResponse>(`/public/events/${tenantSlug}/monitor/${eventSlug}`)
+      .then((r) => r.data),
+
+  getPublicPatientSchedule: (tenantSlug: string, eventSlug: string) =>
+    api
+      .get<PublicPatientScheduleResponse>(
+        `/public/events/${tenantSlug}/patient-schedule/${eventSlug}`,
+      )
       .then((r) => r.data),
 
   postPublicStaffRegistration: (

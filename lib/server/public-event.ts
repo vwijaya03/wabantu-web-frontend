@@ -1,4 +1,8 @@
-import type { PublicEventInfo, PublicStaffMonitorResponse } from "@/lib/api/events";
+import type {
+  PublicEventInfo,
+  PublicPatientScheduleResponse,
+  PublicStaffMonitorResponse,
+} from "@/lib/api/events";
 import { formatEventDateTimeRange } from "@/lib/events-format";
 import { env } from "@/lib/env";
 
@@ -46,12 +50,28 @@ export function buildPublicMonitorDescription(
   return parts.length > 0 ? `${base} ${parts.join(" · ")}` : base;
 }
 
-export function buildMonitorPageUrl(tenantSlug: string, eventSlug: string): string | undefined {
-  const base =
+function siteBaseUrl(): string | undefined {
+  return (
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined)
+  );
+}
+
+export function buildMonitorPageUrl(tenantSlug: string, eventSlug: string): string | undefined {
+  const base = siteBaseUrl();
   if (!base) return undefined;
   return `${base}/monitor/${encodeURIComponent(tenantSlug)}/${encodeURIComponent(eventSlug)}`;
+}
+
+export function buildJadwalPageUrl(tenantSlug: string, eventSlug: string): string | undefined {
+  const base = siteBaseUrl();
+  if (!base) return undefined;
+  return `${base}/jadwal/${encodeURIComponent(tenantSlug)}/${encodeURIComponent(eventSlug)}`;
+}
+
+/** Absolute browser tab title for public patient schedule — event name only, no WABantu/tenant. */
+export function buildPublicPatientScheduleTitle(eventName: string): string {
+  return eventName.trim();
 }
 
 /** Server-only fetch for OG metadata (WhatsApp link preview). */
@@ -80,6 +100,23 @@ export async function fetchPublicStaffMonitor(
     const res = await fetch(url, { next: { revalidate: 300 } });
     if (!res.ok) return null;
     const json: ApiEnvelope<PublicStaffMonitorResponse> | PublicStaffMonitorResponse =
+      await res.json();
+    return unwrapApiEnvelope(json);
+  } catch {
+    return null;
+  }
+}
+
+/** Server-only fetch for OG metadata on public patient schedule page. */
+export async function fetchPublicPatientSchedule(
+  tenantSlug: string,
+  eventSlug: string,
+): Promise<PublicPatientScheduleResponse | null> {
+  const url = `${env.apiUrlInternal}/public/events/${encodeURIComponent(tenantSlug)}/patient-schedule/${encodeURIComponent(eventSlug)}`;
+  try {
+    const res = await fetch(url, { next: { revalidate: 300 } });
+    if (!res.ok) return null;
+    const json: ApiEnvelope<PublicPatientScheduleResponse> | PublicPatientScheduleResponse =
       await res.json();
     return unwrapApiEnvelope(json);
   } catch {

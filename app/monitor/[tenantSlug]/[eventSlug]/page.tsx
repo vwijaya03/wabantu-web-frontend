@@ -15,8 +15,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { eventsApi, type PublicStaffMonitorPerson } from "@/lib/api/events";
-import { toApiError } from "@/lib/api/client";
 import { formatEventDateTimeRange } from "@/lib/events-format";
+import { publicEventErrorCopy } from "@/lib/public-event-error";
 import type { ListSortState } from "@/lib/events-sort";
 
 const MONITOR_SORT_DEFAULT: ListSortState = { sortBy: "fullName", sortDir: "asc" };
@@ -86,15 +86,27 @@ export default function PublicStaffMonitorPage({
   }
 
   if (error || !data) {
-    const message = error ? toApiError(error).message : "Acara tidak tersedia";
+    const copy = error
+      ? publicEventErrorCopy(error)
+      : { title: "Tidak tersedia", message: "Acara tidak ditemukan" };
     return (
       <main className="mx-auto max-w-5xl p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Tidak tersedia</CardTitle>
+            <CardTitle>{copy.title}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">{message}</p>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">{copy.message}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isFetching}
+              onClick={() => void refetch()}
+            >
+              <RefreshCw className={`mr-2 size-4 ${isFetching ? "animate-spin" : ""}`} />
+              Muat ulang
+            </Button>
           </CardContent>
         </Card>
       </main>
@@ -156,6 +168,19 @@ export default function PublicStaffMonitorPage({
           </CardContent>
         </Card>
       </div>
+
+      {data.cateringOrderNotes?.trim() ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Pesanan Catering</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-wrap text-base leading-relaxed">
+              {data.cateringOrderNotes.trim()}
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader className="pb-2">
