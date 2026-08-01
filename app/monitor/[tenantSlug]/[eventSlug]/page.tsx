@@ -172,7 +172,7 @@ export default function PublicStaffMonitorPage({
       {data.cateringOrderNotes?.trim() ? (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Pesan catering</CardTitle>
+            <CardTitle className="text-base">Pesanan Catering</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="whitespace-pre-wrap text-base leading-relaxed">

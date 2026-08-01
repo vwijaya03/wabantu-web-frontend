@@ -261,7 +261,7 @@ export interface PublicStaffMonitorPerson {
 export interface PublicStaffMonitorResponse {
   eventName: string;
   eventDescription?: string;
-  /** Pesan catering acara (terpisah dari deskripsi). */
+  /** Pesanan catering acara (terpisah dari deskripsi). */
   cateringOrderNotes?: string;
   location?: string;
   startDate: string;

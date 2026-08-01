@@ -643,7 +643,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
           <DialogHeader>
             <DialogTitle>Edit acara</DialogTitle>
             <DialogDescription>
-              Ubah nama, tanggal, jam, catatan acara, pesan catering, dan status.
+              Ubah nama, tanggal, jam, catatan acara, pesanan catering, dan status.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">
@@ -664,7 +664,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
             <div>
               <Label>Catatan acara</Label>
               <p className="mb-1 text-xs text-muted-foreground">
-                Catatan internal (diet, kontak, dll.) — tampil di header acara. Beda dari pesan catering ke
+                Catatan internal (diet, kontak, dll.) — tampil di header acara. Beda dari pesanan catering ke
                 vendor.
               </p>
               <Textarea
@@ -677,13 +677,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
               />
             </div>
             <div>
-              <Label>Pesan catering</Label>
+              <Label>Pesanan Catering</Label>
               <p className="mb-1 text-xs text-muted-foreground">
-                Teks yang disimpan dari panel Pesan catering (dashboard) — siap disalin ke WhatsApp vendor.
+                Teks yang disimpan dari panel Pesanan Catering (dashboard) — siap disalin ke WhatsApp vendor.
               </p>
               <Textarea
                 rows={5}
-                placeholder="Belum ada pesan. Buat lewat panel Pesan catering di tab Dashboard, atau ketik di sini."
+                placeholder="Belum ada pesan. Buat lewat panel Pesanan Catering di tab Dashboard, atau ketik di sini."
                 value={editForm.cateringOrderNotes ?? ""}
                 onChange={(e) => setEditForm((f) => ({ ...f, cateringOrderNotes: e.target.value }))}
               />

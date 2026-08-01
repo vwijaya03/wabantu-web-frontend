@@ -73,7 +73,7 @@ function EventCateringOrderPanelInner({ eventId, event, tenantKey, disabled }: P
         cateringOrderNotes,
       }),
     onSuccess: () => {
-      toast.success("Pesan catering disimpan");
+      toast.success("Pesanan Catering disimpan");
       void qc.invalidateQueries({ queryKey: eventDetailKey(tenantKey, eventId) });
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
@@ -102,10 +102,10 @@ function EventCateringOrderPanelInner({ eventId, event, tenantKey, disabled }: P
   return (
     <Card className="mt-4">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Pesan catering</CardTitle>
+        <CardTitle className="text-base">Pesanan Catering</CardTitle>
         <CardDescription>
           Buat teks pesan untuk vendor (mis. wedang pokak), simpan per acara, dan salin ke WhatsApp. Pesan
-          tersimpan terpisah dari Catatan acara — bisa dilihat/diubah di Edit acara → Pesan catering.
+          tersimpan terpisah dari Catatan acara — bisa dilihat/diubah di Edit acara → Pesanan Catering.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
