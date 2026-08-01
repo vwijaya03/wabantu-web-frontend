@@ -343,6 +343,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
     mutationFn: () =>
       eventsApi.updateEvent(eventId, {
         ...editForm,
+        // Pastikan field terpisah tidak hilang saat partial form state.
+        eventDescription: editForm.eventDescription ?? "",
+        cateringOrderNotes: editForm.cateringOrderNotes ?? "",
         breakStartTime: editHasBreak ? editForm.breakStartTime : "",
         breakEndTime: editHasBreak ? editForm.breakEndTime : "",
       } as EventRow),
@@ -639,7 +642,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit acara</DialogTitle>
-            <DialogDescription>Ubah nama, tanggal, jam, dan status acara.</DialogDescription>
+            <DialogDescription>
+              Ubah nama, tanggal, jam, catatan acara, pesan catering, dan status.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">
             <div>
@@ -658,6 +663,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
             </div>
             <div>
               <Label>Catatan acara</Label>
+              <p className="mb-1 text-xs text-muted-foreground">
+                Catatan internal (diet, kontak, dll.) — tampil di header acara. Beda dari pesan catering ke
+                vendor.
+              </p>
               <Textarea
                 rows={4}
                 placeholder={
@@ -665,6 +674,18 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
                 }
                 value={editForm.eventDescription ?? ""}
                 onChange={(e) => setEditForm((f) => ({ ...f, eventDescription: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Pesan catering</Label>
+              <p className="mb-1 text-xs text-muted-foreground">
+                Teks yang disimpan dari panel Pesan catering (dashboard) — siap disalin ke WhatsApp vendor.
+              </p>
+              <Textarea
+                rows={5}
+                placeholder="Belum ada pesan. Buat lewat panel Pesan catering di tab Dashboard, atau ketik di sini."
+                value={editForm.cateringOrderNotes ?? ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, cateringOrderNotes: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
