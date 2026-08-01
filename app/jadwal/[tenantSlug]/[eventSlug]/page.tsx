@@ -67,7 +67,7 @@ export default function PublicPatientSchedulePage({
   if (isLoading) {
     return (
       <main className="mx-auto max-w-5xl p-4 sm:p-6">
-        <p className="text-lg text-foreground">Memuat jadwal...</p>
+        <p className="text-lg text-muted-foreground">Memuat jadwal...</p>
       </main>
     );
   }
@@ -83,15 +83,15 @@ export default function PublicPatientSchedulePage({
             <CardTitle className="text-xl sm:text-2xl">{copy.title}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-base text-foreground/80 sm:text-lg">{copy.message}</p>
+            <p className="text-base text-muted-foreground sm:text-lg">{copy.message}</p>
             <Button
               type="button"
               variant="outline"
-              className="min-h-11 text-base"
+              size="lg"
               disabled={isFetching}
               onClick={() => void refetch()}
             >
-              <RefreshCw className={`mr-2 size-4 ${isFetching ? "animate-spin" : ""}`} />
+              <RefreshCw className={isFetching ? "animate-spin" : undefined} />
               Muat ulang
             </Button>
           </CardContent>
@@ -107,16 +107,16 @@ export default function PublicPatientSchedulePage({
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             {data.eventName}
           </h1>
-          <p className="text-base text-foreground/80 sm:text-lg">Jadwal pasien terjadwal</p>
+          <p className="text-base text-muted-foreground sm:text-lg">Jadwal pasien terjadwal</p>
         </div>
         <Button
           type="button"
           variant="outline"
-          className="min-h-11 text-base"
+          size="lg"
           disabled={isFetching}
           onClick={() => void refetch()}
         >
-          <RefreshCw className={`mr-2 size-4 ${isFetching ? "animate-spin" : ""}`} />
+          <RefreshCw className={isFetching ? "animate-spin" : undefined} />
           Muat ulang
         </Button>
       </div>
@@ -127,23 +127,23 @@ export default function PublicPatientSchedulePage({
         </CardHeader>
         <CardContent className="overflow-x-auto p-0 sm:p-6 sm:pt-0">
           {patients.length === 0 ? (
-            <p className="px-6 pb-6 text-base text-foreground/80 sm:px-0 sm:pb-0 sm:text-lg">
+            <p className="px-6 pb-6 text-base text-muted-foreground sm:px-0 sm:pb-0 sm:text-lg">
               Belum ada pasien terjadwal.
             </p>
           ) : (
-            <Table>
+            <Table className="text-base">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-12 px-4 text-base font-semibold text-foreground">
+                  <TableHead className="h-12 px-4 text-sm font-medium text-muted-foreground sm:text-base">
                     Pasien
                   </TableHead>
-                  <TableHead className="h-12 px-4 text-base font-semibold text-foreground">
+                  <TableHead className="h-12 px-4 text-sm font-medium text-muted-foreground sm:text-base">
                     Terapi
                   </TableHead>
-                  <TableHead className="h-12 px-4 text-base font-semibold text-foreground">
+                  <TableHead className="h-12 px-4 text-sm font-medium text-muted-foreground sm:text-base">
                     Jadwal
                   </TableHead>
-                  <TableHead className="h-12 px-4 text-base font-semibold text-foreground">
+                  <TableHead className="h-12 px-4 text-sm font-medium text-muted-foreground sm:text-base">
                     Jam preferensi
                   </TableHead>
                 </TableRow>

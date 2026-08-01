@@ -14,7 +14,13 @@ import { EventBreakFields } from "@/components/events/event-break-fields";
 import { EventCateringOrderPanel } from "@/components/events/event-catering-order-panel";
 import { EventExportJobsPanel } from "@/components/events/event-export-jobs-panel";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
@@ -163,9 +169,9 @@ function EventPublicRegistrationCard({
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Link publik</CardTitle>
         {tenantSlug ? (
-          <p className="text-sm text-muted-foreground">
+          <CardDescription>
             {tenantSlug} / {eventSlug}
-          </p>
+          </CardDescription>
         ) : null}
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
@@ -182,28 +188,27 @@ function EventPublicRegistrationCard({
           </p>
         ) : null}
         {linkRows.length > 0 ? (
-          <ul className="divide-y rounded-md border">
+          <ul className="divide-y divide-border rounded-md border border-border">
             {linkRows.map((row) => (
               <li
                 key={row.key}
                 className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 sm:flex-nowrap"
               >
-                <span className="min-w-0 text-sm font-medium">{row.label}</span>
+                <span className="min-w-0 font-medium text-foreground">{row.label}</span>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="min-h-10 min-w-[5.5rem]"
                     onClick={() => void copyLink(row.path, row.copyMessage)}
                   >
-                    <Copy className="mr-1.5 size-3.5" />
+                    <Copy className="size-3.5" />
                     Salin
                   </Button>
                   {row.canOpen ? (
-                    <Button size="sm" variant="secondary" className="min-h-10 min-w-[5.5rem]" asChild>
+                    <Button size="sm" variant="secondary" asChild>
                       <Link href={row.path} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="mr-1.5 size-3.5" />
+                        <ExternalLink className="size-3.5" />
                         Buka
                       </Link>
                     </Button>
@@ -212,6 +217,11 @@ function EventPublicRegistrationCard({
               </li>
             ))}
           </ul>
+        ) : null}
+        {linkRows.length > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Salin menyalin URL penuh ke clipboard — URL tidak ditampilkan sebagai teks panjang.
+          </p>
         ) : null}
       </CardContent>
     </Card>
