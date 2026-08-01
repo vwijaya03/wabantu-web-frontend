@@ -271,6 +271,18 @@ export interface PublicStaffMonitorResponse {
   staff: PublicStaffMonitorPerson[];
 }
 
+export interface PublicPatientScheduleRow {
+  fullName: string;
+  therapyName: string;
+  slotLabel: string;
+  preferredTime: string;
+}
+
+export interface PublicPatientScheduleResponse {
+  eventName: string;
+  patients: PublicPatientScheduleRow[];
+}
+
 /** Maksimum baris per export PDF (harus selaras dengan api-go/events). */
 export const EVENTS_MAX_PATIENT_EXPORT_ROWS = 2500;
 
@@ -556,6 +568,13 @@ export const eventsApi = {
   getPublicStaffMonitor: (tenantSlug: string, eventSlug: string) =>
     api
       .get<PublicStaffMonitorResponse>(`/public/events/${tenantSlug}/monitor/${eventSlug}`)
+      .then((r) => r.data),
+
+  getPublicPatientSchedule: (tenantSlug: string, eventSlug: string) =>
+    api
+      .get<PublicPatientScheduleResponse>(
+        `/public/events/${tenantSlug}/patient-schedule/${eventSlug}`,
+      )
       .then((r) => r.data),
 
   postPublicStaffRegistration: (
