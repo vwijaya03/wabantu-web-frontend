@@ -191,8 +191,8 @@ Master tugas di `/dashboard/events/masters`.
 
 1. Acara status **PUBLISHED**.
 2. **Generate slot** dulu di tab **Jadwal** (wajib sebelum pendaftaran bisa memilih jam).
-3. Di detail acara, kartu **Link pendaftaran publik** → salin URL.
-4. Format: `https://domain-anda/register/{slug-toko}/{slug-acara}`.
+3. Di detail acara, kartu **Link publik** → baris **Pasien** → **Salin** (atau **Buka**).
+4. Format URL (disalin ke clipboard): `https://domain-anda/register/{slug-toko}/{slug-acara}`.
 
 Pasien memilih **terapi** lalu **jam** dari daftar slot yang masih ada kuota. Jika slot penuh, jam tersebut tidak muncul dan pendaftaran ditolak.
 
@@ -205,16 +205,22 @@ Pasien dari dashboard (tab Pasien): isi **Jam preferensi** → kolom **Slot** te
 Halaman baca-saja untuk menyebarkan jadwal pasien yang sudah **CONFIRMED** dan punya slot.
 
 1. Acara status **PUBLISHED**.
-2. Di detail acara, kartu **Link pendaftaran publik** → bagian **Jadwal pasien publik** → **Salin link jadwal pasien**.
-3. Format: `https://domain-anda/jadwal/{slug-toko}/{slug-acara}`.
+2. Di detail acara, kartu **Link publik** → baris **Jadwal pasien** → **Salin** (atau **Buka**).
+3. Format URL (disalin ke clipboard): `https://domain-anda/jadwal/{slug-toko}/{slug-acara}`.
 
 | Kolom yang tampil | Tidak ditampilkan (privacy) |
 |-------------------|-----------------------------|
 | Pasien, Terapi, Jadwal, Jam preferensi | Tanggal lahir, keluhan, status reservasi, UUID internal |
 
+**Urutan baris:** jam preferensi naik (ASC); yang tanpa jam preferensi di akhir.
+
+**UX halaman:** tipografi lebih besar dan kontras lebih kuat agar mudah dibaca (termasuk pengguna lansia).
+
 **Metadata browser / preview link:** judul tab = **nama acara saja** (tanpa “WABantu”, tanpa nama toko). Jika acara tidak ditemukan: judul fallback `Jadwal Pasien`.
 
 Error di halaman publik (jadwal & monitor) menampilkan pesan aman saja — teks teknis database tidak pernah ditampilkan.
+
+Mockup UX (preview): `docs/mockups/public-patient-schedule-ux-preview.html` dan gambar `docs/mockups/public-patient-schedule-ux-mockup.png`.
 
 ---
 

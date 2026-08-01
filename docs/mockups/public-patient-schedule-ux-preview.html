@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mockup UX — Link publik & Jadwal lansia</title>
+    <style>
+      :root {
+        --bg: #f4f4f5;
+        --card: #ffffff;
+        --border: #e4e4e7;
+        --text: #18181b;
+        --muted: #3f3f46;
+        --soft: #71717a;
+        --btn-border: #d4d4d8;
+        --btn-bg: #fafafa;
+        --btn-secondary: #f4f4f5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        padding: 24px;
+        line-height: 1.45;
+      }
+      h1 {
+        font-size: 1.25rem;
+        margin: 0 0 8px;
+      }
+      .note {
+        color: var(--muted);
+        margin-bottom: 24px;
+        max-width: 72ch;
+      }
+      .grid {
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        align-items: start;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px;
+      }
+      .card h2 {
+        font-size: 1rem;
+        margin: 0 0 4px;
+      }
+      .slug {
+        color: var(--soft);
+        font-size: 0.875rem;
+        margin-bottom: 12px;
+      }
+      .list {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 12px;
+        border-top: 1px solid var(--border);
+        min-height: 56px;
+      }
+      .row:first-child {
+        border-top: 0;
+      }
+      .label {
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      button {
+        border: 1px solid var(--btn-border);
+        background: var(--btn-bg);
+        border-radius: 6px;
+        padding: 8px 14px;
+        font-size: 0.875rem;
+        cursor: default;
+        min-height: 40px;
+      }
+      button.secondary {
+        background: var(--btn-secondary);
+      }
+      .footer {
+        margin-top: 12px;
+        font-size: 0.8rem;
+        color: var(--soft);
+      }
+      .event-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0 0 6px;
+        letter-spacing: -0.02em;
+      }
+      .event-sub {
+        font-size: 1.05rem;
+        color: var(--muted);
+        margin: 0 0 16px;
+      }
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+        margin-bottom: 8px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 16px 12px;
+        border-bottom: 1px solid var(--border);
+        font-size: 1.125rem;
+        vertical-align: top;
+      }
+      th {
+        font-size: 1rem;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      td.name {
+        font-weight: 600;
+      }
+      .caption {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--soft);
+        margin-bottom: 8px;
+      }
+      img.ref {
+        display: block;
+        width: 100%;
+        max-width: 1100px;
+        margin-top: 28px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Mockup UX — Link publik ringkas + Jadwal ramah lansia</h1>
+    <p class="note">
+      Preview statis (bukan Figma). Buka file ini di browser. Desain mengikuti panel dashboard
+      shadcn yang disederhanakan dan halaman <code>/jadwal</code> dengan tipografi lebih besar.
+    </p>
+
+    <div class="grid">
+      <section class="card">
+        <div class="caption">Dashboard · detail acara</div>
+        <h2>Link publik</h2>
+        <p class="slug">toko-sehat / terapi-energi-2-agt</p>
+        <div class="list">
+          <div class="row">
+            <span class="label">Pasien</span>
+            <div class="actions">
+              <button type="button">Salin</button>
+              <button type="button" class="secondary">Buka</button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="label">Terapis &amp; relawan</span>
+            <div class="actions">
+              <button type="button">Salin</button>
+              <button type="button" class="secondary">Buka</button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="label">Pantau staf</span>
+            <div class="actions">
+              <button type="button">Salin</button>
+              <button type="button" class="secondary">Buka</button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="label">Jadwal pasien</span>
+            <div class="actions">
+              <button type="button">Salin</button>
+              <button type="button" class="secondary">Buka</button>
+            </div>
+          </div>
+        </div>
+        <p class="footer">URL penuh disalin ke clipboard — tidak ditampilkan sebagai dinding monospace.</p>
+      </section>
+
+      <section class="card">
+        <div class="caption">Publik · /jadwal/{tenant}/{event}</div>
+        <div class="toolbar">
+          <div>
+            <h2 class="event-title">Terapi Energi 2 Agustus 2026</h2>
+            <p class="event-sub">Jadwal pasien terjadwal · diurutkan jam preferensi</p>
+          </div>
+          <button type="button">Muat ulang</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Pasien</th>
+              <th>Terapi</th>
+              <th>Jadwal</th>
+              <th>Jam preferensi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="name">Siti Aminah</td>
+              <td>Terapi 5 Elemen</td>
+              <td>2 Agustus 2026 09:00–09:30</td>
+              <td>09:00</td>
+            </tr>
+            <tr>
+              <td class="name">Lilik Supatmi</td>
+              <td>Terapi Shijie</td>
+              <td>2 Agustus 2026 09:30–10:00</td>
+              <td>09:30</td>
+            </tr>
+            <tr>
+              <td class="name">Budi Santoso</td>
+              <td>Terapi 5 Elemen</td>
+              <td>2 Agustus 2026 10:00–10:30</td>
+              <td>10:00</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <img
+      class="ref"
+      src="./public-patient-schedule-ux-mockup.png"
+      alt="Mockup visual link publik ringkas dan tabel jadwal ramah lansia"
+    />
+  </body>
+</html>

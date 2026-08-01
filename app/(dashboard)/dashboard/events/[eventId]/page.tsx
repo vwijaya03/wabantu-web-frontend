@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Pencil, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { EventAssignmentsTab } from "@/components/events/event-assignments-tab";
 import { EventPatientsTab } from "@/components/events/event-patients-tab";
@@ -109,12 +109,66 @@ function EventPublicRegistrationCard({
     }
   };
 
+  type PublicLinkRow = {
+    key: string;
+    label: string;
+    path: string;
+    copyMessage: string;
+    canOpen: boolean;
+  };
+
+  const linkRows: PublicLinkRow[] = patientPath
+    ? [
+        {
+          key: "patient",
+          label: "Pasien",
+          path: patientPath,
+          copyMessage: "Link pendaftaran pasien disalin",
+          canOpen: published,
+        },
+        {
+          key: "staff",
+          label: "Terapis & relawan",
+          path: staffPath,
+          copyMessage: "Link pendaftaran staf disalin",
+          canOpen: published,
+        },
+        ...(published && monitorPath
+          ? [
+              {
+                key: "monitor",
+                label: "Pantau staf",
+                path: monitorPath,
+                copyMessage: "Link pantau staf disalin",
+                canOpen: true,
+              },
+            ]
+          : []),
+        ...(published && jadwalPath
+          ? [
+              {
+                key: "jadwal",
+                label: "Jadwal pasien",
+                path: jadwalPath,
+                copyMessage: "Link jadwal pasien disalin",
+                canOpen: true,
+              },
+            ]
+          : []),
+      ]
+    : [];
+
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Link pendaftaran publik</CardTitle>
+        <CardTitle className="text-base">Link publik</CardTitle>
+        {tenantSlug ? (
+          <p className="text-sm text-muted-foreground">
+            {tenantSlug} / {eventSlug}
+          </p>
+        ) : null}
       </CardHeader>
-      <CardContent className="space-y-2 text-sm">
+      <CardContent className="space-y-3 text-sm">
         {!tenantSlug ? (
           <p className="text-amber-800 dark:text-amber-200">
             Slug toko tidak terdeteksi. Pastikan Anda login sebagai owner toko (bukan hanya konsol
@@ -127,86 +181,38 @@ function EventPublicRegistrationCard({
             &quot;Edit acara&quot; agar pasien bisa mendaftar lewat link ini.
           </p>
         ) : null}
-        {patientPath ? (
-          <>
-            <p className="text-sm font-medium">Pasien</p>
-            <code className="block break-all rounded-md bg-muted px-3 py-2 text-xs">{patientPath}</code>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => void copyLink(patientPath, "Link pendaftaran pasien disalin")}
+        {linkRows.length > 0 ? (
+          <ul className="divide-y rounded-md border">
+            {linkRows.map((row) => (
+              <li
+                key={row.key}
+                className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 sm:flex-nowrap"
               >
-                Salin link pasien
-              </Button>
-              {published ? (
-                <Button size="sm" variant="secondary" asChild>
-                  <Link href={patientPath} target="_blank" rel="noopener noreferrer">
-                    Buka pendaftaran pasien
-                  </Link>
-                </Button>
-              ) : null}
-            </div>
-            <p className="pt-2 text-sm font-medium">Terapis & relawan</p>
-            <code className="block break-all rounded-md bg-muted px-3 py-2 text-xs">{staffPath}</code>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => void copyLink(staffPath, "Link pendaftaran staf disalin")}
-              >
-                Salin link staf
-              </Button>
-              {published ? (
-                <Button size="sm" variant="secondary" asChild>
-                  <Link href={staffPath} target="_blank" rel="noopener noreferrer">
-                    Buka pendaftaran staf
-                  </Link>
-                </Button>
-              ) : null}
-            </div>
-            {published && monitorPath ? (
-              <>
-                <p className="pt-2 text-sm font-medium">Pantau daftar staf</p>
-                <code className="block break-all rounded-md bg-muted px-3 py-2 text-xs">{monitorPath}</code>
-                <div className="flex flex-wrap gap-2 pt-1">
+                <span className="min-w-0 text-sm font-medium">{row.label}</span>
+                <div className="flex shrink-0 flex-wrap gap-2">
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => void copyLink(monitorPath, "Link pantau staf disalin")}
+                    className="min-h-10 min-w-[5.5rem]"
+                    onClick={() => void copyLink(row.path, row.copyMessage)}
                   >
-                    Salin link pantau
+                    <Copy className="mr-1.5 size-3.5" />
+                    Salin
                   </Button>
+                  {row.canOpen ? (
+                    <Button size="sm" variant="secondary" className="min-h-10 min-w-[5.5rem]" asChild>
+                      <Link href={row.path} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-1.5 size-3.5" />
+                        Buka
+                      </Link>
+                    </Button>
+                  ) : null}
                 </div>
-              </>
-            ) : null}
-            {published && jadwalPath ? (
-              <>
-                <p className="pt-2 text-sm font-medium">Jadwal pasien publik</p>
-                <code className="block break-all rounded-md bg-muted px-3 py-2 text-xs">{jadwalPath}</code>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void copyLink(jadwalPath, "Link jadwal pasien disalin")}
-                  >
-                    Salin link jadwal pasien
-                  </Button>
-                </div>
-              </>
-            ) : null}
-          </>
+              </li>
+            ))}
+          </ul>
         ) : null}
-        <p className="text-xs text-muted-foreground">
-          Format: <span className="font-mono">/register/{"{slug-toko}"}/{"{slug-acara}"}</span> · pantau staf:{" "}
-          <span className="font-mono">/monitor/{"{slug-toko}"}/{"{slug-acara}"}</span> · jadwal pasien:{" "}
-          <span className="font-mono">/jadwal/{"{slug-toko}"}/{"{slug-acara}"}</span> · slug acara ini:{" "}
-          <strong>{eventSlug}</strong>
-        </p>
       </CardContent>
     </Card>
   );
