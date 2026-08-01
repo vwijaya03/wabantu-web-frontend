@@ -175,7 +175,9 @@ export default function PublicStaffMonitorPage({
             <CardTitle className="text-base">Pesan catering</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="whitespace-pre-wrap text-sm">{data.cateringOrderNotes.trim()}</p>
+            <p className="whitespace-pre-wrap text-base leading-relaxed">
+              {data.cateringOrderNotes.trim()}
+            </p>
           </CardContent>
         </Card>
       ) : null}
