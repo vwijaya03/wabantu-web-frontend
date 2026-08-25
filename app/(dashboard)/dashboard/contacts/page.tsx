@@ -192,7 +192,10 @@ export default function ContactsPage() {
   };
 
   return (
-    <RequireTenantDashboard>
+    <RequireTenantDashboard
+      title="Contacts"
+      description="Kelola kontak customer WhatsApp dengan search dan pagination."
+    >
     <>
       <PageHeader
         title="Contacts"
