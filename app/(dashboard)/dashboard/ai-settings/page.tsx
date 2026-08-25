@@ -43,6 +43,7 @@ import {
   reportingTimezoneTriggerLabel,
 } from "@/lib/reporting-timezones";
 import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const reportingTimezoneEnum = z.enum(
@@ -68,9 +69,11 @@ type FormValues = z.infer<typeof schema>;
 
 export default function AiSettingsPage() {
   const tenantKey = useTenantKey();
+  const tenantReady = useTenantQueryEnabled();
   const { data: profile, isPending, isError, error, refetch } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "business-profile"),
     queryFn: ({ signal }) => businessApi.get(signal),
+    enabled: tenantReady,
   });
 
   return (

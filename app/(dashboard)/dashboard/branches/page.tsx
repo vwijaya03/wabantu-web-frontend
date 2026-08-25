@@ -9,15 +9,17 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { branchesApi } from "@/lib/api/branches";
 import { usePlan } from "@/hooks/use-plan";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 
 export default function BranchesPage() {
   const { hasMultiBranch } = usePlan();
+  const tenantReady = useTenantQueryEnabled();
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
-  const { data, isLoading } = useQuery({ queryKey: ["branches"], queryFn: () => branchesApi.list(), enabled: hasMultiBranch });
+  const { data, isLoading } = useQuery({ queryKey: ["branches"], queryFn: () => branchesApi.list(), enabled: tenantReady && hasMultiBranch });
   const createMut = useMutation({
     mutationFn: () => branchesApi.create({ name, slug }),
     onSuccess: () => { toast.success("Cabang dibuat"); setName(""); setSlug(""); void qc.invalidateQueries({ queryKey: ["branches"] }); },

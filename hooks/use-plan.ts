@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/providers/auth-provider";
 import { billingApi } from "@/lib/api/billing";
-import { hasTenantDashboardAccess } from "@/lib/api/auth";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
 
 /** Paid plans that include Business-tier features (not trial). */
@@ -18,7 +18,7 @@ function isPaidProTier(planCode: string) {
 
 export function usePlan() {
   const { user } = useAuth();
-  const tenantReady = hasTenantDashboardAccess(user);
+  const tenantReady = useTenantQueryEnabled();
 
   const { data, isLoading } = useQuery({
     queryKey: ["billing-overview", tenantContextKey(user)],

@@ -16,12 +16,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { teamApi } from "@/lib/api/team";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 
 export default function TeamPage() {
   const { user } = useAuth();
+  const tenantReady = useTenantQueryEnabled();
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -30,7 +32,7 @@ export default function TeamPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["team-members"],
     queryFn: () => teamApi.list(),
-    enabled: user?.role === "owner",
+    enabled: tenantReady && user?.role === "owner",
   });
 
   const inviteMut = useMutation({

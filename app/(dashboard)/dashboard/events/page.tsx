@@ -35,7 +35,8 @@ import { eventsApi, type EventRow } from "@/lib/api/events";
 import { formatEventDateTimeRange } from "@/lib/events-format";
 import { EVENT_LIST_SORT_DEFAULT, EVENT_LIST_SORT_OPTIONS } from "@/lib/events-sort";
 import { useAuth } from "@/components/providers/auth-provider";
-import { canPerformOwnerActions, hasTenantDashboardAccess } from "@/lib/api/auth";
+import { canPerformOwnerActions } from "@/lib/api/auth";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
 import { eventsListKey } from "@/lib/query/events-query-keys";
 import { toast } from "sonner";
@@ -48,7 +49,7 @@ export default function EventsListPage() {
   const router = useRouter();
   const { user } = useAuth();
   const tenantKey = tenantContextKey(user);
-  const eventsQueryEnabled = Boolean(user && hasTenantDashboardAccess(user));
+  const tenantReady = useTenantQueryEnabled();
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const [q, setQ] = useState("");
@@ -86,7 +87,7 @@ export default function EventsListPage() {
         },
         signal,
       ),
-    enabled: eventsQueryEnabled,
+    enabled: tenantReady,
   });
 
   const createMut = useMutation({

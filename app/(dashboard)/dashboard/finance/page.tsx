@@ -29,6 +29,7 @@ import { formatFinanceDate, invalidateFinanceCaches } from "@/lib/finance/utils"
 import { WalletIconBadge, resolveWalletAccent } from "@/lib/finance/wallet-icons";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const baseNavCards = [
@@ -46,6 +47,7 @@ export default function FinancePage() {
   const [openAdd, setOpenAdd] = useState(false);
   const { user } = useAuth();
   const tenantKey = useTenantKey();
+  const tenantReady = useTenantQueryEnabled();
   const qc = useQueryClient();
   const canManage = canPerformOwnerActions(user);
   const reportingTimezone = useReportingTimezone();
@@ -60,22 +62,26 @@ export default function FinancePage() {
   } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "finance-dashboard"),
     queryFn: ({ signal }) => financeApi.dashboard(undefined, signal),
+    enabled: tenantReady,
   });
 
   const { data: recentData } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "finance-transactions-recent"),
     queryFn: ({ signal }) => financeApi.listTransactions({ pageSize: 5 }, signal),
+    enabled: tenantReady,
   });
 
   const { data: txnTypesData } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "finance-transaction-types", "dashboard"),
     queryFn: ({ signal }) => financeApi.listTransactionTypes({ pageSize: 100 }, signal),
+    enabled: tenantReady,
   });
   const txnTypes = txnTypesData?.items ?? [];
 
   const { data: checklist } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "finance-checklist-today"),
     queryFn: ({ signal }) => financeApi.todayChecklist(signal),
+    enabled: tenantReady,
   });
 
   const pendingChecklist = checklist?.pending ?? 0;
