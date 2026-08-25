@@ -1,10 +1,12 @@
 "use client";
 
 import { useAuth } from "@/components/providers/auth-provider";
+import { useTenantSwitch } from "@/components/providers/tenant-switch-provider";
 import { hasTenantDashboardAccess } from "@/lib/api/auth";
 
-/** Gate tenant-scoped React Query calls (super_admin needs impersonation). */
+/** Gate tenant-scoped React Query calls (super_admin needs impersonation; pause during switch). */
 export function useTenantQueryEnabled(): boolean {
   const { user } = useAuth();
-  return hasTenantDashboardAccess(user);
+  const { isSwitching } = useTenantSwitch();
+  return hasTenantDashboardAccess(user) && !isSwitching;
 }
