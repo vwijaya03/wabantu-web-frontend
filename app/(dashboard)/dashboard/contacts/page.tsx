@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,7 +27,8 @@ import { priceTypesApi } from "@/lib/api/price-types";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
-import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const pageSize = 25;
 
@@ -58,6 +60,7 @@ const emptyForm: ContactForm = {
 export default function ContactsPage() {
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
+  const tenantReady = useTenantQueryEnabled();
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -73,10 +76,12 @@ export default function ContactsPage() {
   const { data, isLoading } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "contacts", search, page, pageSize),
     queryFn: ({ signal }) => contactsApi.list({ q: search || undefined, page, pageSize }, signal),
+    enabled: tenantReady,
   });
   const { data: priceTypesData } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "price-types", "contacts-form"),
     queryFn: ({ signal }) => priceTypesApi.list({ pageSize: 50 }, signal),
+    enabled: tenantReady,
   });
   const priceTypes = (priceTypesData?.items ?? []).filter((pt) => pt.isActive);
   const defaultPriceType = useMemo(
@@ -93,7 +98,7 @@ export default function ContactsPage() {
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total]);
 
   const invalidateContacts = () => {
-    void qc.invalidateQueries({ queryKey: ["contacts"] });
+    invalidateTenantQueries(qc, tenantKey, "contacts");
   };
 
   const createMut = useMutation({
@@ -187,6 +192,7 @@ export default function ContactsPage() {
   };
 
   return (
+    <RequireTenantDashboard>
     <>
       <PageHeader
         title="Contacts"
@@ -426,6 +432,7 @@ export default function ContactsPage() {
         }}
       />
     </>
+    </RequireTenantDashboard>
   );
 }
 
