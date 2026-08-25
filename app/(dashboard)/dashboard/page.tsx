@@ -51,12 +51,12 @@ export default function DashboardOverviewPage() {
   }, [user, tenantReady, router]);
 
   const { data: channels = [] } = useQuery({
-    queryKey: ["whatsapp-channels"],
+    queryKey: tenantQueryKey(tenantKey, "whatsapp-channels"),
     queryFn: () => whatsappApi.list(),
     enabled: tenantReady,
   });
   const { data: analytics } = useQuery({
-    queryKey: ["analytics-overview", 30],
+    queryKey: tenantQueryKey(tenantKey, "analytics-overview", 30),
     queryFn: () => analyticsApi.overview(30),
     enabled: tenantReady,
   });
@@ -66,7 +66,7 @@ export default function DashboardOverviewPage() {
     enabled: tenantReady,
   });
   const { data: kbList } = useQuery({
-    queryKey: ["knowledge-base-total"],
+    queryKey: tenantQueryKey(tenantKey, "knowledge-base-total"),
     queryFn: () => knowledgeBaseApi.list({ page: 1, pageSize: 1 }),
     enabled: tenantReady,
   });

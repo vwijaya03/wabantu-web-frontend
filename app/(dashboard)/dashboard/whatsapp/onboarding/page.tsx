@@ -24,8 +24,10 @@ import {
   whatsappApi,
   type MetaConnectCallbackInput,
 } from "@/lib/api/whatsapp";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
-const CHANNELS_KEY = ["whatsapp-channels"] as const;
 const OAUTH_PENDING_STORAGE_KEY = "wabantu:meta-oauth-pending";
 
 const oauthSchema = z.object({
@@ -48,9 +50,12 @@ const oauthPendingSchema = oauthSchema.pick({
 
 export default function WhatsappOnboardingPage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
+  const tenantReady = useTenantQueryEnabled();
   const { data: channels = [] } = useQuery({
-    queryKey: CHANNELS_KEY,
+    queryKey: tenantQueryKey(tenantKey, "whatsapp-channels"),
     queryFn: whatsappApi.list,
+    enabled: tenantReady,
   });
   const connectedCount = channels.filter((c) => c.status === "connected").length;
   const {
@@ -93,7 +98,7 @@ export default function WhatsappOnboardingPage() {
     onSuccess: () => {
       toast.success("WhatsApp berhasil tersambung.");
       localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
-      void qc.invalidateQueries({ queryKey: CHANNELS_KEY });
+      invalidateTenantQueries(qc, tenantKey, "whatsapp-channels");
       window.history.replaceState({}, "", "/dashboard/whatsapp/onboarding");
     },
     onError: (err) => toast.error(toApiError(err).message),
