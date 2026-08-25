@@ -1,32 +1,14 @@
 "use client";
 
 import { AlertTriangle, X } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/providers/auth-provider";
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { adminApi } from "@/lib/api/admin";
-import { toApiError } from "@/lib/api/client";
-import { resetQueriesForPlatformConsole } from "@/lib/query/platform-console";
-import { toast } from "sonner";
+import { useTenantImpersonation } from "@/hooks/use-tenant-impersonation";
 
 export function ImpersonationBanner() {
-  const { user, refresh } = useAuth();
-  const qc = useQueryClient();
-  const router = useRouter();
+  const { user } = useAuth();
+  const { stopMut, isBusy } = useTenantImpersonation();
   const active = user?.impersonation?.active && user.tenant;
-
-  const stopMut = useMutation({
-    mutationFn: () => adminApi.stopImpersonation(),
-    onSuccess: async () => {
-      resetQueriesForPlatformConsole(qc);
-      await refresh();
-      toast.success("Keluar dari mode pantau tenant");
-      router.replace("/dashboard/admin");
-    },
-    onError: (e) => toast.error(toApiError(e).message),
-  });
 
   if (!active) return null;
 
@@ -43,7 +25,7 @@ export function ImpersonationBanner() {
         size="sm"
         variant="outline"
         className="h-8 gap-1 border-amber-300 bg-white/80 hover:bg-white"
-        disabled={stopMut.isPending}
+        disabled={isBusy}
         onClick={() => stopMut.mutate()}
       >
         <X className="h-3.5 w-3.5" />
