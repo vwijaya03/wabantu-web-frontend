@@ -1,9 +1,8 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Bell, ChevronDown, LogOut, Settings, User } from "lucide-react";
 import { MobileSidebarSheet } from "@/components/dashboard/mobile-sidebar-sheet";
-import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,12 +16,7 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi } from "@/lib/api/admin";
 import { hasTenantDashboardAccess, isPlatformOperatorHome } from "@/lib/api/auth";
-import { toApiError } from "@/lib/api/client";
-import {
-  resetQueriesForPlatformConsole,
-  resetTenantScopedQueries,
-} from "@/lib/query/platform-console";
-import { toast } from "sonner";
+import { useTenantImpersonation } from "@/hooks/use-tenant-impersonation";
 
 function initials(name?: string | null, email?: string) {
   const src = (name || email || "").trim();
@@ -36,9 +30,8 @@ function initials(name?: string | null, email?: string) {
 }
 
 export function Topbar() {
-  const { user, logout, refresh } = useAuth();
-  const router = useRouter();
-  const qc = useQueryClient();
+  const { user, logout } = useAuth();
+  const { impersonateMut, stopMut, isBusy } = useTenantImpersonation();
   const isSuperAdmin = user?.role === "super_admin";
   const platformHome = isPlatformOperatorHome(user);
 
@@ -47,28 +40,6 @@ export function Topbar() {
     queryFn: () => adminApi.listTenants(),
     enabled: isSuperAdmin,
     staleTime: 60_000,
-  });
-
-  const impMut = useMutation({
-    mutationFn: (tenantId: string) => adminApi.impersonate(tenantId),
-    onSuccess: async () => {
-      resetTenantScopedQueries(qc);
-      await refresh();
-      toast.success("Memantau tenant — mode internal aktif");
-      router.replace("/dashboard");
-    },
-    onError: (e) => toast.error(toApiError(e).message),
-  });
-
-  const stopMut = useMutation({
-    mutationFn: () => adminApi.stopImpersonation(),
-    onSuccess: async () => {
-      resetQueriesForPlatformConsole(qc);
-      await refresh();
-      toast.success("Kembali ke konsol platform");
-      router.replace("/dashboard/admin");
-    },
-    onError: (e) => toast.error(toApiError(e).message),
   });
 
   return (
@@ -84,6 +55,7 @@ export function Topbar() {
                 variant="outline"
                 size="sm"
                 className="gap-2 px-3 text-sm font-medium"
+                disabled={isBusy}
               >
                 {platformHome ? (
                   <>
@@ -108,7 +80,10 @@ export function Topbar() {
               <DropdownMenuSeparator />
               {user?.impersonation?.active && (
                 <>
-                  <DropdownMenuItem onClick={() => stopMut.mutate()}>
+                  <DropdownMenuItem
+                    disabled={isBusy}
+                    onClick={() => stopMut.mutate()}
+                  >
                     Keluar dari tenant saat ini
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -117,8 +92,8 @@ export function Topbar() {
               {(tenantsData?.tenants ?? []).map((t) => (
                 <DropdownMenuItem
                   key={t.id}
-                  disabled={impMut.isPending || user?.tenant?.id === t.id}
-                  onClick={() => impMut.mutate(t.id)}
+                  disabled={isBusy || user?.tenant?.id === t.id}
+                  onClick={() => impersonateMut.mutate(t.id)}
                 >
                   <div className="flex flex-col">
                     <span className="font-medium">{t.companyName}</span>

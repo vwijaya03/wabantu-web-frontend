@@ -26,6 +26,10 @@ import { DashboardRateLimitNotice } from "@/components/dashboard/dashboard-rate-
 import { setProfileHint } from "@/lib/auth/profile-hint";
 import { requestSessionReauth } from "@/lib/auth/session-reauth";
 import { useSyncQueriesOnTenantChange } from "@/hooks/use-sync-queries-on-tenant-change";
+import {
+  TenantSwitchOverlay,
+  TenantSwitchProvider,
+} from "@/components/providers/tenant-switch-provider";
 
 function applyPlatformRouteGuards(
   me: AuthUser,
@@ -198,6 +202,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
     <>
       <SessionReauthDialog />
       <AuthProvider key={authProviderKey} initialUser={user}>
+      <TenantSwitchProvider>
       {hasTenantDashboardAccess(user) ? <InboxActivityBridge /> : null}
       <div className="grid min-h-svh grid-cols-1 lg:grid-cols-[260px_1fr]">
         <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:flex lg:flex-col">
@@ -218,7 +223,8 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
         <div className="flex min-w-0 flex-col">
           <ImpersonationBanner />
           <Topbar />
-          <main className="flex-1 overflow-y-auto bg-muted/20 p-6 lg:p-8">
+          <main className="relative flex-1 overflow-y-auto bg-muted/20 p-6 lg:p-8">
+            <TenantSwitchOverlay />
             <div className="mx-auto max-w-6xl space-y-6">
               <DashboardRateLimitNotice />
               {children}
@@ -226,6 +232,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
           </main>
         </div>
       </div>
+      </TenantSwitchProvider>
       </AuthProvider>
     </>
   );

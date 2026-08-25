@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,15 +28,15 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi, CURRENT_SCHEMA_PATCH_VERSION, type AdminTenant } from "@/lib/api/admin";
 import { isPlatformOperatorHome } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
-import { resetTenantScopedQueries } from "@/lib/query/platform-console";
+import { useTenantImpersonation } from "@/hooks/use-tenant-impersonation";
 import { toast } from "sonner";
 
 export default function AdminPage() {
-  const { user, refresh } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const needTenantHint = searchParams.get("needTenant") === "1";
   const qc = useQueryClient();
+  const { impersonateMut, isBusy } = useTenantImpersonation();
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -56,17 +56,6 @@ export default function AdminPage() {
     () => Math.max(1, Math.ceil((data?.total ?? 0) / pageSize)),
     [data?.total],
   );
-
-  const impMut = useMutation({
-    mutationFn: (tenantId: string) => adminApi.impersonate(tenantId),
-    onSuccess: async () => {
-      resetTenantScopedQueries(qc);
-      await refresh();
-      toast.success("Memantau tenant — mode internal aktif");
-      router.replace("/dashboard");
-    },
-    onError: (e) => toast.error(toApiError(e).message),
-  });
 
   const migrateJobQuery = useQuery({
     queryKey: ["admin-migrate-job", activeJobId],
@@ -422,8 +411,8 @@ export default function AdminPage() {
                     </Button>
                     <Button
                       size="sm"
-                      disabled={impMut.isPending || !t.isActive}
-                      onClick={() => impMut.mutate(t.id)}
+                      disabled={isBusy || !t.isActive}
+                      onClick={() => impersonateMut.mutate(t.id)}
                     >
                       Pantau
                     </Button>
