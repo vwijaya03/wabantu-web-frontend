@@ -35,6 +35,7 @@ import {
   type WorkflowRule,
 } from "@/lib/api/workflow";
 import { usePlan } from "@/hooks/use-plan";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { toApiError } from "@/lib/api/client";
 
 const WORKFLOWS_KEY = ["workflows"] as const;
@@ -81,6 +82,7 @@ function ruleToDraft(r: WorkflowRule): Draft {
 
 export default function WorkflowPage() {
   const { hasWorkflow } = usePlan();
+  const tenantReady = useTenantQueryEnabled();
   const qc = useQueryClient();
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -89,7 +91,7 @@ export default function WorkflowPage() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: WORKFLOWS_KEY,
     queryFn: () => workflowApi.list(),
-    enabled: hasWorkflow,
+    enabled: tenantReady && hasWorkflow,
   });
   const rules = data?.rules ?? [];
 

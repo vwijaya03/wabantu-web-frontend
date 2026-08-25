@@ -14,7 +14,7 @@ import { Loader2 } from "lucide-react";
 import { isTenantScopedQuery } from "@/lib/query/platform-console";
 import { toast } from "sonner";
 
-const SWITCH_TIMEOUT_MS = 8_000;
+const SWITCH_TIMEOUT_MS = 30_000;
 
 type TenantSwitchContextValue = {
   isSwitching: boolean;

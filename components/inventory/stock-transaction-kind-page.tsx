@@ -36,6 +36,7 @@ import {
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export type StockTxnKind = StockTransaction["kind"];
@@ -53,6 +54,7 @@ export type StockTransactionKindPageConfig = {
 export function StockTransactionKindPage({ config }: { config: StockTransactionKindPageConfig }) {
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
+  const tenantReady = useTenantQueryEnabled();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
   const { kind, title, description, helpTopic, createTitle, CreatePanel, renderDetail } = config;
@@ -70,6 +72,7 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
   const { data: whData } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "inventory", "warehouses", "all"),
     queryFn: ({ signal }) => inventoryApi.listWarehouses({ all: true }, signal),
+    enabled: tenantReady,
   });
   const warehouses = whData?.warehouses ?? [];
 
@@ -77,6 +80,7 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
     queryKey: tenantQueryKey(tenantKey, "inventory", "stock-transactions", kind, searchQ, page, pageSize),
     queryFn: ({ signal }) =>
       inventoryApi.listStockTransactions({ kind, q: searchQ || undefined, page, pageSize }, signal),
+    enabled: tenantReady,
     retry: 1,
   });
 

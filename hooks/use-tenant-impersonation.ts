@@ -10,7 +10,23 @@ import {
   resetQueriesForPlatformConsole,
   resetTenantScopedQueries,
 } from "@/lib/query/platform-console";
+import { waitForTenantReadiness } from "@/lib/tenant/wait-for-tenant-readiness";
 import { toast } from "sonner";
+
+async function afterTenantSessionRefresh(
+  qc: ReturnType<typeof useQueryClient>,
+  reset: (qc: ReturnType<typeof useQueryClient>) => void,
+  completeSwitch: () => void,
+) {
+  reset(qc);
+  const status = await waitForTenantReadiness();
+  if (!status.ready) {
+    toast.info(
+      "Schema tenant masih disiapkan — beberapa data mungkin belum tampil.",
+    );
+  }
+  completeSwitch();
+}
 
 export function useTenantImpersonation() {
   const { refresh } = useAuth();
@@ -26,8 +42,17 @@ export function useTenantImpersonation() {
     },
     onSuccess: async () => {
       await refresh();
-      resetTenantScopedQueries(qc);
-      completeSwitch();
+      try {
+        await afterTenantSessionRefresh(
+          qc,
+          resetTenantScopedQueries,
+          completeSwitch,
+        );
+      } catch (e) {
+        cancelSwitch();
+        toast.error(toApiError(e).message);
+        return;
+      }
       toast.success("Memantau tenant — mode internal aktif");
       router.replace("/dashboard");
     },
@@ -44,8 +69,17 @@ export function useTenantImpersonation() {
     },
     onSuccess: async () => {
       await refresh();
-      resetQueriesForPlatformConsole(qc);
-      completeSwitch();
+      try {
+        await afterTenantSessionRefresh(
+          qc,
+          resetQueriesForPlatformConsole,
+          completeSwitch,
+        );
+      } catch (e) {
+        cancelSwitch();
+        toast.error(toApiError(e).message);
+        return;
+      }
       toast.success("Kembali ke konsol platform");
       router.replace("/dashboard/admin");
     },

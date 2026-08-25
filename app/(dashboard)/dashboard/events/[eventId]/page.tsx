@@ -55,7 +55,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { eventsApi, type EventRow } from "@/lib/api/events";
 import { formatEventDateTimeRange } from "@/lib/events-format";
 import { useAuth } from "@/components/providers/auth-provider";
-import { canPerformOwnerActions, hasTenantDashboardAccess } from "@/lib/api/auth";
+import { canPerformOwnerActions } from "@/lib/api/auth";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { toApiError } from "@/lib/api/errors";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
 import {
@@ -235,7 +236,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   const tab = parseEventTab(searchParams.get("tab"));
   const { user } = useAuth();
   const tenantKey = tenantContextKey(user);
-  const eventQueriesEnabled = Boolean(eventId && user && hasTenantDashboardAccess(user));
+  const tenantReady = useTenantQueryEnabled();
+  const eventQueriesEnabled = Boolean(eventId && tenantReady);
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
