@@ -22,6 +22,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { InboxMessageBubble } from "@/components/inbox/inbox-message-bubble";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
 import { Input } from "@/components/ui/input";
 import {
@@ -54,6 +55,7 @@ export default function InboxPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
   const tenantKey = tenantContextKey(user);
+  const tenantReady = useTenantQueryEnabled();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
@@ -74,6 +76,7 @@ export default function InboxPage() {
   const unreadSummaryQuery = useQuery({
     queryKey: [...INBOX_UNREAD_QUERY_KEY, tenantKey],
     queryFn: () => inboxApi.unreadSummary(),
+    enabled: tenantReady,
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
@@ -88,6 +91,7 @@ export default function InboxPage() {
         limit: CONVO_PAGE,
         cursor: pageParam,
       }),
+    enabled: tenantReady,
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     staleTime: 0,
@@ -125,7 +129,7 @@ export default function InboxPage() {
       inboxApi.updateContact(contactId, { displayName }),
     onSuccess: () => {
       toast.success("Nama kontak diperbarui");
-      qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      qc.invalidateQueries({ queryKey: ["inbox-conversations", tenantKey] });
       setIsEditingContactName(false);
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -143,7 +147,7 @@ export default function InboxPage() {
       }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
-    enabled: Boolean(selectedId),
+    enabled: tenantReady && Boolean(selectedId),
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
@@ -358,8 +362,8 @@ export default function InboxPage() {
       return;
     }
     void inboxApi.markAsRead(selectedId).then(() => {
-      void qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
-      void qc.invalidateQueries({ queryKey: INBOX_UNREAD_QUERY_KEY });
+      void qc.invalidateQueries({ queryKey: ["inbox-conversations", tenantKey] });
+      void qc.invalidateQueries({ queryKey: [...INBOX_UNREAD_QUERY_KEY, tenantKey] });
     });
   }, [qc, selectedId, selectedConversation, selectedConversation?.id, selectedConversation?.unreadCount]);
 

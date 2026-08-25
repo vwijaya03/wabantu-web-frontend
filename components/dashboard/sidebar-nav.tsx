@@ -8,6 +8,7 @@ import { ChevronDown } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { hasTenantDashboardAccess } from "@/lib/api/auth";
 import { INBOX_UNREAD_QUERY_KEY, inboxApi } from "@/lib/api/inbox";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
 import {
   isNavLinkActive,
@@ -155,11 +156,12 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   }, [tenantMode, isSuperAdmin]);
 
   const tenantKey = tenantContextKey(user);
+  const tenantQueriesEnabled = useTenantQueryEnabled();
 
   const { data: unreadSummary } = useQuery({
     queryKey: [...INBOX_UNREAD_QUERY_KEY, tenantKey],
     queryFn: () => inboxApi.unreadSummary(),
-    enabled: tenantMode,
+    enabled: tenantMode && tenantQueriesEnabled,
     staleTime: 0,
     refetchOnWindowFocus: tenantMode,
   });

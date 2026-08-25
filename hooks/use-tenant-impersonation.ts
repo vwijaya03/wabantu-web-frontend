@@ -25,8 +25,8 @@ export function useTenantImpersonation() {
       return adminApi.impersonate(tenantId);
     },
     onSuccess: async () => {
-      resetTenantScopedQueries(qc);
       await refresh();
+      resetTenantScopedQueries(qc);
       completeSwitch();
       toast.success("Memantau tenant — mode internal aktif");
       router.replace("/dashboard");
@@ -43,8 +43,8 @@ export function useTenantImpersonation() {
       return adminApi.stopImpersonation();
     },
     onSuccess: async () => {
-      resetQueriesForPlatformConsole(qc);
       await refresh();
+      resetQueriesForPlatformConsole(qc);
       completeSwitch();
       toast.success("Kembali ke konsol platform");
       router.replace("/dashboard/admin");

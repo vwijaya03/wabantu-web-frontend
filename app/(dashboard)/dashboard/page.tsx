@@ -36,19 +36,21 @@ import {
   formatOpenRateCard,
 } from "@/lib/format/analytics-overview";
 import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export default function DashboardOverviewPage() {
   const { user } = useAuth();
   const tenantKey = useTenantKey();
   const router = useRouter();
-  const tenantReady = hasTenantDashboardAccess(user);
+  const tenantDashboardAccess = hasTenantDashboardAccess(user);
+  const tenantReady = useTenantQueryEnabled();
 
   useEffect(() => {
-    if (user && !tenantReady) {
+    if (user && !tenantDashboardAccess) {
       router.replace("/dashboard/admin");
     }
-  }, [user, tenantReady, router]);
+  }, [user, tenantDashboardAccess, router]);
 
   const { data: channels = [] } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "whatsapp-channels"),
@@ -71,7 +73,7 @@ export default function DashboardOverviewPage() {
     enabled: tenantReady,
   });
 
-  if (!tenantReady) {
+  if (!tenantDashboardAccess) {
     return null;
   }
 
