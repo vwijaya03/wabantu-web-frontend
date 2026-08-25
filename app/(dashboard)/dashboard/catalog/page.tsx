@@ -29,6 +29,7 @@ import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const pageSize = 25;
@@ -58,6 +59,7 @@ const emptyForm: CatalogForm = {
 export default function CatalogPage() {
   const { user } = useAuth();
   const tenantKey = useTenantKey();
+  const tenantReady = useTenantQueryEnabled();
   const canManage = canPerformOwnerActions(user);
   const qc = useQueryClient();
   const [q, setQ] = useState("");
@@ -72,10 +74,12 @@ export default function CatalogPage() {
   const { data, isLoading } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "catalog", search, page, pageSize),
     queryFn: ({ signal }) => catalogApi.list({ q: search || undefined, page, pageSize }, signal),
+    enabled: tenantReady,
   });
   const { data: priceTypesData } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "price-types", "catalog-form"),
     queryFn: ({ signal }) => priceTypesApi.list({ pageSize: 50 }, signal),
+    enabled: tenantReady,
   });
   const priceTypes = (priceTypesData?.items ?? []).filter((pt) => pt.isActive);
 
