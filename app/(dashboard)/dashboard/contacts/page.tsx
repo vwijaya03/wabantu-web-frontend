@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, PlusCircle, Search, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { QueryListState } from "@/components/dashboard/query-list-state";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -73,15 +74,34 @@ export default function ContactsPage() {
   const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
   const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  useEffect(() => {
+    setQ("");
+    setSearch("");
+    setPage(1);
+    setSelectedIds(new Set());
+  }, [tenantKey]);
+
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "contacts", search, page, pageSize),
     queryFn: ({ signal }) => contactsApi.list({ q: search || undefined, page, pageSize }, signal),
     enabled: tenantReady,
+    retry: (failureCount, err) => {
+      if (failureCount >= 2) return false;
+      const status = toApiError(err).status;
+      return status === 0 || status >= 500;
+    },
+    retryDelay: 400,
   });
-  const { data: priceTypesData } = useQuery({
+  const { data: priceTypesData, refetch: refetchPriceTypes } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "price-types", "contacts-form"),
     queryFn: ({ signal }) => priceTypesApi.list({ pageSize: 50 }, signal),
     enabled: tenantReady,
+    retry: (failureCount, err) => {
+      if (failureCount >= 2) return false;
+      const status = toApiError(err).status;
+      return status === 0 || status >= 500;
+    },
+    retryDelay: 400,
   });
   const priceTypes = (priceTypesData?.items ?? []).filter((pt) => pt.isActive);
   const defaultPriceType = useMemo(
@@ -265,15 +285,22 @@ export default function ContactsPage() {
             </div>
           )}
 
-          {isLoading ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
-              Memuat contacts...
-            </div>
-          ) : contacts.length === 0 ? (
-            <div className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
-              Belum ada kontak yang cocok.
-            </div>
-          ) : (
+          <QueryListState
+            isLoading={isLoading}
+            isError={isError}
+            error={error}
+            isEmpty={contacts.length === 0}
+            loadingLabel="Memuat contacts..."
+            onRetry={() => {
+              void refetch();
+              void refetchPriceTypes();
+            }}
+            empty={
+              <div className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
+                Belum ada kontak yang cocok.
+              </div>
+            }
+          >
             <div className="overflow-hidden rounded-lg border">
               <div className="grid grid-cols-[40px_minmax(220px,1fr)_120px_140px_180px_160px_120px] gap-3 border-b bg-muted/60 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground max-lg:hidden">
                 <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectVisible} aria-label="Pilih semua kontak" />
@@ -338,7 +365,7 @@ export default function ContactsPage() {
                 ))}
               </div>
             </div>
-          )}
+          </QueryListState>
 
           <div className="mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
             <span className="text-muted-foreground">
