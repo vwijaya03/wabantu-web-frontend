@@ -4,12 +4,18 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { analyticsApi } from "@/lib/api/analytics";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
+import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export default function AnalyticsPage() {
+  const tenantKey = useTenantKey();
+  const tenantReady = useTenantQueryEnabled();
   const { data, isLoading } = useQuery({
-    queryKey: ["analytics-overview"],
+    queryKey: tenantQueryKey(tenantKey, "analytics-overview", 30),
     queryFn: () => analyticsApi.overview(30),
-    refetchInterval: 60000,
+    enabled: tenantReady,
+    refetchInterval: tenantReady ? 60000 : false,
   });
   const totals = data?.totals;
   const kpis = data?.kpis;

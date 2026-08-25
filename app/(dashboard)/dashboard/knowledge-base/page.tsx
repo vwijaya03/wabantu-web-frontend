@@ -21,11 +21,14 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { QueryListState } from "@/components/dashboard/query-list-state";
 import { toApiError } from "@/lib/api/client";
 import { knowledgeBaseApi } from "@/lib/api/knowledge-base";
-
-const KB_KEY = ["kb-list"] as const;
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export default function KnowledgeBasePage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
+  const tenantReady = useTenantQueryEnabled();
   const [search, setSearch] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [draft, setDraft] = useState({
@@ -35,8 +38,9 @@ export default function KnowledgeBasePage() {
   });
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: [...KB_KEY, activeSearch],
+    queryKey: tenantQueryKey(tenantKey, "kb-list", activeSearch),
     queryFn: () => knowledgeBaseApi.list({ search: activeSearch }),
+    enabled: tenantReady,
   });
   const items = data?.items ?? [];
 
@@ -45,7 +49,7 @@ export default function KnowledgeBasePage() {
     onSuccess: () => {
       setDraft({ question: "", answer: "", category: "" });
       toast.success("FAQ ditambahkan");
-      void qc.invalidateQueries({ queryKey: KB_KEY });
+      invalidateTenantQueries(qc, tenantKey, "kb-list");
     },
     onError: (err) => toast.error(toApiError(err).message),
   });
@@ -53,7 +57,7 @@ export default function KnowledgeBasePage() {
   const deleteMut = useMutation({
     mutationFn: (id: string) => knowledgeBaseApi.remove(id),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: KB_KEY });
+      invalidateTenantQueries(qc, tenantKey, "kb-list");
     },
     onError: (err) => toast.error(toApiError(err).message),
   });

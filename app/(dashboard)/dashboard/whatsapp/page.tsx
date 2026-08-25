@@ -16,20 +16,24 @@ import {
 import { PageHeader } from "@/components/dashboard/page-header";
 import { toApiError } from "@/lib/api/client";
 import { whatsappApi } from "@/lib/api/whatsapp";
-
-const CHANNELS_KEY = ["whatsapp-channels"] as const;
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export default function WhatsappPage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
+  const tenantReady = useTenantQueryEnabled();
   const { data: channels = [], isLoading } = useQuery({
-    queryKey: CHANNELS_KEY,
+    queryKey: tenantQueryKey(tenantKey, "whatsapp-channels"),
     queryFn: whatsappApi.list,
+    enabled: tenantReady,
   });
 
   const disconnectMut = useMutation({
     mutationFn: (id: string) => whatsappApi.disconnect(id),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: CHANNELS_KEY });
+      invalidateTenantQueries(qc, tenantKey, "whatsapp-channels");
     },
     onError: (err) => toast.error(toApiError(err).message),
   });

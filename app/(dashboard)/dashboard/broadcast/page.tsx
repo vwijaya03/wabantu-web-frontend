@@ -12,18 +12,23 @@ import { broadcastApi } from "@/lib/api/broadcast";
 import { usePlan } from "@/hooks/use-plan";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 export default function BroadcastPage() {
   const { hasBroadcast } = usePlan();
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
+  const tenantReady = useTenantQueryEnabled();
   const [name, setName] = useState("");
   const [body, setBody] = useState("");
   const [phones, setPhones] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["broadcast"],
+    queryKey: tenantQueryKey(tenantKey, "broadcast"),
     queryFn: () => broadcastApi.list(),
-    enabled: hasBroadcast,
+    enabled: hasBroadcast && tenantReady,
   });
 
   const createMut = useMutation({
@@ -38,7 +43,7 @@ export default function BroadcastPage() {
       setName("");
       setBody("");
       setPhones("");
-      void qc.invalidateQueries({ queryKey: ["broadcast"] });
+      invalidateTenantQueries(qc, tenantKey, "broadcast");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -100,7 +105,7 @@ export default function BroadcastPage() {
                       onClick={() =>
                         broadcastApi.send(c.id).then(() => {
                           toast.success("Broadcast dikirim");
-                          void qc.invalidateQueries({ queryKey: ["broadcast"] });
+                          invalidateTenantQueries(qc, tenantKey, "broadcast");
                         })
                       }
                     >

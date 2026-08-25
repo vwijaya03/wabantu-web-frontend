@@ -16,6 +16,9 @@ import { paymentApi } from "@/lib/api/payment";
 import { UsageQuotaPanel } from "@/components/dashboard/usage-quota-panel";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 async function openQRISForInvoice(inv: Invoice, description: string) {
   const qris = await paymentApi.createQRIS({
@@ -31,9 +34,12 @@ async function openQRISForInvoice(inv: Invoice, description: string) {
 
 export default function BillingPage() {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
+  const tenantReady = useTenantQueryEnabled();
   const { data, isLoading } = useQuery({
-    queryKey: ["billing-overview"],
+    queryKey: tenantQueryKey(tenantKey, "billing-overview"),
     queryFn: () => billingApi.overview(),
+    enabled: tenantReady,
   });
   const sub = data?.subscription;
   const pending = data?.pendingCheckout ?? null;
@@ -56,8 +62,8 @@ export default function BillingPage() {
             "Paket aktif setelah QRIS berhasil. Invoice muncul di riwayat setelah dibayar.",
         },
       );
-      void qc.invalidateQueries({ queryKey: ["billing-overview"] });
-      void qc.invalidateQueries({ queryKey: ["usage-summary"] });
+      invalidateTenantQueries(qc, tenantKey, "billing-overview");
+      invalidateTenantQueries(qc, tenantKey, "usage-summary");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -88,8 +94,8 @@ export default function BillingPage() {
         description:
           "Kuota tambahan aktif setelah QRIS lunas dan berlaku untuk bulan berjalan.",
       });
-      void qc.invalidateQueries({ queryKey: ["billing-overview"] });
-      void qc.invalidateQueries({ queryKey: ["usage-summary"] });
+      invalidateTenantQueries(qc, tenantKey, "billing-overview");
+      invalidateTenantQueries(qc, tenantKey, "usage-summary");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
