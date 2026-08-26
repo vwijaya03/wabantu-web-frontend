@@ -34,9 +34,8 @@ import {
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { usageApi } from "@/lib/api/usage";
 import { cn } from "@/lib/utils";
-
-const KB_KEY = ["kb-list"] as const;
-const PROFILE_KEY = ["business-profile"] as const;
+import { useTenantKey } from "@/hooks/use-tenant-key";
+import { invalidateTenantQueries } from "@/lib/query/tenant-query-key";
 
 const PHASE_STEPS = [
   { id: "profile", label: "Profil bisnis", hint: "Produk, area kirim, jam buka" },
@@ -85,6 +84,7 @@ export default function KnowledgeBaseSetupPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const { user } = useAuth();
+  const tenantKey = useTenantKey();
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const stickChatToBottomRef = useRef(true);
 
@@ -155,8 +155,8 @@ export default function KnowledgeBaseSetupPage() {
       }),
     onSuccess: (res) => {
       toast.success(res.message);
-      void qc.invalidateQueries({ queryKey: KB_KEY });
-      void qc.invalidateQueries({ queryKey: PROFILE_KEY });
+      invalidateTenantQueries(qc, tenantKey, "kb-list");
+      invalidateTenantQueries(qc, tenantKey, "business-profile");
       void qc.invalidateQueries({ queryKey: ["usage-summary"] });
       router.push("/dashboard/knowledge-base");
     },

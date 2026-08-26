@@ -82,7 +82,7 @@ export default function TransactionTypesPage() {
   });
 
   const invalidate = () => {
-    invalidateFinanceCaches(qc);
+    invalidateFinanceCaches(qc, tenantKey);
   };
 
   const createMut = useMutation({

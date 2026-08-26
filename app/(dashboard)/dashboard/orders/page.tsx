@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, PlusCircle, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,6 @@ import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { PromptDialog } from "@/components/dashboard/prompt-dialog";
 import {
   PAYMENT_STATUSES,
-  PaymentProofPanel,
   paymentStatusBadgeVariant,
   paymentStatusHint,
 } from "@/components/orders/payment-proof-panel";
@@ -54,6 +54,14 @@ import {
 } from "@/lib/orders/fulfillment";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+const PaymentProofPanel = dynamic(
+  () =>
+    import("@/components/orders/payment-proof-panel").then((mod) => ({
+      default: mod.PaymentProofPanel,
+    })),
+  { ssr: false },
+);
 
 const ALL = "__all__";
 const pageSize = 25;
@@ -294,14 +302,39 @@ export default function OrdersPage() {
   const defaultWarehouseId = useMemo(() => {
     return warehouses.find((w) => w.isDefault)?.id ?? warehouses[0]?.id ?? "";
   }, [warehouses]);
-  const { data: stockOverview } = useQuery({
-    queryKey: tenantQueryKey(tenantKey, "inventory", "stock", "orders-overview"),
-    queryFn: ({ signal }) => inventoryApi.listStock({ pageSize: 500 }, signal),
-    enabled: tenantReady && inventoryOn,
-  });
-  const stockRows = stockOverview?.stock ?? [];
 
   const orders = useMemo(() => data?.orders ?? [], [data]);
+
+  const stockCatalogIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const order of orders) {
+      for (const item of order.items) {
+        if (item.catalogItemId) ids.add(item.catalogItemId);
+      }
+    }
+    if (editOrder) {
+      for (const item of editForm.items) {
+        if (item.catalogItemId) ids.add(item.catalogItemId);
+      }
+    }
+    return [...ids].sort();
+  }, [orders, editOrder, editForm.items]);
+
+  const { data: stockRows = [] } = useQuery({
+    queryKey: tenantQueryKey(tenantKey, "inventory", "stock", "orders-page", stockCatalogIds),
+    queryFn: async ({ signal }) => {
+      if (stockCatalogIds.length === 0) return [] as StockRow[];
+      const pages = await Promise.all(
+        stockCatalogIds.map((catalogItemId) =>
+          inventoryApi.listStock({ catalogItemId, pageSize: 100 }, signal),
+        ),
+      );
+      return pages.flatMap((page) => page.stock);
+    },
+    enabled: tenantReady && inventoryOn && stockCatalogIds.length > 0,
+    staleTime: 30_000,
+  });
+
   const displayedOrders = useMemo(() => {
     if (paymentFilter === ALL) return orders;
     return orders.filter((o) => (o.paymentStatus ?? "unpaid") === paymentFilter);

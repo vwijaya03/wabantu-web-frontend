@@ -75,10 +75,12 @@ export default function ContactsPage() {
   const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
 
   useEffect(() => {
-    setQ("");
-    setSearch("");
-    setPage(1);
-    setSelectedIds(new Set());
+    queueMicrotask(() => {
+      setQ("");
+      setSearch("");
+      setPage(1);
+      setSelectedIds(new Set());
+    });
   }, [tenantKey]);
 
   const { data, isLoading, isError, error, refetch } = useQuery({

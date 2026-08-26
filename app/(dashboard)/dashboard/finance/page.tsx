@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
@@ -20,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { financeApi, formatIDR, txnTypeColor, txnTypeFlow, txnTypeLabel } from "@/lib/api/finance";
 import { cn } from "@/lib/utils";
-import { AddTransactionSheet } from "@/components/finance/add-transaction-sheet";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -31,6 +31,14 @@ import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+
+const AddTransactionSheet = dynamic(
+  () =>
+    import("@/components/finance/add-transaction-sheet").then((mod) => ({
+      default: mod.AddTransactionSheet,
+    })),
+  { ssr: false },
+);
 
 const baseNavCards = [
   { href: "/dashboard/finance/transactions", label: "Transaksi", icon: BookOpen, desc: "Catat pemasukan & pengeluaran" },
@@ -285,7 +293,7 @@ export default function FinancePage() {
       <AddTransactionSheet
         open={openAdd}
         onOpenChange={setOpenAdd}
-        onCreated={() => invalidateFinanceCaches(qc)}
+        onCreated={() => invalidateFinanceCaches(qc, tenantKey)}
       />
     </>
   );

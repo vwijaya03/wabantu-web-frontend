@@ -13,7 +13,7 @@ import { inventoryApi, formatIDR, type StockTransaction } from "@/lib/api/invent
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
-import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const KIND_LABELS: Record<StockTransaction["kind"], string> = {
   adjustment: "Penyesuaian",
@@ -46,7 +46,7 @@ export function StockTransactionEditDialog({
     onSuccess: () => {
       toast.success("Transaksi diperbarui — nomor dokumen tetap");
       onClose();
-      void qc.invalidateQueries({ queryKey: ["inventory"] });
+      invalidateTenantQueries(qc, tenantKey, "inventory");
     },
     onError: (e) => toast.error(toApiError(e).message),
   });

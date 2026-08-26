@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -14,7 +15,6 @@ import { InventoryDataTablePagination } from "@/components/inventory/data-table-
 import { WarehouseSelect } from "@/components/inventory/warehouse-select";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { InventoryRefDocLink } from "@/components/inventory/inventory-ref-doc-link";
-import { StockTransactionEditDialog } from "@/components/inventory/stock-transaction-edit-dialog";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { inventoryApi, formatIDR, formatStockQty, movementTypeLabel } from "@/lib/api/inventory";
 import { toApiError } from "@/lib/api/client";
@@ -29,6 +29,14 @@ import {
   InventoryTableHeader,
   InventoryTableRow,
 } from "@/components/inventory/inventory-table";
+
+const StockTransactionEditDialog = dynamic(
+  () =>
+    import("@/components/inventory/stock-transaction-edit-dialog").then((mod) => ({
+      default: mod.StockTransactionEditDialog,
+    })),
+  { ssr: false },
+);
 
 function MovementsContent() {
   const tenantKey = useTenantKey();

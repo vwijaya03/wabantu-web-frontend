@@ -17,10 +17,17 @@ export function useInboxRealtimeRefresh(): void {
   const tenantKey = tenantContextKey(user);
 
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
     const onPush = () => {
-      void refreshInboxQueries(qc, tenantKey);
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        void refreshInboxQueries(qc, tenantKey);
+      }, 400);
     };
     window.addEventListener(INBOX_REALTIME_PUSH, onPush);
-    return () => window.removeEventListener(INBOX_REALTIME_PUSH, onPush);
+    return () => {
+      clearTimeout(debounceTimer);
+      window.removeEventListener(INBOX_REALTIME_PUSH, onPush);
+    };
   }, [qc, tenantKey]);
 }
