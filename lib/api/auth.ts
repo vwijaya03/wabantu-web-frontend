@@ -20,6 +20,10 @@ export interface AuthUser {
   impersonation?: {
     active: boolean;
     tenant?: TenantInfo;
+    /** Empty = full access to all modules. */
+    modules?: string[];
+    scope?: "full" | "limited";
+    expiresAt?: string | null;
   };
 }
 

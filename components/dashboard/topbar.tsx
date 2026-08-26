@@ -1,8 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Bell, ChevronDown, LogOut, Settings, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronDown, LogOut, Settings, User } from "lucide-react";
 import { MobileSidebarSheet } from "@/components/dashboard/mobile-sidebar-sheet";
+import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +18,12 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi } from "@/lib/api/admin";
 import { hasTenantDashboardAccess, isPlatformOperatorHome } from "@/lib/api/auth";
+import {
+  resolveTenantAccessState,
+  tenantAccessApi,
+} from "@/lib/api/tenant-access";
 import { useTenantImpersonation } from "@/hooks/use-tenant-impersonation";
+import { toast } from "sonner";
 
 function initials(name?: string | null, email?: string) {
   const src = (name || email || "").trim();
@@ -30,6 +37,7 @@ function initials(name?: string | null, email?: string) {
 }
 
 export function Topbar() {
+  const router = useRouter();
   const { user, logout } = useAuth();
   const { impersonateMut, stopMut, isBusy } = useTenantImpersonation();
   const isSuperAdmin = user?.role === "super_admin";
@@ -41,6 +49,14 @@ export function Topbar() {
     enabled: isSuperAdmin,
     staleTime: 60_000,
   });
+
+  const { data: accessRequestsData } = useQuery({
+    queryKey: ["admin-access-requests"],
+    queryFn: () => tenantAccessApi.listMine(),
+    enabled: isSuperAdmin,
+    staleTime: 30_000,
+  });
+  const accessRequests = accessRequestsData?.requests ?? [];
 
   return (
     <div className="flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6">
@@ -89,20 +105,46 @@ export function Topbar() {
                   <DropdownMenuSeparator />
                 </>
               )}
-              {(tenantsData?.tenants ?? []).map((t) => (
-                <DropdownMenuItem
-                  key={t.id}
-                  disabled={isBusy || user?.tenant?.id === t.id}
-                  onClick={() => impersonateMut.mutate(t.id)}
-                >
-                  <div className="flex flex-col">
-                    <span className="font-medium">{t.companyName}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {t.ownerEmail || t.schemaName}
-                    </span>
-                  </div>
-                </DropdownMenuItem>
-              ))}
+              {(tenantsData?.tenants ?? []).map((t) => {
+                const access = resolveTenantAccessState(accessRequests, t.id);
+                const isCurrent = user?.tenant?.id === t.id;
+                return (
+                  <DropdownMenuItem
+                    key={t.id}
+                    disabled={isBusy || isCurrent}
+                    onClick={() => {
+                      if (access.canImpersonate) {
+                        impersonateMut.mutate(t.id);
+                        return;
+                      }
+                      if (access.status === "pending") {
+                        toast.info(
+                          "Permintaan akses masih menunggu persetujuan owner.",
+                        );
+                        return;
+                      }
+                      toast.info(
+                        "Minta akses di konsol admin sebelum memantau tenant ini.",
+                      );
+                      router.push("/dashboard/admin");
+                    }}
+                  >
+                    <div className="flex w-full flex-col gap-0.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">{t.companyName}</span>
+                        {access.status === "pending" ? (
+                          <span className="text-[10px] text-amber-600">Menunggu</span>
+                        ) : access.canImpersonate ? (
+                          <span className="text-[10px] text-green-600">Akses OK</span>
+                        ) : null}
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {t.ownerEmail || t.schemaName}
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                );
+              })}
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
@@ -125,9 +167,7 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" aria-label="Notifications">
-          <Bell className="h-4 w-4" />
-        </Button>
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

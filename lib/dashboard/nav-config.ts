@@ -10,6 +10,7 @@ import {
   CreditCard,
   FileText,
   Inbox,
+  KeyRound,
   LayoutDashboard,
   Layers,
   GraduationCap,
@@ -163,6 +164,7 @@ export const TENANT_NAV_SECTIONS: NavSection[] = [
     collapsible: true,
     items: [
       { href: "/dashboard/team", label: "Team", icon: Users },
+      { href: "/dashboard/access-requests", label: "Permintaan Akses", icon: KeyRound },
       { href: "/dashboard/import", label: "Import", icon: Upload },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
       { href: "/dashboard/events", label: "Acara & Terapi", icon: CalendarHeart },

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { WabantuLogo } from "@/components/brand/wabantu-logo";
 import { InboxActivityBridge } from "@/components/dashboard/inbox-activity-bridge";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
@@ -21,6 +22,7 @@ import { clearClientSession, hasAccessToken } from "@/lib/auth/session";
 import { installAuthCrossTabSync } from "@/lib/auth/session-cross-tab";
 import { AUTH_SESSION_UPDATED } from "@/lib/auth/session-sync";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
+import { isPathAllowedForModules } from "@/lib/dashboard/impersonation-modules";
 import { SessionReauthDialog } from "@/components/auth/session-reauth-dialog";
 import { DashboardRateLimitNotice } from "@/components/dashboard/dashboard-rate-limit-notice";
 import { setProfileHint } from "@/lib/auth/profile-hint";
@@ -51,6 +53,19 @@ function applyPlatformRouteGuards(
     router.replace("/dashboard/admin?needTenant=1");
     return true;
   }
+
+  if (
+    me.impersonation?.active &&
+    me.impersonation.modules &&
+    me.impersonation.modules.length > 0 &&
+    !isAdminConsole &&
+    !isPathAllowedForModules(path, me.impersonation.modules)
+  ) {
+    toast.error("Modul ini tidak termasuk dalam izin akses tenant Anda.");
+    router.replace("/dashboard");
+    return true;
+  }
+
   return false;
 }
 
