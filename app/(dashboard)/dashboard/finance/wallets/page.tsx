@@ -262,7 +262,7 @@ export default function WalletsPage() {
       }),
     onSuccess: () => {
       toast.success("Dompet berhasil dibuat");
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
       setOpenCreate(false);
       setForm(emptyForm());
     },
@@ -282,7 +282,7 @@ export default function WalletsPage() {
       }),
     onSuccess: () => {
       toast.success("Dompet diperbarui");
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
       setEditWalletId(null);
       setForm(emptyForm());
     },
@@ -294,7 +294,7 @@ export default function WalletsPage() {
     mutationFn: (id: string) => financeApi.deleteWallet(id),
     onSuccess: () => {
       toast.success("Dompet dihapus");
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
       setDeleteWalletId(null);
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>

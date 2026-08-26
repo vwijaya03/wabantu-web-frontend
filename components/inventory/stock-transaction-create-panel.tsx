@@ -21,7 +21,7 @@ import { inventoryApi, formatStockQty, type Warehouse } from "@/lib/api/inventor
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
-import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -81,12 +81,13 @@ function useItemStock(itemId: string | undefined, warehouseId: string) {
   return data?.stock[0];
 }
 
-function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
-  void qc.invalidateQueries({ queryKey: ["inventory"] });
+function invalidateAll(qc: ReturnType<typeof useQueryClient>, tenantKey: string) {
+  invalidateTenantQueries(qc, tenantKey, "inventory");
 }
 
 export function CreateAdjustmentPanel({ warehouses, onSuccess }: { warehouses: Warehouse[]; onSuccess: () => void }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const [item, setItem] = useState<PickedItem | null>(null);
   const [warehouseId, setWarehouseId] = useState("");
   const [direction, setDirection] = useState<"in" | "out">("in");
@@ -111,7 +112,7 @@ export function CreateAdjustmentPanel({ warehouses, onSuccess }: { warehouses: W
       setQty("");
       setUnitCost("");
       setNote("");
-      invalidateAll(qc);
+      invalidateAll(qc, tenantKey);
       onSuccess();
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -144,6 +145,7 @@ export function CreateAdjustmentPanel({ warehouses, onSuccess }: { warehouses: W
 
 export function CreateTransferPanel({ warehouses, onSuccess }: { warehouses: Warehouse[]; onSuccess: () => void }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const [item, setItem] = useState<PickedItem | null>(null);
   const [fromId, setFromId] = useState("");
   const [toId, setToId] = useState("");
@@ -160,7 +162,7 @@ export function CreateTransferPanel({ warehouses, onSuccess }: { warehouses: War
       setQty("");
       setNote("");
       setConfirm(false);
-      invalidateAll(qc);
+      invalidateAll(qc, tenantKey);
       onSuccess();
     },
     onError: (e) => { toast.error(toApiError(e).message); setConfirm(false); },
@@ -195,6 +197,7 @@ type OpeningRow = { item: PickedItem | null; warehouseId: string; qty: string; u
 
 export function CreateOpeningBalancePanel({ warehouses, onSuccess }: { warehouses: Warehouse[]; onSuccess: () => void }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const defaultWh = warehouses.find((w) => w.isDefault)?.id ?? warehouses[0]?.id ?? "";
   const [rows, setRows] = useState<OpeningRow[]>([{ item: null, warehouseId: defaultWh, qty: "", unitCost: "" }]);
   const setRow = (i: number, patch: Partial<OpeningRow>) => setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -227,7 +230,7 @@ export function CreateOpeningBalancePanel({ warehouses, onSuccess }: { warehouse
     onSuccess: (res) => {
       toast.success(`Saldo awal ${res.docNo} — ${res.applied} baris`);
       setRows([{ item: null, warehouseId: defaultWh, qty: "", unitCost: "" }]);
-      invalidateAll(qc);
+      invalidateAll(qc, tenantKey);
       onSuccess();
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -263,6 +266,7 @@ export function CreateOpeningBalancePanel({ warehouses, onSuccess }: { warehouse
 
 export function CreateRevaluationPanel({ warehouses, onSuccess }: { warehouses: Warehouse[]; onSuccess: () => void }) {
   const qc = useQueryClient();
+  const tenantKey = useTenantKey();
   const [item, setItem] = useState<PickedItem | null>(null);
   const [warehouseId, setWarehouseId] = useState("");
   const [newCost, setNewCost] = useState("");
@@ -279,7 +283,7 @@ export function CreateRevaluationPanel({ warehouses, onSuccess }: { warehouses: 
       setNewCost("");
       setNote("");
       setConfirm(false);
-      invalidateAll(qc);
+      invalidateAll(qc, tenantKey);
       onSuccess();
     },
     onError: (e) => { toast.error(toApiError(e).message); setConfirm(false); },

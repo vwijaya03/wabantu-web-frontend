@@ -143,8 +143,8 @@ export function formatFinanceDateTime(
   }
 }
 
-/** Invalidate React Query caches after finance mutations. */
-export function invalidateFinanceCaches(qc: QueryClient) {
+/** Invalidate tenant-scoped React Query caches after finance mutations. */
+export function invalidateFinanceCaches(qc: QueryClient, tenantKey: string) {
   const keys = [
     "finance-dashboard",
     "finance-wallets",
@@ -160,6 +160,6 @@ export function invalidateFinanceCaches(qc: QueryClient) {
     "finance-report-jobs",
   ];
   for (const key of keys) {
-    qc.invalidateQueries({ queryKey: [key] });
+    void qc.invalidateQueries({ queryKey: [key, tenantKey] });
   }
 }

@@ -118,7 +118,7 @@ export default function TransactionImportImagePage() {
     mutationFn: () => transactionImageApi.commit(preview!.jobId, items),
     onSuccess: (res) => {
       toast.success(res.message);
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
       setPreview(null);
       setItems([]);
       setFiles([]);

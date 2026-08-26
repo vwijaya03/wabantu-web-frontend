@@ -37,6 +37,8 @@ import { toast } from "sonner";
 const CONVO_PAGE = 30;
 /** Message thread page size (server clamps 1–100). */
 const MSG_PAGE = 10;
+/** Inbox lists rely on SSE for live updates; avoid focus refetch storms. */
+const INBOX_STALE_MS = 45_000;
 
 /** Throttle scroll-triggered “load older” to avoid duplicate fetches. */
 const SCROLL_LOAD_OLDER_MS = 450;
@@ -77,8 +79,8 @@ export default function InboxPage() {
     queryKey: [...INBOX_UNREAD_QUERY_KEY, tenantKey],
     queryFn: () => inboxApi.unreadSummary(),
     enabled: tenantReady,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    staleTime: INBOX_STALE_MS,
+    refetchOnWindowFocus: false,
   });
   const totalUnread = unreadSummaryQuery.data?.totalUnreadMessages ?? 0;
 
@@ -94,8 +96,8 @@ export default function InboxPage() {
     enabled: tenantReady,
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    staleTime: INBOX_STALE_MS,
+    refetchOnWindowFocus: false,
   });
 
   const conversations = useMemo(
@@ -148,8 +150,8 @@ export default function InboxPage() {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     enabled: tenantReady && Boolean(selectedId),
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    staleTime: INBOX_STALE_MS,
+    refetchOnWindowFocus: false,
   });
 
   const messages = useMemo(() => {

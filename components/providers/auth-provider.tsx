@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { authApi, type AuthUser } from "@/lib/api/auth";
 import { setProfileHint } from "@/lib/auth/profile-hint";
 import { dispatchAuthSessionUpdated } from "@/lib/auth/session-sync";
@@ -50,11 +50,12 @@ export function AuthProvider({
     }
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, setUser, refresh, logout }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ user, setUser, refresh, logout }),
+    [user, refresh, logout],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {

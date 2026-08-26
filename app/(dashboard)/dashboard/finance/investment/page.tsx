@@ -212,7 +212,7 @@ export default function InvestmentPage() {
       }),
     onSuccess: () => {
       toast.success("Aset berhasil ditambahkan");
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
       setOpenAddAsset(false);
       resetAssetForm();
     },
@@ -231,7 +231,7 @@ export default function InvestmentPage() {
       }),
     onSuccess: () => {
       toast.success("Aset diperbarui");
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
       setEditAssetId(null);
       resetAssetForm();
     },
@@ -242,7 +242,7 @@ export default function InvestmentPage() {
     mutationFn: (id: string) => financeApi.deleteAsset(id),
     onSuccess: () => {
       toast.success("Aset dihapus");
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
       setDeleteAssetId(null);
     },
     onError: (e: unknown) => toast.error(toApiError(e).message),
@@ -274,7 +274,7 @@ export default function InvestmentPage() {
       toast.success(
         data.status === "pending_approval" ? "Dividen menunggu persetujuan" : "Dividen tercatat",
       );
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
       if (tradeHistoryAssetId) {
         qc.invalidateQueries({ queryKey: ["finance-asset-trades", tradeHistoryAssetId] });
       }
@@ -315,7 +315,7 @@ export default function InvestmentPage() {
           ? `${label} menunggu persetujuan`
           : `${label} tercatat`
       );
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
       if (tradeHistoryAssetId) {
         qc.invalidateQueries({ queryKey: ["finance-asset-trades", tradeHistoryAssetId] });
       }
@@ -330,7 +330,7 @@ export default function InvestmentPage() {
       financeApi.deleteAssetTrade(assetId, txnId),
     onSuccess: () => {
       toast.success("Transaksi dihapus");
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
       if (tradeHistoryAssetId) {
         qc.invalidateQueries({ queryKey: ["finance-asset-trades", tradeHistoryAssetId] });
       }

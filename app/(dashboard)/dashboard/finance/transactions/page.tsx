@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -59,10 +60,17 @@ import {
   formatFinanceDate,
   invalidateFinanceCaches,
 } from "@/lib/finance/utils";
-import { AddTransactionSheet } from "@/components/finance/add-transaction-sheet";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+
+const AddTransactionSheet = dynamic(
+  () =>
+    import("@/components/finance/add-transaction-sheet").then((mod) => ({
+      default: mod.AddTransactionSheet,
+    })),
+  { ssr: false },
+);
 
 const FILTER_ALL = "__all__";
 const pageSize = 30;
@@ -143,7 +151,7 @@ export default function TransactionsPage() {
       financeApi.approveTransaction(id, action),
     onSuccess: (_, vars) => {
       toast.success(vars.action === "approve" ? "Transaksi disetujui" : "Transaksi ditolak");
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
     },
     onError: () => toast.error("Gagal memproses"),
   });
@@ -152,7 +160,7 @@ export default function TransactionsPage() {
     mutationFn: (id: string) => financeApi.deleteTransaction(id),
     onSuccess: () => {
       toast.success("Transaksi dihapus");
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
       setDeleteTxnId(null);
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
@@ -178,7 +186,7 @@ export default function TransactionsPage() {
     },
     onSuccess: () => {
       toast.success("Transaksi diperbarui");
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
       setEditTxn(null);
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
@@ -391,7 +399,7 @@ export default function TransactionsPage() {
       <AddTransactionSheet
         open={openAdd}
         onOpenChange={setOpenAdd}
-        onCreated={() => invalidateFinanceCaches(qc)}
+        onCreated={() => invalidateFinanceCaches(qc, tenantKey)}
       />
 
       <Dialog open={!!editTxn} onOpenChange={(open) => !open && setEditTxn(null)}>

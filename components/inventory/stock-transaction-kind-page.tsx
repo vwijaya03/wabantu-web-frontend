@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { InventoryPageHeader } from "@/components/inventory/inventory-help";
 import { InventoryDataTablePagination } from "@/components/inventory/data-table-pagination";
-import { StockTransactionEditDialog } from "@/components/inventory/stock-transaction-edit-dialog";
 import { TransactionDocLink } from "@/components/inventory/transaction-doc-link";
 import { RequireTenantDashboard } from "@/components/dashboard/require-tenant-dashboard";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -38,6 +38,14 @@ import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+
+const StockTransactionEditDialog = dynamic(
+  () =>
+    import("@/components/inventory/stock-transaction-edit-dialog").then((mod) => ({
+      default: mod.StockTransactionEditDialog,
+    })),
+  { ssr: false },
+);
 
 export type StockTxnKind = StockTransaction["kind"];
 

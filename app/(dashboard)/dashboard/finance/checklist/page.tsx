@@ -139,7 +139,7 @@ export default function ChecklistPage() {
       financeApi.toggleMonthlyBillingItem(itemId, checked),
     onSuccess: (res, { checked }) => {
       qc.setQueryData(["finance-monthly-billing", period], res.billing);
-      invalidateFinanceCaches(qc);
+      invalidateFinanceCaches(qc, tenantKey);
       if (!checked && res.item.transactionId == null) {
         toast.success("Centang dibatalkan — transaksi terkait dihapus");
       } else if (checked && res.item.transactionId) {
