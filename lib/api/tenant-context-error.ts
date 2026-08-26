@@ -21,3 +21,13 @@ export function isTenantContextApiError(error: unknown): boolean {
 
   return false;
 }
+
+/** True when super_admin opened an event that belongs to another tenant schema. */
+export function isCrossTenantEventApiError(error: unknown): boolean {
+  const apiErr = toApiError(error);
+  if (apiErr.status !== 403) {
+    return false;
+  }
+  const msg = (apiErr.message ?? "").toLowerCase();
+  return msg.includes("tenant lain") || msg.includes("pantau tenant");
+}
