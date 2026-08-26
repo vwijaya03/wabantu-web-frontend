@@ -94,7 +94,10 @@ export default function AdminPage() {
         if (job.status === "completed" || job.status === "cancelled") {
           await qc.invalidateQueries({ queryKey: ["admin-tenants"] });
           await qc.invalidateQueries({ queryKey: ["admin-migrate-jobs-active"] });
-          if (job.failedCount > 0) {
+          if (job.status === "cancelled") {
+            setMigrateErrors([]);
+            toast.info(`Migrasi dibatalkan (${job.doneCount} selesai/dilewati).`);
+          } else if (job.failedCount > 0) {
             setMigrateErrors(job.recentErrors ?? []);
             toast.warning(
               `Migrasi selesai: ${job.doneCount} berhasil, ${job.failedCount} gagal.`,
@@ -147,6 +150,19 @@ export default function AdminPage() {
     queryKey: ["admin-migrate-job", trackedJobId],
     queryFn: () => adminApi.getMigrateJob(trackedJobId!),
     enabled: Boolean(trackedJobId),
+  });
+
+  const cancelMigrateMut = useMutation({
+    mutationFn: (jobId: string) => adminApi.cancelMigrateJob(jobId),
+    onSuccess: (job) => {
+      qc.setQueryData(["admin-migrate-job", job.jobId], job);
+      void qc.invalidateQueries({ queryKey: ["admin-migrate-jobs-active"] });
+      void qc.invalidateQueries({ queryKey: ["admin-tenants"] });
+      setActiveJobId(null);
+      setMigrateErrors([]);
+      toast.info(`Job migrasi dibatalkan (${job.doneCount} selesai/dilewati).`);
+    },
+    onError: (e) => toast.error(toApiError(e).message),
   });
 
   const toggleTenantSelected = (id: string) => {
@@ -289,6 +305,17 @@ export default function AdminPage() {
               gagal · {migrateJobQuery.data.totalCount} total · status:{" "}
               {migrateJobQuery.data.status}
             </p>
+            {(migrateJobQuery.data.status === "pending" ||
+              migrateJobQuery.data.status === "running") && (
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={cancelMigrateMut.isPending}
+                onClick={() => cancelMigrateMut.mutate(migrateJobQuery.data.jobId)}
+              >
+                {cancelMigrateMut.isPending ? "Membatalkan…" : "Batalkan migrasi"}
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : null}

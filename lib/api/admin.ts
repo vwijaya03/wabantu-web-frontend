@@ -102,6 +102,12 @@ export const adminApi = {
     );
     return res.data;
   },
+  async cancelMigrateJob(jobId: string): Promise<SchemaMigrationJobSummary> {
+    const res = await api.post<SchemaMigrationJobSummary>(
+      `/admin/migrate-tenant-schemas/jobs/${jobId}/cancel`,
+    );
+    return res.data;
+  },
   async impersonate(tenantId: string): Promise<{ ok: boolean; tenant: AdminTenant }> {
     const res = await api.post(`/admin/impersonate/${tenantId}`);
     return res.data;
