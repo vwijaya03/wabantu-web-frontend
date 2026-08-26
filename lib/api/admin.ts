@@ -13,6 +13,7 @@ export interface AdminTenant {
   schemaMigratedAt?: string;
   schemaPatchVersion: number;
   isSchemaBehind: boolean;
+  isSchemaMigrating: boolean;
 }
 
 export interface AdminTenantListParams {
@@ -92,6 +93,12 @@ export const adminApi = {
   async getMigrateJob(jobId: string): Promise<SchemaMigrationJobSummary> {
     const res = await api.get<SchemaMigrationJobSummary>(
       `/admin/migrate-tenant-schemas/jobs/${jobId}`,
+    );
+    return res.data;
+  },
+  async listActiveMigrateJobs(): Promise<{ jobs: SchemaMigrationJobSummary[] }> {
+    const res = await api.get<{ jobs: SchemaMigrationJobSummary[] }>(
+      "/admin/migrate-tenant-schemas/active-jobs",
     );
     return res.data;
   },
