@@ -67,11 +67,24 @@ export default function AdminPage() {
     [data?.total],
   );
 
-  const migrateJobQuery = useQuery({
-    queryKey: ["admin-migrate-job", activeJobId],
-    queryFn: () => adminApi.getMigrateJob(activeJobId!),
-    enabled: !!activeJobId,
+  const activeMigrateJobsQuery = useQuery({
+    queryKey: ["admin-migrate-jobs-active"],
+    queryFn: () => adminApi.listActiveMigrateJobs(),
+    enabled: user?.role === "super_admin",
+    refetchInterval: (query) => {
+      const jobs = query.state.data?.jobs ?? [];
+      const hasActive = jobs.some(
+        (j) => j.status === "pending" || j.status === "running",
+      );
+      return hasActive ? 2000 : false;
+    },
   });
+
+  const serverActiveJobId =
+    activeMigrateJobsQuery.data?.jobs.find(
+      (j) => j.status === "pending" || j.status === "running",
+    )?.jobId ?? null;
+  const trackedJobId = activeJobId ?? serverActiveJobId;
 
   const pollMigrateJobUntilDone = async (jobId: string) => {
     try {
@@ -80,6 +93,7 @@ export default function AdminPage() {
         qc.setQueryData(["admin-migrate-job", jobId], job);
         if (job.status === "completed" || job.status === "cancelled") {
           await qc.invalidateQueries({ queryKey: ["admin-tenants"] });
+          await qc.invalidateQueries({ queryKey: ["admin-migrate-jobs-active"] });
           if (job.failedCount > 0) {
             setMigrateErrors(job.recentErrors ?? []);
             toast.warning(
@@ -108,6 +122,7 @@ export default function AdminPage() {
       if (r.async && r.jobId) {
         setMigrateErrors([]);
         setActiveJobId(r.jobId);
+        void qc.invalidateQueries({ queryKey: ["admin-migrate-jobs-active"] });
         toast.info(`Migrasi di antrian (${r.enqueued ?? 0} tenant)…`);
         void pollMigrateJobUntilDone(r.jobId);
         return;
@@ -123,6 +138,15 @@ export default function AdminPage() {
       toast.success(`Migrasi schema selesai (${r.patched} tenant).`);
     },
     onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const migrationInProgress =
+    migrateMut.isPending || Boolean(trackedJobId);
+
+  const migrateJobQuery = useQuery({
+    queryKey: ["admin-migrate-job", trackedJobId],
+    queryFn: () => adminApi.getMigrateJob(trackedJobId!),
+    enabled: Boolean(trackedJobId),
   });
 
   const toggleTenantSelected = (id: string) => {
@@ -203,21 +227,21 @@ export default function AdminPage() {
         </Button>
         <Button
           variant="secondary"
-          disabled={migrateMut.isPending || !!activeJobId}
+          disabled={migrationInProgress}
           onClick={() => migrateMut.mutate({ mode: "behind" })}
         >
-          {activeJobId ? "Migrasi berjalan…" : "Migrasi tenant tertinggal"}
+          {trackedJobId ? "Migrasi berjalan…" : "Migrasi tenant tertinggal"}
         </Button>
         <Button
           variant="outline"
-          disabled={migrateMut.isPending || !!activeJobId}
+          disabled={migrationInProgress}
           onClick={() => migrateMut.mutate(undefined)}
         >
           Migrasi semua tenant
         </Button>
         <Button
           variant="outline"
-          disabled={migrateMut.isPending || !!activeJobId || selectedTenantIds.size === 0}
+          disabled={migrationInProgress || selectedTenantIds.size === 0}
           onClick={() =>
             migrateMut.mutate({
               tenantIds: Array.from(selectedTenantIds),
@@ -233,7 +257,7 @@ export default function AdminPage() {
           </Button>
         ) : null}
       </div>
-      {activeJobId && migrateJobQuery.data ? (
+      {trackedJobId && migrateJobQuery.data ? (
         <Card className="mb-4 border-primary/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Progress migrasi schema</CardTitle>
@@ -414,12 +438,12 @@ export default function AdminPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={migrateMut.isPending || !!activeJobId || !t.isActive}
+                      disabled={migrationInProgress || !t.isActive || t.isSchemaMigrating}
                       onClick={() =>
                         migrateMut.mutate({ tenantIds: [t.id], mode: "selected" })
                       }
                     >
-                      Migrasi
+                      {t.isSchemaMigrating ? "Migrasi…" : "Migrasi"}
                     </Button>
                     <TenantAccessActionButton
                       tenant={t}
