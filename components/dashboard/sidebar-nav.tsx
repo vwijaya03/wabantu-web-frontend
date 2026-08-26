@@ -19,6 +19,7 @@ import {
   type NavLink,
   type NavSection,
 } from "@/lib/dashboard/nav-config";
+import { filterNavSectionsByModules } from "@/lib/dashboard/impersonation-modules";
 import { cn } from "@/lib/utils";
 
 function NavItemLink({
@@ -150,10 +151,35 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const isSuperAdmin = user?.role === "super_admin";
 
   const sections = useMemo(() => {
-    const out = [...(tenantMode ? TENANT_NAV_SECTIONS : [])];
+    let tenantSections = tenantMode ? [...TENANT_NAV_SECTIONS] : [];
+
+    if (tenantMode && user?.role !== "owner") {
+      tenantSections = tenantSections.map((section) => {
+        if (section.id !== "org" || !section.items) return section;
+        return {
+          ...section,
+          items: section.items.filter(
+            (item) => item.href !== "/dashboard/access-requests",
+          ),
+        };
+      });
+    }
+
+    if (
+      user?.impersonation?.active &&
+      user.impersonation.modules &&
+      user.impersonation.modules.length > 0
+    ) {
+      tenantSections = filterNavSectionsByModules(
+        tenantSections,
+        user.impersonation.modules,
+      );
+    }
+
+    const out = [...tenantSections];
     if (isSuperAdmin) out.push(PLATFORM_NAV_SECTION);
     return out;
-  }, [tenantMode, isSuperAdmin]);
+  }, [tenantMode, isSuperAdmin, user]);
 
   const tenantKey = tenantContextKey(user);
   const tenantQueriesEnabled = useTenantQueryEnabled();

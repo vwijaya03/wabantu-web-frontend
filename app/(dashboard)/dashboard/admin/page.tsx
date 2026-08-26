@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { TenantAccessActionButton } from "@/components/dashboard/tenant-access-action-button";
 import {
   Select,
   SelectContent,
@@ -28,7 +29,10 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi, CURRENT_SCHEMA_PATCH_VERSION, type AdminTenant } from "@/lib/api/admin";
 import { isPlatformOperatorHome } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
-import { useTenantImpersonation } from "@/hooks/use-tenant-impersonation";
+import {
+  resolveTenantAccessState,
+  tenantAccessApi,
+} from "@/lib/api/tenant-access";
 import { toast } from "sonner";
 
 export default function AdminPage() {
@@ -36,7 +40,6 @@ export default function AdminPage() {
   const searchParams = useSearchParams();
   const needTenantHint = searchParams.get("needTenant") === "1";
   const qc = useQueryClient();
-  const { impersonateMut, isBusy } = useTenantImpersonation();
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -51,6 +54,13 @@ export default function AdminPage() {
     queryFn: () => adminApi.listTenants({ q: search || undefined, page, pageSize }),
     enabled: user?.role === "super_admin",
   });
+  const { data: accessRequestsData } = useQuery({
+    queryKey: ["admin-access-requests"],
+    queryFn: () => tenantAccessApi.listMine(),
+    enabled: user?.role === "super_admin",
+    staleTime: 30_000,
+  });
+  const accessRequests = accessRequestsData?.requests ?? [];
   const tenants = data?.tenants ?? [];
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil((data?.total ?? 0) / pageSize)),
@@ -178,8 +188,8 @@ export default function AdminPage() {
             <CardTitle className="text-base">Pilih tenant untuk melanjutkan</CardTitle>
             <CardDescription>
               Menu Workflow, Cabang, Inbox, dan fitur operasional lain membutuhkan
-              konteks tenant. Klik <strong>Pantau</strong> pada salah satu tenant di
-              bawah, lalu buka menu yang diinginkan.
+              konteks tenant. Minta akses lalu klik <strong>Pantau</strong> setelah
+              disetujui owner, atau buka menu yang diinginkan.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -282,8 +292,9 @@ export default function AdminPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Akun operator internal</CardTitle>
             <CardDescription>
-              Anda login tanpa tenant bisnis. Pilih tenant di bawah untuk
-              memantau inbox, katalog, dan pengaturan mereka (mode baca/operasional).
+              Anda login tanpa tenant bisnis. Minta akses ke tenant di bawah; setelah
+              disetujui owner, klik Pantau untuk memantau inbox, katalog, dan pengaturan
+              mereka.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -292,7 +303,8 @@ export default function AdminPage() {
         <CardHeader>
           <CardTitle>Tenant ({data?.total ?? 0})</CardTitle>
           <CardDescription>
-            Cari tenant, ubah paket, pantau, migrasi schema, atau hapus permanen schema tenant.
+            Cari tenant, ubah paket, minta akses / pantau (setelah disetujui owner),
+            migrasi schema, atau hapus permanen schema tenant.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -409,13 +421,10 @@ export default function AdminPage() {
                     >
                       Migrasi
                     </Button>
-                    <Button
-                      size="sm"
-                      disabled={isBusy || !t.isActive}
-                      onClick={() => impersonateMut.mutate(t.id)}
-                    >
-                      Pantau
-                    </Button>
+                    <TenantAccessActionButton
+                      tenant={t}
+                      accessState={resolveTenantAccessState(accessRequests, t.id)}
+                    />
                     <Button
                       size="sm"
                       variant="destructive"
