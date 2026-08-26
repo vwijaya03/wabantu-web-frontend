@@ -58,6 +58,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { toApiError } from "@/lib/api/errors";
+import { isCrossTenantEventApiError } from "@/lib/api/tenant-context-error";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
 import {
   eventDetailKey,
@@ -388,12 +389,29 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
 
   if (eventLoadError) {
     const apiErr = toApiError(eventLoadErr);
+    const crossTenant = isCrossTenantEventApiError(eventLoadErr);
     return (
       <div className="space-y-3 p-6">
         <p className="text-sm text-destructive">{apiErr.message || "Gagal memuat acara"}</p>
-        <Button variant="outline" size="sm" onClick={() => void refetchEvent()}>
-          Coba lagi
-        </Button>
+        {crossTenant ? (
+          <p className="text-sm text-muted-foreground">
+            Gunakan tombol <strong>Pantau</strong> di konsol platform untuk tenant yang benar, lalu
+            buka acara lagi dari daftar acara tenant tersebut.
+          </p>
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          {crossTenant ? (
+            <Button asChild size="sm">
+              <Link href="/dashboard/admin">Buka konsol platform</Link>
+            </Button>
+          ) : null}
+          <Button variant="outline" size="sm" onClick={() => void refetchEvent()}>
+            Coba lagi
+          </Button>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/dashboard/events">← Daftar acara</Link>
+          </Button>
+        </div>
       </div>
     );
   }
