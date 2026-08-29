@@ -2,16 +2,25 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { codesimApi, type CodesimTopicPreset } from "@/lib/api/codesim";
+import {
+  codesimApi,
+  type CodesimAIPlanResponse,
+  type CodesimTopicPreset,
+} from "@/lib/api/codesim";
 import { toast } from "sonner";
+
+type SetupMode = "bank" | "ai";
 
 export default function SimulationSetupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [planLoading, setPlanLoading] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [questionCount, setQuestionCount] = useState(0);
 
+  const [mode, setMode] = useState<SetupMode>("bank");
+  const [aiGenEnabled, setAiGenEnabled] = useState(false);
   const [presets, setPresets] = useState<CodesimTopicPreset[]>([]);
   const [tags, setTags] = useState<Array<{ id: string; label: string; mcqCount: number }>>([]);
   const [difficulties, setDifficulties] = useState<
@@ -23,9 +32,17 @@ export default function SimulationSetupPage() {
   const [mcqCountOptions, setMcqCountOptions] = useState<number[]>([3, 4, 5, 6, 7]);
   const [activePreset, setActivePreset] = useState<string | null>(null);
 
+  const [aiBrief, setAiBrief] = useState("");
+  const [aiPlan, setAiPlan] = useState<CodesimAIPlanResponse | null>(null);
+
   function clearPreview() {
     setPreviewId(null);
     setQuestionCount(0);
+  }
+
+  function clearAIPlan() {
+    setAiPlan(null);
+    clearPreview();
   }
 
   useEffect(() => {
@@ -39,6 +56,7 @@ export default function SimulationSetupPage() {
         setDifficulties(catalog.difficulties);
         setMcqCountOptions(catalog.mcqCountOptions);
         setMcqCount(catalog.defaultMcqCount);
+        setAiGenEnabled(catalog.aiGenEnabled);
         const defaultPreset =
           catalog.presets.find((p) => p.id === "full-frontend") ?? catalog.presets[0];
         if (defaultPreset) {
@@ -81,24 +99,48 @@ export default function SimulationSetupPage() {
     setSelectedTopics(preset.tags);
   }
 
+  async function requestAIPlan() {
+    const brief = aiBrief.trim();
+    if (brief.length < 10) {
+      toast.error("Deskripsi topik minimal 10 karakter");
+      return;
+    }
+    setPlanLoading(true);
+    clearAIPlan();
+    try {
+      const plan = await codesimApi.planAIExam(brief, mcqCount);
+      setAiPlan(plan);
+      toast.success("Rencana siap — review lalu konfirmasi");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal buat rencana AI");
+    } finally {
+      setPlanLoading(false);
+    }
+  }
+
   async function createOrRegenerate(regenerate?: boolean) {
-    if (selectedTopics.length === 0) {
+    if (mode === "bank" && selectedTopics.length === 0) {
       toast.error("Pilih minimal satu topik");
       return;
     }
     setLoading(true);
     try {
-      const params = {
-        topics: selectedTopics,
-        difficulty: selectedDifficulty || undefined,
-        mcqCount,
-        presetId: activePreset ?? undefined,
-      };
       let session;
       if (regenerate && previewId) {
         session = await codesimApi.regenerateSession(previewId);
+      } else if (mode === "ai") {
+        if (!aiPlan) {
+          toast.error("Buat dan konfirmasi rencana AI dulu");
+          return;
+        }
+        session = await codesimApi.createSession({ aiPlanId: aiPlan.planId });
       } else {
-        session = await codesimApi.createSession(params);
+        session = await codesimApi.createSession({
+          topics: selectedTopics,
+          difficulty: selectedDifficulty || undefined,
+          mcqCount,
+          presetId: activePreset ?? undefined,
+        });
       }
       setPreviewId(session.id);
       setQuestionCount(session.questions.length);
@@ -135,13 +177,132 @@ export default function SimulationSetupPage() {
       <div>
         <h1 className="text-2xl font-bold">Setup simulasi</h1>
         <p className="mt-1 text-slate-600">
-          Pilih topik dan jumlah MCQ. Setiap generate memakai seed acak — soal berbeda, struktur
-          sama ({mcqCount} MCQ + 1 build + 1 debug).
+          Pilih topik dari bank soal, atau tulis topik bebas lalu AI susun rencana (konfirmasi
+          dulu sebelum generate).
         </p>
       </div>
 
+      {aiGenEnabled && (
+        <div className="flex gap-2 rounded-lg border border-slate-200 bg-white p-1 w-fit">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("bank");
+              clearAIPlan();
+            }}
+            className={`rounded-md px-4 py-2 text-sm ${
+              mode === "bank" ? "bg-emerald-600 text-white" : "text-slate-600"
+            }`}
+          >
+            Bank soal
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("ai");
+              clearPreview();
+            }}
+            className={`rounded-md px-4 py-2 text-sm ${
+              mode === "ai" ? "bg-emerald-600 text-white" : "text-slate-600"
+            }`}
+          >
+            Topik bebas (AI)
+          </button>
+        </div>
+      )}
+
       {catalogLoading ? (
         <p className="text-slate-500">Memuat katalog topik…</p>
+      ) : mode === "ai" ? (
+        <div className="space-y-6">
+          <section className="space-y-2">
+            <h2 className="text-sm font-semibold text-slate-800">Deskripsi topik (free text)</h2>
+            <textarea
+              value={aiBrief}
+              onChange={(e) => {
+                setAiBrief(e.target.value);
+                clearAIPlan();
+              }}
+              rows={4}
+              placeholder="Contoh: Saya mau latihan React hooks, controlled forms, dan debugging infinite render loop"
+              className="w-full rounded-md border border-slate-300 p-3 text-sm"
+            />
+            <p className="text-xs text-slate-500">
+              AI hanya tersedia di local dev. Soal di-generate setelah kamu konfirmasi rencana.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h2 className="text-sm font-semibold text-slate-800">Jumlah MCQ</h2>
+            <div className="flex flex-wrap gap-2">
+              {mcqCountOptions.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => {
+                    setMcqCount(n);
+                    clearAIPlan();
+                  }}
+                  className={`rounded-full px-3 py-1.5 text-sm ${
+                    mcqCount === n
+                      ? "bg-emerald-600 text-white"
+                      : "border border-slate-300 bg-white text-slate-700"
+                  }`}
+                >
+                  {n} MCQ
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <button
+            type="button"
+            disabled={planLoading}
+            onClick={() => void requestAIPlan()}
+            className="rounded-md border border-emerald-600 px-4 py-2 text-emerald-700 disabled:opacity-50"
+          >
+            {planLoading ? "Menyusun rencana…" : "Buat rencana AI"}
+          </button>
+
+          {aiPlan && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 space-y-3">
+              <h3 className="font-semibold text-amber-950">Konfirmasi rencana ujian</h3>
+              <p className="text-sm text-amber-900">{aiPlan.plan.summary}</p>
+              <ul className="list-inside list-disc text-sm text-amber-900 space-y-1">
+                <li>
+                  <strong>MCQ ({aiPlan.plan.mcqCount}):</strong> {aiPlan.plan.mcqFocus}
+                </li>
+                <li>
+                  <strong>Build:</strong> {aiPlan.plan.buildFocus}
+                </li>
+                <li>
+                  <strong>Debug:</strong> {aiPlan.plan.debugFocus}
+                </li>
+                <li>
+                  <strong>Kesulitan:</strong> {aiPlan.plan.suggestedDifficulty}
+                </li>
+              </ul>
+              {aiPlan.plan.warnings && aiPlan.plan.warnings.length > 0 && (
+                <ul className="text-xs text-amber-800">
+                  {aiPlan.plan.warnings.map((w) => (
+                    <li key={w}>⚠ {w}</li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-xs text-amber-700">
+                Berlaku sampai {new Date(aiPlan.expiresAt).toLocaleTimeString("id-ID")}
+              </p>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void createOrRegenerate(false)}
+                className="rounded-md bg-amber-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+              >
+                Konfirmasi & generate tes
+              </button>
+            </div>
+          )}
+        </div>
       ) : (
         <>
           <section className="space-y-3">
@@ -238,7 +399,8 @@ export default function SimulationSetupPage() {
               <strong>Topik:</strong> {topicSummary}
             </p>
             <p className="mt-1">
-              <strong>Pool MCQ estimasi:</strong> ~{estimatedMcqPool} soal (butuh {mcqCount} per tes)
+              <strong>Pool MCQ estimasi:</strong> ~{estimatedMcqPool} soal (butuh {mcqCount} per
+              tes)
             </p>
             <p className="mt-1">
               <strong>Format:</strong> {questionCount || mcqCount + 2} soal, 60 menit
@@ -248,14 +410,16 @@ export default function SimulationSetupPage() {
       )}
 
       <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          disabled={loading || catalogLoading}
-          onClick={() => createOrRegenerate(false)}
-          className="rounded-md bg-emerald-600 px-4 py-2 text-white disabled:opacity-50"
-        >
-          Generate tes
-        </button>
+        {mode === "bank" && (
+          <button
+            type="button"
+            disabled={loading || catalogLoading}
+            onClick={() => createOrRegenerate(false)}
+            className="rounded-md bg-emerald-600 px-4 py-2 text-white disabled:opacity-50"
+          >
+            Generate tes
+          </button>
+        )}
         {previewId && (
           <>
             <button

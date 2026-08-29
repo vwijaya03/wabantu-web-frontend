@@ -63,6 +63,26 @@ export interface CodesimTopicCatalog {
   suggested: string[];
   mcqCountOptions: number[];
   defaultMcqCount: number;
+  aiGenEnabled: boolean;
+}
+
+export interface CodesimAIExamPlan {
+  summary: string;
+  mcqCount: number;
+  mcqFocus: string;
+  buildFocus: string;
+  debugFocus: string;
+  suggestedDifficulty: string;
+  tags: string[];
+  warnings?: string[];
+}
+
+export interface CodesimAIPlanResponse {
+  planId: string;
+  plan: CodesimAIExamPlan;
+  brief: string;
+  aiGenEnabled: boolean;
+  expiresAt: string;
 }
 
 export interface CodesimSessionSelection {
@@ -136,6 +156,14 @@ export const codesimApi = {
     return res.data;
   },
 
+  async planAIExam(brief: string, mcqCount?: number) {
+    const res = await api.post<CodesimAIPlanResponse>("/codesim/ai/plan", {
+      brief,
+      mcqCount,
+    });
+    return res.data;
+  },
+
   async listBlueprints() {
     const res = await api.get<{ blueprints: CodesimBlueprint[] }>("/codesim/blueprints");
     return res.data.blueprints;
@@ -148,6 +176,7 @@ export const codesimApi = {
     difficulty?: string;
     mcqCount?: number;
     presetId?: string;
+    aiPlanId?: string;
   }) {
     const res = await api.post<{ session: CodesimSession }>("/codesim/sessions", {
       blueprintSlug: params?.blueprintSlug,
@@ -156,6 +185,7 @@ export const codesimApi = {
       difficulty: params?.difficulty,
       mcqCount: params?.mcqCount,
       presetId: params?.presetId,
+      aiPlanId: params?.aiPlanId,
     });
     return res.data.session;
   },
