@@ -5,6 +5,7 @@ import { isRateLimitError, notifyRateLimitOnce } from "@/lib/api/rate-limit";
 import { clearClientSession, getAccessToken } from "@/lib/auth/session";
 import { clearProfileHint } from "@/lib/auth/profile-hint";
 import { requestSessionReauth } from "@/lib/auth/session-reauth";
+import { getOrCreateClientToken } from "@/lib/codesim/session-history";
 import { env } from "@/lib/env";
 
 export { toApiError, type ApiError } from "@/lib/api/errors";
@@ -33,6 +34,13 @@ api.interceptors.request.use((config) => {
     const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  const url = config.url ?? "";
+  if (url.includes("/codesim/sessions/")) {
+    const clientToken = getOrCreateClientToken();
+    if (clientToken) {
+      config.headers["X-Codesim-Client-Token"] = clientToken;
     }
   }
   return config;

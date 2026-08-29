@@ -58,7 +58,7 @@ function inferAssertions(question: CodesimExamQuestion): CodeAssertion[] {
   const testId = title.replace(/([A-Z])/g, (m, c, i) => (i > 0 ? "-" : "") + c.toLowerCase());
   const fieldFromSpec =
     spec.match(/field `([^`]+)`/i)?.[1] ??
-    spec.match(/controlled untuk `([^`]+)`/i)?.[1] ??
+    spec.match(/for field `([^`]+)`/i)?.[1] ??
     "email";
 
   const checks: CodeAssertion[] = [
@@ -69,14 +69,24 @@ function inferAssertions(question: CodesimExamQuestion): CodeAssertion[] {
     { check: "shows_error" },
   ];
 
-  if (/max\s*200/i.test(spec)) {
-    checks.push({ check: "validates_max_length", field: fieldFromSpec, max: 200 });
+  const maxMatch = spec.match(/max\s*(\d+)/i);
+  if (maxMatch) {
+    checks.push({
+      check: "validates_max_length",
+      field: fieldFromSpec,
+      max: Number(maxMatch[1]),
+    });
   }
-  if (/mengandung @/i.test(spec)) {
+  if (/must contain @|mengandung @/i.test(spec)) {
     checks.push({ check: "validates_includes", field: fieldFromSpec, substring: "@" });
   }
-  if (/minimal 6/i.test(spec)) {
-    checks.push({ check: "validates_min_length", field: fieldFromSpec, min: 6 });
+  const minMatch = spec.match(/min(?:imum)?\s*(\d+)/i);
+  if (minMatch) {
+    checks.push({
+      check: "validates_min_length",
+      field: fieldFromSpec,
+      min: Number(minMatch[1]),
+    });
   }
 
   return checks;
@@ -106,93 +116,93 @@ function runOneAssertion(code: string, a: CodeAssertion): string | null {
     case "has_testid": {
       const id = a.id ?? "hero";
       if (!new RegExp(`data-testid=['"]${escapeRegExp(id)}['"]`).test(code)) {
-        return `Form/komponen harus punya data-testid="${id}"`;
+        return `Form/component must have data-testid="${id}"`;
       }
       return null;
     }
     case "controlled_input": {
       const field = a.field ?? "email";
       if (!new RegExp(`name=['"]${escapeRegExp(field)}['"]`).test(code)) {
-        return `Input field "${field}" harus ada`;
+        return `Input field "${field}" is required`;
       }
       if (!/value=\{[^}]+\}/.test(code) || !/onChange=/.test(code)) {
-        return `Input "${field}" harus controlled (value + onChange)`;
+        return `Input "${field}" must be controlled (value + onChange)`;
       }
       return null;
     }
     case "form_prevent_default":
       if (!/onSubmit=/.test(code)) {
-        return "Form harus punya handler onSubmit";
+        return "Form must have an onSubmit handler";
       }
       if (!/preventDefault\s*\(\s*\)/.test(code)) {
-        return "Handler submit harus memanggil e.preventDefault()";
+        return "Submit handler must call e.preventDefault()";
       }
       return null;
     case "calls_on_submit": {
       const field = a.field ?? "email";
       if (!/onSubmit\s*\?\.\s*\(/.test(code) && !/onSubmit\s*\(/.test(code)) {
-        return "Panggil prop onSubmit saat data valid";
+        return "Call the onSubmit prop when data is valid";
       }
       if (!new RegExp(`${escapeRegExp(field)}\\s*:`).test(code)) {
-        return `onSubmit harus mengirim field "${field}"`;
+        return `onSubmit must send field "${field}"`;
       }
       return null;
     }
     case "shows_error":
       if (!/role=['"]alert['"]/.test(code) && !/setError|error\s*&&/.test(code)) {
-        return "Tampilkan pesan error (mis. elemen dengan role=\"alert\")";
+        return 'Show an error message (e.g. element with role="alert")';
       }
       return null;
     case "validates_max_length": {
       const max = a.max ?? 200;
       if (!new RegExp(`${max}|length\\s*>`).test(code)) {
-        return `Tambahkan validasi panjang maksimal ${max} karakter`;
+        return `Add validation for maximum length of ${max} characters`;
       }
       return null;
     }
     case "validates_min_length": {
       const min = a.min ?? 1;
       if (!new RegExp(`length\\s*<\\s*${min}|\\.length\\s*<\\s*${min}`).test(code)) {
-        return `Tambahkan validasi minimal ${min} karakter`;
+        return `Add validation for minimum ${min} characters`;
       }
       return null;
     }
     case "validates_includes": {
       const sub = a.substring ?? "@";
       if (!new RegExp(`includes\\s*\\(\\s*['"]${escapeRegExp(sub)}['"]`).test(code)) {
-        return `Validasi harus memeriksa karakter "${sub}"`;
+        return `Validation must check for "${sub}"`;
       }
       return null;
     }
     case "validates_required":
-      if (!/!value|trim\(\)|wajib|kosong/i.test(code)) {
-        return "Tambahkan validasi field wajib diisi";
+      if (!/!value|trim\(\)|required|empty/i.test(code)) {
+        return "Add required-field validation";
       }
       return null;
     case "no_index_list_key":
       if (/key=\{\s*i\s*\}/.test(code) || /key=\{\s*index\s*\}/.test(code)) {
-        return "Jangan pakai index array sebagai key — gunakan id stabil dari item";
+        return "Do not use array index as key — use a stable id from the item";
       }
       return null;
     case "stable_list_key":
       if (!/key=\{[^}]*\.id[^}]*\}/.test(code)) {
-        return "Key list harus memakai properti stabil (mis. key={it.id})";
+        return "List keys must use a stable property (e.g. key={it.id})";
       }
       return null;
     case "no_setstate_in_render": {
       const body = code.replace(/^[\s\S]*?return\s*\(/, "");
       if (/set[A-Z]\w*\s*\(/.test(body.split("onClick")[0] ?? body)) {
-        return "Jangan panggil setState di body render — pindahkan ke event handler";
+        return "Do not call setState in the render body — move it to an event handler";
       }
       return null;
     }
     case "renders_prop": {
       const prop = a.prop ?? "subtitle";
       if (new RegExp(`useState\\s*\\(\\s*${prop}\\s*\\)`).test(code) && !/useEffect/.test(code)) {
-        return `Jangan copy prop ${prop} ke state tanpa sync — render prop langsung atau sync dengan useEffect`;
+        return `Do not copy prop ${prop} to state without syncing — render the prop directly or sync with useEffect`;
       }
       if (!new RegExp(`\\{${prop}\\}`).test(code)) {
-        return `Tampilkan prop ${prop} di JSX`;
+        return `Render prop ${prop} in JSX`;
       }
       return null;
     }

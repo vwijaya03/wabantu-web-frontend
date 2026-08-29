@@ -130,7 +130,7 @@ export function ProctoringDisclaimer({ onAccept }: { onAccept: () => void }) {
         onClick={onAccept}
         className="rounded-md bg-amber-900 px-4 py-2 text-white hover:bg-amber-800"
       >
-        Saya mengerti — mulai
+        I understand — start
       </button>
     </div>
   );

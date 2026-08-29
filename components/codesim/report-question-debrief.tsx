@@ -9,12 +9,12 @@ import {
 
 function ResultBadge({ q }: { q: CodesimReportQuestion }) {
   if (q.correct) {
-    return <span className="rounded bg-emerald-100 px-2 py-0.5 text-emerald-800">✓ Benar</span>;
+    return <span className="rounded bg-emerald-100 px-2 py-0.5 text-emerald-800">✓ Correct</span>;
   }
   if (q.partial) {
     return <span className="rounded bg-amber-100 px-2 py-0.5 text-amber-900">◐ Sebagian</span>;
   }
-  return <span className="rounded bg-red-100 px-2 py-0.5 text-red-800">✗ Salah</span>;
+  return <span className="rounded bg-red-100 px-2 py-0.5 text-red-800">✗ Incorrect</span>;
 }
 
 function ChevronIcon({ open }: { open?: boolean }) {

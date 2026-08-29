@@ -126,7 +126,7 @@ function EditorPane({
           onClick={handleRunTests}
           className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700"
         >
-          Jalankan test
+          Run tests
         </button>
         {testsPassed !== undefined && (
           <span className={testsPassed ? "text-emerald-700" : "text-red-600"}>

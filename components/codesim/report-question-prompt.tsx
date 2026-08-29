@@ -24,7 +24,7 @@ export function questionTypeLabel(type: string): string {
 }
 
 export function promptHeadline(prompt?: CodesimReportQuestionPrompt, type?: string): string {
-  if (!prompt) return "Soal";
+  if (!prompt) return "Question";
   if (prompt.title && prompt.title !== "Multiple Choice") {
     return prompt.title;
   }
@@ -36,7 +36,7 @@ export function promptHeadline(prompt?: CodesimReportQuestionPrompt, type?: stri
       return cleaned.length > 80 ? `${cleaned.slice(0, 77)}…` : cleaned;
     }
   }
-  return prompt.title ?? "Soal";
+  return prompt.title ?? "Question";
 }
 
 export function ReportQuestionPrompt({
@@ -49,7 +49,7 @@ export function ReportQuestionPrompt({
 
   return (
     <section className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Soal asli</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Original question</p>
       {prompt.title && prompt.title !== "Multiple Choice" && (
         <h4 className="mt-1 text-sm font-semibold text-slate-900">{prompt.title}</h4>
       )}
