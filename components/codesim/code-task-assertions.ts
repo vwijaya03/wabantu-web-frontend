@@ -147,7 +147,18 @@ function hasWrongExactLengthValidation(code: string, min: number): boolean {
   return new RegExp(`\\.length\\s*===?\\s*${min}\\b`).test(code);
 }
 
+function stripComments(code: string): string {
+  return code
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "");
+}
+
+function activeSource(code: string): string {
+  return stripComments(code);
+}
+
 function runOneAssertion(code: string, a: CodeAssertion): string | null {
+  const active = activeSource(code);
   switch (a.check) {
     case "has_testid": {
       const id = a.id ?? "hero";
@@ -229,32 +240,32 @@ function runOneAssertion(code: string, a: CodeAssertion): string | null {
       }
       return null;
     case "no_setstate_in_render": {
-      const body = code.replace(/^[\s\S]*?return\s*\(/, "");
+      const body = active.replace(/^[\s\S]*?return\s*\(/, "");
       if (/set[A-Z]\w*\s*\(/.test(body.split("onClick")[0] ?? body)) {
         return "Do not call setState in the render body — move it to an event handler";
       }
       return null;
     }
     case "use_effect_has_dependency_array":
-      if (!/useEffect/.test(code)) {
+      if (!/useEffect/.test(active)) {
         return "Fix requires useEffect with a dependency array (e.g. useEffect(() => { ... }, []))";
       }
-      if (!/useEffect\s*\([\s\S]*?,\s*\[[^\]]*\]\s*\)/.test(code)) {
-        return "useEffect must include a dependency array — add [] or the correct deps";
+      if (!/useEffect\s*\([\s\S]*?,\s*\[[^\]]*\]\s*\)/.test(active)) {
+        return "useEffect must include a dependency array — add [] or the correct deps (uncommented)";
       }
       return null;
     case "no_broken_onclick_setstate":
-      if (/onClick=\{[^}]*setCount\s*\(\s*[a-zA-Z]\w*\s*\+/.test(code)) {
+      if (/onClick=\{[^}]*setCount\s*\(\s*[a-zA-Z]\w*\s*\+/.test(active)) {
         return "onClick receives the click event — use setCount((n) => n + 1), not setCount(c + 1)";
       }
       return null;
     case "onclick_handler_reference":
-      if (/onClick=\{[^}]*\(\s*\)/.test(code)) {
+      if (/onClick=\{[^}]*\(\s*\)/.test(active)) {
         return "Pass a function reference to onClick (e.g. onClick={bump}), not onClick={bump()}";
       }
       return null;
     case "no_hooks_in_conditional":
-      if (/if\s*\([^)]+\)\s*\{[\s\S]*?use(?:State|Effect|Ref|Memo|Callback)\s*\(/.test(code)) {
+      if (/if\s*\([^)]+\)\s*\{[\s\S]*?use(?:State|Effect|Ref|Memo|Callback)\s*\(/.test(active)) {
         return "Hooks cannot be called inside if/loop — move them to the top level";
       }
       return null;
@@ -265,7 +276,7 @@ function runOneAssertion(code: string, a: CodeAssertion): string | null {
       return null;
     case "renders_prop": {
       const prop = a.prop ?? "subtitle";
-      if (new RegExp(`useState\\s*\\(\\s*${prop}\\s*\\)`).test(code) && !/useEffect/.test(code)) {
+      if (new RegExp(`useState\\s*\\(\\s*${prop}\\s*\\)`).test(active) && !/useEffect/.test(active)) {
         return `Do not copy prop ${prop} to state without syncing — render the prop directly or sync with useEffect`;
       }
       if (!new RegExp(`\\{${prop}\\}`).test(code)) {

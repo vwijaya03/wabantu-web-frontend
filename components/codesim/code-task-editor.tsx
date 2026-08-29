@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
+import { autocompletion } from "@codemirror/autocomplete";
 import {
   SandpackCodeEditor,
   SandpackLayout,
@@ -22,6 +23,7 @@ type Props = {
 };
 
 const EDITOR_HEIGHT = 480;
+const EDITOR_EXTENSIONS = [autocompletion()];
 
 const PREVIEW_BOOTSTRAP = `import React from "react";
 import { createRoot } from "react-dom/client";
@@ -116,6 +118,7 @@ function EditorPane({
           showTabs={false}
           showLineNumbers
           wrapContent
+          extensions={EDITOR_EXTENSIONS}
           style={{ minHeight: EDITOR_HEIGHT, height: EDITOR_HEIGHT }}
         />
         {showPreview && <SandpackPreview showNavigator={false} />}
@@ -136,6 +139,7 @@ function EditorPane({
         {sandpack.error && (
           <span className="text-xs text-red-600">Preview error — perbaiki dulu sebelum test lulus</span>
         )}
+        <span className="text-xs text-slate-500">Autocomplete: Ctrl+Space</span>
       </div>
     </>
   );
