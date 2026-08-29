@@ -7,10 +7,7 @@ import { codesimApi, type CodesimExamQuestion, type CodesimSession } from "@/lib
 import { ExamTimer } from "@/components/codesim/exam-timer";
 import { QuestionNavigator } from "@/components/codesim/question-nav";
 import { McqQuestion } from "@/components/codesim/mcq-question";
-import {
-  CodeTaskEditor,
-  runSimpleCodeCheck,
-} from "@/components/codesim/code-task-editor";
+import { CodeTaskEditor } from "@/components/codesim/code-task-editor";
 import {
   ProctoringBanner,
   ProctoringDisclaimer,
@@ -26,11 +23,14 @@ function ExamContent({ session }: { session: CodesimSession }) {
     session.answers?.mcq ?? {}
   );
   const [codeAnswers, setCodeAnswers] = useState<
-    Record<string, { sourceCode: string; testsPassed: boolean }>
+    Record<string, { sourceCode: string; testsPassed: boolean; testMessage?: string }>
   >(() => {
-    const initial: Record<string, { sourceCode: string; testsPassed: boolean }> = {};
+    const initial: Record<string, { sourceCode: string; testsPassed: boolean; testMessage?: string }> = {};
     for (const [k, v] of Object.entries(session.answers?.code ?? {})) {
-      initial[k] = { sourceCode: v.sourceCode, testsPassed: v.testsPassed };
+      initial[k] = {
+        sourceCode: v.sourceCode,
+        testsPassed: v.testsPassed,
+      };
     }
     return initial;
   });
@@ -115,21 +115,19 @@ function ExamContent({ session }: { session: CodesimSession }) {
             const key = String(currentQuestion.index);
             const next = {
               ...codeAnswers,
-              [key]: { sourceCode: code, testsPassed: codeAnswers[key]?.testsPassed ?? false },
+              [key]: { sourceCode: code, testsPassed: false, testMessage: undefined },
             };
             setCodeAnswers(next);
             scheduleSave(mcqAnswers, next);
-          }} onRunTests={() => {
+          }} onTestResult={(passed, message, code) => {
             const key = String(currentQuestion.index);
-            const src = codeAnswers[key]?.sourceCode ?? "";
-            const passed = runSimpleCodeCheck(src);
             const next = {
               ...codeAnswers,
-              [key]: { sourceCode: src, testsPassed: passed },
+              [key]: { sourceCode: code, testsPassed: passed, testMessage: message },
             };
             setCodeAnswers(next);
             scheduleSave(mcqAnswers, next);
-            toast[passed ? "success" : "error"](passed ? "Test lulus" : "Test gagal — pastikan export komponen React");
+            toast[passed ? "success" : "error"](message);
           }} />}
         </div>
       </div>
@@ -174,14 +172,14 @@ function QuestionPanel({
   codeAnswers,
   onMcqChange,
   onCodeChange,
-  onRunTests,
+  onTestResult,
 }: {
   question: CodesimExamQuestion;
   mcqAnswers: Record<string, string>;
-  codeAnswers: Record<string, { sourceCode: string; testsPassed: boolean }>;
+  codeAnswers: Record<string, { sourceCode: string; testsPassed: boolean; testMessage?: string }>;
   onMcqChange: (choiceId: string) => void;
   onCodeChange: (code: string) => void;
-  onRunTests: () => void;
+  onTestResult: (passed: boolean, message: string, code: string) => void;
 }) {
   const key = String(question.index);
 
@@ -218,9 +216,11 @@ function QuestionPanel({
       )}
       <CodeTaskEditor
         starterCode={codeAnswers[key]?.sourceCode || starter}
+        question={question}
         onChange={onCodeChange}
-        onRunTests={onRunTests}
+        onTestResult={onTestResult}
         testsPassed={codeAnswers[key]?.testsPassed}
+        testMessage={codeAnswers[key]?.testMessage}
       />
     </div>
   );
