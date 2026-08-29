@@ -8,6 +8,8 @@ const apiBackend = (
 const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react"],
+    // Rewrite /api/v1/* → Encore defaults to 30s; AI codesim generate needs longer.
+    proxyTimeout: 180_000,
   },
   // Emit a self-contained server bundle in `.next/standalone` so the
   // Docker runtime image can copy just `server.js` + minimal deps and

@@ -45,7 +45,9 @@ function shouldHandleSessionExpired(requestUrl?: string, config?: ApiRequestConf
   if (config?.skipSessionReauth) return false;
   const path = window.location.pathname;
   if (path.startsWith("/login") || path.startsWith("/register")) return false;
+  if (path.startsWith("/learn/simulation")) return false;
   const url = requestUrl ?? "";
+  if (url.includes("/codesim/")) return false;
   if (
     url.includes("/auth/login") ||
     url.includes("/auth/register") ||
