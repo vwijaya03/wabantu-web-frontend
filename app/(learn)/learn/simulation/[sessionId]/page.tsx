@@ -8,6 +8,7 @@ import { ExamTimer } from "@/components/codesim/exam-timer";
 import { QuestionNavigator } from "@/components/codesim/question-nav";
 import { McqQuestion } from "@/components/codesim/mcq-question";
 import { CodeTaskEditor } from "@/components/codesim/code-task-editor";
+import { runCodeTaskTests } from "@/components/codesim/code-task-runner";
 import { RichQuestionText } from "@/components/codesim/rich-question-text";
 import {
   ProctoringBanner,
@@ -66,7 +67,17 @@ function ExamContent({ session }: { session: CodesimSession }) {
     if (submitting) return;
     setSubmitting(true);
     try {
-      await persistAnswers(mcqAnswers, codeAnswers);
+      const finalCode = { ...codeAnswers };
+      for (const q of session.questions) {
+        if (q.type !== "react_build" && q.type !== "react_debug") continue;
+        const key = String(q.index);
+        const sourceCode = finalCode[key]?.sourceCode?.trim() ?? "";
+        if (!sourceCode) continue;
+        const { passed, message } = runCodeTaskTests(sourceCode, q, false);
+        finalCode[key] = { sourceCode, testsPassed: passed, testMessage: message };
+      }
+      setCodeAnswers(finalCode);
+      await persistAnswers(mcqAnswers, finalCode);
       await codesimApi.submitSession(session.id);
       toast.success("Tes disubmit");
       router.push(`/learn/simulation/${session.id}/report`);
@@ -74,7 +85,7 @@ function ExamContent({ session }: { session: CodesimSession }) {
       toast.error(e instanceof Error ? e.message : "Gagal submit");
       setSubmitting(false);
     }
-  }, [codeAnswers, mcqAnswers, persistAnswers, router, session.id, submitting]);
+  }, [codeAnswers, mcqAnswers, persistAnswers, router, session.id, session.questions, submitting]);
 
   const onExpire = useCallback(() => {
     toast.warning("Waktu habis — mengirim jawaban");

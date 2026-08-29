@@ -44,10 +44,6 @@ function SimulationSetupContent() {
   const [reuseSessionId, setReuseSessionId] = useState<string | null>(reuseFromQuery);
   const [examFormat, setExamFormat] = useState<CodesimExamFormat | null>(null);
   const [showMcqFilters, setShowMcqFilters] = useState(false);
-  const [hardBlueprints, setHardBlueprints] = useState<
-    Array<{ slug: string; title: string }>
-  >([]);
-  const [selectedBlueprintSlug, setSelectedBlueprintSlug] = useState("frontend-standard-v1");
 
   function clearPreview() {
     setPreviewId(null);
@@ -70,15 +66,8 @@ function SimulationSetupContent() {
       try {
         const catalog = await codesimApi.listTopics();
         const sessions = await codesimApi.listSessions(20);
-        const blueprints = await codesimApi.listBlueprints();
         if (cancelled) return;
         setAiHistory(sessions.filter((s) => s.source === "ai"));
-        setHardBlueprints(
-          blueprints
-            .filter((b) => b.slug.startsWith("tendem-hard-"))
-            .sort((a, b) => a.slug.localeCompare(b.slug))
-            .map((b) => ({ slug: b.slug, title: b.title })),
-        );
         setExamFormat(catalog.examFormat);
         setPresets(catalog.presets);
         setTags(catalog.tags);
@@ -206,7 +195,6 @@ function SimulationSetupContent() {
         session = await codesimApi.createSession({ reuseSessionId });
       } else {
         session = await codesimApi.createSession({
-          blueprintSlug: selectedBlueprintSlug,
           topics: selectedTopics.length > 0 ? selectedTopics : undefined,
           difficulty: selectedDifficulty || undefined,
           mcqCount: mcqCount !== (examFormat?.sections[0]?.count ?? 5) ? mcqCount : undefined,
@@ -439,37 +427,8 @@ function SimulationSetupContent() {
               {examFormat?.title ?? "Tendem — Frontend Developer"}
             </h2>
             <p className="text-xs text-slate-600">
-              {examMinutes} menit · {tendemQuestionTotal} soal · build & debug diacak dari bank
+              {examMinutes} menit · {tendemQuestionTotal} soal · hard sample diacak otomatis (30 variasi topik)
             </p>
-            {hardBlueprints.length > 0 && (
-              <div className="space-y-1">
-                <label htmlFor="blueprint-select" className="text-xs font-medium text-slate-700">
-                  Sample test pack (English, hard)
-                </label>
-                <select
-                  id="blueprint-select"
-                  value={selectedBlueprintSlug}
-                  onChange={(e) => {
-                    clearPreview();
-                    setSelectedBlueprintSlug(e.target.value);
-                    if (e.target.value.startsWith("tendem-hard-")) {
-                      setSelectedDifficulty("hard");
-                      setShowMcqFilters(false);
-                    }
-                  }}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-                >
-                  <option value="frontend-standard-v1">Standard — mixed difficulty</option>
-                  <optgroup label="Hard samples (Mindrift / Tendem style)">
-                    {hardBlueprints.map((bp) => (
-                      <option key={bp.slug} value={bp.slug}>
-                        {bp.title.replace("Tendem Frontend Developer — ", "")}
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
-              </div>
-            )}
             {examFormat && (
               <table className="w-full text-left text-sm text-slate-700">
                 <thead>

@@ -41,6 +41,32 @@ function inferAssertions(question: CodesimExamQuestion): CodeAssertion[] {
   if (question.type === "react_debug") {
     const code = question.debug?.brokenCode ?? "";
     const title = question.debug?.title ?? "";
+    if (title.includes("Effect Loop")) {
+      return [
+        { check: "has_testid", id: "hero" },
+        { check: "use_effect_has_dependency_array" },
+        { check: "no_broken_onclick_setstate" },
+      ];
+    }
+    if (title.includes("Click Handler")) {
+      return [
+        { check: "has_testid", id: "hero" },
+        { check: "onclick_handler_reference" },
+      ];
+    }
+    if (title.includes("Conditional Hook")) {
+      return [
+        { check: "has_testid", id: "hero" },
+        { check: "no_hooks_in_conditional" },
+      ];
+    }
+    if (title.includes("Missing Return")) {
+      return [
+        { check: "has_testid", id: "hero" },
+        { check: "has_explicit_return" },
+        { check: "renders_prop", prop: "title" },
+      ];
+    }
     if (title.includes("Missing Key") || /\.map\s*\([^)]*,\s*i\s*\)/.test(code)) {
       return [{ check: "no_index_list_key" }, { check: "stable_list_key" }];
     }
@@ -111,6 +137,16 @@ export function runCodeAssertions(
   };
 }
 
+function hasMinLengthValidation(code: string, min: number): boolean {
+  const lessThan = new RegExp(`(?:\\.length|trim\\(\\)\\.length)\\s*<\\s*${min}`);
+  const lessOrEqual = new RegExp(`(?:\\.length|trim\\(\\)\\.length)\\s*<=\\s*${min - 1}`);
+  return lessThan.test(code) || lessOrEqual.test(code);
+}
+
+function hasWrongExactLengthValidation(code: string, min: number): boolean {
+  return new RegExp(`\\.length\\s*===?\\s*${min}\\b`).test(code);
+}
+
 function runOneAssertion(code: string, a: CodeAssertion): string | null {
   switch (a.check) {
     case "has_testid": {
@@ -162,8 +198,11 @@ function runOneAssertion(code: string, a: CodeAssertion): string | null {
     }
     case "validates_min_length": {
       const min = a.min ?? 1;
-      if (!new RegExp(`length\\s*<\\s*${min}|\\.length\\s*<\\s*${min}`).test(code)) {
-        return `Add validation for minimum ${min} characters`;
+      if (hasWrongExactLengthValidation(code, min) && !hasMinLengthValidation(code, min)) {
+        return `Use a minimum-length check (e.g. value.length < ${min}), not exact equality (== ${min})`;
+      }
+      if (!hasMinLengthValidation(code, min)) {
+        return `Add validation for minimum ${min} characters (e.g. value.length < ${min})`;
       }
       return null;
     }
@@ -196,6 +235,34 @@ function runOneAssertion(code: string, a: CodeAssertion): string | null {
       }
       return null;
     }
+    case "use_effect_has_dependency_array":
+      if (!/useEffect/.test(code)) {
+        return "Fix requires useEffect with a dependency array (e.g. useEffect(() => { ... }, []))";
+      }
+      if (!/useEffect\s*\([\s\S]*?,\s*\[[^\]]*\]\s*\)/.test(code)) {
+        return "useEffect must include a dependency array — add [] or the correct deps";
+      }
+      return null;
+    case "no_broken_onclick_setstate":
+      if (/onClick=\{[^}]*setCount\s*\(\s*[a-zA-Z]\w*\s*\+/.test(code)) {
+        return "onClick receives the click event — use setCount((n) => n + 1), not setCount(c + 1)";
+      }
+      return null;
+    case "onclick_handler_reference":
+      if (/onClick=\{[^}]*\(\s*\)/.test(code)) {
+        return "Pass a function reference to onClick (e.g. onClick={bump}), not onClick={bump()}";
+      }
+      return null;
+    case "no_hooks_in_conditional":
+      if (/if\s*\([^)]+\)\s*\{[\s\S]*?use(?:State|Effect|Ref|Memo|Callback)\s*\(/.test(code)) {
+        return "Hooks cannot be called inside if/loop — move them to the top level";
+      }
+      return null;
+    case "has_explicit_return":
+      if (!/\breturn\s+</.test(code) && !/\breturn\s*\(/.test(code)) {
+        return "Component must return JSX (add return before the JSX)";
+      }
+      return null;
     case "renders_prop": {
       const prop = a.prop ?? "subtitle";
       if (new RegExp(`useState\\s*\\(\\s*${prop}\\s*\\)`).test(code) && !/useEffect/.test(code)) {
