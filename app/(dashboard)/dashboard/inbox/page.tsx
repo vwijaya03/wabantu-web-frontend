@@ -367,7 +367,7 @@ export default function InboxPage() {
       void qc.invalidateQueries({ queryKey: ["inbox-conversations", tenantKey] });
       void qc.invalidateQueries({ queryKey: [...INBOX_UNREAD_QUERY_KEY, tenantKey] });
     });
-  }, [qc, selectedId, selectedConversation, selectedConversation?.id, selectedConversation?.unreadCount]);
+  }, [qc, selectedId, selectedConversation, tenantKey]);
 
   const onSelectConversation = (c: InboxConversation) => {
     setSelectedId(c.id);
