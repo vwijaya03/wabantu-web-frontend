@@ -37,6 +37,49 @@ export interface StartRAGRolloutResponse {
   enqueued: number;
 }
 
+export interface TenantIndexingProgress {
+  tenantId: string;
+  kb: EntityIndexCounts;
+  catalog: EntityIndexCounts;
+  outbox: OutboxCounts;
+  percentComplete: number;
+  outboxPercentDone: number;
+  isComplete: boolean;
+  oldestPendingAt?: string;
+}
+
+export interface EntityIndexCounts {
+  pending: number;
+  indexed: number;
+  failed: number;
+  dlq: number;
+  total: number;
+}
+
+export interface OutboxCounts {
+  pending: number;
+  done: number;
+  failed: number;
+  dlq: number;
+  total: number;
+}
+
+export interface RetrievalObservabilitySnapshot {
+  requests: number;
+  fallbacks: number;
+  zeroHits: number;
+  fallbackRatio: number;
+  zeroHitRatio: number;
+  latencyP50Ms: number;
+  latencyP95Ms: number;
+  latencyP99Ms: number;
+  embedCacheHits: number;
+  embedCacheMisses: number;
+  embedCacheHitRatio: number;
+  indexingSuccess: number;
+  indexingFailure: number;
+}
+
 export const flagsApi = {
   async getRetrievalMode(tenantId: string): Promise<RetrievalModeResponse> {
     const { data } = await api.get<RetrievalModeResponse>(
@@ -86,6 +129,20 @@ export const flagsApi = {
   async cancelRAGRolloutJob(jobId: string): Promise<RAGRolloutJobSummary> {
     const { data } = await api.post<RAGRolloutJobSummary>(
       `/api/v1/flags/retrieval-rollout/jobs/${encodeURIComponent(jobId)}/cancel`,
+    );
+    return data;
+  },
+
+  async getRetrievalIndexingProgress(tenantId: string): Promise<TenantIndexingProgress> {
+    const { data } = await api.get<TenantIndexingProgress>(
+      `/api/v1/flags/retrieval-indexing/${encodeURIComponent(tenantId)}`,
+    );
+    return data;
+  },
+
+  async getRetrievalObservability(): Promise<{ metrics: RetrievalObservabilitySnapshot }> {
+    const { data } = await api.get<{ metrics: RetrievalObservabilitySnapshot }>(
+      "/api/v1/flags/retrieval-observability",
     );
     return data;
   },

@@ -20,7 +20,7 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi, type AdminTenant } from "@/lib/api/admin";
 import { toApiError } from "@/lib/api/client";
-import { flagsApi, type RAGRolloutScope, type RetrievalMode } from "@/lib/api/flags";
+import { flagsApi, type RAGRolloutScope, type RetrievalMode, type TenantIndexingProgress } from "@/lib/api/flags";
 
 const MODE_LABELS: Record<RetrievalMode, string> = {
   disabled: "Lexical (lama)",
@@ -48,6 +48,38 @@ function modeBadgeVariant(mode: RetrievalMode): "default" | "secondary" | "outli
   }
 }
 
+function IndexingProgressBar({ progress }: { progress: TenantIndexingProgress }) {
+  if (progress.isComplete) {
+    return (
+      <p className="w-full text-xs text-muted-foreground">
+        Indexing selesai · {progress.kb.indexed} KB + {progress.catalog.indexed} katalog ter-embed
+      </p>
+    );
+  }
+  return (
+    <div className="w-full space-y-1">
+      <div className="flex flex-wrap justify-between gap-1 text-xs text-muted-foreground">
+        <span>
+          Indexing {progress.percentComplete}% · outbox {progress.outboxPercentDone}%
+        </span>
+        <span>
+          {progress.outbox.pending} antrian · {progress.kb.pending + progress.catalog.pending} entitas
+          pending
+          {(progress.kb.failed + progress.catalog.failed + progress.outbox.failed) > 0
+            ? ` · ${progress.kb.failed + progress.catalog.failed + progress.outbox.failed} gagal`
+            : ""}
+        </span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full bg-primary/80 transition-all"
+          style={{ width: `${progress.percentComplete}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function TenantRetrievalRow({
   tenant,
   onUpdated,
@@ -55,6 +87,7 @@ function TenantRetrievalRow({
   tenant: AdminTenant;
   onUpdated: () => void;
 }) {
+  const qc = useQueryClient();
   const modeQuery = useQuery({
     queryKey: ["retrieval-mode", tenant.id],
     queryFn: () => flagsApi.getRetrievalMode(tenant.id),
@@ -64,12 +97,21 @@ function TenantRetrievalRow({
   const [pendingMode, setPendingMode] = useState<RetrievalMode | null>(null);
   const currentMode = modeQuery.data?.mode ?? "disabled";
   const selectedMode = pendingMode ?? currentMode;
+  const trackIndexing = currentMode === "shadow" || currentMode === "vector";
+
+  const indexingQuery = useQuery({
+    queryKey: ["retrieval-indexing", tenant.id],
+    queryFn: () => flagsApi.getRetrievalIndexingProgress(tenant.id),
+    enabled: trackIndexing,
+    refetchInterval: (q) => (q.state.data?.isComplete ? false : 3000),
+  });
 
   const saveMut = useMutation({
     mutationFn: (mode: RetrievalMode) => flagsApi.setRetrievalMode(tenant.id, mode),
     onSuccess: (r) => {
       setPendingMode(null);
       onUpdated();
+      void qc.invalidateQueries({ queryKey: ["retrieval-indexing", tenant.id] });
       toast.success(
         `${tenant.companyName}: ${MODE_LABELS[r.previous]} → ${MODE_LABELS[r.mode]}` +
           (r.kbEnqueued + r.catalogEnqueued > 0
@@ -81,7 +123,8 @@ function TenantRetrievalRow({
   });
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded border p-3 text-sm">
+    <div className="space-y-2 rounded border p-3 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="min-w-0">
         <p className="font-medium">{tenant.companyName}</p>
         <p className="text-muted-foreground">{tenant.ownerEmail || "—"}</p>
@@ -120,7 +163,66 @@ function TenantRetrievalRow({
           {saveMut.isPending ? "Menyimpan…" : "Simpan"}
         </Button>
       </div>
+      </div>
+      {trackIndexing && indexingQuery.data ? (
+        <IndexingProgressBar progress={indexingQuery.data} />
+      ) : trackIndexing && indexingQuery.isLoading ? (
+        <p className="text-xs text-muted-foreground">Memuat progress indexing…</p>
+      ) : null}
     </div>
+  );
+}
+
+function ObservabilityPanel() {
+  const obsQuery = useQuery({
+    queryKey: ["retrieval-observability"],
+    queryFn: () => flagsApi.getRetrievalObservability(),
+    refetchInterval: 5000,
+  });
+  const m = obsQuery.data?.metrics;
+  if (!m) {
+    return null;
+  }
+  return (
+    <Card className="mb-4">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Observability retrieval (proses ini)</CardTitle>
+        <CardDescription>
+          Counter in-process + Encore metrics. Reset saat deploy/restart instance.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded border p-2">
+          <p className="text-xs text-muted-foreground">Query</p>
+          <p className="font-medium">{m.requests} req</p>
+          <p className="text-xs text-muted-foreground">
+            fallback {(m.fallbackRatio * 100).toFixed(1)}% · zero {(m.zeroHitRatio * 100).toFixed(1)}%
+          </p>
+        </div>
+        <div className="rounded border p-2">
+          <p className="text-xs text-muted-foreground">Latency</p>
+          <p className="font-medium">
+            p50 {m.latencyP50Ms}ms · p95 {m.latencyP95Ms}ms
+          </p>
+          <p className="text-xs text-muted-foreground">p99 {m.latencyP99Ms}ms</p>
+        </div>
+        <div className="rounded border p-2">
+          <p className="text-xs text-muted-foreground">Query embed cache</p>
+          <p className="font-medium">
+            hit {(m.embedCacheHitRatio * 100).toFixed(1)}%
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {m.embedCacheHits} hit · {m.embedCacheMisses} miss
+          </p>
+        </div>
+        <div className="rounded border p-2">
+          <p className="text-xs text-muted-foreground">Indexing worker</p>
+          <p className="font-medium">
+            {m.indexingSuccess} ok · {m.indexingFailure} gagal
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -358,6 +460,8 @@ export default function AIRetrievalAdminPage() {
       </Card>
 
       <BulkRolloutPanel onJobDone={() => void refetch()} />
+
+      <ObservabilityPanel />
 
       <Card>
         <CardHeader>
