@@ -1,0 +1,258 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Database, Loader2, Search } from "lucide-react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/dashboard/page-header";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAuth } from "@/components/providers/auth-provider";
+import { adminApi, type AdminTenant } from "@/lib/api/admin";
+import { toApiError } from "@/lib/api/client";
+import { flagsApi, type RetrievalMode } from "@/lib/api/flags";
+
+const MODE_LABELS: Record<RetrievalMode, string> = {
+  disabled: "Lexical (lama)",
+  shadow: "Shadow RAG",
+  vector: "Vector RAG (produksi)",
+};
+
+const MODE_DESCRIPTIONS: Record<RetrievalMode, string> = {
+  disabled:
+    "Hanya pencocokan kata kunci / lexical seperti sebelum RAG. Tidak ada embedding atau Pinecone.",
+  shadow:
+    "Jalankan retrieval vector secara paralel untuk observasi; jawaban ke customer tetap dari lexical.",
+  vector:
+    "Hybrid retrieval (BM25 + vector) aktif untuk KB dan katalog. Backfill otomatis saat diaktifkan.",
+};
+
+function modeBadgeVariant(mode: RetrievalMode): "default" | "secondary" | "outline" {
+  switch (mode) {
+    case "vector":
+      return "default";
+    case "shadow":
+      return "secondary";
+    default:
+      return "outline";
+  }
+}
+
+function TenantRetrievalRow({
+  tenant,
+  onUpdated,
+}: {
+  tenant: AdminTenant;
+  onUpdated: () => void;
+}) {
+  const modeQuery = useQuery({
+    queryKey: ["retrieval-mode", tenant.id],
+    queryFn: () => flagsApi.getRetrievalMode(tenant.id),
+    staleTime: 30_000,
+  });
+
+  const [pendingMode, setPendingMode] = useState<RetrievalMode | null>(null);
+  const currentMode = modeQuery.data?.mode ?? "disabled";
+  const selectedMode = pendingMode ?? currentMode;
+
+  const saveMut = useMutation({
+    mutationFn: (mode: RetrievalMode) => flagsApi.setRetrievalMode(tenant.id, mode),
+    onSuccess: (r) => {
+      setPendingMode(null);
+      onUpdated();
+      toast.success(
+        `${tenant.companyName}: ${MODE_LABELS[r.previous]} → ${MODE_LABELS[r.mode]}` +
+          (r.kbEnqueued + r.catalogEnqueued > 0
+            ? ` · ${r.kbEnqueued} KB + ${r.catalogEnqueued} katalog diantrekan`
+            : ""),
+      );
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded border p-3 text-sm">
+      <div className="min-w-0">
+        <p className="font-medium">{tenant.companyName}</p>
+        <p className="text-muted-foreground">{tenant.ownerEmail || "—"}</p>
+        <p className="font-mono text-xs text-muted-foreground">{tenant.schemaName}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {modeQuery.isLoading ? (
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        ) : (
+          <Badge variant={modeBadgeVariant(currentMode)}>{MODE_LABELS[currentMode]}</Badge>
+        )}
+        <Select
+          value={selectedMode}
+          disabled={!tenant.isActive || saveMut.isPending || modeQuery.isLoading}
+          onValueChange={(v) => setPendingMode(v as RetrievalMode)}
+        >
+          <SelectTrigger className="h-9 w-[200px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="disabled">{MODE_LABELS.disabled}</SelectItem>
+            <SelectItem value="shadow">{MODE_LABELS.shadow}</SelectItem>
+            <SelectItem value="vector">{MODE_LABELS.vector}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button
+          size="sm"
+          disabled={
+            !tenant.isActive ||
+            saveMut.isPending ||
+            modeQuery.isLoading ||
+            selectedMode === currentMode
+          }
+          onClick={() => saveMut.mutate(selectedMode)}
+        >
+          {saveMut.isPending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export default function AIRetrievalAdminPage() {
+  const { user } = useAuth();
+  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["admin-tenants-retrieval", search, page, pageSize],
+    queryFn: () => adminApi.listTenants({ q: search || undefined, page, pageSize }),
+    enabled: user?.role === "super_admin",
+  });
+
+  const tenants = data?.tenants ?? [];
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil((data?.total ?? 0) / pageSize)),
+    [data?.total],
+  );
+
+  if (user?.role !== "super_admin") {
+    return (
+      <PageHeader title="AI Retrieval" description="Akses super admin diperlukan." />
+    );
+  }
+
+  return (
+    <>
+      <PageHeader
+        title="AI Retrieval (RAG)"
+        description="Kelola mode retrieval per tenant — lexical, shadow, atau vector dengan backfill otomatis."
+      />
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Button variant="outline" asChild>
+          <Link href="/dashboard/admin">← Konsol Platform</Link>
+        </Button>
+      </div>
+
+      <Card className="mb-4 border-primary/20 bg-primary/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Database className="size-4" />
+            Mode retrieval
+          </CardTitle>
+          <CardDescription>
+            Tenant baru otomatis mendapat mode <strong>vector</strong> saat signup. Mengaktifkan
+            shadow/vector akan mengantrekan re-index untuk entri KB dan katalog yang belum
+            ter-embed.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
+          {(Object.keys(MODE_LABELS) as RetrievalMode[]).map((mode) => (
+            <div key={mode} className="rounded border bg-background p-3">
+              <p className="font-medium text-foreground">{MODE_LABELS[mode]}</p>
+              <p className="mt-1 text-xs">{MODE_DESCRIPTIONS[mode]}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tenant ({data?.total ?? 0})</CardTitle>
+          <CardDescription>Pilih mode retrieval dan klik Simpan. Tidak perlu cURL.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setPage(1);
+                    setSearch(q.trim());
+                  }
+                }}
+                placeholder="Cari tenant, email owner, atau schema…"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPage(1);
+                setSearch(q.trim());
+              }}
+            >
+              Cari
+            </Button>
+          </div>
+
+          {isLoading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Memuat…</p>
+          ) : tenants.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Tenant tidak ditemukan.</p>
+          ) : (
+            tenants.map((t) => (
+              <TenantRetrievalRow key={t.id} tenant={t} onUpdated={() => void refetch()} />
+            ))
+          )}
+
+          {(data?.total ?? 0) > pageSize && (
+            <div className="flex items-center justify-between pt-3 text-sm text-muted-foreground">
+              <span>
+                Halaman {page} dari {totalPages}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Sebelumnya
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Berikutnya
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
+}
