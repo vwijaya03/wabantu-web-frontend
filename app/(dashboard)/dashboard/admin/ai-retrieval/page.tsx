@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Database, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi, type AdminTenant } from "@/lib/api/admin";
 import { toApiError } from "@/lib/api/client";
-import { flagsApi, type RetrievalMode } from "@/lib/api/flags";
+import { flagsApi, type RAGRolloutScope, type RetrievalMode } from "@/lib/api/flags";
 
 const MODE_LABELS: Record<RetrievalMode, string> = {
   disabled: "Lexical (lama)",
@@ -124,6 +124,179 @@ function TenantRetrievalRow({
   );
 }
 
+function BulkRolloutPanel({ onJobDone }: { onJobDone: () => void }) {
+  const qc = useQueryClient();
+  const [rolloutMode, setRolloutMode] = useState<"shadow" | "vector">("shadow");
+  const [scope, setScope] = useState<RAGRolloutScope>("lexical_only");
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+
+  const activeJobsQuery = useQuery({
+    queryKey: ["rag-rollout-active-jobs"],
+    queryFn: () => flagsApi.listActiveRAGRolloutJobs(),
+    refetchInterval: 3000,
+  });
+
+  const serverJobId =
+    activeJobsQuery.data?.jobs.find(
+      (j) => j.status === "pending" || j.status === "running",
+    )?.jobId ?? null;
+  const trackedJobId = activeJobId ?? serverJobId;
+
+  const jobQuery = useQuery({
+    queryKey: ["rag-rollout-job", trackedJobId],
+    queryFn: () => flagsApi.getRAGRolloutJob(trackedJobId!),
+    enabled: Boolean(trackedJobId),
+    refetchInterval: trackedJobId ? 2000 : false,
+  });
+
+  const rolloutInProgress =
+    Boolean(trackedJobId) &&
+    (jobQuery.data?.status === "pending" || jobQuery.data?.status === "running");
+
+  const startMut = useMutation({
+    mutationFn: () =>
+      flagsApi.startRAGRollout({
+        mode: rolloutMode,
+        scope,
+        tenantDelayMs: 2000,
+      }),
+    onSuccess: (r) => {
+      if (r.jobId) {
+        setActiveJobId(r.jobId);
+        void qc.invalidateQueries({ queryKey: ["rag-rollout-active-jobs"] });
+        toast.info(`Rollout diantrekan (${r.enqueued} tenant)…`);
+      } else {
+        toast.info("Tidak ada tenant yang perlu di-rollout.");
+      }
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const cancelMut = useMutation({
+    mutationFn: (jobId: string) => flagsApi.cancelRAGRolloutJob(jobId),
+    onSuccess: () => {
+      setActiveJobId(null);
+      void qc.invalidateQueries({ queryKey: ["rag-rollout-active-jobs"] });
+      toast.info("Job rollout dibatalkan.");
+      onJobDone();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
+  const job = jobQuery.data;
+
+  useEffect(() => {
+    if (
+      job &&
+      activeJobId === job.jobId &&
+      (job.status === "completed" || job.status === "cancelled")
+    ) {
+      const t = window.setTimeout(() => {
+        setActiveJobId(null);
+        onJobDone();
+        if (job.status === "completed") {
+          toast.success(
+            `Rollout selesai: ${job.doneCount} tenant, ${job.kbEnqueuedTotal} KB + ${job.catalogEnqueuedTotal} katalog diantrekan.`,
+          );
+        }
+      }, 500);
+      return () => window.clearTimeout(t);
+    }
+  }, [job, activeJobId, onJobDone]);
+
+  const progressPct =
+    job && job.totalCount > 0
+      ? Math.round(((job.doneCount + job.failedCount) / job.totalCount) * 100)
+      : 0;
+
+  return (
+    <Card className="mb-4">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Rollout massal (aman)</CardTitle>
+        <CardDescription>
+          Proses per tenant via antrian async dengan jeda antar tenant. Canary: mulai dengan mode{" "}
+          <strong>shadow</strong> + scope <strong>hanya lexical</strong>, pantau progress, lalu
+          ulangi untuk <strong>vector</strong>.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          <Select
+            value={rolloutMode}
+            disabled={rolloutInProgress || startMut.isPending}
+            onValueChange={(v) => setRolloutMode(v as "shadow" | "vector")}
+          >
+            <SelectTrigger className="h-9 w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="shadow">Shadow RAG</SelectItem>
+              <SelectItem value="vector">Vector RAG</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={scope}
+            disabled={rolloutInProgress || startMut.isPending}
+            onValueChange={(v) => setScope(v as RAGRolloutScope)}
+          >
+            <SelectTrigger className="h-9 w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="lexical_only">Hanya tenant lexical</SelectItem>
+              <SelectItem value="all_active">Semua tenant aktif</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            disabled={rolloutInProgress || startMut.isPending}
+            onClick={() => startMut.mutate()}
+          >
+            {startMut.isPending ? "Memulai…" : "Mulai rollout"}
+          </Button>
+          {rolloutInProgress && job ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={cancelMut.isPending}
+              onClick={() => cancelMut.mutate(job.jobId)}
+            >
+              Batalkan
+            </Button>
+          ) : null}
+        </div>
+
+        {job && trackedJobId ? (
+          <div className="space-y-2 rounded border p-3 text-sm">
+            <div className="flex flex-wrap justify-between gap-2">
+              <span>
+                Job {job.jobId.slice(0, 8)}… · {job.mode} · {job.scope}
+              </span>
+              <Badge variant="outline">{job.status}</Badge>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <p className="text-muted-foreground">
+              {job.doneCount} selesai · {job.failedCount} gagal · {job.totalCount} total ·{" "}
+              {job.kbEnqueuedTotal} KB + {job.catalogEnqueuedTotal} katalog diantrekan
+            </p>
+            {(job.recentErrors?.length ?? 0) > 0 ? (
+              <ul className="list-inside list-disc text-xs text-destructive">
+                {job.recentErrors!.map((err) => (
+                  <li key={err}>{err}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AIRetrievalAdminPage() {
   const { user } = useAuth();
   const [q, setQ] = useState("");
@@ -183,6 +356,8 @@ export default function AIRetrievalAdminPage() {
           ))}
         </CardContent>
       </Card>
+
+      <BulkRolloutPanel onJobDone={() => void refetch()} />
 
       <Card>
         <CardHeader>

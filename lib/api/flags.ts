@@ -2,6 +2,8 @@ import { api } from "./client";
 
 export type RetrievalMode = "disabled" | "shadow" | "vector";
 
+export type RAGRolloutScope = "selected" | "all_active" | "lexical_only";
+
 export interface RetrievalModeResponse {
   tenantId: string;
   mode: RetrievalMode;
@@ -11,6 +13,28 @@ export interface SetRetrievalModeResponse extends RetrievalModeResponse {
   previous: RetrievalMode;
   kbEnqueued: number;
   catalogEnqueued: number;
+}
+
+export interface RAGRolloutJobSummary {
+  jobId: string;
+  mode: "shadow" | "vector";
+  scope: RAGRolloutScope;
+  status: string;
+  totalCount: number;
+  doneCount: number;
+  failedCount: number;
+  kbEnqueuedTotal: number;
+  catalogEnqueuedTotal: number;
+  tenantDelayMs: number;
+  startedBy?: string;
+  createdAt: string;
+  completedAt?: string;
+  recentErrors?: string[];
+}
+
+export interface StartRAGRolloutResponse {
+  jobId: string;
+  enqueued: number;
 }
 
 export const flagsApi = {
@@ -29,6 +53,40 @@ export const flagsApi = {
       tenantId,
       mode,
     });
+    return data;
+  },
+
+  async startRAGRollout(input: {
+    mode: "shadow" | "vector";
+    scope: RAGRolloutScope;
+    tenantIds?: string[];
+    tenantDelayMs?: number;
+  }): Promise<StartRAGRolloutResponse> {
+    const { data } = await api.post<StartRAGRolloutResponse>(
+      "/api/v1/flags/retrieval-rollout",
+      input,
+    );
+    return data;
+  },
+
+  async getRAGRolloutJob(jobId: string): Promise<RAGRolloutJobSummary> {
+    const { data } = await api.get<RAGRolloutJobSummary>(
+      `/api/v1/flags/retrieval-rollout/jobs/${encodeURIComponent(jobId)}`,
+    );
+    return data;
+  },
+
+  async listActiveRAGRolloutJobs(): Promise<{ jobs: RAGRolloutJobSummary[] }> {
+    const { data } = await api.get<{ jobs: RAGRolloutJobSummary[] }>(
+      "/api/v1/flags/retrieval-rollout/active-jobs",
+    );
+    return data;
+  },
+
+  async cancelRAGRolloutJob(jobId: string): Promise<RAGRolloutJobSummary> {
+    const { data } = await api.post<RAGRolloutJobSummary>(
+      `/api/v1/flags/retrieval-rollout/jobs/${encodeURIComponent(jobId)}/cancel`,
+    );
     return data;
   },
 };
