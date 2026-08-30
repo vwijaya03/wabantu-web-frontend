@@ -168,9 +168,10 @@ export default function AIRetrievalAdminPage() {
             Mode retrieval
           </CardTitle>
           <CardDescription>
-            Tenant baru otomatis mendapat mode <strong>vector</strong> saat signup. Mengaktifkan
-            shadow/vector akan mengantrekan re-index untuk entri KB dan katalog yang belum
-            ter-embed.
+            Tenant baru otomatis mode <strong>vector</strong>. Mengaktifkan shadow/vector
+            mengantrekan re-index semua entri KB/katalog yang belum ter-embed (sekali klik,
+            tanpa aksi dari client). Pastikan schema tenant sudah di-migrasi (patch v2) lewat
+            Konsol Platform jika tenant masih tertinggal.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
