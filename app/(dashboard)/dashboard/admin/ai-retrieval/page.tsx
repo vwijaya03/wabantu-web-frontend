@@ -95,8 +95,8 @@ function TenantRetrievalRow({
   });
 
   const [pendingMode, setPendingMode] = useState<RetrievalMode | null>(null);
-  const currentMode = modeQuery.data?.mode ?? "disabled";
-  const selectedMode = pendingMode ?? currentMode;
+  const currentMode = modeQuery.data?.mode;
+  const selectedMode = pendingMode ?? currentMode ?? "disabled";
   const trackIndexing = currentMode === "shadow" || currentMode === "vector";
 
   const indexingQuery = useQuery({
@@ -110,6 +110,10 @@ function TenantRetrievalRow({
     mutationFn: (mode: RetrievalMode) => flagsApi.setRetrievalMode(tenant.id, mode),
     onSuccess: (r) => {
       setPendingMode(null);
+      qc.setQueryData(["retrieval-mode", tenant.id], {
+        tenantId: tenant.id,
+        mode: r.mode,
+      });
       onUpdated();
       void qc.invalidateQueries({ queryKey: ["retrieval-indexing", tenant.id] });
       toast.success(
@@ -133,12 +137,25 @@ function TenantRetrievalRow({
       <div className="flex flex-wrap items-center gap-2">
         {modeQuery.isLoading ? (
           <Loader2 className="size-4 animate-spin text-muted-foreground" />
-        ) : (
+        ) : modeQuery.isError ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-destructive">Gagal memuat mode</span>
+            <Button variant="outline" size="sm" onClick={() => void modeQuery.refetch()}>
+              Coba lagi
+            </Button>
+          </div>
+        ) : currentMode ? (
           <Badge variant={modeBadgeVariant(currentMode)}>{MODE_LABELS[currentMode]}</Badge>
-        )}
+        ) : null}
         <Select
           value={selectedMode}
-          disabled={!tenant.isActive || saveMut.isPending || modeQuery.isLoading}
+          disabled={
+            !tenant.isActive ||
+            saveMut.isPending ||
+            modeQuery.isLoading ||
+            modeQuery.isError ||
+            !currentMode
+          }
           onValueChange={(v) => setPendingMode(v as RetrievalMode)}
         >
           <SelectTrigger className="h-9 w-[200px]">
@@ -156,6 +173,8 @@ function TenantRetrievalRow({
             !tenant.isActive ||
             saveMut.isPending ||
             modeQuery.isLoading ||
+            modeQuery.isError ||
+            !currentMode ||
             selectedMode === currentMode
           }
           onClick={() => saveMut.mutate(selectedMode)}
@@ -235,7 +254,13 @@ function BulkRolloutPanel({ onJobDone }: { onJobDone: () => void }) {
   const activeJobsQuery = useQuery({
     queryKey: ["rag-rollout-active-jobs"],
     queryFn: () => flagsApi.listActiveRAGRolloutJobs(),
-    refetchInterval: 3000,
+    refetchInterval: (query) => {
+      const jobs = query.state.data?.jobs ?? [];
+      const hasActive = jobs.some(
+        (j) => j.status === "pending" || j.status === "running",
+      );
+      return hasActive ? 3000 : false;
+    },
   });
 
   const serverJobId =

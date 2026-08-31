@@ -83,7 +83,7 @@ export interface RetrievalObservabilitySnapshot {
 export const flagsApi = {
   async getRetrievalMode(tenantId: string): Promise<RetrievalModeResponse> {
     const { data } = await api.get<RetrievalModeResponse>(
-      `/api/v1/flags/retrieval-mode/${encodeURIComponent(tenantId)}`,
+      `/flags/retrieval-mode/${encodeURIComponent(tenantId)}`,
     );
     return data;
   },
@@ -92,7 +92,7 @@ export const flagsApi = {
     tenantId: string,
     mode: RetrievalMode,
   ): Promise<SetRetrievalModeResponse> {
-    const { data } = await api.put<SetRetrievalModeResponse>("/api/v1/flags/retrieval-mode", {
+    const { data } = await api.put<SetRetrievalModeResponse>("/flags/retrieval-mode", {
       tenantId,
       mode,
     });
@@ -106,7 +106,7 @@ export const flagsApi = {
     tenantDelayMs?: number;
   }): Promise<StartRAGRolloutResponse> {
     const { data } = await api.post<StartRAGRolloutResponse>(
-      "/api/v1/flags/retrieval-rollout",
+      "/flags/retrieval-rollout",
       input,
     );
     return data;
@@ -114,35 +114,35 @@ export const flagsApi = {
 
   async getRAGRolloutJob(jobId: string): Promise<RAGRolloutJobSummary> {
     const { data } = await api.get<RAGRolloutJobSummary>(
-      `/api/v1/flags/retrieval-rollout/jobs/${encodeURIComponent(jobId)}`,
+      `/flags/retrieval-rollout/jobs/${encodeURIComponent(jobId)}`,
     );
     return data;
   },
 
   async listActiveRAGRolloutJobs(): Promise<{ jobs: RAGRolloutJobSummary[] }> {
     const { data } = await api.get<{ jobs: RAGRolloutJobSummary[] }>(
-      "/api/v1/flags/retrieval-rollout/active-jobs",
+      "/flags/retrieval-rollout/active-jobs",
     );
     return data;
   },
 
   async cancelRAGRolloutJob(jobId: string): Promise<RAGRolloutJobSummary> {
     const { data } = await api.post<RAGRolloutJobSummary>(
-      `/api/v1/flags/retrieval-rollout/jobs/${encodeURIComponent(jobId)}/cancel`,
+      `/flags/retrieval-rollout/jobs/${encodeURIComponent(jobId)}/cancel`,
     );
     return data;
   },
 
   async getRetrievalIndexingProgress(tenantId: string): Promise<TenantIndexingProgress> {
     const { data } = await api.get<TenantIndexingProgress>(
-      `/api/v1/flags/retrieval-indexing/${encodeURIComponent(tenantId)}`,
+      `/flags/retrieval-indexing/${encodeURIComponent(tenantId)}`,
     );
     return data;
   },
 
   async getRetrievalObservability(): Promise<{ metrics: RetrievalObservabilitySnapshot }> {
     const { data } = await api.get<{ metrics: RetrievalObservabilitySnapshot }>(
-      "/api/v1/flags/retrieval-observability",
+      "/flags/retrieval-observability",
     );
     return data;
   },
