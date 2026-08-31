@@ -6,8 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { CatalogImportDraftTable } from "@/components/catalog/catalog-import-draft-table";
 import { PageHeader } from "@/components/dashboard/page-header";
 import {
   catalogImageApi,
@@ -337,49 +336,8 @@ export default function CatalogImportImagePage() {
           <CardHeader>
             <CardTitle>Pratinjau produk</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {items.map((row, idx) => (
-              <div key={`${row.externalCode}-${idx}`} className="grid gap-2 rounded border p-3 md:grid-cols-12 md:items-end">
-                <div className="flex items-center gap-2 md:col-span-1">
-                  <input
-                    type="checkbox"
-                    checked={row.include}
-                    onChange={(e) => updateItem(idx, { include: e.target.checked })}
-                    aria-label="Sertakan"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label className="text-xs">SKU / Kode</Label>
-                  <Input
-                    value={row.externalCode}
-                    onChange={(e) => updateItem(idx, { externalCode: e.target.value })}
-                  />
-                </div>
-                <div className="md:col-span-5">
-                  <Label className="text-xs">Nama</Label>
-                  <Input value={row.name} onChange={(e) => updateItem(idx, { name: e.target.value })} />
-                </div>
-                <div className="md:col-span-2">
-                  <Label className="text-xs">Harga (IDR)</Label>
-                  <Input
-                    type="number"
-                    value={row.sellPrice ?? ""}
-                    onChange={(e) =>
-                      updateItem(idx, {
-                        sellPrice: e.target.value === "" ? undefined : Number(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label className="text-xs">Satuan</Label>
-                  <Input
-                    value={row.sellUnit ?? "pcs"}
-                    onChange={(e) => updateItem(idx, { sellUnit: e.target.value })}
-                  />
-                </div>
-              </div>
-            ))}
+          <CardContent>
+            <CatalogImportDraftTable items={items} onUpdateItem={updateItem} />
           </CardContent>
         </Card>
       ) : null}

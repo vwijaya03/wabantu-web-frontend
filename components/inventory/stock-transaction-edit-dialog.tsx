@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ItemPicker, type PickedItem } from "@/components/inventory/item-picker";
 import { WarehouseSelect } from "@/components/inventory/warehouse-select";
 import { inventoryApi, formatIDR, type StockTransaction } from "@/lib/api/inventory";
@@ -53,22 +53,24 @@ export function StockTransactionEditDialog({
 
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+        <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 pr-12 text-left">
+          <DialogTitle className="leading-snug">
             {txn ? `Edit ${txn.docNo} · ${KIND_LABELS[txn.kind]}` : "Memuat..."}
           </DialogTitle>
-          {txn ? (
-            <DialogDescription className="sr-only">
-              Form edit transaksi {txn.docNo}
-            </DialogDescription>
-          ) : null}
+          <DialogDescription>
+            {txn
+              ? `Perubahan disimpan pada nomor dokumen yang sama (${txn.docNo}).`
+              : "Memuat detail transaksi stok untuk diedit."}
+          </DialogDescription>
         </DialogHeader>
-        {isLoading || !txn ? (
-          <p className="text-sm text-muted-foreground">Memuat...</p>
-        ) : (
-          <EditForm key={txn.id} txn={txn} saving={mut.isPending} onSave={(body) => mut.mutate(body)} />
-        )}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          {isLoading || !txn ? (
+            <p className="text-sm text-muted-foreground">Memuat...</p>
+          ) : (
+            <EditForm key={txn.id} txn={txn} saving={mut.isPending} onSave={(body) => mut.mutate(body)} />
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -126,18 +128,20 @@ function AdjustmentEdit({ txn, saving, onSave }: { txn: StockTransaction; saving
         ) : null}
       </div>
       <Field label="Alasan"><Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} /></Field>
-      <Button
-        disabled={!valid || saving}
-        onClick={() => onSave({
-          catalogItemId: item!.id,
-          warehouseId,
-          qty: direction === "in" ? qtyNum : -qtyNum,
-          unitCost: direction === "in" ? Number(unitCost) || 0 : undefined,
-          note,
-        })}
-      >
-        {saving ? "Menyimpan..." : "Simpan Perubahan"}
-      </Button>
+      <DialogFooter className="px-0 sm:justify-start">
+        <Button
+          disabled={!valid || saving}
+          onClick={() => onSave({
+            catalogItemId: item!.id,
+            warehouseId,
+            qty: direction === "in" ? qtyNum : -qtyNum,
+            unitCost: direction === "in" ? Number(unitCost) || 0 : undefined,
+            note,
+          })}
+        >
+          {saving ? "Menyimpan..." : "Simpan Perubahan"}
+        </Button>
+      </DialogFooter>
     </div>
   );
 }
@@ -163,18 +167,20 @@ function TransferEdit({ txn, saving, onSave }: { txn: StockTransaction; saving: 
       </div>
       <Field label="Jumlah"><Input type="number" min="0" step="any" value={qty} onChange={(e) => setQty(e.target.value)} /></Field>
       <Field label="Catatan"><Input value={note} onChange={(e) => setNote(e.target.value)} /></Field>
-      <Button
-        disabled={!valid || saving}
-        onClick={() => onSave({
-          catalogItemId: item!.id,
-          fromWarehouseId: fromId,
-          toWarehouseId: toId,
-          transferQty: qtyNum,
-          note,
-        })}
-      >
-        {saving ? "Menyimpan..." : "Simpan Perubahan"}
-      </Button>
+      <DialogFooter className="px-0 sm:justify-start">
+        <Button
+          disabled={!valid || saving}
+          onClick={() => onSave({
+            catalogItemId: item!.id,
+            fromWarehouseId: fromId,
+            toWarehouseId: toId,
+            transferQty: qtyNum,
+            note,
+          })}
+        >
+          {saving ? "Menyimpan..." : "Simpan Perubahan"}
+        </Button>
+      </DialogFooter>
     </div>
   );
 }
@@ -198,28 +204,56 @@ function OpeningEdit({ txn, saving, onSave }: { txn: StockTransaction; saving: b
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Edit baris saldo awal dalam satu nomor transaksi ({txn.docNo}).</p>
-      {rows.map((r, i) => (
-        <div key={i} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_140px_100px_100px] sm:items-end">
-          <Field label={i === 0 ? "Produk" : ""}><ItemPicker value={r.item} onChange={(it) => setRow(i, { item: it })} /></Field>
-          <Field label={i === 0 ? "Gudang" : ""}><WarehouseSelect value={r.warehouseId} onChange={(v) => setRow(i, { warehouseId: v })} /></Field>
-          <Field label={i === 0 ? "Qty" : ""}><Input type="number" min="0" step="any" value={r.qty} onChange={(e) => setRow(i, { qty: e.target.value })} /></Field>
-          <Field label={i === 0 ? "HPP" : ""}><Input type="number" min="0" step="any" value={r.unitCost} onChange={(e) => setRow(i, { unitCost: e.target.value })} /></Field>
-        </div>
-      ))}
-      <Button
-        disabled={valid.length === 0 || saving}
-        onClick={() => onSave({
-          entries: valid.map((r) => ({
-            catalogItemId: r.item!.id,
-            warehouseId: r.warehouseId,
-            qty: Number(r.qty),
-            unitCost: Number(r.unitCost) || 0,
-          })),
-        })}
-      >
-        {saving ? "Menyimpan..." : `Simpan ${valid.length} baris`}
-      </Button>
+      <p className="text-sm text-muted-foreground">
+        Edit baris saldo awal dalam satu nomor transaksi ({txn.docNo}).
+      </p>
+      <div className="space-y-3">
+        {rows.map((r, i) => (
+          <div key={i} className="space-y-3 rounded-lg border bg-muted/20 p-4">
+            <Field label="Produk">
+              <ItemPicker value={r.item} onChange={(it) => setRow(i, { item: it })} />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Gudang">
+                <WarehouseSelect value={r.warehouseId} onChange={(v) => setRow(i, { warehouseId: v })} />
+              </Field>
+              <Field label="Qty">
+                <Input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={r.qty}
+                  onChange={(e) => setRow(i, { qty: e.target.value })}
+                />
+              </Field>
+              <Field label="HPP / unit">
+                <Input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={r.unitCost}
+                  onChange={(e) => setRow(i, { unitCost: e.target.value })}
+                />
+              </Field>
+            </div>
+          </div>
+        ))}
+      </div>
+      <DialogFooter className="px-0 sm:justify-start">
+        <Button
+          disabled={valid.length === 0 || saving}
+          onClick={() => onSave({
+            entries: valid.map((r) => ({
+              catalogItemId: r.item!.id,
+              warehouseId: r.warehouseId,
+              qty: Number(r.qty),
+              unitCost: Number(r.unitCost) || 0,
+            })),
+          })}
+        >
+          {saving ? "Menyimpan..." : `Simpan ${valid.length} baris`}
+        </Button>
+      </DialogFooter>
     </div>
   );
 }
@@ -241,17 +275,19 @@ function RevaluationEdit({ txn, saving, onSave }: { txn: StockTransaction; savin
       <Field label="HPP baru / unit"><Input type="number" min="0" step="any" value={newCost} onChange={(e) => setNewCost(e.target.value)} /></Field>
       <p className="text-xs text-muted-foreground">Nilai baru: {formatIDR((Number(newCost) || 0) * (txn.signedQty ?? 0))}</p>
       <Field label="Catatan"><Input value={note} onChange={(e) => setNote(e.target.value)} /></Field>
-      <Button
-        disabled={!valid || saving}
-        onClick={() => onSave({
-          catalogItemId: item!.id,
-          warehouseId,
-          newUnitCost: Number(newCost) || 0,
-          note,
-        })}
-      >
-        {saving ? "Menyimpan..." : "Simpan Perubahan"}
-      </Button>
+      <DialogFooter className="px-0 sm:justify-start">
+        <Button
+          disabled={!valid || saving}
+          onClick={() => onSave({
+            catalogItemId: item!.id,
+            warehouseId,
+            newUnitCost: Number(newCost) || 0,
+            note,
+          })}
+        >
+          {saving ? "Menyimpan..." : "Simpan Perubahan"}
+        </Button>
+      </DialogFooter>
     </div>
   );
 }

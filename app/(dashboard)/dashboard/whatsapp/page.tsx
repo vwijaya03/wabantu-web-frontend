@@ -1,9 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +26,7 @@ import {
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { toApiError } from "@/lib/api/client";
-import { whatsappApi } from "@/lib/api/whatsapp";
+import { whatsappApi, type WhatsappChannel } from "@/lib/api/whatsapp";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
@@ -24,6 +35,10 @@ export default function WhatsappPage() {
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
+  const [channelToDelete, setChannelToDelete] = useState<WhatsappChannel | null>(
+    null,
+  );
+
   const { data: channels = [], isLoading } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "whatsapp-channels"),
     queryFn: whatsappApi.list,
@@ -33,6 +48,17 @@ export default function WhatsappPage() {
   const disconnectMut = useMutation({
     mutationFn: (id: string) => whatsappApi.disconnect(id),
     onSuccess: () => {
+      toast.success("Channel diputuskan.");
+      invalidateTenantQueries(qc, tenantKey, "whatsapp-channels");
+    },
+    onError: (err) => toast.error(toApiError(err).message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => whatsappApi.removePermanent(id),
+    onSuccess: (res) => {
+      toast.success(res.message || "Channel dihapus permanen.");
+      setChannelToDelete(null);
       invalidateTenantQueries(qc, tenantKey, "whatsapp-channels");
     },
     onError: (err) => toast.error(toApiError(err).message),
@@ -96,17 +122,21 @@ export default function WhatsappPage() {
                     <p className="text-sm text-muted-foreground">
                       {c.phoneNumber} · provider: {c.provider}
                     </p>
-                    {c.lastError && (
-                      <p className="mt-1 text-xs text-destructive">
-                        {c.lastError}
+                    {c.metaPhoneNumberId ? (
+                      <p className="text-xs text-muted-foreground">
+                        Phone number ID: {c.metaPhoneNumberId}
                       </p>
-                    )}
+                    ) : null}
+                    {c.lastError ? (
+                      <p className="mt-1 text-xs text-destructive">{c.lastError}</p>
+                    ) : null}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {c.status === "connected" ? (
                       <Button
                         variant="outline"
                         size="sm"
+                        disabled={disconnectMut.isPending || deleteMut.isPending}
                         onClick={() => disconnectMut.mutate(c.id)}
                       >
                         Disconnect
@@ -116,6 +146,15 @@ export default function WhatsappPage() {
                         <Link href="/dashboard/whatsapp/onboarding">Reconnect</Link>
                       </Button>
                     )}
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={disconnectMut.isPending || deleteMut.isPending}
+                      onClick={() => setChannelToDelete(c)}
+                    >
+                      <Trash2 className="mr-1 h-3.5 w-3.5" />
+                      Hapus
+                    </Button>
                   </div>
                 </li>
               ))}
@@ -123,6 +162,40 @@ export default function WhatsappPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={channelToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setChannelToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus channel permanen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Channel{" "}
+              <span className="font-medium text-foreground">
+                {channelToDelete?.displayName} ({channelToDelete?.phoneNumber})
+              </span>{" "}
+              akan dihapus dari database beserta percakapan inbox terkait. Tindakan
+              ini tidak bisa dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMut.isPending}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMut.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (channelToDelete) deleteMut.mutate(channelToDelete.id);
+              }}
+            >
+              {deleteMut.isPending ? "Menghapus..." : "Hapus permanen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
