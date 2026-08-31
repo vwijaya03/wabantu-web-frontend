@@ -20,7 +20,7 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi, type AdminTenant } from "@/lib/api/admin";
 import { toApiError } from "@/lib/api/client";
-import { flagsApi, type RAGRolloutScope, type RetrievalMode, type TenantIndexingProgress } from "@/lib/api/flags";
+import { flagsApi, type RAGRolloutScope, type RetrievalMode, type TenantIndexingProgress, shouldPollRetrievalIndexing } from "@/lib/api/flags";
 
 const MODE_LABELS: Record<RetrievalMode, string> = {
   disabled: "Lexical (lama)",
@@ -92,6 +92,8 @@ function TenantRetrievalRow({
     queryKey: ["retrieval-mode", tenant.id],
     queryFn: () => flagsApi.getRetrievalMode(tenant.id),
     staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const [pendingMode, setPendingMode] = useState<RetrievalMode | null>(null);
@@ -103,7 +105,12 @@ function TenantRetrievalRow({
     queryKey: ["retrieval-indexing", tenant.id],
     queryFn: () => flagsApi.getRetrievalIndexingProgress(tenant.id),
     enabled: trackIndexing,
-    refetchInterval: (q) => (q.state.data?.isComplete ? false : 3000),
+    refetchInterval: (q) => {
+      const p = q.state.data;
+      return p && shouldPollRetrievalIndexing(p) ? 3000 : false;
+    },
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const saveMut = useMutation({
@@ -193,10 +200,30 @@ function TenantRetrievalRow({
 }
 
 function ObservabilityPanel() {
+  const activeJobsQuery = useQuery({
+    queryKey: ["rag-rollout-active-jobs"],
+    queryFn: () => flagsApi.listActiveRAGRolloutJobs(),
+    staleTime: 10_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: (query) => {
+      const jobs = query.state.data?.jobs ?? [];
+      const live = jobs.some((j) => j.status === "pending" || j.status === "running");
+      return live ? 3000 : false;
+    },
+  });
+  const rolloutLive =
+    activeJobsQuery.data?.jobs.some(
+      (j) => j.status === "pending" || j.status === "running",
+    ) ?? false;
+
   const obsQuery = useQuery({
     queryKey: ["retrieval-observability"],
     queryFn: () => flagsApi.getRetrievalObservability(),
-    refetchInterval: 5000,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: rolloutLive ? 5000 : false,
   });
   const m = obsQuery.data?.metrics;
   if (!m) {
@@ -205,10 +232,22 @@ function ObservabilityPanel() {
   return (
     <Card className="mb-4">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Observability retrieval (proses ini)</CardTitle>
-        <CardDescription>
-          Counter in-process + Encore metrics. Reset saat deploy/restart instance.
-        </CardDescription>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <CardTitle className="text-base">Observability retrieval (proses ini)</CardTitle>
+            <CardDescription>
+              Counter in-process + Encore metrics. Reset saat deploy/restart instance.
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={obsQuery.isFetching}
+            onClick={() => void obsQuery.refetch()}
+          >
+            {obsQuery.isFetching ? "Memuat…" : "Muat ulang"}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded border p-2">
@@ -254,6 +293,9 @@ function BulkRolloutPanel({ onJobDone }: { onJobDone: () => void }) {
   const activeJobsQuery = useQuery({
     queryKey: ["rag-rollout-active-jobs"],
     queryFn: () => flagsApi.listActiveRAGRolloutJobs(),
+    staleTime: 10_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     refetchInterval: (query) => {
       const jobs = query.state.data?.jobs ?? [];
       const hasActive = jobs.some(
@@ -274,6 +316,8 @@ function BulkRolloutPanel({ onJobDone }: { onJobDone: () => void }) {
     queryFn: () => flagsApi.getRAGRolloutJob(trackedJobId!),
     enabled: Boolean(trackedJobId),
     refetchInterval: trackedJobId ? 2000 : false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const rolloutInProgress =

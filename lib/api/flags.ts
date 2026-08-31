@@ -80,6 +80,17 @@ export interface RetrievalObservabilitySnapshot {
   indexingFailure: number;
 }
 
+/** Poll indexing progress only while entities are still embedding or failed. */
+export function shouldPollRetrievalIndexing(progress: TenantIndexingProgress): boolean {
+  if (progress.isComplete) return false;
+  const entityPending = progress.kb.pending + progress.catalog.pending;
+  const entityFailed =
+    progress.kb.failed + progress.catalog.failed + progress.kb.dlq + progress.catalog.dlq;
+  if (progress.percentComplete < 100 || entityPending > 0) return true;
+  if (entityFailed > 0 || progress.outbox.failed > 0 || progress.outbox.dlq > 0) return true;
+  return false;
+}
+
 export const flagsApi = {
   async getRetrievalMode(tenantId: string): Promise<RetrievalModeResponse> {
     const { data } = await api.get<RetrievalModeResponse>(
