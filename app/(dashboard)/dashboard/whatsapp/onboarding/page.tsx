@@ -81,9 +81,11 @@ export default function WhatsappOnboardingPage() {
       invalidateTenantQueries(qc, tenantKey, "whatsapp-channels");
       clearOAuthCallbackUrl();
     },
-    onError: (err) => toast.error(toApiError(err).message),
-    onSettled: () => {
-      oauthCallbackHandledRef.current = true;
+    onError: (err) => {
+      toast.error(toApiError(err).message);
+      localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
+      clearOAuthCallbackUrl();
+      oauthCallbackHandledRef.current = false;
     },
   });
 
@@ -131,6 +133,7 @@ export default function WhatsappOnboardingPage() {
     const raw = localStorage.getItem(OAUTH_PENDING_STORAGE_KEY);
     if (!raw) {
       clearOAuthCallbackUrl();
+      oauthCallbackHandledRef.current = false;
       toast.error("Data OAuth tidak ditemukan. Ulangi dari tombol Generate OAuth URL.");
       return;
     }
@@ -141,6 +144,7 @@ export default function WhatsappOnboardingPage() {
     } catch {
       localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
       clearOAuthCallbackUrl();
+      oauthCallbackHandledRef.current = false;
       toast.error("Data OAuth rusak. Ulangi proses connect.");
       return;
     }
@@ -149,6 +153,7 @@ export default function WhatsappOnboardingPage() {
     if (!parsed.success) {
       localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
       clearOAuthCallbackUrl();
+      oauthCallbackHandledRef.current = false;
       toast.error("Data connect tidak lengkap. Ulangi proses.");
       return;
     }
@@ -160,6 +165,7 @@ export default function WhatsappOnboardingPage() {
 
     if (!pendingState || pendingState !== state) {
       clearOAuthCallbackUrl();
+      oauthCallbackHandledRef.current = false;
       toast.error("State OAuth tidak cocok. Ulangi proses connect.");
       return;
     }
