@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Search, Trash2 } from "lucide-react";
+import { Pencil, Search, Trash2, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { generateSkuFromProductName } from "@/lib/catalog/generate-sku";
 
 const pageSize = 25;
 
@@ -271,12 +272,19 @@ export default function CatalogPage() {
                         </div>
                         <div className="flex justify-start gap-1 lg:justify-end">
                           <Button
-                            variant={item.isActive ? "outline" : "secondary"}
+                            variant="outline"
                             size="sm"
                             disabled={!canManage}
+                            className={cn(
+                              "shrink-0",
+                              item.isActive
+                                ? "text-muted-foreground hover:text-destructive"
+                                : "border-primary/40 text-primary",
+                            )}
                             onClick={() => toggleActiveMut.mutate(item)}
+                            title={item.isActive ? "Nonaktifkan produk" : "Aktifkan produk"}
                           >
-                            {item.isActive ? "Off" : "On"}
+                            {item.isActive ? "Nonaktifkan" : "Aktifkan"}
                           </Button>
                           <Button variant="outline" size="sm" disabled={!canManage} onClick={() => openEdit(item)}>
                             <Pencil className="h-3.5 w-3.5" />
@@ -400,20 +408,55 @@ function CatalogFormFields({
     }
     setForm({ ...form, ...patch });
   };
+
+  const generateSku = () => {
+    const name = form.name.trim();
+    if (!name) {
+      toast.error("Isi nama produk dulu");
+      return;
+    }
+    update({ externalCode: generateSkuFromProductName(name) });
+  };
+
   return (
     <div className="space-y-3">
       <div>
-        <Label>SKU / Kode</Label>
+        <Label htmlFor="catalog-name">Nama</Label>
         <Input
-          value={form.externalCode}
-          onChange={(e) => update({ externalCode: e.target.value })}
-          disabled={isEdit}
-          placeholder="SKU-001"
+          id="catalog-name"
+          value={form.name}
+          onChange={(e) => update({ name: e.target.value })}
+          placeholder="Nama produk"
         />
       </div>
       <div>
-        <Label>Nama</Label>
-        <Input value={form.name} onChange={(e) => update({ name: e.target.value })} placeholder="Nama produk" />
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <Label htmlFor="catalog-sku">SKU / Kode</Label>
+          {!isEdit && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 px-2 text-xs text-primary"
+              onClick={generateSku}
+              disabled={!form.name.trim()}
+            >
+              <Wand2 className="h-3.5 w-3.5" />
+              Generate
+            </Button>
+          )}
+        </div>
+        <Input
+          id="catalog-sku"
+          value={form.externalCode}
+          onChange={(e) => update({ externalCode: e.target.value.toUpperCase() })}
+          disabled={isEdit}
+          placeholder="KAOS_POLOS_L"
+          className="font-mono text-sm uppercase"
+        />
+        {!isEdit && (
+          <p className="mt-1 text-xs text-muted-foreground">Dari nama, atau ketik manual. Unik per tenant.</p>
+        )}
       </div>
       {priceTypes.length > 0 ? (
         <div className="space-y-2 rounded-md border p-3">
@@ -446,33 +489,80 @@ function CatalogFormFields({
           />
         </div>
       )}
-      <div>
-        <Label>Satuan</Label>
-        <Input value={form.sellUnit} onChange={(e) => update({ sellUnit: e.target.value })} placeholder="pcs" />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label>Satuan</Label>
+          <Input value={form.sellUnit} onChange={(e) => update({ sellUnit: e.target.value })} placeholder="pcs" />
+        </div>
+        <div>
+          <Label>Barcode</Label>
+          <Input value={form.barcode} onChange={(e) => update({ barcode: e.target.value })} placeholder="Opsional" />
+        </div>
       </div>
       <div>
-        <Label>Barcode</Label>
-        <Input value={form.barcode} onChange={(e) => update({ barcode: e.target.value })} placeholder="Opsional" />
-      </div>
-      <div>
-        <Label>Deskripsi</Label>
+        <Label htmlFor="catalog-desc">Deskripsi</Label>
         <Textarea
+          id="catalog-desc"
           value={form.description}
           onChange={(e) => update({ description: e.target.value })}
           placeholder="Opsional, dipakai AI untuk menjawab pertanyaan produk"
-          rows={3}
+          rows={2}
         />
       </div>
-      <button
-        type="button"
-        onClick={() => update({ isActive: !form.isActive })}
-        className={cn(
-          "rounded-md border px-3 py-2 text-left text-sm",
-          form.isActive ? "border-primary/30 bg-primary/5" : "bg-muted/40 text-muted-foreground",
-        )}
+      <ProductActiveToggle active={form.isActive} onChange={(isActive) => update({ isActive })} />
+    </div>
+  );
+}
+
+function ProductActiveToggle({
+  active,
+  onChange,
+  disabled,
+}: {
+  active: boolean;
+  onChange: (active: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>Status produk</Label>
+      <div
+        className="flex rounded-lg border bg-muted/20 p-1"
+        role="group"
+        aria-label="Status produk aktif atau nonaktif"
       >
-        Status: {form.isActive ? "Aktif" : "Nonaktif"}
-      </button>
+        <button
+          type="button"
+          disabled={disabled}
+          aria-pressed={active}
+          onClick={() => onChange(true)}
+          className={cn(
+            "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            active
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted/80",
+          )}
+        >
+          Aktif
+        </button>
+        <button
+          type="button"
+          disabled={disabled}
+          aria-pressed={!active}
+          onClick={() => onChange(false)}
+          className={cn(
+            "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            !active
+              ? "bg-destructive text-destructive-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted/80",
+          )}
+        >
+          Nonaktif
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {active ? "Produk tampil di AI & pesanan." : "Produk disembunyikan dari AI & pesanan."}
+      </p>
     </div>
   );
 }
