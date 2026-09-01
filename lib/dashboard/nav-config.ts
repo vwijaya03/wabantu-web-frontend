@@ -37,6 +37,7 @@ import {
   Wand2,
   Workflow,
   Wrench,
+  FlaskConical,
   ArrowLeftRight,
   Database,
 } from "lucide-react";
@@ -190,6 +191,7 @@ export const PLATFORM_NAV_SECTION: NavSection = {
     { href: "/dashboard/admin/ai-activity", label: "AI Activity", icon: Sparkles },
     { href: "/dashboard/admin/ai-triage", label: "AI Triage", icon: Wrench },
     { href: "/dashboard/admin/ai-retrieval", label: "AI Retrieval", icon: Database },
+    { href: "/dashboard/admin/ai-regression", label: "AI Regression", icon: FlaskConical },
     { href: "/dashboard/docs", label: "Dokumentasi", icon: BookOpen },
   ],
 };
