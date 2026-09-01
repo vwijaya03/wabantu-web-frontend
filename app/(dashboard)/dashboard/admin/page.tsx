@@ -244,6 +244,9 @@ export default function AdminPage() {
         <Button variant="outline" asChild>
           <Link href="/dashboard/admin/ai-retrieval">AI Retrieval (RAG) →</Link>
         </Button>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard/admin/ai-regression">AI Regression →</Link>
+        </Button>
         <Button
           variant="secondary"
           disabled={migrationInProgress}
