@@ -52,12 +52,14 @@ export default function WhatsappOnboardingPage() {
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
-  const { data: channels = [] } = useQuery({
+  const { data: channels = [], isSuccess: channelsLoaded } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "whatsapp-channels"),
     queryFn: whatsappApi.list,
     enabled: tenantReady,
   });
   const connectedCount = channels.filter((c) => c.status === "connected").length;
+  const isConnected = connectedCount > 0;
+  const oauthCallbackHandledRef = useRef(false);
   const {
     control,
     register,
@@ -65,7 +67,27 @@ export default function WhatsappOnboardingPage() {
     formState: { errors },
   } = useForm<OauthFormValues>({ resolver: zodResolver(oauthSchema) });
   const hasFacebookAccount = useWatch({ control, name: "hasFacebookAccount" });
-  const isProcessingOauthRef = useRef(false);
+
+  const clearOAuthCallbackUrl = () => {
+    window.history.replaceState({}, "", "/dashboard/whatsapp/onboarding");
+  };
+
+  const completeOauthMut = useMutation({
+    mutationFn: (values: MetaConnectCallbackInput) =>
+      whatsappApi.completeMetaConnect(values),
+    onSuccess: () => {
+      toast.success("WhatsApp berhasil tersambung.");
+      localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
+      invalidateTenantQueries(qc, tenantKey, "whatsapp-channels");
+      clearOAuthCallbackUrl();
+    },
+    onError: (err) => {
+      toast.error(toApiError(err).message);
+      localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
+      clearOAuthCallbackUrl();
+      oauthCallbackHandledRef.current = false;
+    },
+  });
 
   const initOauthMut = useMutation({
     mutationFn: async (values: OauthFormValues) => {
@@ -92,26 +114,26 @@ export default function WhatsappOnboardingPage() {
     onError: (err) => toast.error(toApiError(err).message),
   });
 
-  const completeOauthMut = useMutation({
-    mutationFn: (values: MetaConnectCallbackInput) =>
-      whatsappApi.completeMetaConnect(values),
-    onSuccess: () => {
-      toast.success("WhatsApp berhasil tersambung.");
-      localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
-      invalidateTenantQueries(qc, tenantKey, "whatsapp-channels");
-      window.history.replaceState({}, "", "/dashboard/whatsapp/onboarding");
-    },
-    onError: (err) => toast.error(toApiError(err).message),
-  });
-
   useEffect(() => {
+    if (!channelsLoaded || oauthCallbackHandledRef.current) return;
+
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     const state = params.get("state");
-    if (!code || !state || isProcessingOauthRef.current) return;
+    if (!code || !state) return;
+
+    oauthCallbackHandledRef.current = true;
+
+    if (isConnected) {
+      localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
+      clearOAuthCallbackUrl();
+      return;
+    }
 
     const raw = localStorage.getItem(OAUTH_PENDING_STORAGE_KEY);
     if (!raw) {
+      clearOAuthCallbackUrl();
+      oauthCallbackHandledRef.current = false;
       toast.error("Data OAuth tidak ditemukan. Ulangi dari tombol Generate OAuth URL.");
       return;
     }
@@ -121,6 +143,8 @@ export default function WhatsappOnboardingPage() {
       pending = JSON.parse(raw);
     } catch {
       localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
+      clearOAuthCallbackUrl();
+      oauthCallbackHandledRef.current = false;
       toast.error("Data OAuth rusak. Ulangi proses connect.");
       return;
     }
@@ -128,6 +152,8 @@ export default function WhatsappOnboardingPage() {
     const parsed = oauthPendingSchema.safeParse(pending);
     if (!parsed.success) {
       localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
+      clearOAuthCallbackUrl();
+      oauthCallbackHandledRef.current = false;
       toast.error("Data connect tidak lengkap. Ulangi proses.");
       return;
     }
@@ -138,18 +164,21 @@ export default function WhatsappOnboardingPage() {
         : "";
 
     if (!pendingState || pendingState !== state) {
+      clearOAuthCallbackUrl();
+      oauthCallbackHandledRef.current = false;
       toast.error("State OAuth tidak cocok. Ulangi proses connect.");
       return;
     }
 
-    isProcessingOauthRef.current = true;
     completeOauthMut.mutate({
       code,
       state,
       displayName: parsed.data.displayName,
       phoneNumber: parsed.data.phoneNumber,
     });
-  }, [completeOauthMut]);
+  }, [channelsLoaded, isConnected, completeOauthMut]);
+
+  const showCompletingOAuth = completeOauthMut.isPending;
 
   return (
     <>
@@ -218,19 +247,28 @@ export default function WhatsappOnboardingPage() {
                 </p>
               )}
             </div>
-            <div className="sm:col-span-2 flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Status saat ini: {connectedCount > 0 ? "Sudah tersambung" : "Belum tersambung"}
-              </p>
+            <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">
+                  Status saat ini: {isConnected ? "Sudah tersambung" : "Belum tersambung"}
+                </p>
+                {isConnected && !showCompletingOAuth ? (
+                  <Button asChild variant="link" className="h-auto p-0 text-sm">
+                    <Link href="/dashboard/whatsapp">Buka halaman WhatsApp →</Link>
+                  </Button>
+                ) : null}
+              </div>
               <Button
                 type="submit"
-                disabled={!hasFacebookAccount || initOauthMut.isPending || completeOauthMut.isPending}
+                disabled={!hasFacebookAccount || initOauthMut.isPending || showCompletingOAuth}
               >
                 {initOauthMut.isPending
                   ? "Membuat URL..."
-                  : completeOauthMut.isPending
+                  : showCompletingOAuth
                     ? "Menyelesaikan OAuth..."
-                    : "Generate OAuth URL"}
+                    : isConnected
+                      ? "Hubungkan ulang (OAuth)"
+                      : "Generate OAuth URL"}
               </Button>
             </div>
           </form>

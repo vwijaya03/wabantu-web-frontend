@@ -132,7 +132,7 @@ function stripHtmlComments(content) {
 }
 
 function createDoc(source, filePath) {
-  const relativePath = path.relative(source.root, filePath).replaceAll(path.sep, "/");
+  const relativePath = path.relative(source.root, filePath).split(path.sep).join("/");
   const stat = statSync(filePath);
   const content = stripHtmlComments(readFileSync(filePath, "utf8"));
   const title = titleFromMarkdown(content, path.basename(filePath));

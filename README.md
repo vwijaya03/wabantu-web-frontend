@@ -92,7 +92,8 @@ app/
         ├── team/
         ├── catalog/             # Katalog produk — CRUD multi-harga + search/pagination server-side
         │   ├── price-types/     # CRUD tipe harga (umum, reseller, kustom)
-        │   └── import-image/    # Import screenshot → AI vision → konfirmasi → simpan
+        │   ├── import-image/    # Import screenshot → AI vision → konfirmasi → simpan
+        │   └── import-text/     # Import teks/caption → AI → konfirmasi → simpan
         ├── orders/              # Pesanan — harga per tipe kontak, finance sync saat selesai/batal
         ├── broadcast/           # Broadcast WA (trial kuota / Business+)
         ├── import/              # Import CSV/XLSX produk — template CSV/XLSX + preview mapping ke katalog
@@ -141,6 +142,8 @@ Detail + penjelasan React/Next: **[DEVELOPER_DOCUMENTATION.md](./DEVELOPER_DOCUM
 **Events module (acara & terapi):** halaman `/dashboard/events`, komponen `components/events/`, API `lib/api/events.ts`. Panduan penggunaan: [`docs/EVENTS_MODULE.md`](docs/EVENTS_MODULE.md); teknis: [`../api-go/docs/EVENTS_MODULE.md`](../api-go/docs/EVENTS_MODULE.md).
 
 **Inventory module (persediaan & HPP):** halaman `/dashboard/inventory/*`, komponen `components/inventory/`, API `lib/api/inventory.ts`, konten bantuan owner `lib/inventory/help-content.ts` + tombol **(?)** di UI. Panduan owner bisnis: [`docs/INVENTORY_MODULE.md`](docs/INVENTORY_MODULE.md); teknis: [`../api-go/docs/INVENTORY_MODULE.md`](../api-go/docs/INVENTORY_MODULE.md).
+
+**Catalog module (produk & harga):** halaman `/dashboard/catalog/*`, komponen `components/catalog/`, API `lib/api/catalog.ts` + import `catalogImage.ts` / `catalogText.ts`. Panduan UI: [`docs/CATALOG_MODULE.md`](docs/CATALOG_MODULE.md); harga & API: [`../api-go/docs/PRICE_TYPES_AND_CATALOG_PRICING.md`](../api-go/docs/PRICE_TYPES_AND_CATALOG_PRICING.md), import AI: [`../api-go/docs/CATALOG_IMAGE_IMPORT.md`](../api-go/docs/CATALOG_IMAGE_IMPORT.md), [`../api-go/docs/CATALOG_TEXT_IMPORT.md`](../api-go/docs/CATALOG_TEXT_IMPORT.md).
 
 `hooks/use-plan.ts` memuat `GET /api/v1/billing/overview` hanya jika user punya konteks tenant (`hasTenantDashboardAccess` — owner/staff atau super_admin setelah **Pantau**).
 

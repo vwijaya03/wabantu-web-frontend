@@ -156,6 +156,9 @@ Empat tab:
 - **Untuk:** mengisi stok pertama kali / migrasi dari catatan manual
 - Setiap baris: produk + gudang + qty + harga pokok
 - Item otomatis mulai **lacak stok**
+- **Edit transaksi lama:** modal `StockTransactionEditDialog` — header tetap, isi scroll; tombol tutup (X) tidak ikut scroll (`DialogContent` tanpa `overflow-y-auto` di root). Setiap baris saldo awal ditampilkan sebagai kartu terpisah.
+
+> Detail UI katalog: [CATALOG_MODULE.md](./CATALOG_MODULE.md)
 
 #### Revaluasi HPP
 - **Untuk:** ubah HPP tanpa ubah qty (koreksi nilai persediaan)

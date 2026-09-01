@@ -68,4 +68,10 @@ export const whatsappApi = {
     const res = await api.delete<WhatsappChannel>(`/whatsapp/channels/${id}`);
     return res.data;
   },
+  async removePermanent(id: string): Promise<{ id: string; message: string }> {
+    const res = await api.delete<{ id: string; message: string }>(
+      `/whatsapp/channels/${id}/permanent`,
+    );
+    return res.data;
+  },
 };
