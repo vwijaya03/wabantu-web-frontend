@@ -262,7 +262,7 @@ function ObservabilityPanel() {
     queryFn: () => flagsApi.getRetrievalIncidents(),
     staleTime: 30_000,
     refetchOnWindowFocus: false,
-    refetchInterval: (query) => {
+    refetchInterval: () => {
       const status = obsQuery.data?.metrics.status;
       if (status && status !== "ok") return 5000;
       return false;
