@@ -226,47 +226,20 @@ function statusBannerMessage(m: RetrievalObservabilitySnapshot): string {
 }
 
 function ObservabilityPanel() {
-  const activeJobsQuery = useQuery({
-    queryKey: ["rag-rollout-active-jobs"],
-    queryFn: () => flagsApi.listActiveRAGRolloutJobs(),
-    staleTime: 10_000,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchInterval: (query) => {
-      const jobs = query.state.data?.jobs ?? [];
-      const live = jobs.some((j) => j.status === "pending" || j.status === "running");
-      return live ? 3000 : false;
-    },
-  });
-  const rolloutLive =
-    activeJobsQuery.data?.jobs.some(
-      (j) => j.status === "pending" || j.status === "running",
-    ) ?? false;
-
   const obsQuery = useQuery({
     queryKey: ["retrieval-observability"],
     queryFn: () => flagsApi.getRetrievalObservability(),
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    refetchInterval: (query) => {
-      const status = query.state.data?.metrics.status;
-      if (rolloutLive) return 5000;
-      if (status && status !== "ok") return 5000;
-      return false;
-    },
   });
 
   const incidentsQuery = useQuery({
     queryKey: ["retrieval-incidents"],
     queryFn: () => flagsApi.getRetrievalIncidents(),
-    staleTime: 30_000,
+    staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
-    refetchInterval: () => {
-      const status = obsQuery.data?.metrics.status;
-      if (status && status !== "ok") return 5000;
-      return false;
-    },
+    refetchOnReconnect: false,
   });
 
   const m = obsQuery.data?.metrics;
@@ -291,13 +264,13 @@ function ObservabilityPanel() {
           <Button
             variant="outline"
             size="sm"
-            disabled={obsQuery.isFetching}
+            disabled={obsQuery.isFetching || incidentsQuery.isFetching}
             onClick={() => {
               void obsQuery.refetch();
               void incidentsQuery.refetch();
             }}
           >
-            {obsQuery.isFetching ? "Memuat…" : "Muat ulang"}
+            {obsQuery.isFetching || incidentsQuery.isFetching ? "Memuat…" : "Muat ulang"}
           </Button>
         </div>
       </CardHeader>
