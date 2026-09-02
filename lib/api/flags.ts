@@ -176,8 +176,8 @@ export const flagsApi = {
     return data;
   },
 
-  async getRetrievalIncidents(): Promise<{ incidents: RetrievalIncident[] }> {
-    const { data } = await api.get<{ incidents: RetrievalIncident[] }>(
+  async getRetrievalIncidents(): Promise<{ incidents: RetrievalIncident[]; degraded?: boolean }> {
+    const { data } = await api.get<{ incidents: RetrievalIncident[]; degraded?: boolean }>(
       "/admin/ai-retrieval/incidents",
     );
     return data;

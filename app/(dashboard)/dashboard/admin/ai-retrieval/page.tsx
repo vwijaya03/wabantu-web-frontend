@@ -275,6 +275,7 @@ function ObservabilityPanel() {
   }
   const errorEntries = Object.entries(m.errorsByCategory ?? {}).sort((a, b) => b[1] - a[1]);
   const incidents = incidentsQuery.data?.incidents ?? [];
+  const incidentsDegraded = incidentsQuery.data?.degraded === true;
 
   return (
     <Card className="mb-4">
@@ -346,6 +347,11 @@ function ObservabilityPanel() {
               ))}
             </ul>
           </div>
+        ) : null}
+        {incidentsDegraded ? (
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            Riwayat insiden tidak tersedia (Redis degraded) — daftar kosong bukan berarti tidak ada insiden.
+          </p>
         ) : null}
         {incidents.length > 0 ? (
           <div className="rounded border p-2 text-sm">
