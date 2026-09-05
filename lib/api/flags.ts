@@ -73,11 +73,29 @@ export interface RetrievalObservabilitySnapshot {
   latencyP50Ms: number;
   latencyP95Ms: number;
   latencyP99Ms: number;
+  embedLatencyP95Ms: number;
+  storeLatencyP95Ms: number;
   embedCacheHits: number;
   embedCacheMisses: number;
   embedCacheHitRatio: number;
   indexingSuccess: number;
   indexingFailure: number;
+  indexingDlq?: number;
+  budgetMs: number;
+  sampleCount: number;
+  status: "ok" | "warning" | "critical" | "insufficient_data";
+  errorsByCategory?: Record<string, number>;
+}
+
+export interface RetrievalIncident {
+  at: string;
+  tenantId: string;
+  source: string;
+  provider: string;
+  category: string;
+  latencyMs: number;
+  budgetMs: number;
+  safeError: string;
 }
 
 /** Poll indexing progress only while entities are still embedding or failed. */
@@ -154,6 +172,13 @@ export const flagsApi = {
   async getRetrievalObservability(): Promise<{ metrics: RetrievalObservabilitySnapshot }> {
     const { data } = await api.get<{ metrics: RetrievalObservabilitySnapshot }>(
       "/flags/retrieval-observability",
+    );
+    return data;
+  },
+
+  async getRetrievalIncidents(): Promise<{ incidents: RetrievalIncident[]; degraded?: boolean }> {
+    const { data } = await api.get<{ incidents: RetrievalIncident[]; degraded?: boolean }>(
+      "/admin/ai-retrieval/incidents",
     );
     return data;
   },

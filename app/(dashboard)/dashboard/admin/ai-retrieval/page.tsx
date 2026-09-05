@@ -20,7 +20,7 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi, type AdminTenant } from "@/lib/api/admin";
 import { toApiError } from "@/lib/api/client";
-import { flagsApi, type RAGRolloutScope, type RetrievalMode, type TenantIndexingProgress, shouldPollRetrievalIndexing } from "@/lib/api/flags";
+import { flagsApi, type RAGRolloutScope, type RetrievalMode, type RetrievalObservabilitySnapshot, type TenantIndexingProgress, shouldPollRetrievalIndexing } from "@/lib/api/flags";
 
 const MODE_LABELS: Record<RetrievalMode, string> = {
   disabled: "Lexical (lama)",
@@ -199,36 +199,57 @@ function TenantRetrievalRow({
   );
 }
 
-function ObservabilityPanel() {
-  const activeJobsQuery = useQuery({
-    queryKey: ["rag-rollout-active-jobs"],
-    queryFn: () => flagsApi.listActiveRAGRolloutJobs(),
-    staleTime: 10_000,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchInterval: (query) => {
-      const jobs = query.state.data?.jobs ?? [];
-      const live = jobs.some((j) => j.status === "pending" || j.status === "running");
-      return live ? 3000 : false;
-    },
-  });
-  const rolloutLive =
-    activeJobsQuery.data?.jobs.some(
-      (j) => j.status === "pending" || j.status === "running",
-    ) ?? false;
+function statusBannerClass(status: RetrievalObservabilitySnapshot["status"]): string {
+  switch (status) {
+    case "critical":
+      return "border-destructive/40 bg-destructive/10 text-destructive";
+    case "warning":
+      return "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400";
+    case "insufficient_data":
+      return "border-muted bg-muted/40 text-muted-foreground";
+    default:
+      return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
+  }
+}
 
+function statusBannerMessage(m: RetrievalObservabilitySnapshot): string {
+  switch (m.status) {
+    case "critical":
+      return `Kritis: fallback ${(m.fallbackRatio * 100).toFixed(1)}% atau circuit breaker terbuka`;
+    case "warning":
+      return `Peringatan: p95 embed ${m.embedLatencyP95Ms}ms dari budget ${m.budgetMs}ms, fallback ${(m.fallbackRatio * 100).toFixed(1)}%`;
+    case "insufficient_data":
+      return `Data belum cukup (${m.sampleCount} sampel, minimum 20) — angka per-instance`;
+    default:
+      return `Sehat: p95 embed ${m.embedLatencyP95Ms}ms · budget ${m.budgetMs}ms (per-instance)`;
+  }
+}
+
+function ObservabilityPanel() {
   const obsQuery = useQuery({
     queryKey: ["retrieval-observability"],
     queryFn: () => flagsApi.getRetrievalObservability(),
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    refetchInterval: rolloutLive ? 5000 : false,
   });
+
+  const incidentsQuery = useQuery({
+    queryKey: ["retrieval-incidents"],
+    queryFn: () => flagsApi.getRetrievalIncidents(),
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
   const m = obsQuery.data?.metrics;
   if (!m) {
     return null;
   }
+  const errorEntries = Object.entries(m.errorsByCategory ?? {}).sort((a, b) => b[1] - a[1]);
+  const incidents = incidentsQuery.data?.incidents ?? [];
+  const incidentsDegraded = incidentsQuery.data?.degraded === true;
+
   return (
     <Card className="mb-4">
       <CardHeader className="pb-2">
@@ -236,49 +257,108 @@ function ObservabilityPanel() {
           <div>
             <CardTitle className="text-base">Observability retrieval (proses ini)</CardTitle>
             <CardDescription>
-              Counter in-process + Encore metrics. Reset saat deploy/restart instance.
+              Counter in-process + Encore metrics. Reset saat deploy/restart instance — bukan agregat
+              lintas instance.
             </CardDescription>
           </div>
           <Button
             variant="outline"
             size="sm"
-            disabled={obsQuery.isFetching}
-            onClick={() => void obsQuery.refetch()}
+            disabled={obsQuery.isFetching || incidentsQuery.isFetching}
+            onClick={() => {
+              void obsQuery.refetch();
+              void incidentsQuery.refetch();
+            }}
           >
-            {obsQuery.isFetching ? "Memuat…" : "Muat ulang"}
+            {obsQuery.isFetching || incidentsQuery.isFetching ? "Memuat…" : "Muat ulang"}
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded border p-2">
-          <p className="text-xs text-muted-foreground">Query</p>
-          <p className="font-medium">{m.requests} req</p>
-          <p className="text-xs text-muted-foreground">
-            fallback {(m.fallbackRatio * 100).toFixed(1)}% · zero {(m.zeroHitRatio * 100).toFixed(1)}%
-          </p>
+      <CardContent className="space-y-3">
+        <div className={`rounded border px-3 py-2 text-sm ${statusBannerClass(m.status)}`}>
+          {statusBannerMessage(m)}
         </div>
-        <div className="rounded border p-2">
-          <p className="text-xs text-muted-foreground">Latency</p>
-          <p className="font-medium">
-            p50 {m.latencyP50Ms}ms · p95 {m.latencyP95Ms}ms
-          </p>
-          <p className="text-xs text-muted-foreground">p99 {m.latencyP99Ms}ms</p>
+        <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded border p-2">
+            <p className="text-xs text-muted-foreground">Query</p>
+            <p className="font-medium">{m.requests} req</p>
+            <p className="text-xs text-muted-foreground">
+              fallback {(m.fallbackRatio * 100).toFixed(1)}% · zero {(m.zeroHitRatio * 100).toFixed(1)}%
+            </p>
+          </div>
+          <div className="rounded border p-2">
+            <p className="text-xs text-muted-foreground">p95 embed / store</p>
+            <p className="font-medium">
+              {m.embedLatencyP95Ms}ms · {m.storeLatencyP95Ms}ms
+            </p>
+            <p className="text-xs text-muted-foreground">budget {m.budgetMs}ms · total p95 {m.latencyP95Ms}ms</p>
+          </div>
+          <div className="rounded border p-2">
+            <p className="text-xs text-muted-foreground">Query embed cache</p>
+            <p className="font-medium">hit {(m.embedCacheHitRatio * 100).toFixed(1)}%</p>
+            <p className="text-xs text-muted-foreground">
+              {m.embedCacheHits} hit · {m.embedCacheMisses} miss
+            </p>
+          </div>
+          <div className="rounded border p-2">
+            <p className="text-xs text-muted-foreground">Indexing worker</p>
+            <p className="font-medium">
+              {m.indexingSuccess} ok · {m.indexingFailure} gagal
+            </p>
+            <p className="text-xs text-muted-foreground">{m.sampleCount} sampel latency</p>
+          </div>
         </div>
-        <div className="rounded border p-2">
-          <p className="text-xs text-muted-foreground">Query embed cache</p>
-          <p className="font-medium">
-            hit {(m.embedCacheHitRatio * 100).toFixed(1)}%
+        {errorEntries.length > 0 ? (
+          <div className="rounded border p-2 text-sm">
+            <p className="mb-1 text-xs font-medium text-muted-foreground">Error per kategori</p>
+            <ul className="space-y-0.5 text-xs">
+              {errorEntries.map(([key, count]) => (
+                <li key={key} className="flex justify-between gap-2">
+                  <span className="font-mono">{key}</span>
+                  <span>{count}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {incidentsDegraded ? (
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            Riwayat insiden tidak tersedia (Redis degraded) — daftar kosong bukan berarti tidak ada insiden.
           </p>
-          <p className="text-xs text-muted-foreground">
-            {m.embedCacheHits} hit · {m.embedCacheMisses} miss
-          </p>
-        </div>
-        <div className="rounded border p-2">
-          <p className="text-xs text-muted-foreground">Indexing worker</p>
-          <p className="font-medium">
-            {m.indexingSuccess} ok · {m.indexingFailure} gagal
-          </p>
-        </div>
+        ) : null}
+        {incidents.length > 0 ? (
+          <div className="rounded border p-2 text-sm">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Insiden terakhir</p>
+            <div className="max-h-48 overflow-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-muted-foreground">
+                    <th className="pb-1 pr-2">Waktu</th>
+                    <th className="pb-1 pr-2">Tenant</th>
+                    <th className="pb-1 pr-2">Sumber</th>
+                    <th className="pb-1 pr-2">Provider</th>
+                    <th className="pb-1 pr-2">Kategori</th>
+                    <th className="pb-1">Latency</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {incidents.slice(0, 20).map((inc, i) => (
+                    <tr key={`${inc.at}-${i}`} className="border-t">
+                      <td className="py-1 pr-2 whitespace-nowrap">
+                        {new Date(inc.at).toLocaleString("id-ID")}
+                      </td>
+                      <td className="py-1 pr-2 font-mono">{inc.tenantId.slice(0, 8)}…</td>
+                      <td className="py-1 pr-2">{inc.source}</td>
+                      <td className="py-1 pr-2">{inc.provider}</td>
+                      <td className="py-1 pr-2">{inc.category}</td>
+                      <td className="py-1">{inc.latencyMs}ms</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
