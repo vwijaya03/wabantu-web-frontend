@@ -259,7 +259,7 @@ function CopyableMono({ value, label }: { value: string; label: string }) {
     }
   };
   return (
-    <div className="flex items-start gap-1">
+    <span className="inline-flex items-start gap-1 align-top">
       <code className="max-w-[240px] break-all text-[11px] leading-snug">{value}</code>
       <Button
         type="button"
@@ -271,7 +271,7 @@ function CopyableMono({ value, label }: { value: string; label: string }) {
       >
         <Copy className="h-3 w-3" />
       </Button>
-    </div>
+    </span>
   );
 }
 
@@ -367,6 +367,13 @@ function JobStatusPanel({
           </p>
         ) : null}
 
+        {(job.status === "pr_ready" || job.status === "pr_ready_needs_fix") && !job.prUrl ? (
+          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-900 dark:text-amber-100">
+            Label &quot;PR siap&quot; adalah status internal job — GitHub Pull Request belum dibuat.
+            Buka GitHub Actions untuk melihat branch <code className="text-[11px]">fix/ai-triage-*</code>.
+          </p>
+        ) : null}
+
         {(analysis?.cursorFixAttempts ?? 0) >= 2 &&
         (job.status === "pr_ready_needs_fix" || job.status === "failed") ? (
           <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-900 dark:text-amber-100">
@@ -419,9 +426,9 @@ function JobStatusPanel({
         </div>
 
         {analysis?.cursorAgentId ? (
-          <p className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             Cursor agent: <CopyableMono value={analysis.cursorAgentId} label="Agent ID" />
-          </p>
+          </div>
         ) : null}
 
         {analysis?.fixHints ? (
