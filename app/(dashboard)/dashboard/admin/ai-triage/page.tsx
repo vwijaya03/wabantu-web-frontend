@@ -614,10 +614,17 @@ export default function AdminAITriagePage() {
     [tenants, effectiveTenantId],
   );
 
-  const { data: anomaliesData, isLoading: anomaliesLoading } = useQuery({
+  const {
+    data: anomaliesData,
+    isLoading: anomaliesLoading,
+    isFetching: anomaliesFetching,
+    refetch: refetchAnomalies,
+  } = useQuery({
     queryKey: ["admin-ai-triage-anomalies", effectiveTenantId],
     queryFn: () => aiTriageAdminApi.listAnomalies(effectiveTenantId, { limit: 50 }),
     enabled: user?.role === "super_admin" && Boolean(effectiveTenantId),
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: reportsData, isLoading: reportsLoading, refetch: refetchReports } = useQuery({
@@ -902,19 +909,41 @@ export default function AdminAITriagePage() {
 
       {tab === "mencurigakan" ? (
         <Card>
-          <CardHeader>
-            <CardTitle>Aktivitas AI terbaru</CardTitle>
-            <CardDescription>
-              Event ai_activity 1 jam terakhir per tenant. Jalankan loop per percakapan untuk
-              menganalisis semua turn routing deterministik sekaligus.
-            </CardDescription>
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
+            <div className="space-y-1.5">
+              <CardTitle>Aktivitas AI terbaru</CardTitle>
+              <CardDescription>
+                Data tab ini datang dari GET /api/v1/admin/ai-triage/anomalies — log tenant{" "}
+                <code className="text-[11px]">usage_event</code> (ai_activity, inbound_autoreply, 1 jam)
+                yang pesan masuknya masih ada. Bukan dari request RSC halaman (
+                <code className="text-[11px]">?tab=mencurigakan&amp;_rsc=</code>
+                ). Hapus chat tanpa menghapus percakapan yang masih hidup → baris itu tetap
+                muncul. Log judge AI Review dan pesan yang sudah dihapus tidak ditampilkan.
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!effectiveTenantId || anomaliesFetching}
+              onClick={() => void refetchAnomalies()}
+            >
+              {anomaliesFetching ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Segarkan
+            </Button>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {anomaliesLoading ? (
               <p className="text-sm text-muted-foreground">Memuat…</p>
             ) : (anomaliesData?.anomalies ?? []).length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                Belum ada aktivitas AI 1 jam terakhir untuk tenant ini.
+                Tidak ada inbound_autoreply 1 jam terakhir yang pesan masuknya masih ada.
+                Hapus percakapan di tenant, lalu Segarkan. Log usage_event tanpa baris message
+                tidak ditampilkan.
               </p>
             ) : (
               <>
@@ -1174,7 +1203,8 @@ export default function AdminAITriagePage() {
               Laporan balasan AI
             </CardTitle>
             <CardDescription>
-              Laporan manual dari Inbox (tenant staff / superadmin). Review, konfirmasi, atau jalankan
+              Tabel <code className="text-[11px]">ai_triage_report</code> di database system — terpisah
+              dari pesan tenant. Hapus chat tidak menghapus laporan. Review, konfirmasi, atau jalankan
               loop investigasi. Percakapan yang sudah lulus Verifikasi fix berstatus Selesai (bukan
               dihapus). Merge PR tidak mengubah history WhatsApp.
             </CardDescription>
