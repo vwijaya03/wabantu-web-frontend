@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Copy, ExternalLink, Flag, Loader2, Play, RefreshCw, Sparkles, Wand2 } from "lucide-react";
+import { CheckCircle2, Copy, ExternalLink, Flag, Loader2, Play, RefreshCw, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -99,6 +99,8 @@ function reportStatusLabel(status: AITriageReportStatus): string {
       return "Dikonfirmasi";
     case "dismissed":
       return "Diabaikan";
+    case "resolved":
+      return "Selesai";
     default:
       return status;
   }
@@ -136,6 +138,8 @@ function jobStatusLabel(status: AITriageJobStatus): string {
       return "Fix AI berjalan";
     case "failed":
       return "Gagal";
+    case "verified":
+      return "Terverifikasi";
     default:
       return status;
   }
@@ -144,6 +148,8 @@ function jobStatusLabel(status: AITriageJobStatus): string {
 function jobStatusVariant(status: AITriageJobStatus): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
     case "pr_ready":
+      return "default";
+    case "verified":
       return "default";
     case "pr_ready_needs_fix":
       return "secondary";
@@ -160,6 +166,17 @@ function jobStatusVariant(status: AITriageJobStatus): "default" | "secondary" | 
 
 function isJobActive(status: AITriageJobStatus): boolean {
   return status === "pending" || status === "running" || status === "fix_running";
+}
+
+function canVerifyJob(job: AITriageJob): boolean {
+  return job.status === "pr_ready" || job.status === "pr_ready_needs_fix" || job.status === "verified";
+}
+
+function parseForensicJobId(message: string): string | null {
+  const match = message.match(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+  );
+  return match?.[0] ?? null;
 }
 
 function canRequestAiFix(job: AITriageJob): boolean {
@@ -281,19 +298,25 @@ function JobStatusPanel({
   isRefreshing,
   onAiFix,
   aiFixPending,
+  onVerify,
+  verifyPending,
 }: {
   job: AITriageJob;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   onAiFix?: () => void;
   aiFixPending?: boolean;
+  onVerify?: () => void;
+  verifyPending?: boolean;
 }) {
   const analysis = job.analysis;
   const deterministicMismatches =
     analysis?.mismatches?.filter((m) => !m.skipped && m.actualPath !== m.expectedPath) ?? [];
   const regressionFailures = analysis?.regressionFailures ?? [];
+  const verifyFailures = analysis?.verifyFailures ?? [];
   const regressionCases = analysis ? regressionCaseCount(analysis.mismatches ?? []) : 0;
   const showAiFix = canRequestAiFix(job);
+  const showVerify = Boolean(onVerify) && canVerifyJob(job);
 
   return (
     <Card className="mt-6 border-primary/30">
@@ -358,6 +381,31 @@ function JobStatusPanel({
         {analysis && regressionCases === 0 ? (
           <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-900 dark:text-amber-100">
             Tidak ada routing mismatch deterministik — loop tidak menghasilkan regression test.
+            Nol mismatch forensic bukan bukti fix: sukses = Verifikasi fix hijau.
+          </p>
+        ) : null}
+
+        {deterministicMismatches.length > 0 ? (
+          <p className="rounded-md border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-sky-950 dark:text-sky-100">
+            Ini path WhatsApp lama vs simulator sekarang. Merge tidak mengubah history. Sukses =
+            Verifikasi fix hijau.
+          </p>
+        ) : null}
+
+        {analysis?.verifyNote ? (
+          <p className="rounded-md border px-3 py-2 text-muted-foreground">{analysis.verifyNote}</p>
+        ) : null}
+
+        {analysis?.verifyPassed === true ? (
+          <p className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-emerald-900 dark:text-emerald-100">
+            Simulator deployed cocok dengan golden wantPath.
+            {analysis.verifyUsedLiveCatalog ? " Snapshot katalog job kosong — memakai katalog live." : ""}
+          </p>
+        ) : null}
+
+        {analysis?.verifyPassed === false ? (
+          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive">
+            Verifikasi gagal — simulator belum mengembalikan wantPath. Jangan jalankan loop forensic baru.
           </p>
         ) : null}
 
@@ -389,6 +437,16 @@ function JobStatusPanel({
         ) : null}
 
         <div className="flex flex-wrap gap-2">
+          {showVerify ? (
+            <Button size="sm" disabled={verifyPending} onClick={onVerify}>
+              {verifyPending ? (
+                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
+              )}
+              Verifikasi fix
+            </Button>
+          ) : null}
           {showAiFix && onAiFix ? (
             <Button size="sm" disabled={aiFixPending} onClick={onAiFix}>
               {aiFixPending ? (
@@ -463,9 +521,33 @@ function JobStatusPanel({
           </div>
         ) : null}
 
+        {verifyFailures.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">
+              Verifikasi gagal ({verifyFailures.length})
+            </p>
+            {verifyFailures.slice(0, 8).map((f) => (
+              <div key={`verify-${f.caseName}`} className="rounded border px-3 py-2 text-xs">
+                <p className="font-mono font-medium">{f.caseName}</p>
+                <p className="mt-1">
+                  <Badge variant="outline" className="mr-1">
+                    {f.gotPath}
+                  </Badge>
+                  →
+                  <Badge variant="secondary" className="ml-1">
+                    {f.wantPath}
+                  </Badge>
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         {deterministicMismatches.length > 0 ? (
           <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Detail mismatch</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              Detail mismatch forensic (history WA vs sim)
+            </p>
             {deterministicMismatches.slice(0, 5).map((m) => (
               <div key={m.inboundId} className="rounded border px-3 py-2 text-xs">
                 <CopyableMono value={m.inboundId} label="Inbound ID" />
@@ -514,6 +596,7 @@ export default function AdminAITriagePage() {
   const [activeLLMScanId, setActiveLLMScanId] = useState<string | null>(null);
   const [llmShowOnlyFlagged, setLlmShowOnlyFlagged] = useState(false);
   const [investigateFocusOneTurn, setInvestigateFocusOneTurn] = useState(false);
+  const [forceForensic, setForceForensic] = useState(false);
   const [reportStatusFilter, setReportStatusFilter] = useState<AITriageReportStatus | "all">("open");
 
   const { data: tenantsData, isLoading: tenantsLoading } = useQuery({
@@ -620,6 +703,12 @@ export default function AdminAITriagePage() {
         toast.error("Antrian penuh — maks. 3 job triage bersamaan");
         return;
       }
+      const existingId = parseForensicJobId(err.message);
+      if (existingId) {
+        setActiveJobId(existingId);
+        toast.error(err.message);
+        return;
+      }
       toast.error(err.message);
     },
   });
@@ -638,6 +727,25 @@ export default function AdminAITriagePage() {
       }
       toast.error(err.message);
     },
+  });
+
+  const verifyJobMut = useMutation({
+    mutationFn: aiTriageAdminApi.verifyJob,
+    onSuccess: (res) => {
+      setActiveJobId(res.job.id);
+      void refetchJob();
+      void refetchReports();
+      if (res.passed) {
+        toast.success(
+          res.reportsResolved > 0
+            ? `Verifikasi lulus — ${res.reportsResolved} laporan diselesaikan`
+            : "Verifikasi lulus",
+        );
+        return;
+      }
+      toast.error("Verifikasi gagal — simulator belum cocok dengan wantPath");
+    },
+    onError: (e) => toast.error(toApiError(e).message),
   });
 
   const setTab = (id: TriageTabId) => {
@@ -663,6 +771,7 @@ export default function AdminAITriagePage() {
       tenantId: effectiveTenantId,
       conversationId: params.conversationId.trim(),
       inboundId: params.inboundId?.trim() || undefined,
+      force: forceForensic || undefined,
     });
   };
 
@@ -1096,7 +1205,8 @@ export default function AdminAITriagePage() {
             <CardDescription>
               Tabel <code className="text-[11px]">ai_triage_report</code> di database system — terpisah
               dari pesan tenant. Hapus chat tidak menghapus laporan. Review, konfirmasi, atau jalankan
-              loop investigasi.
+              loop investigasi. Percakapan yang sudah lulus Verifikasi fix berstatus Selesai (bukan
+              dihapus). Merge PR tidak mengubah history WhatsApp.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1106,6 +1216,7 @@ export default function AdminAITriagePage() {
                   ["open", "Menunggu"],
                   ["confirmed", "Dikonfirmasi"],
                   ["dismissed", "Diabaikan"],
+                  ["resolved", "Selesai"],
                   ["all", "Semua"],
                 ] as const
               ).map(([id, label]) => (
@@ -1228,7 +1339,8 @@ export default function AdminAITriagePage() {
             <CardTitle>Investigasi manual</CardTitle>
             <CardDescription>
               Masukkan conversationId (wajib). Secara default loop menganalisis seluruh percakapan.
-              Centang &quot;Hanya turn ini&quot; untuk fokus pada satu pesan masuk (debug).
+              Centang &quot;Hanya turn ini&quot; untuk fokus pada satu pesan masuk (debug). Job kedua
+              untuk percakapan yang sama ditolak kecuali Paksa loop baru.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 max-w-lg">
@@ -1261,6 +1373,14 @@ export default function AdminAITriagePage() {
               />
               Hanya turn ini (fokus satu inbound)
             </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={forceForensic}
+                onChange={(e) => setForceForensic(e.target.checked)}
+              />
+              Paksa loop baru (force) — hanya jika ada bug baru di thread yang sama
+            </label>
             <Button
               disabled={loopBusy || !conversationId.trim()}
               onClick={() =>
@@ -1292,6 +1412,10 @@ export default function AdminAITriagePage() {
               : undefined
           }
           aiFixPending={aiFixMut.isPending}
+          onVerify={
+            canVerifyJob(jobData.job) ? () => verifyJobMut.mutate(jobData.job.id) : undefined
+          }
+          verifyPending={verifyJobMut.isPending}
         />
       ) : null}
     </>
