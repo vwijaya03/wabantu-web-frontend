@@ -72,6 +72,10 @@ export interface AnalyzeConversationResult {
   cursorAgentId?: string;
   cursorFixGithubRunUrl?: string;
   cursorFixAttempts?: number;
+  verifyFailures?: TriageRegressionFailure[];
+  verifyNote?: string;
+  verifyUsedLiveCatalog?: boolean;
+  verifyPassed?: boolean;
 }
 
 export type AITriageJobStatus =
@@ -80,7 +84,8 @@ export type AITriageJobStatus =
   | "pr_ready"
   | "pr_ready_needs_fix"
   | "fix_running"
-  | "failed";
+  | "failed"
+  | "verified";
 
 export interface AITriageJob {
   id: string;
@@ -103,6 +108,14 @@ export interface CreateAITriageJobParams {
   tenantId: string;
   conversationId: string;
   inboundId?: string;
+  force?: boolean;
+}
+
+export interface VerifyAITriageJobResponse {
+  job: AITriageJob;
+  passed: boolean;
+  failures?: TriageRegressionFailure[];
+  reportsResolved: number;
 }
 
 export const aiTriageAdminApi = {
@@ -128,6 +141,11 @@ export const aiTriageAdminApi = {
 
   async requestAiFix(id: string): Promise<{ job: AITriageJob }> {
     const res = await api.post(`/admin/ai-triage/jobs/${id}/ai-fix`);
+    return res.data;
+  },
+
+  async verifyJob(id: string): Promise<VerifyAITriageJobResponse> {
+    const res = await api.post(`/admin/ai-triage/jobs/${id}/verify`);
     return res.data;
   },
 
@@ -164,7 +182,7 @@ export const aiTriageAdminApi = {
   },
 };
 
-export type AITriageReportStatus = "open" | "confirmed" | "dismissed";
+export type AITriageReportStatus = "open" | "confirmed" | "dismissed" | "resolved";
 
 export interface AITriageReport {
   id: string;
@@ -187,6 +205,7 @@ export interface AITriageReport {
   reviewedBy?: string;
   reviewNote?: string;
   reviewedAt?: string;
+  resolvedByJobId?: string;
   createdAt: string;
   updatedAt: string;
   tenantName?: string;
