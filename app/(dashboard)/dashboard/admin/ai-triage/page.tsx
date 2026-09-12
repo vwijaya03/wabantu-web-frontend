@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/components/providers/auth-provider";
+import { IncidentPanel } from "@/components/admin/ai-triage/incident-panel";
 import { adminApi } from "@/lib/api/admin";
 import {
   aiTriageAdminApi,
@@ -30,7 +31,7 @@ import {
 import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
-const TRIAGE_TABS = ["mencurigakan", "ai-review", "laporan", "investigasi"] as const;
+const TRIAGE_TABS = ["insiden", "mencurigakan", "ai-review", "laporan", "investigasi"] as const;
 type TriageTabId = (typeof TRIAGE_TABS)[number];
 
 function formatDatetimeLocal(d: Date): string {
@@ -887,6 +888,7 @@ export default function AdminAITriagePage() {
       <div className="mb-4 flex flex-wrap gap-2">
         {(
           [
+            ["insiden", "Insiden"],
             ["mencurigakan", "Mencurigakan"],
             ["ai-review", "AI Review"],
             ["laporan", "Laporan"],
@@ -906,6 +908,8 @@ export default function AdminAITriagePage() {
           </button>
         ))}
       </div>
+
+      {tab === "insiden" ? <IncidentPanel tenantId={effectiveTenantId} /> : null}
 
       {tab === "mencurigakan" ? (
         <Card>
