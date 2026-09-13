@@ -66,6 +66,7 @@ export interface AnalyzeConversationResult {
   turnsSkipped: number;
   mismatches: TriageMismatch[];
   hasDeterministicMismatch: boolean;
+  focusFound?: boolean;
   regressionFailures?: TriageRegressionFailure[];
   fixHints?: TriageFixHints;
   simulatorSnapshot?: TriageSimulatorSnapshot;
@@ -180,6 +181,80 @@ export const aiTriageAdminApi = {
     const res = await api.patch(`/admin/ai-triage/reports/${id}`, params);
     return res.data;
   },
+
+  async openIncidentFromReport(id: string): Promise<{ incident: AITriageIncident }> {
+    const res = await api.post(`/admin/ai-triage/reports/${id}/incident`);
+    return res.data;
+  },
+
+  async listIncidents(params?: {
+    tenantId?: string;
+    channel?: string;
+    status?: string;
+    limit?: number;
+  }): Promise<{ incidents: AITriageIncident[] }> {
+    const res = await api.get("/admin/ai-triage/incidents", { params });
+    return res.data;
+  },
+
+  async getIncident(id: string): Promise<{ incident: AITriageIncident }> {
+    const res = await api.get(`/admin/ai-triage/incidents/${id}`);
+    return res.data;
+  },
+
+  async confirmIncident(
+    id: string,
+    contract: BehaviorContract,
+  ): Promise<{ incident: AITriageIncident; behaviorJob?: AITriageBehaviorJob }> {
+    const res = await api.post(`/admin/ai-triage/incidents/${id}/confirm`, { contract });
+    return res.data;
+  },
+
+  async dismissIncident(id: string, note?: string): Promise<{ incident: AITriageIncident }> {
+    const res = await api.post(`/admin/ai-triage/incidents/${id}/dismiss`, { note });
+    return res.data;
+  },
+
+  async getBehaviorJob(id: string): Promise<{ job: AITriageBehaviorJob }> {
+    const res = await api.get(`/admin/ai-triage/behavior-jobs/${id}`);
+    return res.data;
+  },
+
+  async retryBehaviorJob(id: string): Promise<{ job: AITriageBehaviorJob }> {
+    const res = await api.post(`/admin/ai-triage/behavior-jobs/${id}/retry`);
+    return res.data;
+  },
+
+  async verifyBehaviorJob(id: string): Promise<{
+    job: AITriageBehaviorJob;
+    result: { passed: boolean; deployedRevision?: string; failures?: string[] };
+  }> {
+    const res = await api.post(`/admin/ai-triage/behavior-jobs/${id}/verify`);
+    return res.data;
+  },
+
+  async dryRunRepair(
+    incidentId: string,
+    params: { operation: string; targetOrderId?: string; items?: unknown[] },
+  ): Promise<{ plan: AITriageRepairPlan }> {
+    const res = await api.post(`/admin/ai-triage/incidents/${incidentId}/repair/dry-run`, params);
+    return res.data;
+  },
+
+  async getRepairPlan(id: string): Promise<{ plan: AITriageRepairPlan }> {
+    const res = await api.get(`/admin/ai-triage/repair-plans/${id}`);
+    return res.data;
+  },
+
+  async approveRepair(id: string): Promise<{ plan: AITriageRepairPlan }> {
+    const res = await api.post(`/admin/ai-triage/repair-plans/${id}/approve`);
+    return res.data;
+  },
+
+  async applyRepair(id: string): Promise<{ plan: AITriageRepairPlan }> {
+    const res = await api.post(`/admin/ai-triage/repair-plans/${id}/apply`);
+    return res.data;
+  },
 };
 
 export type AITriageReportStatus = "open" | "confirmed" | "dismissed" | "resolved";
@@ -251,4 +326,93 @@ export interface CreateAITriageLLMScanParams {
   from: string;
   to: string;
   conversationId?: string;
+}
+
+export type AITriageChannel = "whatsapp" | "web_chat" | "storefront_search";
+export type AITriageIncidentReview = "open" | "confirmed" | "dismissed" | "needs_human_input";
+export type AITriageBehaviorJobStatus =
+  | "planning"
+  | "needs_human_input"
+  | "needs_customer_input"
+  | "test_ready"
+  | "fix_running"
+  | "pr_ready"
+  | "already_fixed"
+  | "verify_pending"
+  | "verified"
+  | "failed";
+
+export interface AITriageTurnEvidence {
+  userText?: string;
+  finalText?: string;
+  path?: string;
+  inboundRef?: string;
+  outboundRef?: string;
+  threadRef?: string;
+}
+
+export interface AITriageIncident {
+  id: string;
+  tenantId: string;
+  tenantSchema: string;
+  channel: AITriageChannel;
+  fingerprint: string;
+  reviewStatus: AITriageIncidentReview;
+  resolutionStatus: string;
+  lane?: string;
+  degradedMode?: string;
+  evidenceVersion: number;
+  evidence?: AITriageTurnEvidence;
+  draftContract?: unknown;
+  confirmedContract?: unknown;
+  behaviorJobId?: string;
+  repairPlanId?: string;
+  createdAt: string;
+  updatedAt: string;
+  sources?: Array<{ sourceType: string; sourceId: string; channel: string }>;
+}
+
+export interface AITriageBehaviorJob {
+  id: string;
+  incidentId: string;
+  status: AITriageBehaviorJobStatus;
+  lane: string;
+  channel: string;
+  targetRepo: string;
+  prUrl?: string;
+  githubRunUrl?: string;
+  expectedRevision?: string;
+  attemptCount: number;
+  errorText?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AITriageRepairPlan {
+  id: string;
+  incidentId: string;
+  operation: string;
+  status: string;
+  blockReasons?: string[];
+  beforeJson?: unknown;
+  afterJson?: unknown;
+  beforeHash: string;
+  afterHash: string;
+  createdAt: string;
+}
+
+export interface BehaviorContract {
+  version: number;
+  lane: string;
+  channel: string;
+  degradedMode?: string;
+  clarification?: string;
+  assertions: {
+    wantPath?: string;
+    cartInclude?: Array<{ nameContains?: string; qty?: number }>;
+    cartExclude?: string[];
+    replyContains?: string[];
+    replyExcludes?: string[];
+    needCustomerInput?: boolean;
+  };
 }

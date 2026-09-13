@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/components/providers/auth-provider";
+import { IncidentPanel } from "@/components/admin/ai-triage/incident-panel";
 import { adminApi } from "@/lib/api/admin";
 import {
   aiTriageAdminApi,
@@ -30,7 +31,7 @@ import {
 import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
-const TRIAGE_TABS = ["mencurigakan", "ai-review", "laporan", "investigasi"] as const;
+const TRIAGE_TABS = ["insiden", "mencurigakan", "ai-review", "laporan", "investigasi"] as const;
 type TriageTabId = (typeof TRIAGE_TABS)[number];
 
 function formatDatetimeLocal(d: Date): string {
@@ -209,6 +210,10 @@ function groupByConversationId<T extends { conversationId?: string }>(
   }));
 }
 
+function isNonDeterministicReportPath(path?: string): boolean {
+  return path === "llm" || path === "llm_grounded" || path === "llm_tools";
+}
+
 function regressionCaseCount(
   mismatches: { skipped?: boolean; actualPath?: string; expectedPath?: string; userText?: string }[],
 ): number {
@@ -310,6 +315,10 @@ function JobStatusPanel({
   verifyPending?: boolean;
 }) {
   const analysis = job.analysis;
+  const focusId = job.inboundId || analysis?.focusInboundId;
+  const focusedMismatch = focusId
+    ? analysis?.mismatches?.find((m) => m.inboundId === focusId)
+    : undefined;
   const deterministicMismatches =
     analysis?.mismatches?.filter((m) => !m.skipped && m.actualPath !== m.expectedPath) ?? [];
   const regressionFailures = analysis?.regressionFailures ?? [];
@@ -375,6 +384,27 @@ function JobStatusPanel({
               <p className="text-xs text-muted-foreground">Regression case</p>
               <p className="font-medium">{regressionCases}</p>
             </div>
+          </div>
+        ) : null}
+
+        {focusedMismatch ? (
+          <div className="rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-xs">
+            <p className="font-medium">Turn yang diminta</p>
+            <p className="mt-1 whitespace-pre-wrap break-words">{focusedMismatch.userText || "—"}</p>
+            <p className="mt-1">
+              Path: <Badge variant="outline">{focusedMismatch.actualPath || "—"}</Badge>
+              {focusedMismatch.skipped ? (
+                <span className="ml-2 text-amber-800 dark:text-amber-200">
+                  dilewati ({focusedMismatch.skipReason || "skipped"})
+                </span>
+              ) : null}
+            </p>
+            {focusedMismatch.skipped && focusedMismatch.skipReason === "non_deterministic_path" ? (
+              <p className="mt-2 text-amber-900 dark:text-amber-100">
+                Loop routing tidak menilai isi katalog/SKU. Buka tab Insiden untuk pasangan pesan
+                ini.
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -655,6 +685,15 @@ export default function AdminAITriagePage() {
     onError: (e) => toast.error(toApiError(e).message),
   });
 
+  const openIncidentMut = useMutation({
+    mutationFn: (id: string) => aiTriageAdminApi.openIncidentFromReport(id),
+    onSuccess: () => {
+      toast.success("Insiden menampilkan pasangan laporan ini");
+      setTab("insiden");
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
   const {
     data: jobData,
     refetch: refetchJob,
@@ -758,6 +797,31 @@ export default function AdminAITriagePage() {
     runLoop({ conversationId });
   };
 
+  const investigateReport = (row: {
+    id: string;
+    conversationId?: string;
+    inboundId?: string;
+    path?: string;
+    userText?: string;
+  }) => {
+    if (isNonDeterministicReportPath(row.path)) {
+      openIncidentMut.mutate(row.id);
+      return;
+    }
+    if (!row.conversationId?.trim()) {
+      toast.error("conversationId kosong");
+      return;
+    }
+    if (!row.inboundId?.trim()) {
+      toast.error("inboundId kosong — jangan loop seluruh percakapan dari laporan");
+      return;
+    }
+    setConversationId(row.conversationId);
+    setInboundId(row.inboundId);
+    setInvestigateFocusOneTurn(true);
+    runLoop({ conversationId: row.conversationId, inboundId: row.inboundId });
+  };
+
   const runLoop = (params: { conversationId: string; inboundId?: string }) => {
     if (!effectiveTenantId) {
       toast.error("Pilih tenant terlebih dahulu");
@@ -786,13 +850,6 @@ export default function AdminAITriagePage() {
     () => groupByConversationId(reviewableAnomalies),
     [reviewableAnomalies],
   );
-
-  const reportConversationGroups = useMemo(() => {
-    const withConversation = (reportsData?.reports ?? []).filter((row) =>
-      Boolean(row.conversationId?.trim()),
-    );
-    return groupByConversationId(withConversation);
-  }, [reportsData?.reports]);
 
   const loopBusy =
     createJobMut.isPending ||
@@ -887,6 +944,7 @@ export default function AdminAITriagePage() {
       <div className="mb-4 flex flex-wrap gap-2">
         {(
           [
+            ["insiden", "Insiden"],
             ["mencurigakan", "Mencurigakan"],
             ["ai-review", "AI Review"],
             ["laporan", "Laporan"],
@@ -906,6 +964,8 @@ export default function AdminAITriagePage() {
           </button>
         ))}
       </div>
+
+      {tab === "insiden" ? <IncidentPanel tenantId={effectiveTenantId} /> : null}
 
       {tab === "mencurigakan" ? (
         <Card>
@@ -1204,9 +1264,9 @@ export default function AdminAITriagePage() {
             </CardTitle>
             <CardDescription>
               Tabel <code className="text-[11px]">ai_triage_report</code> di database system — terpisah
-              dari pesan tenant. Hapus chat tidak menghapus laporan. Review, konfirmasi, atau jalankan
-              loop investigasi. Percakapan yang sudah lulus Verifikasi fix berstatus Selesai (bukan
-              dihapus). Merge PR tidak mengubah history WhatsApp.
+              dari pesan tenant. Hapus chat tidak menghapus laporan. Investigasi terikat inbound yang
+              dilaporkan: path <code className="text-[11px]">llm_grounded</code> / LLM ke tab Insiden,
+              bukan loop seluruh percakapan (itu menampilkan turn routing lain di thread yang sama).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1238,13 +1298,6 @@ export default function AdminAITriagePage() {
               </p>
             ) : (
               <div className="overflow-x-auto">
-                <ConversationLoopBar
-                  groups={reportConversationGroups}
-                  itemLabel="laporan"
-                  busy={loopBusy}
-                  pending={createJobMut.isPending}
-                  onRun={runLoopForConversation}
-                />
                 <table className="w-full min-w-[1000px] text-left text-sm">
                   <thead>
                     <tr className="border-b text-muted-foreground">
@@ -1298,8 +1351,19 @@ export default function AdminAITriagePage() {
                           ) : null}
                         </td>
                         <td className="py-2 space-y-1">
+                          <div className="flex flex-col gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={loopBusy || openIncidentMut.isPending}
+                            onClick={() => investigateReport(row)}
+                          >
+                            {isNonDeterministicReportPath(row.path)
+                              ? "Buka Insiden"
+                              : "Loop turn ini"}
+                          </Button>
                           {row.status === "open" ? (
-                            <div className="flex flex-col gap-1">
+                            <>
                               <Button
                                 variant="secondary"
                                 size="sm"
@@ -1320,8 +1384,9 @@ export default function AdminAITriagePage() {
                               >
                                 Abaikan
                               </Button>
-                            </div>
+                            </>
                           ) : null}
+                          </div>
                         </td>
                       </tr>
                     ))}
