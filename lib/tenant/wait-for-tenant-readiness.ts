@@ -10,9 +10,10 @@ export type WaitTenantReadinessOptions = {
 };
 
 /**
- * Poll until backend reports tenant schema is ready (or timeout).
- * Only call after entering a tenant session. After stop-impersonation the
- * session has no schema — polling would spin until maxWaitMs.
+ * Wait for tenant schema readiness after entering a tenant session.
+ * Poll only while a migration job is active — a stable not-ready tenant
+ * (patch behind, cloud DDL pending) will not become ready in 400ms.
+ * Do not call after stop-impersonation.
  */
 export async function waitForTenantReadiness(
   options: WaitTenantReadinessOptions = {},
@@ -27,7 +28,7 @@ export async function waitForTenantReadiness(
 
     const status = await tenantApi.readiness(options.signal);
     options.onPoll?.(status);
-    if (status.ready) {
+    if (status.ready || !status.migrating) {
       return status;
     }
 

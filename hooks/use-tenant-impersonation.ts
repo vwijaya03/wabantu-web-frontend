@@ -40,6 +40,7 @@ async function afterEnterTenant(
   resetTenantScopedQueries(qc);
   abortInFlightReadiness();
   inFlightReadiness = new AbortController();
+  completeSwitch();
   const status = await waitForTenantReadiness({
     signal: inFlightReadiness.signal,
   });
@@ -49,7 +50,6 @@ async function afterEnterTenant(
       "Schema tenant masih disiapkan — beberapa data mungkin belum tampil.",
     );
   }
-  completeSwitch();
 }
 
 async function afterLeaveTenant(
