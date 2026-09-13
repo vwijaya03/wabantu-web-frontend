@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { IncidentReviewDialog } from "@/components/admin/ai-triage/incident-review-dialog";
 import { RepairPreviewCard } from "@/components/admin/ai-triage/repair-preview-card";
+import { incidentUserText } from "@/components/admin/ai-triage/incident-turn-pair";
 import { aiTriageAdminApi, type AITriageIncident } from "@/lib/api/ai-triage";
 import { toApiError } from "@/lib/api/client";
 
@@ -110,15 +111,19 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
                 <th className="py-2">Kanal</th>
                 <th>Status</th>
                 <th>Lane</th>
+                <th>Pesan</th>
                 <th />
               </tr>
             </thead>
             <tbody>
               {incidents.map((inc) => (
-                <tr key={inc.id} className="border-b">
+                <tr key={inc.id} className="border-b align-top">
                   <td className="py-2">{inc.channel}</td>
                   <td>{resolutionLabel(inc)}</td>
                   <td>{inc.lane || "—"}</td>
+                  <td className="max-w-[280px] py-2 text-xs whitespace-pre-wrap break-words">
+                    {incidentUserText(inc) || "—"}
+                  </td>
                   <td>
                     <Button type="button" size="sm" variant="outline" onClick={() => setOpen(inc)}>
                       Review

@@ -66,6 +66,7 @@ export interface AnalyzeConversationResult {
   turnsSkipped: number;
   mismatches: TriageMismatch[];
   hasDeterministicMismatch: boolean;
+  focusFound?: boolean;
   regressionFailures?: TriageRegressionFailure[];
   fixHints?: TriageFixHints;
   simulatorSnapshot?: TriageSimulatorSnapshot;
@@ -178,6 +179,11 @@ export const aiTriageAdminApi = {
     params: { status: "confirmed" | "dismissed"; reviewNote?: string },
   ): Promise<{ report: AITriageReport }> {
     const res = await api.patch(`/admin/ai-triage/reports/${id}`, params);
+    return res.data;
+  },
+
+  async openIncidentFromReport(id: string): Promise<{ incident: AITriageIncident }> {
+    const res = await api.post(`/admin/ai-triage/reports/${id}/incident`);
     return res.data;
   },
 
@@ -336,6 +342,15 @@ export type AITriageBehaviorJobStatus =
   | "verified"
   | "failed";
 
+export interface AITriageTurnEvidence {
+  userText?: string;
+  finalText?: string;
+  path?: string;
+  inboundRef?: string;
+  outboundRef?: string;
+  threadRef?: string;
+}
+
 export interface AITriageIncident {
   id: string;
   tenantId: string;
@@ -347,6 +362,7 @@ export interface AITriageIncident {
   lane?: string;
   degradedMode?: string;
   evidenceVersion: number;
+  evidence?: AITriageTurnEvidence;
   draftContract?: unknown;
   confirmedContract?: unknown;
   behaviorJobId?: string;

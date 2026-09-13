@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/ai-triage";
 import { toApiError } from "@/lib/api/client";
 import { BehaviorContractCard } from "./behavior-contract-card";
+import { IncidentTurnPair } from "./incident-turn-pair";
 
 function asContract(raw: unknown): BehaviorContract | null {
   if (!raw || typeof raw !== "object") return null;
@@ -69,6 +70,9 @@ export function IncidentReviewDialog({
           {incident.degradedMode ? ` · ${incident.degradedMode}` : ""}. Confirm tidak berarti
           sudah fixed.
         </p>
+        <div className="mt-3">
+          <IncidentTurnPair incident={incident} />
+        </div>
         <div className="mt-3">
           <BehaviorContractCard contract={draft} />
         </div>
