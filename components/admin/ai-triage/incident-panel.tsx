@@ -82,8 +82,8 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
       <CardHeader>
         <CardTitle>Insiden self-healing</CardTitle>
         <CardDescription>
-          Konfirmasi masalah dulu. Composer hanya setelah kontrak disetujui. Feedback widget
-          tampil di sini sebagai Menunggu, bukan job GHA.
+          Konfirmasi menjalankan Composer 2.5 (draft PR). Chat WhatsApp lama tidak berubah
+          sampai PR di-merge dan Encore di-deploy.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

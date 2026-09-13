@@ -17,6 +17,21 @@ function asContract(raw: unknown): BehaviorContract | null {
   return raw as BehaviorContract;
 }
 
+function contractCanDispatchComposer(c?: BehaviorContract | null): boolean {
+  if (!c?.assertions || c.assertions.needCustomerInput) return false;
+  const a = c.assertions;
+  if (c.lane === "buyerflow" || c.lane === "draft_order") {
+    return Boolean(a.wantPath || (a.cartInclude && a.cartInclude.length > 0));
+  }
+  if (c.lane === "grounded_content") {
+    return Boolean(
+      (a.replyContains && a.replyContains.length > 0) ||
+        (a.replyExcludes && a.replyExcludes.length > 0),
+    );
+  }
+  return Boolean(a.wantPath);
+}
+
 export function IncidentReviewDialog({
   incident,
   onClose,
@@ -29,6 +44,9 @@ export function IncidentReviewDialog({
   const draft = asContract(incident.draftContract) ?? asContract(incident.confirmedContract);
   const [busy, setBusy] = useState(false);
 
+  const canDispatch = contractCanDispatchComposer(draft);
+  const alreadyHasJob = Boolean(incident.behaviorJobId);
+
   const confirm = async () => {
     if (!draft) {
       toast.error("Contract kosong");
@@ -36,8 +54,14 @@ export function IncidentReviewDialog({
     }
     setBusy(true);
     try {
-      await aiTriageAdminApi.confirmIncident(incident.id, draft);
-      toast.success("Masalah dikonfirmasi — belum diperbaiki");
+      const res = await aiTriageAdminApi.confirmIncident(incident.id, draft);
+      if (res.behaviorJob) {
+        toast.success("Composer 2.5 mulai membuat draft PR");
+      } else if (alreadyHasJob) {
+        toast.success("Composer sudah jalan untuk insiden ini");
+      } else {
+        toast.message("Dikonfirmasi — kontrak belum cukup untuk Composer");
+      }
       onChanged();
       onClose();
     } catch (e) {
@@ -64,11 +88,13 @@ export function IncidentReviewDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-background p-4 shadow-lg">
-        <h2 className="text-lg font-semibold">Konfirmasi masalah — belum diperbaiki</h2>
+        <h2 className="text-lg font-semibold">
+          {canDispatch ? "Jalankan Composer 2.5" : "Konfirmasi masalah"}
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Kanal {incident.channel}
-          {incident.degradedMode ? ` · ${incident.degradedMode}` : ""}. Confirm tidak berarti
-          sudah fixed.
+          {incident.degradedMode ? ` · ${incident.degradedMode}` : ""}. Composer membuat draft PR;
+          chat WhatsApp lama tidak berubah sampai PR di-merge dan di-deploy.
         </p>
         <div className="mt-3">
           <IncidentTurnPair incident={incident} />
@@ -83,8 +109,12 @@ export function IncidentReviewDialog({
           <Button type="button" variant="outline" onClick={() => void dismiss()} disabled={busy}>
             Abaikan
           </Button>
-          <Button type="button" onClick={() => void confirm()} disabled={busy}>
-            Konfirmasi masalah
+          <Button type="button" onClick={() => void confirm()} disabled={busy || alreadyHasJob}>
+            {alreadyHasJob
+              ? "Composer sudah jalan"
+              : canDispatch
+                ? "Konfirmasi & jalankan Composer"
+                : "Konfirmasi masalah"}
           </Button>
         </div>
       </div>

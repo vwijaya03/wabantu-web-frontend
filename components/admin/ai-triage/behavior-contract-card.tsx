@@ -29,6 +29,24 @@ export function BehaviorContractCard({
           Path: <code>{contract.assertions.wantPath}</code>
         </p>
       ) : null}
+      {contract.assertions.cartInclude?.length ? (
+        <p>
+          Keranjang:{" "}
+          {contract.assertions.cartInclude
+            .map((l) => `${l.nameContains || "item"} ×${l.qty ?? 1}`)
+            .join(", ")}
+        </p>
+      ) : null}
+      {contract.assertions.replyExcludes?.length ? (
+        <p className="text-muted-foreground">
+          Jangan bilang: {contract.assertions.replyExcludes.join(", ")}
+        </p>
+      ) : null}
+      {contract.assertions.replyContains?.length ? (
+        <p className="text-muted-foreground">
+          Balasan harus menyebut: {contract.assertions.replyContains.join(", ")}
+        </p>
+      ) : null}
       {contract.assertions.needCustomerInput ? (
         <p className="text-amber-700">Menunggu input pelanggan — jangan menebak varian.</p>
       ) : null}
