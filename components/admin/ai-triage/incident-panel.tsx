@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BehaviorJobCard } from "@/components/admin/ai-triage/behavior-job-card";
 import { IncidentReviewDialog } from "@/components/admin/ai-triage/incident-review-dialog";
 import { RepairPreviewCard } from "@/components/admin/ai-triage/repair-preview-card";
 import { incidentUserText } from "@/components/admin/ai-triage/incident-turn-pair";
@@ -15,13 +16,18 @@ function resolutionLabel(inc: AITriageIncident): string {
   if (inc.reviewStatus === "needs_human_input") return "Menunggu input";
   if (inc.resolutionStatus === "fixed") return "Selesai";
   if (inc.resolutionStatus === "repair_ready") return "Repair siap";
-  if (inc.behaviorJobId && inc.resolutionStatus !== "fixed") return "Fix kode siap";
+  if (inc.behaviorJobId && inc.resolutionStatus !== "fixed") return "Composer";
   if (inc.reviewStatus === "confirmed") return "Dikonfirmasi — belum diperbaiki";
   return "Menunggu";
 }
 
+function jobInFlight(status?: string): boolean {
+  return status === "fix_running" || status === "test_ready" || status === "planning";
+}
+
 export function IncidentPanel({ tenantId }: { tenantId: string }) {
-  const [open, setOpen] = useState<AITriageIncident | null>(null);
+  const [reviewing, setReviewing] = useState<AITriageIncident | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const [channel, setChannel] = useState<string>("");
   const q = useQuery({
     queryKey: ["admin-ai-triage-incidents", tenantId, channel],
@@ -34,25 +40,35 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
     enabled: Boolean(tenantId),
     refetchInterval: (query) => {
       const items = query.state.data?.incidents ?? [];
-      return items.some((i) => i.reviewStatus === "open" || i.behaviorJobId) ? 5000 : false;
+      return items.some((i) => i.reviewStatus === "open") ? 5000 : false;
     },
   });
 
-  const selected = open;
+  const incidents = q.data?.incidents ?? [];
+  const focused = incidents.find((i) => i.id === focusedId) ?? reviewing;
   const jobQuery = useQuery({
-    queryKey: ["admin-ai-triage-behavior-job", selected?.behaviorJobId],
-    queryFn: () => aiTriageAdminApi.getBehaviorJob(selected!.behaviorJobId!),
-    enabled: Boolean(selected?.behaviorJobId),
+    queryKey: ["admin-ai-triage-behavior-job", focused?.behaviorJobId],
+    queryFn: () => aiTriageAdminApi.getBehaviorJob(focused!.behaviorJobId!),
+    enabled: Boolean(focused?.behaviorJobId),
+    refetchInterval: (query) => (jobInFlight(query.state.data?.job.status) ? 3000 : false),
   });
   const repairQuery = useQuery({
-    queryKey: ["admin-ai-triage-repair", selected?.repairPlanId],
-    queryFn: () => aiTriageAdminApi.getRepairPlan(selected!.repairPlanId!),
-    enabled: Boolean(selected?.repairPlanId),
+    queryKey: ["admin-ai-triage-repair", focused?.repairPlanId],
+    queryFn: () => aiTriageAdminApi.getRepairPlan(focused!.repairPlanId!),
+    enabled: Boolean(focused?.repairPlanId),
   });
 
   const verifyMut = useMutation({
     mutationFn: (id: string) => aiTriageAdminApi.verifyBehaviorJob(id),
     onSuccess: (res) => toast.success(res.result.passed ? "Verifikasi lulus" : "Verifikasi gagal"),
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+  const retryMut = useMutation({
+    mutationFn: (id: string) => aiTriageAdminApi.retryBehaviorJob(id),
+    onSuccess: () => {
+      toast.success("Composer di-dispatch ulang ke GitHub Actions");
+      void jobQuery.refetch();
+    },
     onError: (e) => toast.error(toApiError(e).message),
   });
   const approveMut = useMutation({
@@ -72,10 +88,14 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
     onError: (e) => toast.error(toApiError(e).message),
   });
 
-  const incidents = q.data?.incidents ?? [];
   const job = jobQuery.data?.job;
   const plan = repairQuery.data?.plan;
   const channels = useMemo(() => ["", "whatsapp", "web_chat", "storefront_search"], []);
+
+  const openReview = (inc: AITriageIncident) => {
+    setFocusedId(inc.id);
+    setReviewing(inc);
+  };
 
   return (
     <Card>
@@ -100,7 +120,9 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
             </Button>
           ))}
         </div>
-        {q.isLoading ? (
+        {q.isError ? (
+          <p className="text-sm text-destructive">{toApiError(q.error).message}</p>
+        ) : q.isLoading ? (
           <p className="text-sm text-muted-foreground">Memuat…</p>
         ) : incidents.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">Belum ada insiden.</p>
@@ -125,7 +147,7 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
                     {incidentUserText(inc) || "—"}
                   </td>
                   <td>
-                    <Button type="button" size="sm" variant="outline" onClick={() => setOpen(inc)}>
+                    <Button type="button" size="sm" variant="outline" onClick={() => openReview(inc)}>
                       Review
                     </Button>
                   </td>
@@ -134,33 +156,18 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
             </tbody>
           </table>
         )}
-        {job ? (
-          <div className="rounded-md border p-3 text-sm">
-            <p>
-              Behavior job {job.status}
-              {job.prUrl ? (
-                <>
-                  {" "}
-                  ·{" "}
-                  <a className="underline" href={job.prUrl} target="_blank" rel="noreferrer">
-                    Draft PR
-                  </a>
-                </>
-              ) : null}
-            </p>
-            {job.expectedRevision ? <p>Expected revision: {job.expectedRevision}</p> : null}
-            <Button
-              type="button"
-              size="sm"
-              className="mt-2"
-              disabled={job.attemptCount >= 2}
-              onClick={() => verifyMut.mutate(job.id)}
-            >
-              Verifikasi fix kode
-            </Button>
-          </div>
+        {jobQuery.isError ? (
+          <p className="text-sm text-destructive">{toApiError(jobQuery.error).message}</p>
         ) : null}
-        {plan ? (
+        {job && !reviewing ? (
+          <BehaviorJobCard
+            job={job}
+            busy={retryMut.isPending || verifyMut.isPending}
+            onRetry={() => retryMut.mutate(job.id)}
+            onVerify={() => verifyMut.mutate(job.id)}
+          />
+        ) : null}
+        {plan && !reviewing ? (
           <RepairPreviewCard
             plan={plan}
             busy={approveMut.isPending || applyMut.isPending}
@@ -169,10 +176,10 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
           />
         ) : null}
       </CardContent>
-      {open ? (
+      {reviewing ? (
         <IncidentReviewDialog
-          incident={open}
-          onClose={() => setOpen(null)}
+          incident={incidents.find((i) => i.id === reviewing.id) ?? reviewing}
+          onClose={() => setReviewing(null)}
           onChanged={() => void q.refetch()}
         />
       ) : null}
