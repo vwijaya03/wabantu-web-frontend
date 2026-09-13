@@ -9,7 +9,11 @@ export type WaitTenantReadinessOptions = {
   onPoll?: (status: TenantReadiness) => void;
 };
 
-/** Poll until backend reports tenant schema is ready (or timeout). */
+/**
+ * Poll until backend reports tenant schema is ready (or timeout).
+ * Only call after entering a tenant session. After stop-impersonation the
+ * session has no schema — polling would spin until maxWaitMs.
+ */
 export async function waitForTenantReadiness(
   options: WaitTenantReadinessOptions = {},
 ): Promise<TenantReadiness> {
