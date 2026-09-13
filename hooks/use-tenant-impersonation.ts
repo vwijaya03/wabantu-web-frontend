@@ -13,18 +13,51 @@ import {
 import { waitForTenantReadiness } from "@/lib/tenant/wait-for-tenant-readiness";
 import { toast } from "sonner";
 
-async function afterTenantSessionRefresh(
+let inFlightReadiness: AbortController | null = null;
+
+function abortInFlightReadiness() {
+  inFlightReadiness?.abort();
+  inFlightReadiness = null;
+}
+
+function isAbortError(e: unknown): boolean {
+  if (e instanceof DOMException && e.name === "AbortError") return true;
+  if (e instanceof Error && (e.name === "AbortError" || e.name === "CanceledError")) {
+    return true;
+  }
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    "code" in e &&
+    (e as { code?: string }).code === "ERR_CANCELED"
+  );
+}
+
+async function afterEnterTenant(
   qc: ReturnType<typeof useQueryClient>,
-  reset: (qc: ReturnType<typeof useQueryClient>) => void,
   completeSwitch: () => void,
 ) {
-  reset(qc);
-  const status = await waitForTenantReadiness();
+  resetTenantScopedQueries(qc);
+  abortInFlightReadiness();
+  inFlightReadiness = new AbortController();
+  const status = await waitForTenantReadiness({
+    signal: inFlightReadiness.signal,
+  });
+  inFlightReadiness = null;
   if (!status.ready) {
     toast.info(
       "Schema tenant masih disiapkan — beberapa data mungkin belum tampil.",
     );
   }
+  completeSwitch();
+}
+
+async function afterLeaveTenant(
+  qc: ReturnType<typeof useQueryClient>,
+  completeSwitch: () => void,
+) {
+  abortInFlightReadiness();
+  resetQueriesForPlatformConsole(qc);
   completeSwitch();
 }
 
@@ -43,12 +76,11 @@ export function useTenantImpersonation() {
     onSuccess: async () => {
       await refresh();
       try {
-        await afterTenantSessionRefresh(
-          qc,
-          resetTenantScopedQueries,
-          completeSwitch,
-        );
+        await afterEnterTenant(qc, completeSwitch);
       } catch (e) {
+        if (isAbortError(e)) {
+          return;
+        }
         cancelSwitch();
         toast.error(toApiError(e).message);
         return;
@@ -57,6 +89,7 @@ export function useTenantImpersonation() {
       router.replace("/dashboard");
     },
     onError: (e) => {
+      abortInFlightReadiness();
       cancelSwitch();
       toast.error(toApiError(e).message);
     },
@@ -65,16 +98,13 @@ export function useTenantImpersonation() {
   const stopMut = useMutation({
     mutationFn: async () => {
       beginSwitch();
+      abortInFlightReadiness();
       return adminApi.stopImpersonation();
     },
     onSuccess: async () => {
       await refresh();
       try {
-        await afterTenantSessionRefresh(
-          qc,
-          resetQueriesForPlatformConsole,
-          completeSwitch,
-        );
+        await afterLeaveTenant(qc, completeSwitch);
       } catch (e) {
         cancelSwitch();
         toast.error(toApiError(e).message);
@@ -84,6 +114,7 @@ export function useTenantImpersonation() {
       router.replace("/dashboard/admin");
     },
     onError: (e) => {
+      abortInFlightReadiness();
       cancelSwitch();
       toast.error(toApiError(e).message);
     },
