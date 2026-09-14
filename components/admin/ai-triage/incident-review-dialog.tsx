@@ -40,10 +40,12 @@ export function IncidentReviewDialog({
   incident,
   onClose,
   onChanged,
+  onDelete,
 }: {
   incident: AITriageIncident;
   onClose: () => void;
   onChanged: () => void;
+  onDelete?: (id: string) => void;
 }) {
   const draft = asContract(incident.draftContract) ?? asContract(incident.confirmedContract);
   const [busy, setBusy] = useState(false);
@@ -105,7 +107,7 @@ export function IncidentReviewDialog({
     setBusy(true);
     try {
       await aiTriageAdminApi.dismissIncident(incident.id);
-      toast.success("Insiden diabaikan");
+      toast.success("Insiden diabaikan — tetap di daftar, badge Diabaikan");
       onChanged();
       onClose();
     } catch (e) {
@@ -168,11 +170,26 @@ export function IncidentReviewDialog({
             />
           </div>
         ) : null}
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          {onDelete ? (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => onDelete(incident.id)}
+              disabled={busy}
+            >
+              Hapus
+            </Button>
+          ) : null}
           <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
             Tutup
           </Button>
-          <Button type="button" variant="outline" onClick={() => void dismiss()} disabled={busy}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void dismiss()}
+            disabled={busy || incident.reviewStatus === "dismissed"}
+          >
             Abaikan
           </Button>
           {showConfirm ? (

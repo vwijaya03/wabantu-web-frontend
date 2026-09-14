@@ -76,6 +76,7 @@ export function incidentComposerBadgeVariant(
   now = Date.now(),
 ): "destructive" | "warning" | "success" | "secondary" | "outline" {
   const label = incidentComposerLabel(inc, now);
+  if (label === "Diabaikan") return "outline";
   if (label === "Composer gagal") return "destructive";
   if (label === "Composer jalan" || label === "Composer") return "warning";
   if (label === "Draft PR" || label === "Tes hijau" || label === "Terverifikasi" || label === "Selesai") {
@@ -117,16 +118,15 @@ export function incidentNeedsCustomerInput(inc: AITriageIncident): boolean {
 
 /** Kenapa Composer tidak jalan setelah konfirmasi (fail-closed = aman). */
 export function incidentHoldHint(inc: AITriageIncident): string | null {
-  if (incidentNeedsCustomerInput(inc) || inc.reviewStatus === "needs_human_input") {
-    if (incidentNeedsCustomerInput(inc)) {
-      const extra = contractFromIncident(inc)?.clarification?.trim();
-      return extra
-        ? `Aman: Composer tidak dijalankan. ${extra} Menunggu pembeli pilih SKU di chat — bukan klik superadmin.`
-        : "Aman: jangan menebak varian. Composer tidak dijalankan. Menunggu pembeli pilih SKU di WhatsApp, bukan klik superadmin.";
-    }
-    if (inc.reviewStatus === "needs_human_input") {
-      return "Aman: kontrak belum bisa diuji. Composer tidak dijalankan. Lengkapi invariant (path/keranjang/teks) atau abaikan.";
-    }
+  if (inc.reviewStatus === "dismissed") return null;
+  if (incidentNeedsCustomerInput(inc)) {
+    const extra = contractFromIncident(inc)?.clarification?.trim();
+    return extra
+      ? `Aman: Composer tidak dijalankan. ${extra} Menunggu pembeli pilih SKU di chat — bukan klik superadmin.`
+      : "Aman: jangan menebak varian. Composer tidak dijalankan. Menunggu pembeli pilih SKU di WhatsApp, bukan klik superadmin.";
+  }
+  if (inc.reviewStatus === "needs_human_input") {
+    return "Aman: kontrak belum bisa diuji. Composer tidak dijalankan. Lengkapi invariant (path/keranjang/teks) atau abaikan.";
   }
   return null;
 }
@@ -146,6 +146,7 @@ export function confirmHoldToast(holdReason?: string, dispatched?: boolean): str
 }
 
 export function incidentComposerLabel(inc: AITriageIncident, now = Date.now()): string {
+  if (inc.reviewStatus === "dismissed") return "Diabaikan";
   if (incidentNeedsCustomerInput(inc)) return "Tunggu pembeli";
   if (inc.reviewStatus === "needs_human_input") return "Tunggu kontrak";
   if (inc.resolutionStatus === "fixed") return "Selesai";
