@@ -2,29 +2,15 @@
 
 import { Button } from "@/components/ui/button";
 import type { AITriageBehaviorJob } from "@/lib/api/ai-triage";
-
-function canRetryBehaviorJob(job: AITriageBehaviorJob): boolean {
-  if (job.attemptCount >= 2) return false;
-  return job.status === "failed" || job.status === "pr_ready";
-}
-
-function statusLabel(status: string): string {
-  switch (status) {
-    case "failed":
-      return "Composer gagal";
-    case "fix_running":
-    case "test_ready":
-      return "Composer sedang jalan";
-    case "pr_ready":
-      return "Draft PR siap";
-    case "already_fixed":
-      return "Tes sudah hijau di master";
-    case "verified":
-      return "Verifikasi lulus";
-    default:
-      return status;
-  }
-}
+import {
+  canRetryBehaviorJob,
+  canVerifyBehaviorJob,
+  composerActionsUrl,
+  composerErrorText,
+  composerStatusLabel,
+  jobInFlight,
+  behaviorJobStuck,
+} from "@/components/admin/ai-triage/behavior-job-status";
 
 export function BehaviorJobCard({
   job,
@@ -37,11 +23,24 @@ export function BehaviorJobCard({
   onRetry?: () => void;
   onVerify?: () => void;
 }) {
+  const stuck = behaviorJobStuck(job);
+  const failed = job.status === "failed" || stuck;
   const retry = canRetryBehaviorJob(job);
+  const verify = canVerifyBehaviorJob(job);
+  const errorText = composerErrorText(job);
+  const actionsUrl = composerActionsUrl(job);
+  const running = jobInFlight(job.status) && !stuck;
+
   return (
-    <div className="space-y-2 rounded-md border p-3 text-sm">
-      <p>
-        {statusLabel(job.status)}
+    <div
+      className={
+        failed
+          ? "space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm"
+          : "space-y-2 rounded-md border p-3 text-sm"
+      }
+    >
+      <p className={failed ? "font-medium text-destructive" : undefined}>
+        {composerStatusLabel(job)}
         {job.prUrl ? (
           <>
             {" "}
@@ -51,19 +50,21 @@ export function BehaviorJobCard({
             </a>
           </>
         ) : null}
-        {job.githubRunUrl ? (
-          <>
-            {" "}
-            ·{" "}
-            <a className="underline" href={job.githubRunUrl} target="_blank" rel="noreferrer">
-              GitHub Actions
-            </a>
-          </>
-        ) : null}
+        {" "}
+        ·{" "}
+        <a className="underline" href={actionsUrl} target="_blank" rel="noreferrer">
+          GitHub Actions
+        </a>
       </p>
-      {job.errorText ? (
+      {errorText ? (
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive whitespace-pre-wrap break-words">
-          {job.errorText}
+          {errorText}
+        </p>
+      ) : null}
+      {running ? (
+        <p className="text-muted-foreground">
+          Biasanya 5–45 menit. Kalau GitHub Actions merah, status di sini harus berubah jadi gagal —
+          jangan menunggu tanpa membuka Actions.
         </p>
       ) : null}
       {job.expectedRevision ? <p className="text-muted-foreground">Revision: {job.expectedRevision}</p> : null}
@@ -73,7 +74,7 @@ export function BehaviorJobCard({
             Coba Composer lagi
           </Button>
         ) : null}
-        {onVerify ? (
+        {verify && onVerify ? (
           <Button type="button" size="sm" variant="outline" onClick={onVerify} disabled={busy}>
             Verifikasi fix kode
           </Button>

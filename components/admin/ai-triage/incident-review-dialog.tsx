@@ -12,6 +12,7 @@ import {
 import { toApiError } from "@/lib/api/client";
 import { BehaviorContractCard } from "./behavior-contract-card";
 import { BehaviorJobCard } from "./behavior-job-card";
+import { BEHAVIOR_FIX_ACTIONS_URL, jobInFlight } from "./behavior-job-status";
 import { IncidentTurnPair } from "./incident-turn-pair";
 
 function asContract(raw: unknown): BehaviorContract | null {
@@ -32,10 +33,6 @@ function contractCanDispatchComposer(c?: BehaviorContract | null): boolean {
     );
   }
   return Boolean(a.wantPath);
-}
-
-function jobInFlight(status?: string): boolean {
-  return status === "fix_running" || status === "test_ready" || status === "planning";
 }
 
 export function IncidentReviewDialog({
@@ -137,7 +134,22 @@ export function IncidentReviewDialog({
           <BehaviorContractCard contract={draft} />
         </div>
         {jobQuery.isError ? (
-          <p className="mt-3 text-sm text-destructive">{toApiError(jobQuery.error).message}</p>
+          <div className="mt-3 space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+            <p className="font-medium text-destructive">Composer gagal dimuat</p>
+            <p className="text-destructive">{toApiError(jobQuery.error).message}</p>
+            <div className="flex flex-wrap gap-2">
+              {incident.behaviorJobId ? (
+                <Button type="button" size="sm" onClick={() => retryMut.mutate()} disabled={busy || retryMut.isPending}>
+                  Coba Composer lagi
+                </Button>
+              ) : null}
+              <Button size="sm" variant="outline" asChild>
+                <a href={BEHAVIOR_FIX_ACTIONS_URL} target="_blank" rel="noreferrer">
+                  Buka GitHub Actions
+                </a>
+              </Button>
+            </div>
+          </div>
         ) : null}
         {job ? (
           <div className="mt-3">
