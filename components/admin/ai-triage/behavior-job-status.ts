@@ -71,6 +71,38 @@ export function composerStatusLabel(job: AITriageBehaviorJob, now = Date.now()):
   }
 }
 
+export function incidentComposerBadgeVariant(
+  inc: AITriageIncident,
+  now = Date.now(),
+): "destructive" | "warning" | "success" | "secondary" | "outline" {
+  const label = incidentComposerLabel(inc, now);
+  if (label === "Composer gagal") return "destructive";
+  if (label === "Composer jalan" || label === "Composer") return "warning";
+  if (label === "Draft PR" || label === "Tes hijau" || label === "Terverifikasi" || label === "Selesai") {
+    return "success";
+  }
+  if (label === "Repair siap" || label === "Menunggu input") return "warning";
+  return "secondary";
+}
+
+export function channelLabel(channel: string): string {
+  switch (channel) {
+    case "whatsapp":
+      return "WhatsApp";
+    case "web_chat":
+      return "Web chat";
+    case "storefront_search":
+      return "Storefront";
+    default:
+      return channel || "Semua";
+  }
+}
+
+export function laneLabel(lane?: string): string {
+  if (!lane) return "";
+  return lane.replaceAll("_", " ");
+}
+
 export function incidentComposerLabel(inc: AITriageIncident, now = Date.now()): string {
   if (inc.reviewStatus === "needs_human_input") return "Menunggu input";
   if (inc.resolutionStatus === "fixed") return "Selesai";

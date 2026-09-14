@@ -51,7 +51,7 @@ export function IncidentReviewDialog({
     queryKey: ["admin-ai-triage-behavior-job", incident.behaviorJobId],
     queryFn: () => aiTriageAdminApi.getBehaviorJob(incident.behaviorJobId!),
     enabled: Boolean(incident.behaviorJobId),
-    refetchInterval: (q) => (jobInFlight(q.state.data?.job.status) ? 3000 : false),
+    refetchOnWindowFocus: false,
   });
   const job = jobQuery.data?.job;
   const canDispatch = contractCanDispatchComposer(draft);
