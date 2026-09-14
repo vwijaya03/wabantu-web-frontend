@@ -6,23 +6,25 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BehaviorJobCard } from "@/components/admin/ai-triage/behavior-job-card";
+import {
+  BEHAVIOR_FIX_ACTIONS_URL,
+  incidentComposerLabel,
+  jobInFlight,
+} from "@/components/admin/ai-triage/behavior-job-status";
 import { IncidentReviewDialog } from "@/components/admin/ai-triage/incident-review-dialog";
 import { RepairPreviewCard } from "@/components/admin/ai-triage/repair-preview-card";
 import { incidentUserText } from "@/components/admin/ai-triage/incident-turn-pair";
 import { aiTriageAdminApi, type AITriageIncident } from "@/lib/api/ai-triage";
 import { toApiError } from "@/lib/api/client";
 
-function resolutionLabel(inc: AITriageIncident): string {
-  if (inc.reviewStatus === "needs_human_input") return "Menunggu input";
-  if (inc.resolutionStatus === "fixed") return "Selesai";
-  if (inc.resolutionStatus === "repair_ready") return "Repair siap";
-  if (inc.behaviorJobId && inc.resolutionStatus !== "fixed") return "Composer";
-  if (inc.reviewStatus === "confirmed") return "Dikonfirmasi — belum diperbaiki";
-  return "Menunggu";
-}
-
-function jobInFlight(status?: string): boolean {
-  return status === "fix_running" || status === "test_ready" || status === "planning";
+function pickJobIncident(incidents: AITriageIncident[], focusedId: string | null, reviewing: AITriageIncident | null) {
+  return (
+    incidents.find((i) => i.id === focusedId) ??
+    reviewing ??
+    incidents.find((i) => i.behaviorJobStatus === "failed") ??
+    incidents.find((i) => jobInFlight(i.behaviorJobStatus)) ??
+    incidents.find((i) => i.behaviorJobId)
+  );
 }
 
 export function IncidentPanel({ tenantId }: { tenantId: string }) {
@@ -40,12 +42,14 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
     enabled: Boolean(tenantId),
     refetchInterval: (query) => {
       const items = query.state.data?.incidents ?? [];
-      return items.some((i) => i.reviewStatus === "open") ? 5000 : false;
+      if (items.some((i) => i.reviewStatus === "open")) return 5000;
+      if (items.some((i) => jobInFlight(i.behaviorJobStatus))) return 5000;
+      return false;
     },
   });
 
   const incidents = q.data?.incidents ?? [];
-  const focused = incidents.find((i) => i.id === focusedId) ?? reviewing;
+  const focused = pickJobIncident(incidents, focusedId, reviewing);
   const jobQuery = useQuery({
     queryKey: ["admin-ai-triage-behavior-job", focused?.behaviorJobId],
     queryFn: () => aiTriageAdminApi.getBehaviorJob(focused!.behaviorJobId!),
@@ -68,6 +72,7 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
     onSuccess: () => {
       toast.success("Composer di-dispatch ulang ke GitHub Actions");
       void jobQuery.refetch();
+      void q.refetch();
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -138,26 +143,43 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
               </tr>
             </thead>
             <tbody>
-              {incidents.map((inc) => (
-                <tr key={inc.id} className="border-b align-top">
-                  <td className="py-2">{inc.channel}</td>
-                  <td>{resolutionLabel(inc)}</td>
-                  <td>{inc.lane || "—"}</td>
-                  <td className="max-w-[280px] py-2 text-xs whitespace-pre-wrap break-words">
-                    {incidentUserText(inc) || "—"}
-                  </td>
-                  <td>
-                    <Button type="button" size="sm" variant="outline" onClick={() => openReview(inc)}>
-                      Review
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+              {incidents.map((inc) => {
+                const label = incidentComposerLabel(inc);
+                const failed = label === "Composer gagal";
+                return (
+                  <tr key={inc.id} className="border-b align-top">
+                    <td className="py-2">{inc.channel}</td>
+                    <td className={failed ? "font-medium text-destructive" : undefined}>{label}</td>
+                    <td>{inc.lane || "—"}</td>
+                    <td className="max-w-[280px] py-2 text-xs whitespace-pre-wrap break-words">
+                      {incidentUserText(inc) || "—"}
+                    </td>
+                    <td>
+                      <Button type="button" size="sm" variant="outline" onClick={() => openReview(inc)}>
+                        Review
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
-        {jobQuery.isError ? (
-          <p className="text-sm text-destructive">{toApiError(jobQuery.error).message}</p>
+        {jobQuery.isError && focused?.behaviorJobId && !reviewing ? (
+          <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+            <p className="font-medium text-destructive">Composer gagal dimuat</p>
+            <p className="text-destructive">{toApiError(jobQuery.error).message}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" onClick={() => retryMut.mutate(focused.behaviorJobId!)} disabled={retryMut.isPending}>
+                Coba Composer lagi
+              </Button>
+              <Button size="sm" variant="outline" asChild>
+                <a href={BEHAVIOR_FIX_ACTIONS_URL} target="_blank" rel="noreferrer">
+                  Buka GitHub Actions
+                </a>
+              </Button>
+            </div>
+          </div>
         ) : null}
         {job && !reviewing ? (
           <BehaviorJobCard

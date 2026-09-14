@@ -366,6 +366,10 @@ export interface AITriageIncident {
   draftContract?: unknown;
   confirmedContract?: unknown;
   behaviorJobId?: string;
+  behaviorJobStatus?: AITriageBehaviorJobStatus;
+  behaviorJobError?: string;
+  behaviorJobRunUrl?: string;
+  behaviorJobUpdatedAt?: string;
   repairPlanId?: string;
   createdAt: string;
   updatedAt: string;
