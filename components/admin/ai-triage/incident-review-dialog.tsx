@@ -105,7 +105,7 @@ export function IncidentReviewDialog({
     setBusy(true);
     try {
       await aiTriageAdminApi.dismissIncident(incident.id);
-      toast.success("Insiden diabaikan");
+      toast.success("Insiden diabaikan dan dihilangkan dari antrian");
       onChanged();
       onClose();
     } catch (e) {

@@ -54,7 +54,7 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
     refetchOnWindowFocus: false,
   });
 
-  const incidents = q.data?.incidents ?? [];
+  const incidents = (q.data?.incidents ?? []).filter((i) => i.reviewStatus !== "dismissed");
   const focused = pickJobIncident(incidents, focusedId, reviewing);
   const jobQuery = useQuery({
     queryKey: ["admin-ai-triage-behavior-job", focused?.behaviorJobId],
