@@ -15,6 +15,7 @@ import {
   channelLabel,
   incidentComposerBadgeVariant,
   incidentComposerLabel,
+  incidentHoldHint,
   jobInFlight,
   laneLabel,
 } from "@/components/admin/ai-triage/behavior-job-status";
@@ -163,10 +164,11 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
           <p className="py-8 text-center text-sm text-muted-foreground">Belum ada insiden.</p>
         ) : (
           <div className="divide-y rounded-lg border">
-            {incidents.map((inc) => {
+            {            incidents.map((inc) => {
               const label = incidentComposerLabel(inc);
               const selected = focused?.id === inc.id;
               const lane = laneLabel(inc.lane);
+              const hold = incidentHoldHint(inc);
               return (
                 <div
                   key={inc.id}
@@ -186,6 +188,9 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
                       <p className="line-clamp-2 text-sm leading-relaxed">
                         {incidentUserText(inc) || "Tanpa teks pesan"}
                       </p>
+                      {hold ? (
+                        <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-400">{hold}</p>
+                      ) : null}
                     </button>
                     <Button
                       type="button"

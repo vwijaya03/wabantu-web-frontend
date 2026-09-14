@@ -13,7 +13,7 @@ import {
 import { toApiError } from "@/lib/api/client";
 import { BehaviorContractCard } from "./behavior-contract-card";
 import { BehaviorJobCard } from "./behavior-job-card";
-import { BEHAVIOR_FIX_ACTIONS_URL, jobInFlight } from "./behavior-job-status";
+import { BEHAVIOR_FIX_ACTIONS_URL, confirmHoldToast, incidentHoldHint, jobInFlight } from "./behavior-job-status";
 import { IncidentTurnPair } from "./incident-turn-pair";
 
 function asContract(raw: unknown): BehaviorContract | null {
@@ -57,6 +57,7 @@ export function IncidentReviewDialog({
   const job = jobQuery.data?.job;
   const canDispatch = contractCanDispatchComposer(draft);
   const inFlight = jobInFlight(job?.status);
+  const hold = incidentHoldHint(incident);
 
   const retryMut = useMutation({
     mutationFn: () => aiTriageAdminApi.retryBehaviorJob(incident.behaviorJobId!),
@@ -85,13 +86,13 @@ export function IncidentReviewDialog({
     setBusy(true);
     try {
       const res = await aiTriageAdminApi.confirmIncident(incident.id, draft);
-      if (res.behaviorJob) {
-        toast.success("Composer di-dispatch ke GitHub Actions");
-      } else {
-        toast.message("Dikonfirmasi — kontrak belum cukup untuk Composer");
-      }
       onChanged();
-      onClose();
+      if (res.behaviorJob) {
+        toast.success(confirmHoldToast(res.holdReason, true));
+        onClose();
+      } else {
+        toast.message(confirmHoldToast(res.holdReason, false));
+      }
     } catch (e) {
       toast.error(toApiError(e).message);
       onChanged();
@@ -114,19 +115,19 @@ export function IncidentReviewDialog({
     }
   };
 
-  const showConfirm = !job;
+  const showConfirm = !job && incident.reviewStatus === "open";
   const confirmDisabled = busy || inFlight || retryMut.isPending;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-background p-4 shadow-lg">
         <h2 className="text-lg font-semibold">
-          {canDispatch ? "Jalankan Composer 2.5" : "Konfirmasi masalah"}
+          {hold ? "Tidak ke Composer (aman)" : canDispatch ? "Jalankan Composer 2.5" : "Konfirmasi masalah"}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Kanal {incident.channel}
-          {incident.degradedMode ? ` · ${incident.degradedMode}` : ""}. Composer membuat draft PR;
-          chat WhatsApp lama tidak berubah sampai PR di-merge dan di-deploy.
+          {incident.degradedMode ? ` · ${incident.degradedMode}` : ""}.
+          {hold ? "" : " Composer membuat draft PR; chat WhatsApp lama tidak berubah sampai PR di-merge dan di-deploy."}
         </p>
         <div className="mt-3">
           <IncidentTurnPair incident={incident} />
@@ -134,6 +135,11 @@ export function IncidentReviewDialog({
         <div className="mt-3">
           <BehaviorContractCard contract={draft} />
         </div>
+        {hold ? (
+          <p className="mt-3 rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+            {hold}
+          </p>
+        ) : null}
         {jobQuery.isError ? (
           <div className="mt-3 space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
             <p className="font-medium text-destructive">Composer gagal dimuat</p>

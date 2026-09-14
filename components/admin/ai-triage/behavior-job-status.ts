@@ -81,7 +81,7 @@ export function incidentComposerBadgeVariant(
   if (label === "Draft PR" || label === "Tes hijau" || label === "Terverifikasi" || label === "Selesai") {
     return "success";
   }
-  if (label === "Repair siap" || label === "Menunggu input") return "warning";
+  if (label === "Repair siap" || label.startsWith("Tunggu ")) return "warning";
   return "secondary";
 }
 
@@ -103,8 +103,51 @@ export function laneLabel(lane?: string): string {
   return lane.replaceAll("_", " ");
 }
 
+function contractFromIncident(inc: AITriageIncident): { needCustomerInput?: boolean; clarification?: string } | null {
+  const raw = inc.confirmedContract ?? inc.draftContract;
+  if (!raw || typeof raw !== "object") return null;
+  const c = raw as { assertions?: { needCustomerInput?: boolean }; clarification?: string };
+  return { needCustomerInput: c.assertions?.needCustomerInput, clarification: c.clarification };
+}
+
+export function incidentNeedsCustomerInput(inc: AITriageIncident): boolean {
+  if (inc.resolutionStatus === "needs_customer_input") return true;
+  return Boolean(contractFromIncident(inc)?.needCustomerInput);
+}
+
+/** Kenapa Composer tidak jalan setelah konfirmasi (fail-closed = aman). */
+export function incidentHoldHint(inc: AITriageIncident): string | null {
+  if (incidentNeedsCustomerInput(inc) || inc.reviewStatus === "needs_human_input") {
+    if (incidentNeedsCustomerInput(inc)) {
+      const extra = contractFromIncident(inc)?.clarification?.trim();
+      return extra
+        ? `Aman: Composer tidak dijalankan. ${extra} Menunggu pembeli pilih SKU di chat — bukan klik superadmin.`
+        : "Aman: jangan menebak varian. Composer tidak dijalankan. Menunggu pembeli pilih SKU di WhatsApp, bukan klik superadmin.";
+    }
+    if (inc.reviewStatus === "needs_human_input") {
+      return "Aman: kontrak belum bisa diuji. Composer tidak dijalankan. Lengkapi invariant (path/keranjang/teks) atau abaikan.";
+    }
+  }
+  return null;
+}
+
+export function confirmHoldToast(holdReason?: string, dispatched?: boolean): string {
+  if (dispatched) return "Composer di-dispatch ke GitHub Actions";
+  switch (holdReason) {
+    case "need_customer_input":
+      return "Dikonfirmasi. Aman: jangan tebak varian. Menunggu pembeli di WhatsApp — Composer tidak dijalankan.";
+    case "lane_fail_closed":
+      return "Dikonfirmasi. Lane fail-closed — Composer tidak dijalankan.";
+    case "contract_not_deterministic":
+      return "Dikonfirmasi. Kontrak belum deterministik — Composer tidak dijalankan.";
+    default:
+      return "Dikonfirmasi — Composer tidak dijalankan (bukan bug; menunggu input yang tepat).";
+  }
+}
+
 export function incidentComposerLabel(inc: AITriageIncident, now = Date.now()): string {
-  if (inc.reviewStatus === "needs_human_input") return "Menunggu input";
+  if (incidentNeedsCustomerInput(inc)) return "Tunggu pembeli";
+  if (inc.reviewStatus === "needs_human_input") return "Tunggu kontrak";
   if (inc.resolutionStatus === "fixed") return "Selesai";
   if (inc.resolutionStatus === "repair_ready") return "Repair siap";
   if (inc.behaviorJobStatus === "failed" || incidentComposerStuck(inc, now)) return "Composer gagal";
@@ -114,7 +157,7 @@ export function incidentComposerLabel(inc: AITriageIncident, now = Date.now()): 
   if (jobInFlight(inc.behaviorJobStatus)) return "Composer jalan";
   if (inc.behaviorJobId && inc.resolutionStatus !== "fixed") return "Composer";
   if (inc.reviewStatus === "confirmed") return "Dikonfirmasi — belum diperbaiki";
-  return "Menunggu";
+  return "Perlu review";
 }
 
 export function composerErrorText(job: AITriageBehaviorJob, now = Date.now()): string | null {
