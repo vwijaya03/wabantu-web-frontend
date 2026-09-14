@@ -214,7 +214,7 @@ export const aiTriageAdminApi = {
   async confirmIncident(
     id: string,
     contract: BehaviorContract,
-  ): Promise<{ incident: AITriageIncident; behaviorJob?: AITriageBehaviorJob }> {
+  ): Promise<{ incident: AITriageIncident; behaviorJob?: AITriageBehaviorJob; holdReason?: string }> {
     const res = await api.post(`/admin/ai-triage/incidents/${id}/confirm`, { contract });
     return res.data;
   },
