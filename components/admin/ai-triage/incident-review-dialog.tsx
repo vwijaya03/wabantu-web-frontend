@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   aiTriageAdminApi,
+  isTriageUUID,
   type AITriageIncident,
   type BehaviorContract,
 } from "@/lib/api/ai-triage";
@@ -50,7 +51,7 @@ export function IncidentReviewDialog({
   const jobQuery = useQuery({
     queryKey: ["admin-ai-triage-behavior-job", incident.behaviorJobId],
     queryFn: () => aiTriageAdminApi.getBehaviorJob(incident.behaviorJobId!),
-    enabled: Boolean(incident.behaviorJobId),
+    enabled: isTriageUUID(incident.behaviorJobId),
     refetchOnWindowFocus: false,
   });
   const job = jobQuery.data?.job;

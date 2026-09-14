@@ -21,7 +21,7 @@ import {
 import { IncidentReviewDialog } from "@/components/admin/ai-triage/incident-review-dialog";
 import { RepairPreviewCard } from "@/components/admin/ai-triage/repair-preview-card";
 import { incidentUserText } from "@/components/admin/ai-triage/incident-turn-pair";
-import { aiTriageAdminApi, type AITriageIncident } from "@/lib/api/ai-triage";
+import { aiTriageAdminApi, isTriageUUID, type AITriageIncident } from "@/lib/api/ai-triage";
 import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
@@ -58,13 +58,13 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
   const jobQuery = useQuery({
     queryKey: ["admin-ai-triage-behavior-job", focused?.behaviorJobId],
     queryFn: () => aiTriageAdminApi.getBehaviorJob(focused!.behaviorJobId!),
-    enabled: Boolean(focused?.behaviorJobId),
+    enabled: isTriageUUID(focused?.behaviorJobId),
     refetchOnWindowFocus: false,
   });
   const repairQuery = useQuery({
     queryKey: ["admin-ai-triage-repair", focused?.repairPlanId],
     queryFn: () => aiTriageAdminApi.getRepairPlan(focused!.repairPlanId!),
-    enabled: Boolean(focused?.repairPlanId),
+    enabled: isTriageUUID(focused?.repairPlanId),
     refetchOnWindowFocus: false,
   });
 
@@ -112,8 +112,8 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
   const refreshing = q.isFetching || jobQuery.isFetching || repairQuery.isFetching;
   const refresh = () => {
     void q.refetch();
-    void jobQuery.refetch();
-    void repairQuery.refetch();
+    if (isTriageUUID(focused?.behaviorJobId)) void jobQuery.refetch();
+    if (isTriageUUID(focused?.repairPlanId)) void repairQuery.refetch();
   };
 
   return (

@@ -1,5 +1,14 @@
 import { api } from "./client";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** False for empty, JS "undefined"/"null" sentinels, and non-UUID strings. */
+export function isTriageUUID(id: string | undefined | null): id is string {
+  const s = id?.trim() ?? "";
+  if (!s || s === "undefined" || s === "null") return false;
+  return UUID_RE.test(s);
+}
+
 export interface AITriageAnomaly {
   tenantId: string;
   tenantSchema: string;
@@ -216,6 +225,9 @@ export const aiTriageAdminApi = {
   },
 
   async getBehaviorJob(id: string): Promise<{ job: AITriageBehaviorJob }> {
+    if (!isTriageUUID(id)) {
+      throw new Error("id job Composer tidak valid");
+    }
     const res = await api.get(`/admin/ai-triage/behavior-jobs/${id}`);
     return res.data;
   },
@@ -242,6 +254,9 @@ export const aiTriageAdminApi = {
   },
 
   async getRepairPlan(id: string): Promise<{ plan: AITriageRepairPlan }> {
+    if (!isTriageUUID(id)) {
+      throw new Error("id repair plan tidak valid");
+    }
     const res = await api.get(`/admin/ai-triage/repair-plans/${id}`);
     return res.data;
   },
