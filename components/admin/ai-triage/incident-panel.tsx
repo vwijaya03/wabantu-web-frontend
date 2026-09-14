@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,12 +50,7 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
         limit: 50,
       }),
     enabled: Boolean(tenantId),
-    refetchInterval: (query) => {
-      const items = query.state.data?.incidents ?? [];
-      if (items.some((i) => i.reviewStatus === "open")) return 5000;
-      if (items.some((i) => jobInFlight(i.behaviorJobStatus))) return 5000;
-      return false;
-    },
+    refetchOnWindowFocus: false,
   });
 
   const incidents = q.data?.incidents ?? [];
@@ -63,12 +59,13 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
     queryKey: ["admin-ai-triage-behavior-job", focused?.behaviorJobId],
     queryFn: () => aiTriageAdminApi.getBehaviorJob(focused!.behaviorJobId!),
     enabled: Boolean(focused?.behaviorJobId),
-    refetchInterval: (query) => (jobInFlight(query.state.data?.job.status) ? 3000 : false),
+    refetchOnWindowFocus: false,
   });
   const repairQuery = useQuery({
     queryKey: ["admin-ai-triage-repair", focused?.repairPlanId],
     queryFn: () => aiTriageAdminApi.getRepairPlan(focused!.repairPlanId!),
     enabled: Boolean(focused?.repairPlanId),
+    refetchOnWindowFocus: false,
   });
 
   const verifyMut = useMutation({
@@ -112,15 +109,33 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
   };
 
   const showJobFor = (inc: AITriageIncident) => focused?.id === inc.id && Boolean(inc.behaviorJobId);
+  const refreshing = q.isFetching || jobQuery.isFetching || repairQuery.isFetching;
+  const refresh = () => {
+    void q.refetch();
+    void jobQuery.refetch();
+    void repairQuery.refetch();
+  };
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Insiden self-healing</CardTitle>
-        <CardDescription>
-          Konfirmasi menjalankan Composer 2.5 (draft PR). Chat WhatsApp lama tidak berubah
-          sampai PR di-merge dan Encore di-deploy.
-        </CardDescription>
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
+        <div className="space-y-1.5">
+          <CardTitle>Insiden self-healing</CardTitle>
+          <CardDescription>
+            Konfirmasi menjalankan Composer 2.5 (draft PR). Chat WhatsApp lama tidak berubah
+            sampai PR di-merge dan Encore di-deploy.
+          </CardDescription>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={refresh}
+          disabled={refreshing}
+        >
+          <RefreshCw className={cn("mr-2 h-3.5 w-3.5", refreshing && "animate-spin")} />
+          Perbarui
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1">
