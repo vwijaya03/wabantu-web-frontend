@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
   const [reviewing, setReviewing] = useState<AITriageIncident | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [channel, setChannel] = useState<string>("");
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
   const q = useQuery({
     queryKey: ["admin-ai-triage-incidents", tenantId, channel],
     queryFn: () =>
@@ -54,7 +55,8 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
     refetchOnWindowFocus: false,
   });
 
-  const incidents = (q.data?.incidents ?? []).filter((i) => i.reviewStatus !== "dismissed");
+  const incidents = q.data?.incidents ?? [];
+  const selectedIds = incidents.filter((i) => selected[i.id]).map((i) => i.id);
   const focused = pickJobIncident(incidents, focusedId, reviewing);
   const jobQuery = useQuery({
     queryKey: ["admin-ai-triage-behavior-job", focused?.behaviorJobId],
@@ -99,10 +101,33 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
+  const deleteMut = useMutation({
+    mutationFn: (ids: string[]) => aiTriageAdminApi.deleteIncidents(ids),
+    onSuccess: (res, ids) => {
+      toast.success(`${res.deleted} insiden dihapus`);
+      setSelected({});
+      if (focusedId && ids.includes(focusedId)) setFocusedId(null);
+      if (reviewing && ids.includes(reviewing.id)) setReviewing(null);
+      void q.refetch();
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
 
   const job = jobQuery.data?.job;
   const plan = repairQuery.data?.plan;
   const channels = useMemo(() => CHANNELS, []);
+
+  const askDelete = (ids: string[]) => {
+    if (ids.length === 0 || deleteMut.isPending) return;
+    const msg =
+      ids.length === 1 ? "Hapus insiden ini dari antrian?" : `Hapus ${ids.length} insiden terpilih?`;
+    if (!window.confirm(msg)) return;
+    deleteMut.mutate(ids);
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const openReview = (inc: AITriageIncident) => {
     setFocusedId(inc.id);
@@ -127,16 +152,30 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
             sampai PR di-merge dan Encore di-deploy.
           </CardDescription>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={refresh}
-          disabled={refreshing}
-        >
-          <RefreshCw className={cn("mr-2 h-3.5 w-3.5", refreshing && "animate-spin")} />
-          Perbarui
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedIds.length > 0 ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => askDelete(selectedIds)}
+              disabled={deleteMut.isPending}
+            >
+              <Trash2 className="mr-2 h-3.5 w-3.5" />
+              Hapus {selectedIds.length}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={refresh}
+            disabled={refreshing}
+          >
+            <RefreshCw className={cn("mr-2 h-3.5 w-3.5", refreshing && "animate-spin")} />
+            Perbarui
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1">
@@ -164,17 +203,29 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
           <p className="py-8 text-center text-sm text-muted-foreground">Belum ada insiden.</p>
         ) : (
           <div className="divide-y rounded-lg border">
-            {            incidents.map((inc) => {
+            {incidents.map((inc) => {
               const label = incidentComposerLabel(inc);
-              const selected = focused?.id === inc.id;
+              const rowFocused = focused?.id === inc.id;
               const lane = laneLabel(inc.lane);
               const hold = incidentHoldHint(inc);
+              const dismissed = inc.reviewStatus === "dismissed";
               return (
                 <div
                   key={inc.id}
-                  className={cn("px-3 py-3", selected ? "bg-muted/40" : "hover:bg-muted/20")}
+                  className={cn(
+                    "px-3 py-3",
+                    rowFocused ? "bg-muted/40" : "hover:bg-muted/20",
+                    dismissed && "opacity-70",
+                  )}
                 >
                   <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 shrink-0"
+                      checked={Boolean(selected[inc.id])}
+                      onChange={() => toggleSelected(inc.id)}
+                      aria-label="Pilih insiden"
+                    />
                     <button
                       type="button"
                       className="min-w-0 flex-1 space-y-2 text-left"
@@ -192,15 +243,26 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
                         <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-400">{hold}</p>
                       ) : null}
                     </button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="shrink-0"
-                      onClick={() => openReview(inc)}
-                    >
-                      Review
-                    </Button>
+                    <div className="flex shrink-0 flex-col gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openReview(inc)}
+                      >
+                        Review
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive"
+                        disabled={deleteMut.isPending}
+                        onClick={() => askDelete([inc.id])}
+                      >
+                        Hapus
+                      </Button>
+                    </div>
                   </div>
                   {showJobFor(inc) ? (
                     <div className="mt-3 space-y-2">
@@ -259,6 +321,7 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
           incident={incidents.find((i) => i.id === reviewing.id) ?? reviewing}
           onClose={() => setReviewing(null)}
           onChanged={() => void q.refetch()}
+          onDelete={(id) => askDelete([id])}
         />
       ) : null}
     </Card>

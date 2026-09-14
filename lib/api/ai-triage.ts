@@ -224,6 +224,11 @@ export const aiTriageAdminApi = {
     return res.data;
   },
 
+  async deleteIncidents(ids: string[]): Promise<{ deleted: number }> {
+    const res = await api.post(`/admin/ai-triage/incident-deletes`, { ids });
+    return res.data;
+  },
+
   async getBehaviorJob(id: string): Promise<{ job: AITriageBehaviorJob }> {
     if (!isTriageUUID(id)) {
       throw new Error("id job Composer tidak valid");

@@ -76,6 +76,7 @@ export function incidentComposerBadgeVariant(
   now = Date.now(),
 ): "destructive" | "warning" | "success" | "secondary" | "outline" {
   const label = incidentComposerLabel(inc, now);
+  if (label === "Diabaikan") return "outline";
   if (label === "Composer gagal") return "destructive";
   if (label === "Composer jalan" || label === "Composer") return "warning";
   if (label === "Draft PR" || label === "Tes hijau" || label === "Terverifikasi" || label === "Selesai") {
