@@ -11,6 +11,7 @@ Folder ini berisi **catatan implementasi** fitur yang sudah di-merge — bukan s
 
 | Entri | Isi |
 |-------|-----|
+| [2026-09-20_121000_drop-routing-loop-triage.md](./2026-09-20_121000_drop-routing-loop-triage.md) | Buang tab Mencurigakan/Investigasi; konsol hanya Insiden + intake |
 | [inbox-media-fase1.md](./inbox-media-fase1.md) | Media di Inbox + lightbox |
 | [payment-proof-fase2.md](./payment-proof-fase2.md) | Panel bukti transfer, verify/reject/unblock |
-| [ai-triage-console.md](./ai-triage-console.md) | Konsol superadmin AI Triage Loop |
+| [ai-triage-console.md](./ai-triage-console.md) | Konsol superadmin AI Triage (Insiden / AI Review / Laporan) |

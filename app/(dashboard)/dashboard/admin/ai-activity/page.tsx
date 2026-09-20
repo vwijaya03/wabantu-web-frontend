@@ -119,7 +119,7 @@ export default function AdminAIActivityPage() {
                 : "/dashboard/admin/ai-triage"
             }
           >
-            AI Triage Loop →
+            AI Triage →
           </Link>
         </Button>
         <Button variant="outline" asChild>

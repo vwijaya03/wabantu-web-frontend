@@ -239,7 +239,7 @@ export default function AdminPage() {
           <Link href="/dashboard/admin/ai-activity">Log aktivitas AI →</Link>
         </Button>
         <Button variant="outline" asChild>
-          <Link href="/dashboard/admin/ai-triage">AI Triage Loop →</Link>
+          <Link href="/dashboard/admin/ai-triage">AI Triage →</Link>
         </Button>
         <Button variant="outline" asChild>
           <Link href="/dashboard/admin/ai-retrieval">AI Retrieval (RAG) →</Link>
