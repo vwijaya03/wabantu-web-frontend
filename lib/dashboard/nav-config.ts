@@ -157,6 +157,7 @@ export const TENANT_NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/dashboard/ai-settings", label: "AI Settings", icon: Bot },
       { href: "/dashboard/knowledge-base", label: "Knowledge Base", icon: MessageSquare },
+      { href: "/dashboard/chat-widget", label: "Chat Widget", icon: Sparkles },
       { href: "/dashboard/whatsapp", label: "WhatsApp", icon: Plug },
     ],
   },
