@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toApiError } from "@/lib/api/client";
 import { chatWidgetApi, type ChatWidgetConfig } from "@/lib/api/chat-widget";
@@ -21,7 +20,7 @@ export default function ChatWidgetDashboardPage() {
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
   const qc = useQueryClient();
-  const [form, setForm] = useState<ChatWidgetConfig | null>(null);
+  const [edited, setEdited] = useState<ChatWidgetConfig | null>(null);
 
   const { data: config, isLoading } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "chat-widget-config"),
@@ -29,9 +28,7 @@ export default function ChatWidgetDashboardPage() {
     enabled: tenantReady,
   });
 
-  useEffect(() => {
-    if (config) setForm(config);
-  }, [config]);
+  const form = edited ?? config;
 
   const { data: templates } = useQuery({
     queryKey: ["templates", "chatbot"],
@@ -46,8 +43,8 @@ export default function ChatWidgetDashboardPage() {
 
   const saveMut = useMutation({
     mutationFn: chatWidgetApi.updateConfig,
-    onSuccess: (data) => {
-      setForm(data);
+    onSuccess: () => {
+      setEdited(null);
       toast.success("Pengaturan chat widget disimpan");
       qc.invalidateQueries({ queryKey: tenantQueryKey(tenantKey, "chat-widget-config") });
     },
@@ -73,10 +70,11 @@ export default function ChatWidgetDashboardPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="enabled">Aktifkan widget</Label>
-              <Switch
+              <input
                 id="enabled"
+                type="checkbox"
                 checked={form.enabled}
-                onCheckedChange={(enabled) => setForm((f) => (f ? { ...f, enabled } : f))}
+                onChange={(e) => setEdited((f) => ({ ...(f ?? config!), enabled: e.target.checked }))}
               />
             </div>
             <div className="space-y-2">
@@ -85,7 +83,7 @@ export default function ChatWidgetDashboardPage() {
                 id="welcome"
                 value={form.welcomeMessage ?? ""}
                 onChange={(e) =>
-                  setForm((f) => (f ? { ...f, welcomeMessage: e.target.value } : f))
+                  setEdited((f) => ({ ...(f ?? config!), welcomeMessage: e.target.value }))
                 }
               />
             </div>
@@ -95,7 +93,7 @@ export default function ChatWidgetDashboardPage() {
                 id="persona"
                 value={form.personaName ?? ""}
                 onChange={(e) =>
-                  setForm((f) => (f ? { ...f, personaName: e.target.value } : f))
+                  setEdited((f) => ({ ...(f ?? config!), personaName: e.target.value }))
                 }
               />
             </div>

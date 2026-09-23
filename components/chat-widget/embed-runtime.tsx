@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { chatWidgetApi, type ChatMessage } from "@/lib/api/chat-widget";
-import { themeFromManifest, themeToCssVars } from "@/lib/template-engine/apply-tokens";
+import { resolveManifestTheme } from "@/lib/template-engine/resolve-manifest";
 import type { TemplateManifestV1 } from "@/lib/template-engine/types";
 import { templatesApi } from "@/lib/api/templates";
 
@@ -23,7 +23,7 @@ export function ChatEmbedRuntime({ tenantSlug }: Props) {
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const themeStyle = useMemo(() => themeToCssVars(themeFromManifest(manifest)), [manifest]);
+  const themeStyle = useMemo(() => resolveManifestTheme(manifest).style, [manifest]);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,7 +38,12 @@ export function ChatEmbedRuntime({ tenantSlug }: Props) {
         }
         const tpl = await templatesApi.get("platform-chat-minimal");
         if (!cancelled) {
-          setManifest(tpl.manifest as TemplateManifestV1);
+          const base = tpl.manifest as TemplateManifestV1;
+          if (cfg.tokens && typeof cfg.tokens === "object") {
+            setManifest({ ...base, tokens: { ...base.tokens, ...(cfg.tokens as object) } });
+          } else {
+            setManifest(base);
+          }
         }
         const sess = await chatWidgetApi.createSession(tenantSlug);
         if (cancelled) return;

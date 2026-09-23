@@ -158,6 +158,7 @@ export const TENANT_NAV_SECTIONS: NavSection[] = [
       { href: "/dashboard/ai-settings", label: "AI Settings", icon: Bot },
       { href: "/dashboard/knowledge-base", label: "Knowledge Base", icon: MessageSquare },
       { href: "/dashboard/chat-widget", label: "Chat Widget", icon: Sparkles },
+      { href: "/dashboard/storefront", label: "Toko Online", icon: ShoppingCart },
       { href: "/dashboard/whatsapp", label: "WhatsApp", icon: Plug },
     ],
   },
@@ -178,6 +179,7 @@ export const TENANT_NAV_SECTIONS: NavSection[] = [
     label: "Lanjutan",
     collapsible: true,
     items: [
+      { href: "/dashboard/template-marketplace", label: "Template Marketplace", icon: Layers },
       { href: "/dashboard/branches", label: "Cabang", icon: Building2 },
       { href: "/dashboard/workflow", label: "Workflow", icon: Workflow },
     ],
