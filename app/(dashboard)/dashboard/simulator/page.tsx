@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ImageUp, Loader2, RotateCcw, Send } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { AlertTriangle, ImageUp, Loader2, Radio, RefreshCw, RotateCcw, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ import {
 import { PageHeader } from "@/components/dashboard/page-header";
 import { InboxMessageBubble } from "@/components/inbox/inbox-message-bubble";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useRealtimeCollection } from "@/hooks/use-realtime-collection";
+import { FIRESTORE_ORDER_FIELD, firestorePaths } from "@/lib/firebase/paths";
 import { hasTenantDashboardAccess } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
 import {
@@ -44,6 +46,23 @@ function errorMessage(err: unknown): string {
   if (e.status === 403) return "Tidak ada akses: buka simulator sebagai owner/staff, atau super admin saat impersonate tenant.";
   if (e.status === 404) return "Endpoint belum tersedia di backend yang terhubung.";
   return e.message;
+}
+
+/** TODO(BE): bentuk dokumen Firestore belum final; diasumsikan sama dengan item GET /simulator/messages. */
+function docToSimMessage(id: string, d: Record<string, unknown>): SimMessage | null {
+  const createdAt = d.createdAt as { toDate?: () => Date } | string | undefined;
+  const iso =
+    typeof createdAt === "string" ? createdAt : createdAt?.toDate ? createdAt.toDate().toISOString() : null;
+  if (!iso || (d.direction !== "inbound" && d.direction !== "outbound")) return null;
+  return {
+    id,
+    direction: d.direction,
+    author: typeof d.author === "string" ? d.author : "system",
+    type: d.type === "image" ? "image" : "text",
+    text: typeof d.text === "string" ? d.text : "",
+    createdAt: iso,
+    status: typeof d.status === "string" ? d.status : "sent",
+  };
 }
 
 function SimBubble({ m }: { m: SimMessage }) {
@@ -94,14 +113,16 @@ export default function SimulatorPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const messagesQuery = useQuery({
+  const tenantId = user?.impersonation?.tenant?.id ?? user?.tenant?.id ?? null;
+  const messagesQuery = useRealtimeCollection<SimMessage>({
     queryKey: ["simulator", "messages", sessionId],
-    queryFn: () => simulatorApi.list(sessionId),
+    path: tenantId ? firestorePaths.simulatorMessages(tenantId, sessionId) : null,
+    orderField: FIRESTORE_ORDER_FIELD,
+    mapDoc: docToSimMessage,
+    poll: async () => (await simulatorApi.list(sessionId)).messages,
     enabled: allowed,
-    refetchInterval: (q) => (q.state.status === "error" ? false : 1500),
-    retry: false,
   });
-  const messages = messagesQuery.data?.messages ?? [];
+  const messages = messagesQuery.items;
   const last = messages[messages.length - 1];
   const waitingReply = Boolean(last && last.direction === "inbound");
 
@@ -197,7 +218,7 @@ export default function SimulatorPage() {
         </CardContent>
       </Card>
 
-      {messagesQuery.isError && (
+      {messagesQuery.error && (
         <Card className="border-amber-500/50">
           <CardContent className="flex gap-2 pt-6 text-sm">
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
@@ -211,7 +232,20 @@ export default function SimulatorPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Percakapan</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base">Percakapan</CardTitle>
+            {messagesQuery.mode === "realtime" ? (
+              <Badge className="bg-emerald-600 hover:bg-emerald-600">
+                <Radio className="mr-1 h-3 w-3" /> Realtime
+              </Badge>
+            ) : messagesQuery.mode === "connecting" ? (
+              <Badge variant="outline">Menyambung…</Badge>
+            ) : (
+              <Badge variant="secondary" title={messagesQuery.reason ?? undefined}>
+                <RefreshCw className="mr-1 h-3 w-3" /> Polling
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex max-h-[60vh] min-h-48 flex-col gap-3 overflow-y-auto rounded-md border bg-muted/20 p-3">

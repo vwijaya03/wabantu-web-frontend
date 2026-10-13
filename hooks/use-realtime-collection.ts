@@ -1,0 +1,96 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { collection, onSnapshot, orderBy, query, type DocumentData } from "firebase/firestore";
+import { ensureFirebaseSignIn, RealtimeUnavailableError, type RealtimeUnavailableReason } from "@/lib/firebase/client";
+import { isFirebaseConfigured } from "@/lib/firebase/config";
+
+export type RealtimeMode = "connecting" | "realtime" | "polling";
+
+export interface UseRealtimeCollectionOptions<T> {
+  /** Kunci unik (mis. ["simulator", sessionId]) untuk cache polling. */
+  queryKey: readonly unknown[];
+  /** Path koleksi Firestore; null = langsung polling. */
+  path: string | null;
+  orderField: string;
+  /** Ubah dokumen Firestore jadi item; kembalikan null untuk melewati dokumen tak valid. */
+  mapDoc: (id: string, data: DocumentData) => T | null;
+  /** Fallback polling (API REST). */
+  poll: () => Promise<T[]>;
+  pollIntervalMs?: number;
+  enabled?: boolean;
+}
+
+/**
+ * Dengarkan koleksi Firestore (read-only); jatuh ke polling REST bila Firebase tidak dikonfigurasi,
+ * endpoint token 404/503, sign-in gagal, atau listener ditolak (permission-denied/error).
+ */
+export function useRealtimeCollection<T>(opts: UseRealtimeCollectionOptions<T>) {
+  const { path, orderField, mapDoc, poll, pollIntervalMs = 1500, enabled = true } = opts;
+  const canTryRealtime = enabled && Boolean(path) && isFirebaseConfigured();
+  const connKey = canTryRealtime ? `${path}|${orderField}` : null;
+  // State hanya di-set dari callback async (bukan langsung di body effect).
+  const [rt, setRt] = useState<{
+    key: string;
+    ok: boolean;
+    reason: RealtimeUnavailableReason | null;
+    items: T[];
+  } | null>(null);
+
+  useEffect(() => {
+    if (!connKey || !path) return;
+    let unsub: (() => void) | null = null;
+    let cancelled = false;
+    const fallback = (r: RealtimeUnavailableReason) => {
+      if (!cancelled) setRt({ key: connKey, ok: false, reason: r, items: [] });
+    };
+    ensureFirebaseSignIn()
+      .then(({ db }) => {
+        if (cancelled) return;
+        unsub = onSnapshot(
+          query(collection(db, path), orderBy(orderField)),
+          (snap) => {
+            const next: T[] = [];
+            snap.forEach((d) => {
+              const v = mapDoc(d.id, d.data());
+              if (v !== null) next.push(v);
+            });
+            if (!cancelled) setRt({ key: connKey, ok: true, reason: null, items: next });
+          },
+          (err) => fallback(err.code === "permission-denied" ? "permission_denied" : "listener_error"),
+        );
+      })
+      .catch((err) => fallback(err instanceof RealtimeUnavailableError ? err.reason : "auth_failed"));
+    return () => {
+      cancelled = true;
+      unsub?.();
+    };
+    // mapDoc sengaja tidak jadi dependency (biasanya fungsi inline).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connKey]);
+
+  const current = rt && rt.key === connKey ? rt : null;
+  const mode: RealtimeMode = !connKey ? "polling" : !current ? "connecting" : current.ok ? "realtime" : "polling";
+  const reason: RealtimeUnavailableReason | null = !connKey ? "not_configured" : (current?.reason ?? null);
+  const items: T[] | null = mode === "realtime" && current ? current.items : null;
+
+  const polling = mode === "polling";
+  const pollQuery = useQuery({
+    queryKey: [...opts.queryKey, "poll"],
+    queryFn: poll,
+    // Saat realtime masih menyambung pun ambil sekali, supaya layar tidak kosong.
+    enabled: enabled && mode !== "realtime",
+    refetchInterval: (q) => (polling && q.state.status !== "error" ? pollIntervalMs : false),
+    retry: false,
+  });
+
+  return {
+    items: mode === "realtime" ? (items ?? []) : (pollQuery.data ?? []),
+    mode,
+    reason,
+    isLoading: mode === "realtime" ? items === null : pollQuery.isLoading,
+    error: mode === "realtime" ? null : pollQuery.error,
+    refetch: () => (mode === "realtime" ? Promise.resolve() : pollQuery.refetch().then(() => undefined)),
+  };
+}
