@@ -6,10 +6,28 @@ test.describe("3) impersonate (Pantau)", () => {
   test("mulai, token impersonate ditolak di /admin/*, lalu stop", async ({ page, request }) => {
     await requireBackend(request);
     requireEnv("adminEmail", "adminPassword", "impersonateTenant");
+    // UI menampilkan nama perusahaan (bukan UUID): petakan id → companyName dari respons /admin/tenants.
+    let tenantName = "";
+    page.on("response", async (res) => {
+      if (!/\/api\/v1\/admin\/tenants(\?|$)/.test(res.url()) || res.status() !== 200) return;
+      try {
+        const j = await res.json();
+        const t = ((j.data ?? j).tenants ?? []).find((x: { id: string }) => x.id === E2E.impersonateTenant);
+        if (t?.companyName) tenantName = t.companyName;
+      } catch {
+        /* abaikan */
+      }
+    });
     await adminLogin(page, "/dashboard/admin");
+    await expect.poll(() => tenantName, { timeout: 30_000 }).not.toBe("");
 
     const impResp = page.waitForResponse((r) => /\/api\/v1\/admin\/impersonate\//.test(r.url()) && r.request().method() === "POST");
-    const row = page.getByRole("row").filter({ hasText: E2E.impersonateTenant }).first();
+    // Baris tenant = div terdalam yang memuat checkbox "Pilih <nama>" dan tombol Pantau.
+    const row = page
+      .locator("div")
+      .filter({ has: page.getByRole("checkbox", { name: `Pilih ${tenantName}`, exact: true }) })
+      .filter({ has: page.getByRole("button", { name: "Pantau" }) })
+      .last();
     await row.getByRole("button", { name: "Pantau" }).click();
     const r = await impResp;
     expect(r.status()).toBe(200);
