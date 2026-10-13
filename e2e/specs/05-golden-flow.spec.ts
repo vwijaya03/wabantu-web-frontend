@@ -15,9 +15,20 @@ test.describe("5) golden flow simulator", () => {
     await page.getByPlaceholder(/Ketik pesan/).fill(E2E.orderMessage);
     await page.getByRole("button", { name: "Kirim" }).click();
     await expect(page.getByText("Menunggu balasan bot…")).toHaveCount(0, { timeout: 90_000 });
-    if (E2E.expectedTier) await expect(page.getByText(`Tingkat: ${E2E.expectedTier}`)).toBeVisible({ timeout: 30_000 });
+    // Soft: badge tingkat bergantung pada field `pricing` dari backend; gagal tetap dilaporkan tapi flow lanjut.
+    if (E2E.expectedTier) await expect.soft(page.getByText(new RegExp(`Tingkat: ${E2E.expectedTier}`, "i"))).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("Belum ada pesanan di percakapan ini.")).toHaveCount(0, { timeout: 90_000 });
-    if (E2E.expectedUnitPrice) await expect(page.getByText(`@ ${E2E.expectedUnitPrice}`).first()).toBeVisible();
+    // UI memformat harga sebagai "@ Rp 72.000" (id-ID), env berisi angka polos "72000".
+    if (E2E.expectedUnitPrice) {
+      const fmt = Number(E2E.expectedUnitPrice).toLocaleString("id-ID");
+      await expect(page.getByText(new RegExp(`@\\s*(Rp\\s*)?(${fmt.replace(/\./g, "\\.")}|${E2E.expectedUnitPrice})`)).first()).toBeVisible();
+    }
+    // Bot meminta nama penerima + HP sebelum order bisa diproses; kirim data sintetis (1 pesan, hemat rate limit).
+    if (await page.getByText(/Kirim nama penerima/).isVisible().catch(() => false)) {
+      await page.getByPlaceholder(/Ketik pesan/).fill("Nama: Budi\nHP: 081234567890");
+      await page.getByRole("button", { name: "Kirim" }).click();
+      await expect(page.getByText("Menunggu balasan bot…")).toHaveCount(0, { timeout: 90_000 });
+    }
     await step(page, "order-created-tier-price");
 
     await page.locator('input[type="file"]').setInputFiles(path.join(__dirname, "../fixtures/bukti-transfer.png"));
