@@ -142,13 +142,17 @@ export default function SimulatorPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
+  // Waktu kirim terakhir yang sukses; order di panel dianggap basi sampai state REST diperbarui sesudahnya.
+  const [lastSentAt, setLastSentAt] = useState(0);
   const sendMut = useMutation({
     mutationFn: (req: Omit<SimSendRequest, "sessionId" | "buyerName">) =>
       simulatorApi.send({ ...req, sessionId, buyerName: buyerName.trim() || undefined }),
     onSuccess: (r) => {
       setText("");
       if (r.conversationId) setConv({ sessionId, id: r.conversationId });
+      setLastSentAt(Date.now());
       void messagesQuery.refetch();
+      void qc.invalidateQueries({ queryKey: stateKey });
     },
     onError: (err) => toast.error(errorMessage(err)),
   });
@@ -324,6 +328,7 @@ export default function SimulatorPage() {
         order={order}
         pricing={pricing}
         canApprove={canPerformOwnerActions(user)}
+        syncing={sendMut.isPending || waitingReply || stateQuery.dataUpdatedAt <= lastSentAt}
         onChanged={() => void qc.invalidateQueries({ queryKey: stateKey })}
       />
       </div>

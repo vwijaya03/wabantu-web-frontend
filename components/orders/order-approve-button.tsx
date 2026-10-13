@@ -17,18 +17,22 @@ export function OrderApproveButton({
   canManage,
   onApproved,
   size = "sm",
+  disabled = false,
 }: {
   order: Pick<Order, "id" | "status" | "paymentProofMessageId"> & { hasProof?: boolean };
   canManage: boolean;
   onApproved?: (o: Order) => void;
   size?: "sm" | "default";
+  /** Paksa nonaktif (mis. data order di layar sedang disinkronkan). */
+  disabled?: boolean;
 }) {
   const [unavailable, setUnavailable] = useState(false);
   const hasProof = order.hasProof ?? Boolean(order.paymentProofMessageId);
   const done = order.status === "completed";
 
   const mut = useMutation({
-    mutationFn: () => ordersApi.approve(order.id),
+    // id dikirim eksplisit saat klik = id order yang sedang ditampilkan.
+    mutationFn: (id: string) => ordersApi.approve(id),
     onSuccess: (o) => {
       toast.success("Pesanan disetujui dan diselesaikan");
       onApproved?.(o);
@@ -61,13 +65,15 @@ export function OrderApproveButton({
       ? "Pesanan sudah selesai"
       : !hasProof
         ? "Belum ada bukti transfer"
-        : undefined;
+        : disabled
+          ? "Menyinkronkan data pesanan…"
+          : undefined;
 
   return (
     <Button
       size={size}
-      onClick={() => mut.mutate()}
-      disabled={unavailable || done || !hasProof || mut.isPending}
+      onClick={() => mut.mutate(order.id)}
+      disabled={disabled || unavailable || done || !hasProof || mut.isPending}
       title={title}
     >
       {mut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
