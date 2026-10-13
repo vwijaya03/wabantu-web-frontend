@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { adminApi as adminHttp } from "./admin-client";
 
 export type RetrievalMode = "disabled" | "shadow" | "vector";
 
@@ -177,7 +178,7 @@ export const flagsApi = {
   },
 
   async getRetrievalIncidents(): Promise<{ incidents: RetrievalIncident[]; degraded?: boolean }> {
-    const { data } = await api.get<{ incidents: RetrievalIncident[]; degraded?: boolean }>(
+    const { data } = await adminHttp.get<{ incidents: RetrievalIncident[]; degraded?: boolean }>(
       "/admin/ai-retrieval/incidents",
     );
     return data;

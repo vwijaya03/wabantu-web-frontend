@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminSession } from "@/hooks/use-admin-session";
+import { AdminSessionRequired } from "@/components/admin/require-admin-session";
+
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -36,13 +39,14 @@ function formatTime(iso: string): string {
 
 export default function AdminAIActivityPage() {
   const { user } = useAuth();
+  const { isAdmin } = useAdminSession();
   const [period, setPeriod] = useState(currentPeriod);
   const [tenantId, setTenantId] = useState<string>("");
 
   const { data: tenantsData, isLoading: tenantsLoading } = useQuery({
     queryKey: ["admin-tenants"],
     queryFn: () => adminApi.listTenants(),
-    enabled: user?.role === "super_admin",
+    enabled: isAdmin,
   });
 
   const tenants = useMemo(() => tenantsData?.tenants ?? [], [tenantsData?.tenants]);
@@ -52,13 +56,13 @@ export default function AdminAIActivityPage() {
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ["admin-ai-activity-summary", effectiveTenantId, period],
     queryFn: () => aiActivityAdminApi.summary(effectiveTenantId, { period }),
-    enabled: user?.role === "super_admin" && Boolean(effectiveTenantId),
+    enabled: isAdmin && Boolean(effectiveTenantId),
   });
 
   const { data: list, isLoading: listLoading } = useQuery({
     queryKey: ["admin-ai-activity-list", effectiveTenantId, period],
     queryFn: () => aiActivityAdminApi.list(effectiveTenantId, { period, limit: 200 }),
-    enabled: user?.role === "super_admin" && Boolean(effectiveTenantId),
+    enabled: isAdmin && Boolean(effectiveTenantId),
   });
 
   const selectedTenant = useMemo(
@@ -66,13 +70,8 @@ export default function AdminAIActivityPage() {
     [tenants, effectiveTenantId],
   );
 
-  if (user?.role !== "super_admin") {
-    return (
-      <PageHeader
-        title="AI Activity"
-        description="Halaman ini hanya untuk super admin platform."
-      />
-    );
+  if (!isAdmin) {
+    return <AdminSessionRequired />;
   }
 
   return (

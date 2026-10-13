@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminSession } from "@/hooks/use-admin-session";
+import { AdminSessionRequired } from "@/components/admin/require-admin-session";
+
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -125,6 +128,7 @@ function formatTime(iso: string): string {
 
 export default function AdminAITriagePage() {
   const { user } = useAuth();
+  const { isAdmin } = useAdminSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = parseTriageTab(searchParams.get("tab"));
@@ -140,7 +144,7 @@ export default function AdminAITriagePage() {
   const { data: tenantsData, isLoading: tenantsLoading } = useQuery({
     queryKey: ["admin-tenants"],
     queryFn: () => adminApi.listTenants(),
-    enabled: user?.role === "super_admin",
+    enabled: isAdmin,
   });
 
   const tenants = useMemo(() => tenantsData?.tenants ?? [], [tenantsData?.tenants]);
@@ -159,7 +163,7 @@ export default function AdminAITriagePage() {
         status: reportStatusFilter === "all" ? "" : reportStatusFilter,
         limit: 50,
       }),
-    enabled: user?.role === "super_admin" && tab === "laporan",
+    enabled: isAdmin && tab === "laporan",
   });
 
   const updateReportMut = useMutation({
@@ -195,7 +199,7 @@ export default function AdminAITriagePage() {
   } = useQuery({
     queryKey: ["admin-ai-triage-llm-scan", activeLLMScanId],
     queryFn: () => aiTriageAdminApi.getLLMScan(activeLLMScanId!),
-    enabled: user?.role === "super_admin" && Boolean(activeLLMScanId),
+    enabled: isAdmin && Boolean(activeLLMScanId),
   });
 
   const createLLMScanMut = useMutation({
@@ -251,13 +255,8 @@ export default function AdminAITriagePage() {
     });
   };
 
-  if (user?.role !== "super_admin") {
-    return (
-      <PageHeader
-        title="AI Triage"
-        description="Halaman ini hanya untuk super admin platform."
-      />
-    );
+  if (!isAdmin) {
+    return <AdminSessionRequired />;
   }
 
   return (

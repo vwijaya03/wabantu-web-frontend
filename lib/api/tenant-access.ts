@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { adminApi as adminHttp } from "./admin-client";
 
 export type AccessScope = "full" | "limited";
 export type AccessRequestStatus =
@@ -49,14 +50,14 @@ export const tenantAccessApi = {
   async listMine(params?: { tenantId?: string }): Promise<{
     requests: TenantAccessRequest[];
   }> {
-    const res = await api.get("/admin/tenant-access-requests", { params });
+    const res = await adminHttp.get("/admin/tenant-access-requests", { params });
     return res.data;
   },
 
   async create(
     payload: CreateAccessRequestPayload,
   ): Promise<{ request: TenantAccessRequest }> {
-    const res = await api.post("/admin/tenant-access-requests", payload);
+    const res = await adminHttp.post("/admin/tenant-access-requests", payload);
     return res.data;
   },
 

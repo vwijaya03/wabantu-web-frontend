@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { adminApi as adminHttp } from "./admin-client";
 
 export type AIRegressionCaseResult = {
   name: string;
@@ -41,7 +41,7 @@ export type RunAIRegressionResponse = {
 
 export const aiRegressionApi = {
   async run(): Promise<RunAIRegressionResponse> {
-    const res = await api.post("/admin/ai-regression/run");
+    const res = await adminHttp.post("/admin/ai-regression/run");
     return res.data;
   },
 };

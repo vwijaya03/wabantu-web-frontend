@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { adminApi as adminHttp } from "./admin-client";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -11,12 +11,12 @@ export function isTriageUUID(id: string | undefined | null): id is string {
 
 export const aiTriageAdminApi = {
   async createLLMScan(params: CreateAITriageLLMScanParams): Promise<{ scan: AITriageLLMScan }> {
-    const res = await api.post("/admin/ai-triage/llm-scans", params);
+    const res = await adminHttp.post("/admin/ai-triage/llm-scans", params);
     return res.data;
   },
 
   async getLLMScan(id: string): Promise<{ scan: AITriageLLMScan }> {
-    const res = await api.get(`/admin/ai-triage/llm-scans/${id}`);
+    const res = await adminHttp.get(`/admin/ai-triage/llm-scans/${id}`);
     return res.data;
   },
 
@@ -25,12 +25,12 @@ export const aiTriageAdminApi = {
     status?: AITriageReportStatus | "";
     limit?: number;
   }): Promise<{ reports: AITriageReport[] }> {
-    const res = await api.get("/admin/ai-triage/reports", { params });
+    const res = await adminHttp.get("/admin/ai-triage/reports", { params });
     return res.data;
   },
 
   async getReport(id: string): Promise<{ report: AITriageReport }> {
-    const res = await api.get(`/admin/ai-triage/reports/${id}`);
+    const res = await adminHttp.get(`/admin/ai-triage/reports/${id}`);
     return res.data;
   },
 
@@ -38,12 +38,12 @@ export const aiTriageAdminApi = {
     id: string,
     params: { status: "confirmed" | "dismissed"; reviewNote?: string },
   ): Promise<{ report: AITriageReport }> {
-    const res = await api.patch(`/admin/ai-triage/reports/${id}`, params);
+    const res = await adminHttp.patch(`/admin/ai-triage/reports/${id}`, params);
     return res.data;
   },
 
   async openIncidentFromReport(id: string): Promise<{ incident: AITriageIncident }> {
-    const res = await api.post(`/admin/ai-triage/reports/${id}/incident`);
+    const res = await adminHttp.post(`/admin/ai-triage/reports/${id}/incident`);
     return res.data;
   },
 
@@ -53,12 +53,12 @@ export const aiTriageAdminApi = {
     status?: string;
     limit?: number;
   }): Promise<{ incidents: AITriageIncident[] }> {
-    const res = await api.get("/admin/ai-triage/incidents", { params });
+    const res = await adminHttp.get("/admin/ai-triage/incidents", { params });
     return res.data;
   },
 
   async getIncident(id: string): Promise<{ incident: AITriageIncident }> {
-    const res = await api.get(`/admin/ai-triage/incidents/${id}`);
+    const res = await adminHttp.get(`/admin/ai-triage/incidents/${id}`);
     return res.data;
   },
 
@@ -66,17 +66,17 @@ export const aiTriageAdminApi = {
     id: string,
     contract: BehaviorContract,
   ): Promise<{ incident: AITriageIncident; behaviorJob?: AITriageBehaviorJob; holdReason?: string }> {
-    const res = await api.post(`/admin/ai-triage/incidents/${id}/confirm`, { contract });
+    const res = await adminHttp.post(`/admin/ai-triage/incidents/${id}/confirm`, { contract });
     return res.data;
   },
 
   async dismissIncident(id: string, note?: string): Promise<{ incident: AITriageIncident }> {
-    const res = await api.post(`/admin/ai-triage/incidents/${id}/dismiss`, { note });
+    const res = await adminHttp.post(`/admin/ai-triage/incidents/${id}/dismiss`, { note });
     return res.data;
   },
 
   async deleteIncidents(ids: string[]): Promise<{ deleted: number }> {
-    const res = await api.post(`/admin/ai-triage/incident-deletes`, { ids });
+    const res = await adminHttp.post(`/admin/ai-triage/incident-deletes`, { ids });
     return res.data;
   },
 
@@ -84,12 +84,12 @@ export const aiTriageAdminApi = {
     if (!isTriageUUID(id)) {
       throw new Error("id job Composer tidak valid");
     }
-    const res = await api.get(`/admin/ai-triage/behavior-jobs/${id}`);
+    const res = await adminHttp.get(`/admin/ai-triage/behavior-jobs/${id}`);
     return res.data;
   },
 
   async retryBehaviorJob(id: string): Promise<{ job: AITriageBehaviorJob }> {
-    const res = await api.post(`/admin/ai-triage/behavior-jobs/${id}/retry`);
+    const res = await adminHttp.post(`/admin/ai-triage/behavior-jobs/${id}/retry`);
     return res.data;
   },
 
@@ -97,7 +97,7 @@ export const aiTriageAdminApi = {
     job: AITriageBehaviorJob;
     result: { passed: boolean; deployedRevision?: string; failures?: string[] };
   }> {
-    const res = await api.post(`/admin/ai-triage/behavior-jobs/${id}/verify`);
+    const res = await adminHttp.post(`/admin/ai-triage/behavior-jobs/${id}/verify`);
     return res.data;
   },
 
@@ -105,7 +105,7 @@ export const aiTriageAdminApi = {
     incidentId: string,
     params: { operation: string; targetOrderId?: string; items?: unknown[] },
   ): Promise<{ plan: AITriageRepairPlan }> {
-    const res = await api.post(`/admin/ai-triage/incidents/${incidentId}/repair/dry-run`, params);
+    const res = await adminHttp.post(`/admin/ai-triage/incidents/${incidentId}/repair/dry-run`, params);
     return res.data;
   },
 
@@ -113,17 +113,17 @@ export const aiTriageAdminApi = {
     if (!isTriageUUID(id)) {
       throw new Error("id repair plan tidak valid");
     }
-    const res = await api.get(`/admin/ai-triage/repair-plans/${id}`);
+    const res = await adminHttp.get(`/admin/ai-triage/repair-plans/${id}`);
     return res.data;
   },
 
   async approveRepair(id: string): Promise<{ plan: AITriageRepairPlan }> {
-    const res = await api.post(`/admin/ai-triage/repair-plans/${id}/approve`);
+    const res = await adminHttp.post(`/admin/ai-triage/repair-plans/${id}/approve`);
     return res.data;
   },
 
   async applyRepair(id: string): Promise<{ plan: AITriageRepairPlan }> {
-    const res = await api.post(`/admin/ai-triage/repair-plans/${id}/apply`);
+    const res = await adminHttp.post(`/admin/ai-triage/repair-plans/${id}/apply`);
     return res.data;
   },
 };

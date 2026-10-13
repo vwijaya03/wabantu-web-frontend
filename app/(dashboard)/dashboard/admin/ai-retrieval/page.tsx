@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminSession } from "@/hooks/use-admin-session";
+import { AdminSessionRequired } from "@/components/admin/require-admin-session";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi, type AdminTenant } from "@/lib/api/admin";
 import { toApiError } from "@/lib/api/client";
 import { flagsApi, type RAGRolloutScope, type RetrievalMode, type RetrievalObservabilitySnapshot, type TenantIndexingProgress, shouldPollRetrievalIndexing } from "@/lib/api/flags";
@@ -549,7 +551,7 @@ function BulkRolloutPanel({ onJobDone }: { onJobDone: () => void }) {
 }
 
 export default function AIRetrievalAdminPage() {
-  const { user } = useAuth();
+  const { isAdmin } = useAdminSession();
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -558,7 +560,7 @@ export default function AIRetrievalAdminPage() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-tenants-retrieval", search, page, pageSize],
     queryFn: () => adminApi.listTenants({ q: search || undefined, page, pageSize }),
-    enabled: user?.role === "super_admin",
+    enabled: isAdmin,
   });
 
   const tenants = data?.tenants ?? [];
@@ -567,10 +569,8 @@ export default function AIRetrievalAdminPage() {
     [data?.total],
   );
 
-  if (user?.role !== "super_admin") {
-    return (
-      <PageHeader title="AI Retrieval" description="Akses super admin diperlukan." />
-    );
+  if (!isAdmin) {
+    return <AdminSessionRequired />;
   }
 
   return (

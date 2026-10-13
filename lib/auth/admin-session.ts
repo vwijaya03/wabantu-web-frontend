@@ -4,6 +4,16 @@
  * Server tetap sumber kebenaran: 401 dari /admin/* → hapus sesi dan ke /platform-admin/login.
  */
 const KEY = "wabantu_admin_session";
+/** Event in-tab agar UI (menu, gate) ikut berubah saat sesi admin set/clear. */
+export const ADMIN_SESSION_EVENT = "wabantu-admin-session";
+
+function notify(): void {
+  try {
+    window.dispatchEvent(new Event(ADMIN_SESSION_EVENT));
+  } catch {
+    /* ignore */
+  }
+}
 /** Fallback bila server tidak mengirim expiresAt/expiresIn. */
 const DEFAULT_TTL_MS = 30 * 60 * 1000;
 
@@ -20,6 +30,7 @@ export function setAdminSession(token: string, expiresAt?: number | null): void 
   } catch {
     /* ignore */
   }
+  notify();
 }
 
 export function getAdminToken(): string | null {
@@ -45,4 +56,9 @@ export function clearAdminSession(): void {
   } catch {
     /* ignore */
   }
+  notify();
+}
+
+export function hasAdminSession(): boolean {
+  return Boolean(getAdminToken());
 }

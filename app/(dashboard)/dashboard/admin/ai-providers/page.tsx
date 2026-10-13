@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminSession } from "@/hooks/use-admin-session";
+import { AdminSessionRequired } from "@/components/admin/require-admin-session";
+
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Loader2, Save } from "lucide-react";
@@ -16,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi } from "@/lib/api/admin";
 import { toApiError } from "@/lib/api/client";
 import {
@@ -245,38 +247,32 @@ function FunctionCard({
 }
 
 export default function AIProvidersPage() {
-  const { user } = useAuth();
-  const isSuperAdmin = user?.role === "super_admin";
+  const { isAdmin } = useAdminSession();
   const [tenantSel, setTenantSel] = useState<string>(GLOBAL);
   const tenantId = tenantSel === GLOBAL ? null : tenantSel;
 
   const tenantsQuery = useQuery({
     queryKey: ["admin", "tenants", "ai-providers"],
     queryFn: () => adminApi.listTenants({ pageSize: 100 }),
-    enabled: isSuperAdmin,
+    enabled: isAdmin,
   });
 
   const catalogQuery = useQuery({
     queryKey: ["admin", "ai-providers", "catalog"],
     queryFn: aiProvidersApi.getCatalog,
-    enabled: isSuperAdmin,
+    enabled: isAdmin,
     retry: false,
   });
 
   const configsQuery = useQuery({
     queryKey: ["admin", "ai-providers", tenantId],
     queryFn: () => aiProvidersApi.listConfigs(tenantId),
-    enabled: isSuperAdmin,
+    enabled: isAdmin,
     retry: false,
   });
 
-  if (!isSuperAdmin) {
-    return (
-      <div className="p-6">
-        <PageHeader title="AI Providers" description="Hanya untuk super admin platform." />
-        <p className="text-sm text-muted-foreground">Anda tidak memiliki akses ke halaman ini.</p>
-      </div>
-    );
+  if (!isAdmin) {
+    return <AdminSessionRequired />;
   }
 
   const backendReady = configsQuery.isSuccess && catalogQuery.isSuccess;
