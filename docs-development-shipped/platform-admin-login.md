@@ -30,3 +30,12 @@
 - Login client: super_admin kini 401 → form menampilkan pesan generik (401/429/5xx); redirect super_admin ke `/dashboard/admin` dihapus. Tidak ada tautan ke login admin.
 - **Pengecualian (perlu review Security):** `GET /auth/me` memakai token admin hanya bila tidak ada token impersonation/client, agar `DashboardAuthShell` bisa memuat konsol admin tanpa sesi client (doc: `/auth/me` raw, tidak lewat middleware). Belum diverifikasi ke backend.
 - Gap: 401 di `/auth/me` untuk admin masih diarahkan ke `/login` client (bukan login admin); `dashboard-auth-shell` masih punya guard berbasis `role` dari `/auth/me` (kini berasal dari token admin/impersonation, bukan sesi client).
+
+## Tahap 4: keputusan CTO — tanpa pengecualian /auth/me
+- Fallback token admin di `GET /auth/me` **dihapus**. Klien `api` hanya memasang token impersonation (Pantau) atau token client; token admin tidak pernah ke endpoint client/tenant.
+- Identitas konsol admin: `GET /api/v1/platform-admin/me` (token admin saja, `{id, email, name, role}`) lewat `adminApi` (`platformAdminMe()`), dipetakan ke `AuthUser {role:"super_admin", platform:true}`.
+- `lib/auth/load-session-user.ts`: routing shell berdasarkan sesi yang ada — `tenant` (impersonation/client → `/auth/me`), `admin` (hanya admin → `/platform-admin/me`), `none` (rute `/dashboard/admin/**` → `/platform-admin/login?next=`, lainnya → `/login?next=`). `DashboardAuthShell` dan `AuthProvider.refresh` memakainya; admin-only tidak lagi dipantulkan ke `/login`.
+- `/platform-admin/me`: 401 → interceptor `adminApi` menghapus sesi admin + redirect login admin; 404 → layar "Endpoint belum tersedia" (endpoint belum di-merge di BE).
+- Logout ("Keluar") saat sesi admin saja → hapus sesi admin, ke `/platform-admin/login`.
+- Perbaikan bug: path login admin sebelumnya `/api/v1/platform-admin/login` padahal `baseURL` sudah `/api/v1` (jadi dobel). Sekarang `/platform-admin/login`.
+- Bagian "Pengecualian /auth/me" di Tahap 3 tidak berlaku lagi.

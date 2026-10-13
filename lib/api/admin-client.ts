@@ -50,10 +50,22 @@ export interface AdminLoginResponse {
 }
 
 export async function adminLogin(email: string, password: string): Promise<AdminLoginResponse> {
-  const res = await adminApi.post<AdminLoginResponse>("/api/v1/platform-admin/login", { email, password });
+  const res = await adminApi.post<AdminLoginResponse>("/platform-admin/login", { email, password });
   const d = res.data;
   if (!d?.accessToken || !d?.expiresAt || !Number.isFinite(Date.parse(d.expiresAt))) {
     throw new Error("Respons login admin tidak valid.");
   }
   return { accessToken: d.accessToken, expiresAt: d.expiresAt };
+}
+
+/** Identitas admin: GET /api/v1/platform-admin/me (token admin saja). baseURL sudah berisi /api/v1. */
+export interface PlatformAdminMe {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+}
+
+export async function platformAdminMe(): Promise<PlatformAdminMe> {
+  return (await adminApi.get<PlatformAdminMe>("/platform-admin/me")).data;
 }
