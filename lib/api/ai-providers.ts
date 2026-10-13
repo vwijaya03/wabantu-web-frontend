@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { adminApi as api } from "./admin-client";
 
 /**
  * Kontrak resmi: wabantu-api-go docs/API_AI_CONFIG.md §1 (branch be/h1-llm-master, admin/ai_config.go).
