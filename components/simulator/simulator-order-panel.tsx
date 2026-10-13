@@ -22,14 +22,11 @@ export function SimulatorOrderPanel({
   order,
   pricing,
   canApprove,
-  syncing = false,
   onChanged,
 }: {
   order: SimOrder | null | undefined;
   pricing: SimPricing | null | undefined;
   canApprove: boolean;
-  /** true selama pesan baru belum tercermin di state REST → order di layar bisa basi, approve dinonaktifkan. */
-  syncing?: boolean;
   onChanged: () => void;
 }) {
   return (
@@ -79,8 +76,6 @@ export function SimulatorOrderPanel({
             </div>
             <div className="flex flex-wrap gap-2">
               <OrderApproveButton
-                key={order.id}
-                disabled={syncing}
                 order={{
                   id: order.id,
                   status: order.status,

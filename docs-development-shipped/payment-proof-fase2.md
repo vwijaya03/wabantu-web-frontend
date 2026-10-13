@@ -104,7 +104,3 @@ Counter penolakan di-reset penuh di backend; pembeli bisa upload lagi (max 5 pen
 
 - `orders` di halaman Orders dibungkus `useMemo` agar dependency `useEffect` stabil (eslint).
 - Jangan commit `public/generated-docs/docs-index.json` dari generator lokal kecuali sengaja regenerate docs hub.
-
-## Fix: approve di simulator mengenai order basi (WB-07B19997 vs WB-5F6198FE)
-- Order di panel Pesanan simulator berasal dari `GET /simulator/messages?sessionId=…` field `order` (query key `["simulator","state",sessionId]`; saat polling diisi `setQueryData` dari poll pesan). Sesi `reseller-demo` dipakai ulang, jadi sesaat setelah kirim pesan/bukti panel masih menampilkan order lama sampai state REST berikutnya datang; tombol "Setujui pesanan" aktif untuk order lama yang sudah punya bukti → `POST /orders/<id lama>/approve`.
-- Fix: `OrderApproveButton` mengirim id eksplisit saat klik (`mutate(order.id)`), di-`key` per `order.id`, dan menerima `disabled`. Simulator menonaktifkan tombol (`syncing`) selama kirim pesan berjalan, menunggu balasan bot, atau state REST belum diperbarui sejak kirim sukses terakhir; setelah kirim sukses state di-invalidate.
