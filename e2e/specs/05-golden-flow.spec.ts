@@ -16,7 +16,7 @@ test.describe("5) golden flow simulator", () => {
     await page.getByRole("button", { name: "Kirim" }).click();
     await expect(page.getByText("Menunggu balasan bot…")).toHaveCount(0, { timeout: 90_000 });
     // Soft: badge tingkat bergantung pada field `pricing` dari backend; gagal tetap dilaporkan tapi flow lanjut.
-    if (E2E.expectedTier) await expect.soft(page.getByText(new RegExp(`Tingkat: ${E2E.expectedTier}`, "i"))).toBeVisible({ timeout: 30_000 });
+    if (E2E.expectedTier) await expect.soft(page.getByText(new RegExp(`Tingkat:\\s*(Harga\\s+)?${E2E.expectedTier}`, "i"))).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("Belum ada pesanan di percakapan ini.")).toHaveCount(0, { timeout: 90_000 });
     // UI memformat harga sebagai "@ Rp 72.000" (id-ID), env berisi angka polos "72000".
     if (E2E.expectedUnitPrice) {
