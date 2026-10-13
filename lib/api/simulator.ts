@@ -2,70 +2,67 @@ import { api } from "./client";
 
 /**
  * Simulator chat web (golden flow demo).
- *
- * TODO(BE): kontrak resmi akan ditulis di wabantu-api-go docs/API_AI_CONFIG.md (branch be/h1-llm-master).
- * Sampai dokumen itu ada, path & tipe di bawah adalah USULAN dan backend akan 404.
- * Jangan menampilkan data palsu: UI wajib menampilkan status "Endpoint belum tersedia".
+ * Kontrak resmi: wabantu-api-go docs/API_AI_CONFIG.md §2 (branch be/h1-llm-master).
+ * Status backend: FINAL & implemented (`webhook/simulator.go`, be/h1-llm-master 493cec2).
+ * Tenant = tenant sesi (owner/staff, atau super_admin saat impersonate). Pembeli hanya bisa kirim teks/gambar.
  */
-export const SIMULATOR_BASE_PROPOSED = "/admin/simulator";
 
-export interface SimulatorTenant {
-  id: string;
-  name: string;
-}
+export const SIM_SESSION_ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
+export const SIM_MAX_TEXT = 1000;
+export const SIM_MAX_BUYER_NAME = 60;
+export const SIM_MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+export const SIM_IMAGE_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
+export type SimImageMime = (typeof SIM_IMAGE_MIME)[number];
 
-export interface SimulatorReseller {
-  id: string;
-  name: string;
-  /** nama tingkat harga, mis. "Agen", "Reseller", "Distributor" */
-  tier: string;
-}
-
-export interface SimulatorQuoteLine {
-  productName: string;
-  qty: number;
-  unitPrice: number;
-  tier: string;
-}
-
-export interface SimulatorMessage {
-  id: string;
-  direction: "in" | "out";
-  author: "contact" | "ai" | "system";
-  type: "text" | "image";
-  body: string | null;
-  createdAt: string;
-  quote?: SimulatorQuoteLine[] | null;
-  orderId?: string | null;
-  orderStatus?: string | null;
-}
-
-export interface SimulatorSession {
+export interface SimSendRequest {
   sessionId: string;
-  messages: SimulatorMessage[];
+  buyerName?: string;
+  text?: string;
+  image?: { base64: string; mimeType: SimImageMime };
+}
+
+export interface SimSendResponse {
+  conversationId: string;
+  messageId: string;
+  status: "queued";
+}
+
+export interface SimMessage {
+  id: string;
+  direction: "inbound" | "outbound";
+  author: string;
+  type: "text" | "image";
+  text: string;
+  createdAt: string;
+  status: string;
+}
+
+export interface SimMessagesResponse {
+  conversationId: string | null;
+  messages: SimMessage[];
+}
+
+export function newSimSessionId(): string {
+  return `sim-${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
+}
+
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1] ?? "");
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
 }
 
 export const simulatorApi = {
-  /** USULAN */
-  async listTenants(): Promise<{ tenants: SimulatorTenant[] }> {
-    return (await api.get(`${SIMULATOR_BASE_PROPOSED}/tenants`)).data;
+  async send(req: SimSendRequest): Promise<SimSendResponse> {
+    return (await api.post<SimSendResponse>("/simulator/messages", req)).data;
   },
-  /** USULAN */
-  async listResellers(tenantId: string): Promise<{ resellers: SimulatorReseller[] }> {
-    return (await api.get(`${SIMULATOR_BASE_PROPOSED}/tenants/${tenantId}/resellers`)).data;
-  },
-  /** USULAN — buat sesi baru (percakapan bersih) untuk reseller tsb. */
-  async startSession(tenantId: string, resellerId: string): Promise<SimulatorSession> {
-    return (await api.post(`${SIMULATOR_BASE_PROPOSED}/sessions`, { tenantId, resellerId })).data;
-  },
-  /** USULAN — kirim teks; respons berisi pesan baru (pesan user + balasan bot). */
-  async sendMessage(sessionId: string, text: string): Promise<{ messages: SimulatorMessage[] }> {
-    return (await api.post(`${SIMULATOR_BASE_PROPOSED}/sessions/${sessionId}/messages`, { text })).data;
-  },
-  /** USULAN — upload bukti transfer (multipart, field "file"). */
-  async uploadProof(sessionId: string, file: File): Promise<{ messages: SimulatorMessage[] }> {
-    const form = new FormData();
-    form.append("file", file);
-    return (await api.post(`${SIMULATOR_BASE_PROPOSED}/sessions/${sessionId}/payment-proof`, form)).data;
+  async list(sessionId: string, after?: string): Promise<SimMessagesResponse> {
+    const res = await api.get<SimMessagesResponse>("/simulator/messages", {
+      params: { sessionId, after: after || undefined },
+    });
+    return res.data;
   },
 };
