@@ -9,6 +9,7 @@ const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./e2e/specs",
+  globalSetup: "./e2e/global-setup.ts",
   outputDir: "./e2e-artifacts/test-results",
   timeout: 90_000,
   expect: { timeout: 15_000 },
