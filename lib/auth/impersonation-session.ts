@@ -58,5 +58,9 @@ export function clearImpersonationSession(): void {
     clearTimeout(timer);
     timer = null;
   }
-  if (had) emit();
+  if (had) {
+    emit();
+    // Security M-1: sesi berakhir → Firebase ikut sign-out (tutup listener).
+    void import("@/lib/firebase/client").then((m) => m.firebaseSignOut()).catch(() => undefined);
+  }
 }

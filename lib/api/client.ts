@@ -85,6 +85,11 @@ api.interceptors.response.use(
     const config = error.config as ApiRequestConfig | undefined;
     const status = error.response?.status;
 
+    // Security M-1: setiap 401 dari API client → sign-out Firebase (tutup listener, buang sesi in-memory).
+    if (status === 401 && typeof window !== "undefined") {
+      void import("@/lib/firebase/client").then((m) => m.firebaseSignOut()).catch(() => undefined);
+    }
+
     // 401 dengan token impersonation → sesi pantau habis/dicabut: bersihkan dan kembali ke konsol admin.
     if (status === 401 && getImpersonationToken() && typeof window !== "undefined") {
       clearImpersonationSession();

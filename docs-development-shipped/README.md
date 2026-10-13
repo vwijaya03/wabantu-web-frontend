@@ -16,3 +16,4 @@ Folder ini berisi **catatan implementasi** fitur yang sudah di-merge — bukan s
 | [payment-proof-fase2.md](./payment-proof-fase2.md) | Panel bukti transfer, verify/reject/unblock |
 | [ai-triage-console.md](./ai-triage-console.md) | Konsol superadmin AI Triage (Insiden / AI Review / Laporan) |
 | [platform-admin-login.md](./platform-admin-login.md) | Login superadmin terpisah, sesi admin untuk /admin/ai/* |
+| [firebase-realtime.md](./firebase-realtime.md) | Realtime Firestore + polling, persistence in-memory, firebaseSignOut |

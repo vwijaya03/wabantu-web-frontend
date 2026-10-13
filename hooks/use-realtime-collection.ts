@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { collection, onSnapshot, orderBy, query, type DocumentData } from "firebase/firestore";
-import { ensureFirebaseSignIn, RealtimeUnavailableError, type RealtimeUnavailableReason } from "@/lib/firebase/client";
+import {
+  ensureFirebaseSignIn,
+  registerFirebaseListener,
+  RealtimeUnavailableError,
+  type RealtimeUnavailableReason,
+} from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 
 export type RealtimeMode = "connecting" | "realtime" | "polling";
@@ -45,6 +50,7 @@ export function useRealtimeCollection<T>(opts: UseRealtimeCollectionOptions<T>) 
   useEffect(() => {
     if (!connKey || !path) return;
     let unsub: (() => void) | null = null;
+    let deregister: (() => void) | null = null;
     let cancelled = false;
     const fallback = (r: RealtimeUnavailableReason) => {
       if (!cancelled) setRt({ key: connKey, ok: false, reason: r, items: [] });
@@ -64,10 +70,15 @@ export function useRealtimeCollection<T>(opts: UseRealtimeCollectionOptions<T>) 
           },
           (err) => fallback(err.code === "permission-denied" ? "permission_denied" : "listener_error"),
         );
+        deregister = registerFirebaseListener(unsub, () => {
+          unsub = null;
+          fallback("signed_out");
+        });
       })
       .catch((err) => fallback(err instanceof RealtimeUnavailableError ? err.reason : "auth_failed"));
     return () => {
       cancelled = true;
+      deregister?.();
       unsub?.();
     };
     // mapDoc sengaja tidak jadi dependency (biasanya fungsi inline).
