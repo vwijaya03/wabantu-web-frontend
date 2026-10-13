@@ -1,64 +1,81 @@
 /**
- * Sesi superadmin — TERPISAH dari sesi client (lib/auth/session.ts).
- * Disimpan di sessionStorage (hilang saat tab ditutup) + batas waktu lokal pendek.
- * Server tetap sumber kebenaran: 401 dari /admin/* → hapus sesi dan ke /platform-admin/login.
+ * Sesi superadmin — HANYA di memori (module-level). Tidak pernah ke localStorage/sessionStorage.
+ * Konsekuensi: reload / tab baru = login ulang. Terpisah total dari sesi client (lib/auth/session.ts).
+ * Kontrak: POST /api/v1/platform-admin/login → {accessToken, expiresAt (RFC3339)}.
  */
-const KEY = "wabantu_admin_session";
-/** Event in-tab agar UI (menu, gate) ikut berubah saat sesi admin set/clear. */
-export const ADMIN_SESSION_EVENT = "wabantu-admin-session";
+const LEGACY_KEY = "wabantu_admin_session";
+export const ADMIN_LOGIN_PATH = "/platform-admin/login";
 
-function notify(): void {
+let token: string | null = null;
+let expiresAt = 0;
+let timer: ReturnType<typeof setTimeout> | null = null;
+const listeners = new Set<() => void>();
+
+// Bersihkan sisa versi lama yang menyimpan token di sessionStorage.
+if (typeof window !== "undefined") {
   try {
-    window.dispatchEvent(new Event(ADMIN_SESSION_EVENT));
+    sessionStorage.removeItem(LEGACY_KEY);
+    localStorage.removeItem(LEGACY_KEY);
   } catch {
     /* ignore */
   }
 }
-/** Fallback bila server tidak mengirim expiresAt/expiresIn. */
-const DEFAULT_TTL_MS = 30 * 60 * 1000;
 
-interface StoredAdminSession {
-  token: string;
-  expiresAt: number;
+function emit(): void {
+  listeners.forEach((l) => l());
 }
 
-export function setAdminSession(token: string, expiresAt?: number | null): void {
+export function subscribeAdminSession(cb: () => void): () => void {
+  listeners.add(cb);
+  return () => {
+    listeners.delete(cb);
+  };
+}
+
+export function redirectToAdminLogin(): void {
   if (typeof window === "undefined") return;
-  const exp = expiresAt && expiresAt > Date.now() ? expiresAt : Date.now() + DEFAULT_TTL_MS;
-  try {
-    sessionStorage.setItem(KEY, JSON.stringify({ token, expiresAt: exp } satisfies StoredAdminSession));
-  } catch {
-    /* ignore */
+  if (window.location.pathname.startsWith(ADMIN_LOGIN_PATH)) return;
+  const next = window.location.pathname + window.location.search;
+  window.location.replace(`${ADMIN_LOGIN_PATH}?next=${encodeURIComponent(next)}`);
+}
+
+/** expiresAtRfc3339 dari respons login. Token tanpa expiresAt valid tidak diterima. */
+export function setAdminSession(accessToken: string, expiresAtRfc3339: string): void {
+  const exp = Date.parse(expiresAtRfc3339);
+  if (!accessToken || !Number.isFinite(exp) || exp <= Date.now()) {
+    clearAdminSession();
+    return;
   }
-  notify();
+  token = accessToken;
+  expiresAt = exp;
+  if (timer) clearTimeout(timer);
+  // setTimeout dibatasi ~24,8 hari; sesi admin jauh lebih pendek.
+  timer = setTimeout(() => {
+    clearAdminSession();
+    redirectToAdminLogin();
+  }, Math.min(exp - Date.now(), 2_147_000_000));
+  emit();
 }
 
 export function getAdminToken(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(KEY);
-    if (!raw) return null;
-    const s = JSON.parse(raw) as StoredAdminSession;
-    if (!s.token || Date.now() >= s.expiresAt) {
-      sessionStorage.removeItem(KEY);
-      return null;
-    }
-    return s.token;
-  } catch {
+  if (token && Date.now() >= expiresAt) {
+    clearAdminSession();
     return null;
   }
-}
-
-export function clearAdminSession(): void {
-  if (typeof window === "undefined") return;
-  try {
-    sessionStorage.removeItem(KEY);
-  } catch {
-    /* ignore */
-  }
-  notify();
+  return token;
 }
 
 export function hasAdminSession(): boolean {
   return Boolean(getAdminToken());
+}
+
+export function clearAdminSession(): void {
+  const had = token !== null;
+  token = null;
+  expiresAt = 0;
+  if (timer) {
+    clearTimeout(timer);
+    timer = null;
+  }
+  if (had) emit();
 }

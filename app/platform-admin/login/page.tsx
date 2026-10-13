@@ -42,8 +42,8 @@ function AdminLoginForm() {
     setPending(true);
     setError(null);
     try {
-      const { token, expiresAt } = await adminLogin(email.trim(), password);
-      setAdminSession(token, expiresAt);
+      const { accessToken, expiresAt } = await adminLogin(email.trim(), password);
+      setAdminSession(accessToken, expiresAt);
       setPassword("");
       router.replace(safeNext(params.get("next")));
     } catch (err) {

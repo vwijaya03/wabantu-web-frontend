@@ -1,8 +1,9 @@
 import axios, { type AxiosInstance } from "axios";
-import { clearAdminSession, getAdminToken } from "@/lib/auth/admin-session";
+import { ADMIN_LOGIN_PATH, clearAdminSession, getAdminToken, redirectToAdminLogin } from "@/lib/auth/admin-session";
+
 import { env } from "@/lib/env";
 
-export const ADMIN_LOGIN_PATH = "/platform-admin/login";
+export { ADMIN_LOGIN_PATH };
 
 /**
  * Klien API khusus /admin/* — memakai token sesi admin, BUKAN token client.
@@ -31,34 +32,28 @@ adminApi.interceptors.response.use(
     if (status === 401 && !url.includes("/platform-admin/login") && typeof window !== "undefined" && !redirecting) {
       redirecting = true;
       clearAdminSession();
-      const next = window.location.pathname;
-      window.location.replace(`${ADMIN_LOGIN_PATH}?next=${encodeURIComponent(next)}`);
+      redirectToAdminLogin();
     }
     return Promise.reject(error);
   },
 );
 
 /**
- * ASUMSI kontrak (be/admin-auth belum punya kode/doc saat ditulis):
- * POST /api/v1/platform-admin/login body {email, password}
- * → {accessToken|token, expiresAt?(ISO/epoch ms), expiresIn?(detik)}
- * 429 = rate limit (header Retry-After opsional), 423 = akun terkunci.
+ * Kontrak tetap: POST /api/v1/platform-admin/login {email, password}
+ * → {accessToken, expiresAt (RFC3339)}. 429 = rate limit, 423 = lockout.
+ * Header Authorization di adminApi hanya diisi token admin (getAdminToken) — token impersonasi
+ * dari /admin/impersonate disimpan di sesi client dan tidak pernah dikirim ke /admin/*.
  */
 export interface AdminLoginResponse {
-  accessToken?: string;
-  token?: string;
-  expiresAt?: string | number;
-  expiresIn?: number;
+  accessToken: string;
+  expiresAt: string;
 }
 
-export async function adminLogin(email: string, password: string): Promise<{ token: string; expiresAt: number | null; }> {
+export async function adminLogin(email: string, password: string): Promise<AdminLoginResponse> {
   const res = await adminApi.post<AdminLoginResponse>("/api/v1/platform-admin/login", { email, password });
-  const d = res.data ?? {};
-  const token = d.accessToken ?? d.token;
-  if (!token) throw new Error("Respons login admin tidak berisi token.");
-  let expiresAt: number | null = null;
-  if (typeof d.expiresAt === "number") expiresAt = d.expiresAt;
-  else if (typeof d.expiresAt === "string") expiresAt = Date.parse(d.expiresAt) || null;
-  else if (typeof d.expiresIn === "number") expiresAt = Date.now() + d.expiresIn * 1000;
-  return { token, expiresAt };
+  const d = res.data;
+  if (!d?.accessToken || !d?.expiresAt || !Number.isFinite(Date.parse(d.expiresAt))) {
+    throw new Error("Respons login admin tidak valid.");
+  }
+  return { accessToken: d.accessToken, expiresAt: d.expiresAt };
 }
