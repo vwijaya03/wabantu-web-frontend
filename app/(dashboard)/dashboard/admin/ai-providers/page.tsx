@@ -22,12 +22,13 @@ import { toApiError } from "@/lib/api/client";
 import {
   AI_FUNCTIONS,
   AI_PROVIDERS,
-  MODEL_CATALOG,
   PROVIDER_DEFAULT_MODEL,
   aiProvidersApi,
+  modelsFor,
   normalizeModel,
-  providerSupported,
+  providerAllowedFor,
   validateChain,
+  type AICatalog,
   type AIFunction,
   type AIFunctionConfig,
   type AIProviderId,
@@ -51,28 +52,26 @@ const PROVIDER_LABELS: Record<AIProviderId, string> = {
   gemini: "Gemini",
 };
 
-/** Default kode backend (shared/llm/config.go CodeDefaults + seed migrasi 26). */
+/** Fungsi tanpa baris config memakai default kode backend: Anthropic, model default (API_AI_CONFIG.md §1). */
 function codeDefault(fn: AIFunction, tenantId: string | null): AIFunctionConfig {
-  const chain: ChainLink[] =
-    fn === "payment_ocr"
-      ? [
-          { provider: "gemini", model: "gemini-2.5-flash", timeout_ms: 8000 },
-          { provider: "anthropic", model: PROVIDER_DEFAULT_MODEL },
-        ]
-      : [{ provider: "anthropic", model: PROVIDER_DEFAULT_MODEL }];
-  return { function: fn, tenantId, chain, maxRetries: 1 };
+  return { function: fn, tenantId, chain: [{ provider: "anthropic", model: PROVIDER_DEFAULT_MODEL }], maxRetries: 1 };
 }
 
 function LinkEditor({
   label,
   link,
+  fn,
+  catalog,
   onChange,
 }: {
   label: string;
   link: ChainLink;
+  fn: AIFunction;
+  catalog: AICatalog;
   onChange: (l: ChainLink) => void;
 }) {
-  const models = MODEL_CATALOG[link.provider];
+  const models = modelsFor(catalog, fn, link.provider);
+  const info = catalog.providers.find((p) => p.id === link.provider);
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       <div className="space-y-1">
@@ -81,7 +80,7 @@ function LinkEditor({
           value={link.provider}
           onValueChange={(v) => {
             const provider = v as AIProviderId;
-            onChange({ ...link, provider, model: normalizeModel(provider, link.model) });
+            onChange({ ...link, provider, model: normalizeModel(catalog, fn, provider, link.model) });
           }}
         >
           <SelectTrigger>
@@ -89,13 +88,18 @@ function LinkEditor({
           </SelectTrigger>
           <SelectContent>
             {AI_PROVIDERS.map((p) => (
-              <SelectItem key={p} value={p}>
+              <SelectItem key={p} value={p} disabled={!providerAllowedFor(fn, p)}>
                 {PROVIDER_LABELS[p]}
-                {providerSupported(p) ? "" : " (belum didukung backend)"}
+                {providerAllowedFor(fn, p) ? "" : " (belum didukung untuk fungsi ini)"}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {info && (!info.enabled || !info.available) && (
+          <p className="text-xs text-amber-600">
+            {!info.enabled ? "Provider dinonaktifkan" : "Kredensial belum terpasang"} — link ini akan dilewati saat runtime.
+          </p>
+        )}
       </div>
       <div className="space-y-1">
         <Label>{label} — model</Label>
@@ -104,7 +108,7 @@ function LinkEditor({
           onValueChange={(v) =>
             onChange({ ...link, model: v === DEFAULT_MODEL_VALUE ? PROVIDER_DEFAULT_MODEL : v })
           }
-          disabled={!providerSupported(link.provider)}
+          disabled={!providerAllowedFor(fn, link.provider)}
         >
           <SelectTrigger>
             <SelectValue />
@@ -114,7 +118,6 @@ function LinkEditor({
             {models.map((m) => (
               <SelectItem key={m.id} value={m.id}>
                 {m.label}
-                {m.status === "legacy" ? " (legacy)" : ""}
               </SelectItem>
             ))}
           </SelectContent>
@@ -130,7 +133,9 @@ function FunctionCard({
   isOverride,
   backendReady,
   tenantId,
+  catalog,
 }: {
+  catalog: AICatalog;
   fn: AIFunction;
   initial: AIFunctionConfig;
   isOverride: boolean;
@@ -140,7 +145,7 @@ function FunctionCard({
   const qc = useQueryClient();
   const [cfg, setCfg] = useState<AIFunctionConfig>(initial);
 
-  const error = validateChain(cfg.chain);
+  const error = validateChain(catalog, fn, cfg.chain);
   const primary = cfg.chain[0];
   const fallback = cfg.chain[1];
 
@@ -148,6 +153,14 @@ function FunctionCard({
     mutationFn: () => aiProvidersApi.saveConfig({ ...cfg, tenantId }),
     onSuccess: () => {
       toast.success(`Konfigurasi ${FUNCTION_LABELS[fn].title} disimpan`);
+      void qc.invalidateQueries({ queryKey: ["admin", "ai-providers"] });
+    },
+    onError: (err) => toast.error(toApiError(err).message),
+  });
+  const resetMut = useMutation({
+    mutationFn: () => aiProvidersApi.deleteTenantOverride(fn, tenantId as string),
+    onSuccess: () => {
+      toast.success("Override tenant dihapus, kembali ke default global");
       void qc.invalidateQueries({ queryKey: ["admin", "ai-providers"] });
     },
     onError: (err) => toast.error(toApiError(err).message),
@@ -170,6 +183,8 @@ function FunctionCard({
       <CardContent className="space-y-4">
         <LinkEditor
           label="Utama"
+          fn={fn}
+          catalog={catalog}
           link={primary}
           onChange={(l) => setCfg({ ...cfg, chain: [l, ...cfg.chain.slice(1)] })}
         />
@@ -184,7 +199,7 @@ function FunctionCard({
                   chain:
                     v === NO_FALLBACK
                       ? [primary]
-                      : [primary, { provider: "anthropic", model: PROVIDER_DEFAULT_MODEL }],
+                      : [primary, { provider: primary.provider === "anthropic" ? "gemini" : "anthropic", model: PROVIDER_DEFAULT_MODEL }],
                 })
               }
             >
@@ -200,6 +215,8 @@ function FunctionCard({
           {fallback && (
             <LinkEditor
               label="Fallback"
+              fn={fn}
+              catalog={catalog}
               link={fallback}
               onChange={(l) => setCfg({ ...cfg, chain: [primary, l] })}
             />
@@ -217,6 +234,11 @@ function FunctionCard({
           )}
           Simpan
         </Button>
+        {tenantId && isOverride && (
+          <Button variant="outline" className="ml-2" onClick={() => resetMut.mutate()} disabled={resetMut.isPending}>
+            Hapus override
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
@@ -232,6 +254,13 @@ export default function AIProvidersPage() {
     queryKey: ["admin", "tenants", "ai-providers"],
     queryFn: () => adminApi.listTenants({ pageSize: 100 }),
     enabled: isSuperAdmin,
+  });
+
+  const catalogQuery = useQuery({
+    queryKey: ["admin", "ai-providers", "catalog"],
+    queryFn: aiProvidersApi.getCatalog,
+    enabled: isSuperAdmin,
+    retry: false,
   });
 
   const configsQuery = useQuery({
@@ -250,7 +279,8 @@ export default function AIProvidersPage() {
     );
   }
 
-  const backendReady = configsQuery.isSuccess;
+  const backendReady = configsQuery.isSuccess && catalogQuery.isSuccess;
+  const loadError = configsQuery.error ?? catalogQuery.error;
   const configs = configsQuery.data?.configs ?? [];
 
   const resolve = (fn: AIFunction): { cfg: AIFunctionConfig; isOverride: boolean } => {
@@ -267,13 +297,13 @@ export default function AIProvidersPage() {
         description="Pilih provider, model, dan fallback per fungsi AI. Perubahan berlaku tanpa redeploy (cache backend ≤30 detik)."
       />
 
-      {configsQuery.isError && (
+      {loadError && (
         <Card className="border-amber-500/50">
           <CardContent className="flex gap-2 pt-6 text-sm">
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
             <span>
-              Endpoint belum tersedia: konfigurasi AI di backend belum ada ({toApiError(configsQuery.error).message}).
-              Nilai di bawah adalah default kode backend; tombol simpan dinonaktifkan.
+              Gagal memuat konfigurasi AI dari backend ({toApiError(loadError).message}). Endpoint belum
+              tersedia di backend yang terhubung, atau Anda tidak punya akses. Pengeditan dinonaktifkan.
             </span>
           </CardContent>
         </Card>
@@ -303,9 +333,9 @@ export default function AIProvidersPage() {
         </CardContent>
       </Card>
 
-      {configsQuery.isLoading ? (
+      {configsQuery.isLoading || catalogQuery.isLoading ? (
         <Loader2 className="h-5 w-5 animate-spin" />
-      ) : (
+      ) : !backendReady || !catalogQuery.data ? null : (
         <div className="grid gap-4 lg:grid-cols-2">
           {AI_FUNCTIONS.map((fn) => {
             const { cfg, isOverride } = resolve(fn);
@@ -317,6 +347,7 @@ export default function AIProvidersPage() {
                 isOverride={isOverride}
                 backendReady={backendReady}
                 tenantId={tenantId}
+                catalog={catalogQuery.data}
               />
             );
           })}

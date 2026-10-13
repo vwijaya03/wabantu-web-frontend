@@ -1,28 +1,20 @@
 import { api } from "./client";
 
 /**
- * Kontrak AI provider config.
- *
- * Sumber kebenaran: wabantu-api-go branch be/h1-llm-master
- *  - system/migrations/25_ai_provider_config.up.sql  (tabel ai_providers, ai_function_config)
- *  - system/migrations/26_ai_payment_ocr_seed.up.sql (fungsi payment_ocr + seed Gemini)
- *  - shared/llm/config.go (ChainLink: provider, model, timeout_ms; "" = model default provider)
- *  - ai/models.go (katalog model Anthropic)
- *  - shared/llm/gemini.go (default model Gemini: gemini-2.5-flash)
- *
- * TODO(BE): backend BELUM punya endpoint admin untuk membaca/menulis ai_function_config.
- * Path di bawah adalah USULAN (belum ada di backend) dan akan 404 sampai BE menambahkannya.
+ * Kontrak resmi: wabantu-api-go docs/API_AI_CONFIG.md §1 (branch be/h1-llm-master, admin/ai_config.go).
+ * Semua endpoint superadmin-only (server cek role dari sesi).
  */
-export const AI_CONFIG_ENDPOINT_PROPOSED = "/admin/ai/function-config";
 
+/** Fungsi yang diatur dari halaman ini (backend juga punya ocr/vision/embedding). */
 export const AI_FUNCTIONS = ["chat", "intent", "memory", "payment_ocr"] as const;
 export type AIFunction = (typeof AI_FUNCTIONS)[number];
 
 export const AI_PROVIDERS = ["openai", "anthropic", "gemini"] as const;
 export type AIProviderId = (typeof AI_PROVIDERS)[number];
 
-/** Model "" berarti default provider (perilaku legacy di backend). */
+/** Model "" = default provider. */
 export const PROVIDER_DEFAULT_MODEL = "";
+export const MAX_CHAIN_LINKS = 3;
 
 export interface ChainLink {
   provider: AIProviderId;
@@ -34,78 +26,89 @@ export interface AIFunctionConfig {
   function: AIFunction;
   /** null = default global */
   tenantId: string | null;
-  /** chain[0] = utama, chain[1] = fallback (opsional) */
   chain: ChainLink[];
   maxRetries: number;
 }
 
-export interface AIModelOption {
+export interface AIProviderInfo {
+  id: AIProviderId;
+  enabled: boolean;
+  /** kredensial ada saat runtime; link yang tidak available akan dilewati */
+  available: boolean;
+}
+
+export interface AIModelInfo {
+  provider: AIProviderId;
   id: string;
   label: string;
-  status: "active" | "legacy";
+  status: "supported" | "embedding_only";
+  vision: boolean;
 }
 
-/**
- * Katalog model per provider, disalin dari konstanta backend (bukan dari API):
- * GET /api/v1/ai/models hanya mengembalikan model Anthropic dan tanpa info provider/vision.
- * Model berstatus "retired" di backend sengaja tidak ditampilkan.
- * OpenAI: backend belum mendaftarkan provider chat OpenAI (hanya embedding), jadi kosong.
- */
-export const MODEL_CATALOG: Record<AIProviderId, AIModelOption[]> = {
-  anthropic: [
-    { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5", status: "active" },
-    { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", status: "active" },
-    { id: "claude-opus-4-7", label: "Claude Opus 4.7", status: "legacy" },
-    { id: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5", status: "legacy" },
-  ],
-  gemini: [{ id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", status: "active" }],
-  openai: [],
-};
-
-/** Provider yang didukung backend untuk fungsi-fungsi ini (OpenAI belum ada adapter chat). */
-export function providerSupported(p: AIProviderId): boolean {
-  return p !== "openai";
+export interface AICatalog {
+  providers: AIProviderInfo[];
+  models: AIModelInfo[];
 }
 
-export function isModelValidForProvider(provider: AIProviderId, model: string): boolean {
-  if (!providerSupported(provider)) return false;
+/** Sesuai dokumen: fungsi non-embedding hanya boleh anthropic/gemini; OpenAI tak punya adapter chat. */
+export function providerAllowedFor(_fn: AIFunction, p: AIProviderId): boolean {
+  return p === "anthropic" || p === "gemini";
+}
+
+/** Allowlist model untuk (fungsi, provider) dari katalog backend. payment_ocr hanya model vision. */
+export function modelsFor(catalog: AICatalog | undefined, fn: AIFunction, p: AIProviderId): AIModelInfo[] {
+  if (!catalog || !providerAllowedFor(fn, p)) return [];
+  return catalog.models.filter(
+    (m) => m.provider === p && m.status === "supported" && (fn !== "payment_ocr" || m.vision),
+  );
+}
+
+export function isModelValid(catalog: AICatalog | undefined, fn: AIFunction, p: AIProviderId, model: string): boolean {
+  if (!providerAllowedFor(fn, p)) return false;
   if (model === PROVIDER_DEFAULT_MODEL) return true;
-  return MODEL_CATALOG[provider].some((m) => m.id === model);
+  return modelsFor(catalog, fn, p).some((m) => m.id === model);
 }
 
-/** Saat provider diganti: pertahankan model bila masih valid, kalau tidak reset ke default provider. */
-export function normalizeModel(provider: AIProviderId, model: string): string {
-  return isModelValidForProvider(provider, model) ? model : PROVIDER_DEFAULT_MODEL;
+export function normalizeModel(catalog: AICatalog | undefined, fn: AIFunction, p: AIProviderId, model: string): string {
+  return isModelValid(catalog, fn, p, model) ? model : PROVIDER_DEFAULT_MODEL;
 }
 
-export function validateChain(chain: ChainLink[]): string | null {
+export function validateChain(catalog: AICatalog | undefined, fn: AIFunction, chain: ChainLink[]): string | null {
   if (chain.length === 0) return "Provider utama wajib diisi.";
+  if (chain.length > MAX_CHAIN_LINKS) return `Maksimal ${MAX_CHAIN_LINKS} link.`;
+  const seen = new Set<string>();
   for (const [i, l] of chain.entries()) {
     const label = i === 0 ? "Utama" : "Fallback";
-    if (!providerSupported(l.provider)) return `${label}: provider ${l.provider} belum didukung backend.`;
-    if (!isModelValidForProvider(l.provider, l.model))
-      return `${label}: model ${l.model} bukan milik provider ${l.provider}.`;
+    if (!providerAllowedFor(fn, l.provider)) return `${label}: provider ${l.provider} belum didukung untuk fungsi ini.`;
+    if (!isModelValid(catalog, fn, l.provider, l.model))
+      return `${label}: model ${l.model} tidak diizinkan untuk provider ${l.provider}.`;
+    const key = `${l.provider}|${l.model}`;
+    if (seen.has(key)) return "Fallback tidak boleh sama dengan link lain.";
+    seen.add(key);
+    if (l.timeout_ms !== undefined && (l.timeout_ms < 0 || l.timeout_ms > 60000))
+      return `${label}: timeout harus 0–60000 ms.`;
   }
-  if (chain.length > 1 && chain[0].provider === chain[1].provider && chain[0].model === chain[1].model)
-    return "Fallback tidak boleh sama dengan provider utama.";
   return null;
 }
 
 export const aiProvidersApi = {
-  /** USULAN — endpoint belum ada di backend. */
+  async getCatalog(): Promise<AICatalog> {
+    return (await api.get<AICatalog>("/admin/ai/catalog")).data;
+  },
   async listConfigs(tenantId: string | null): Promise<{ configs: AIFunctionConfig[] }> {
-    const res = await api.get(AI_CONFIG_ENDPOINT_PROPOSED, {
-      params: tenantId ? { tenantId } : undefined,
+    const res = await api.get("/admin/ai/function-config", { params: tenantId ? { tenantId } : undefined });
+    return res.data;
+  },
+  async saveConfig(cfg: AIFunctionConfig): Promise<AIFunctionConfig> {
+    const res = await api.put<AIFunctionConfig>(`/admin/ai/function-config/${cfg.function}`, {
+      tenantId: cfg.tenantId,
+      chain: cfg.chain,
+      maxRetries: cfg.maxRetries,
     });
     return res.data;
   },
-  /** USULAN — endpoint belum ada di backend. */
-  async saveConfig(cfg: AIFunctionConfig): Promise<{ config: AIFunctionConfig }> {
-    const res = await api.put(`${AI_CONFIG_ENDPOINT_PROPOSED}/${cfg.function}`, cfg);
-    return res.data;
-  },
-  /** USULAN — hapus override tenant (kembali ke default global). */
-  async deleteTenantOverride(fn: AIFunction, tenantId: string): Promise<void> {
-    await api.delete(`${AI_CONFIG_ENDPOINT_PROPOSED}/${fn}`, { params: { tenantId } });
+  /** Hapus override tenant saja (global tidak bisa dihapus). */
+  async deleteTenantOverride(fn: AIFunction, tenantId: string): Promise<{ deleted: boolean }> {
+    return (await api.delete(`/admin/ai/function-config/${fn}`, { params: { tenantId } })).data;
   },
 };
