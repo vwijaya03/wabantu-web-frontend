@@ -40,3 +40,8 @@
 ## Tahap 5: Firebase sign-out (Security M-1)
 - Merge `fe/simulator` (persistence in-memory, `firebaseSignOut()` saat logout client & setiap 401 klien `api`; lihat `firebase-realtime.md`).
 - `clearAdminSession()` dan `clearImpersonationSession()` memanggil `firebaseSignOut()` → tercakup: stop-impersonation, token Pantau kedaluwarsa, 401 saat Pantau, logout admin ("Keluar"/"Keluar admin"), 401/kedaluwarsa sesi admin.
+
+## Tahap 6: fix redirect ke /login saat sesi admin-only
+- Gejala: setelah login admin, `/dashboard/admin/*` terlempar ke `/login?next=…` client.
+- Akar masalah: `NotificationBell` (topbar) memanggil `GET /notifications` lewat klien tenant `api` tanpa token → 401 → interceptor `api` (`lib/api/client.ts`, cabang "tanpa token") `redirectToLogin()`.
+- Fix: query notifikasi hanya `enabled` bila `currentSessionKind() === "tenant"` (client atau Pantau). Sesi admin-only tidak memanggil endpoint tenant.
