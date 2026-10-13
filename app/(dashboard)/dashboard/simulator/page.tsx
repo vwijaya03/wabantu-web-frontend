@@ -324,6 +324,7 @@ export default function SimulatorPage() {
         order={order}
         pricing={pricing}
         canApprove={canPerformOwnerActions(user)}
+        readOnly={Boolean(user?.impersonation?.active)}
         onChanged={() => void qc.invalidateQueries({ queryKey: stateKey })}
       />
       </div>

@@ -104,3 +104,10 @@ Counter penolakan di-reset penuh di backend; pembeli bisa upload lagi (max 5 pen
 
 - `orders` di halaman Orders dibungkus `useMemo` agar dependency `useEffect` stabil (eslint).
 - Jangan commit `public/generated-docs/docs-index.json` dari generator lokal kecuali sengaja regenerate docs hub.
+
+## Approve dengan optimistic concurrency (expectedUpdatedAt)
+- `ordersApi.approve(id, expectedUpdatedAt?)`: bila order punya `updatedAt` (RFC3339 dari GET order / `GET /simulator/messages` field `order.updatedAt`), body `{"expectedUpdatedAt": "<updatedAt>"}` dikirim. Tanpa `updatedAt` → tanpa body (kompatibel backend lama).
+- 409 dengan `code: "aborted"` (order berubah sejak dimuat) → `OrderApproveButton` menampilkan "Pesanan berubah, muat ulang" + tombol **Muat ulang** (simulator: invalidate state `["simulator","state",sessionId]`; halaman Pesanan: invalidate `["orders"]`). 409 lain tetap toast "Belum bisa disetujui: …".
+- Banner hilang sendiri bila `updatedAt` order di layar berubah.
+- `expectedUpdatedAt` diteruskan sebagai string apa adanya dari respons GET (RFC3339Nano), tanpa `new Date()`/format ulang.
+- Sesi Pantau (impersonate, `user.impersonation.active`): backend membalas 403 untuk approve. Di simulator tombol Setujui dinonaktifkan dengan keterangan "Mode pantau: hanya lihat". 403 di mana pun ditangani sebagai toast jelas, tanpa redirect/logout (interceptor `api` tidak bereaksi pada 403).

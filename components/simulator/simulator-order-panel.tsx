@@ -22,11 +22,14 @@ export function SimulatorOrderPanel({
   order,
   pricing,
   canApprove,
+  readOnly = false,
   onChanged,
 }: {
   order: SimOrder | null | undefined;
   pricing: SimPricing | null | undefined;
   canApprove: boolean;
+  /** true saat sesi Pantau (impersonate) → approve hanya lihat. */
+  readOnly?: boolean;
   onChanged: () => void;
 }) {
   return (
@@ -79,10 +82,13 @@ export function SimulatorOrderPanel({
                 order={{
                   id: order.id,
                   status: order.status,
+                  updatedAt: order.updatedAt,
                   hasProof: order.paymentStatus !== "unpaid" || Boolean(order.proofCheck),
                 }}
                 canManage={canApprove}
                 onApproved={onChanged}
+                onReload={onChanged}
+                readOnly={readOnly}
               />
               <Button size="sm" variant="outline" asChild>
                 <Link href={`/dashboard/orders?highlight=${order.id}`}>
