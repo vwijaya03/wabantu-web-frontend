@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ImageUp, Loader2, Radio, RefreshCw, RotateCcw, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,8 @@ import { InboxMessageBubble } from "@/components/inbox/inbox-message-bubble";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useRealtimeCollection } from "@/hooks/use-realtime-collection";
 import { FIRESTORE_ORDER_FIELD, firestorePaths } from "@/lib/firebase/paths";
-import { hasTenantDashboardAccess } from "@/lib/api/auth";
+import { canPerformOwnerActions, hasTenantDashboardAccess } from "@/lib/api/auth";
+import { SimulatorOrderPanel } from "@/components/simulator/simulator-order-panel";
 import { toApiError } from "@/lib/api/client";
 import {
   SIM_IMAGE_MIME,
@@ -33,6 +34,7 @@ import {
   simulatorApi,
   type SimImageMime,
   type SimMessage,
+  type SimMessagesResponse,
   type SimSendRequest,
 } from "@/lib/api/simulator";
 
@@ -62,6 +64,7 @@ function docToSimMessage(id: string, d: Record<string, unknown>): SimMessage | n
     text: typeof d.text === "string" ? d.text : "",
     createdAt: iso,
     status: typeof d.status === "string" ? d.status : "sent",
+    imageUrl: typeof d.imageUrl === "string" ? d.imageUrl : null,
   };
 }
 
@@ -72,18 +75,6 @@ function SimBubble({ m }: { m: SimMessage }) {
     | "ai"
     | "human"
     | "system";
-  if (m.type === "image") {
-    return (
-      <div className={`max-w-[85%] rounded-lg border px-3 py-2 text-sm ${out ? "ml-auto bg-primary/10" : "bg-background"}`}>
-        <p className="flex items-center gap-1 text-muted-foreground">
-          <ImageUp className="h-4 w-4" /> {m.text || "[gambar]"}
-        </p>
-        <p className="mt-1 text-[10px] text-muted-foreground">
-          {m.author} · {new Date(m.createdAt).toLocaleTimeString("id-ID")}
-        </p>
-      </div>
-    );
-  }
   return (
     <InboxMessageBubble
       message={{
@@ -92,9 +83,10 @@ function SimBubble({ m }: { m: SimMessage }) {
         externalId: null,
         direction: out ? "out" : "in",
         author,
-        type: "text",
-        body: m.text,
-        media: null,
+        type: m.type === "image" && m.imageUrl ? "image" : "text",
+        body: m.type === "image" && m.text === "[gambar]" ? null : m.text,
+        // URL backend = /inbox/messages/:id/media; bubble memuatnya lewat inboxApi (Bearer).
+        media: m.type === "image" && m.imageUrl ? { url: m.imageUrl } : null,
         linkedOrderId: null,
         status: m.status === "failed" ? "failed" : "sent",
         createdAt: m.createdAt,
@@ -113,16 +105,32 @@ export default function SimulatorPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const qc = useQueryClient();
   const tenantId = user?.impersonation?.tenant?.id ?? user?.tenant?.id ?? null;
+  const stateKey = ["simulator", "state", sessionId] as const;
   const messagesQuery = useRealtimeCollection<SimMessage>({
     queryKey: ["simulator", "messages", sessionId],
     path: tenantId ? firestorePaths.simulatorMessages(tenantId, sessionId) : null,
     orderField: FIRESTORE_ORDER_FIELD,
     mapDoc: docToSimMessage,
-    poll: async () => (await simulatorApi.list(sessionId)).messages,
+    poll: async () => {
+      const r = await simulatorApi.list(sessionId);
+      qc.setQueryData<SimMessagesResponse>(stateKey, r);
+      return r.messages;
+    },
     enabled: allowed,
   });
   const messages = messagesQuery.items;
+  // pricing/order hanya dari REST. Saat polling sudah terisi oleh poll di atas; saat realtime di-refresh tiap 3 dtk.
+  const stateQuery = useQuery({
+    queryKey: stateKey,
+    queryFn: () => simulatorApi.list(sessionId),
+    enabled: allowed && messagesQuery.mode === "realtime",
+    refetchInterval: 3000,
+    retry: false,
+  });
+  const pricing = stateQuery.data?.pricing;
+  const order = stateQuery.data?.order;
   const last = messages[messages.length - 1];
   const waitingReply = Boolean(last && last.direction === "inbound");
 
@@ -178,11 +186,15 @@ export default function SimulatorPage() {
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle className="text-base">Pembeli</CardTitle>
             {tenantName && <Badge variant="outline">Tenant: {tenantName}</Badge>}
-            <Badge>{kind === "reseller" ? "Harga reseller" : "Harga umum"}</Badge>
+            {pricing ? (
+              <Badge>Tingkat: {pricing.tierLabel || pricing.tier}</Badge>
+            ) : (
+              <Badge variant="outline">Tingkat harga: menunggu pesan pertama</Badge>
+            )}
           </div>
           <CardDescription>
             Sesi &quot;reseller-demo&quot; terhubung ke kontak reseller di data demo; sesi lain dianggap pembeli umum.
-            Tingkat harga ditentukan backend, bukan dari halaman ini.
+            Tingkat harga ditentukan backend dari data kontak, bukan dari halaman ini.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-3 sm:items-end">
@@ -230,7 +242,8 @@ export default function SimulatorPage() {
         </Card>
       )}
 
-      <Card>
+      <div className="grid gap-6 lg:grid-cols-3">
+      <Card className="lg:col-span-2">
         <CardHeader>
           <div className="flex items-center gap-2">
             <CardTitle className="text-base">Percakapan</CardTitle>
@@ -298,10 +311,17 @@ export default function SimulatorPage() {
             </Button>
           </form>
           <p className="text-xs text-muted-foreground">
-            Status order & hasil cek bukti transfer dilihat dan disetujui owner di halaman Pesanan.
+            Status order & hasil cek bukti transfer tampil di panel Pesanan; persetujuan owner memakai endpoint order.
           </p>
         </CardContent>
       </Card>
+      <SimulatorOrderPanel
+        order={order}
+        pricing={pricing}
+        canApprove={canPerformOwnerActions(user)}
+        onChanged={() => void qc.invalidateQueries({ queryKey: stateKey })}
+      />
+      </div>
     </div>
   );
 }
