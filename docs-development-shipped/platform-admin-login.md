@@ -21,3 +21,12 @@
   Impersonasi (`/admin/impersonate`) kini dikirim dengan token admin; perlu dicek ke BE apakah respons/efeknya masih mengikat sesi client.
   Halaman lain yang memakai `super_admin` (docs, knowledge-base/setup, finance/transaction-types, login-form, auth-shell) tidak diubah.
 - Impersonasi: `/admin/impersonate` tidak mengembalikan token yang disimpan FE; `adminApi` hanya memasang `getAdminToken()` sehingga token client/impersonasi tidak pernah dikirim ke `/admin/*`, dan token admin tidak pernah dikirim ke endpoint client.
+
+## Tahap 3: selaras dengan api-go `docs/ADMIN_AUTH.md` (PR #217, d37f17e)
+- Kode error login admin: 200 `{accessToken, expiresAt}`; 400 field kosong; 401 generik ("Email atau password salah"); 429 = rate limit **atau** lockout (tidak ada 423 — penanganan 423 dihapus). Body error memakai field `error`, UI tetap menampilkan pesan generik sendiri.
+- Tidak ada refresh token: token admin 60 menit / sesi absolut 2 jam → 401 dari `/admin/*` = login ulang.
+- "Pantau" tenant: `POST /admin/impersonate/:tenantId` → `{ok, tenant, accessToken, expiresAt}` (30 menit). Token disimpan **hanya di memori** (`lib/auth/impersonation-session.ts`), dipasang klien tenant `api` (prioritas di atas token client), tidak pernah dikirim ke `/admin/*` (`adminApi` hanya token admin). Kedaluwarsa → token dihapus, toast, `stop-impersonation` (best-effort, token admin), kembali ke `/dashboard/admin`. 401 di endpoint tenant saat pantau → token dihapus, kembali ke konsol. Stop manual juga menghapus token.
+- `/flags/*` (kecuali `/flags/check/:key`) kini admin-only → semua lewat `adminApi`. FE belum punya klien `GET /audit/logs`.
+- Login client: super_admin kini 401 → form menampilkan pesan generik (401/429/5xx); redirect super_admin ke `/dashboard/admin` dihapus. Tidak ada tautan ke login admin.
+- **Pengecualian (perlu review Security):** `GET /auth/me` memakai token admin hanya bila tidak ada token impersonation/client, agar `DashboardAuthShell` bisa memuat konsol admin tanpa sesi client (doc: `/auth/me` raw, tidak lewat middleware). Belum diverifikasi ke backend.
+- Gap: 401 di `/auth/me` untuk admin masih diarahkan ke `/login` client (bukan login admin); `dashboard-auth-shell` masih punya guard berbasis `role` dari `/auth/me` (kini berasal dari token admin/impersonation, bukan sesi client).

@@ -3,6 +3,8 @@ import { toApiError } from "@/lib/api/errors";
 import { isTenantContextApiError } from "@/lib/api/tenant-context-error";
 import { isRateLimitError, notifyRateLimitOnce } from "@/lib/api/rate-limit";
 import { clearClientSession, getAccessToken } from "@/lib/auth/session";
+import { clearImpersonationSession, getImpersonationToken } from "@/lib/auth/impersonation-session";
+import { getAdminToken } from "@/lib/auth/admin-session";
 import { clearProfileHint } from "@/lib/auth/profile-hint";
 import { requestSessionReauth } from "@/lib/auth/session-reauth";
 import { env } from "@/lib/env";
@@ -30,7 +32,11 @@ export const api: AxiosInstance = axios.create({
 api.interceptors.request.use((config) => {
   const cfg = config as ApiRequestConfig;
   if (!cfg.skipAuthHeader) {
-    const token = getAccessToken();
+    // Saat "Pantau" tenant: pakai token impersonation (in-memory). Token admin hanya untuk GET /auth/me (lihat di bawah).
+    let token = getImpersonationToken() ?? getAccessToken();
+    // Pengecualian sempit: konsol admin tanpa sesi client butuh identitas via GET /auth/me
+    // (raw endpoint, tidak lewat middleware SessionKind). Hanya path ini, hanya bila tak ada token lain.
+    if (!token && /\/auth\/me(\?|$)/.test(config.url ?? "")) token = getAdminToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -82,6 +88,13 @@ api.interceptors.response.use(
 
     const config = error.config as ApiRequestConfig | undefined;
     const status = error.response?.status;
+
+    // 401 dengan token impersonation → sesi pantau habis/dicabut: bersihkan dan kembali ke konsol admin.
+    if (status === 401 && getImpersonationToken() && typeof window !== "undefined") {
+      clearImpersonationSession();
+      window.location.assign("/dashboard/admin?impersonationEnded=1");
+      return Promise.reject(error);
+    }
 
     if (
       status === 401 &&

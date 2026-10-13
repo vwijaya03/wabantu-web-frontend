@@ -40,7 +40,7 @@ adminApi.interceptors.response.use(
 
 /**
  * Kontrak tetap: POST /api/v1/platform-admin/login {email, password}
- * → {accessToken, expiresAt (RFC3339)}. 429 = rate limit, 423 = lockout.
+ * → {accessToken, expiresAt (RFC3339)}. 429 = rate limit ATAU lockout (tidak ada 423), 400 = field kosong, 401 = generik.
  * Header Authorization di adminApi hanya diisi token admin (getAdminToken) — token impersonasi
  * dari /admin/impersonate disimpan di sesi client dan tidak pernah dikirim ke /admin/*.
  */

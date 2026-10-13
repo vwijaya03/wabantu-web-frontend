@@ -11,11 +11,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  authApi,
-  hasTenantDashboardAccess,
-  isPlatformOperatorHome,
-} from "@/lib/api/auth";
+import { authApi } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
 
 const schema = z.object({
@@ -39,19 +35,16 @@ export function LoginForm() {
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
     try {
-      const user = await authApi.login(values);
+      await authApi.login(values);
       toast.success("Berhasil masuk");
-      let dest = next;
-      if (
-        isPlatformOperatorHome(user) ||
-        (user.role === "super_admin" && !hasTenantDashboardAccess(user))
-      ) {
-        dest = "/dashboard/admin";
-      }
-      window.location.assign(dest);
+      window.location.assign(next);
     } catch (err) {
       const e = toApiError(err);
-      toast.error(e.message || "Gagal masuk");
+      // Pesan generik (akun tidak ada / password salah / akun platform ditolak = 401 yang sama).
+      if (e.status === 401) toast.error("Email atau password salah");
+      else if (e.status === 429) toast.error("Terlalu banyak percobaan. Coba lagi nanti.");
+      else if (e.status === 0 || e.status >= 500) toast.error("Gagal, coba lagi.");
+      else toast.error("Gagal masuk");
     } finally {
       setSubmitting(false);
     }

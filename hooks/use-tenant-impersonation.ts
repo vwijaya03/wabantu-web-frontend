@@ -12,6 +12,12 @@ import {
 } from "@/lib/query/platform-console";
 import { waitForTenantReadiness } from "@/lib/tenant/wait-for-tenant-readiness";
 import { toast } from "sonner";
+import { useEffect } from "react";
+import {
+  clearImpersonationSession,
+  setImpersonationExpiryHandler,
+  setImpersonationSession,
+} from "@/lib/auth/impersonation-session";
 
 let inFlightReadiness: AbortController | null = null;
 
@@ -73,7 +79,8 @@ export function useTenantImpersonation() {
       beginSwitch();
       return adminApi.impersonate(tenantId);
     },
-    onSuccess: async () => {
+    onSuccess: async (res) => {
+      setImpersonationSession(res.accessToken, res.expiresAt);
       await refresh();
       try {
         await afterEnterTenant(qc, completeSwitch);
@@ -99,7 +106,11 @@ export function useTenantImpersonation() {
     mutationFn: async () => {
       beginSwitch();
       abortInFlightReadiness();
-      return adminApi.stopImpersonation();
+      try {
+        return await adminApi.stopImpersonation();
+      } finally {
+        clearImpersonationSession();
+      }
     },
     onSuccess: async () => {
       await refresh();
@@ -119,6 +130,16 @@ export function useTenantImpersonation() {
       toast.error(toApiError(e).message);
     },
   });
+
+  useEffect(() => {
+    setImpersonationExpiryHandler(() => {
+      toast.info("Sesi pantau tenant (30 menit) berakhir.");
+      void adminApi.stopImpersonation().catch(() => undefined);
+      resetQueriesForPlatformConsole(qc);
+      router.replace("/dashboard/admin");
+    });
+    return () => setImpersonationExpiryHandler(null);
+  }, [qc, router]);
 
   const isBusy = isSwitching || impersonateMut.isPending || stopMut.isPending;
 

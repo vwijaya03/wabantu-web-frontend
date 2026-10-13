@@ -108,7 +108,9 @@ export const adminApi = {
     );
     return res.data;
   },
-  async impersonate(tenantId: string): Promise<{ ok: boolean; tenant: AdminTenant }> {
+  async impersonate(
+    tenantId: string,
+  ): Promise<{ ok: boolean; tenant: AdminTenant; accessToken: string; expiresAt: string }> {
     const res = await adminHttp.post(`/admin/impersonate/${tenantId}`);
     return res.data;
   },

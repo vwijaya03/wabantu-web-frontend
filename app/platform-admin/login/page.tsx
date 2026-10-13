@@ -16,10 +16,12 @@ function describeError(err: unknown): string {
   const e = toApiError(err);
   if (e.status === 429) {
     const ra = err instanceof AxiosError ? err.response?.headers?.["retry-after"] : undefined;
-    return ra ? `Terlalu banyak percobaan. Coba lagi dalam ${ra} detik.` : "Terlalu banyak percobaan. Coba lagi nanti.";
+    return ra
+      ? `Terlalu banyak percobaan atau login dikunci sementara. Coba lagi dalam ${ra} detik.`
+      : "Terlalu banyak percobaan atau login dikunci sementara (±15 menit). Coba lagi nanti.";
   }
-  if (e.status === 423) return "Login dikunci sementara karena terlalu banyak percobaan gagal. Coba lagi nanti.";
   if (e.status === 401 || e.status === 403) return "Email atau password salah.";
+  if (e.status === 400) return "Email dan password wajib diisi.";
   if (e.status === 404) return "Endpoint login admin belum tersedia di backend.";
   if (e.status === 0 || e.status >= 500) return "Gagal, coba lagi.";
   return "Login gagal. Periksa data lalu coba lagi.";
