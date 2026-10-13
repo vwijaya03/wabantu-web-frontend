@@ -11,8 +11,12 @@ export type RealtimeMode = "connecting" | "realtime" | "polling";
 export interface UseRealtimeCollectionOptions<T> {
   /** Kunci unik (mis. ["simulator", sessionId]) untuk cache polling. */
   queryKey: readonly unknown[];
-  /** Path koleksi Firestore; null = langsung polling. */
-  path: string | null;
+  /**
+   * Penyusun path koleksi dari tenantId klaim server; null = belum bisa (mis. conversationId belum ada) → polling.
+   * Berikan juga `pathKey` stabil (mis. conversationId) supaya listener tidak dibuat ulang tiap render.
+   */
+  path: ((tenantId: string) => string) | null;
+  pathKey: string | null;
   orderField: string;
   /** Ubah dokumen Firestore jadi item; kembalikan null untuk melewati dokumen tak valid. */
   mapDoc: (id: string, data: DocumentData) => T | null;
@@ -27,9 +31,9 @@ export interface UseRealtimeCollectionOptions<T> {
  * endpoint token 404/503, sign-in gagal, atau listener ditolak (permission-denied/error).
  */
 export function useRealtimeCollection<T>(opts: UseRealtimeCollectionOptions<T>) {
-  const { path, orderField, mapDoc, poll, pollIntervalMs = 1500, enabled = true } = opts;
-  const canTryRealtime = enabled && Boolean(path) && isFirebaseConfigured();
-  const connKey = canTryRealtime ? `${path}|${orderField}` : null;
+  const { path, pathKey, orderField, mapDoc, poll, pollIntervalMs = 1500, enabled = true } = opts;
+  const canTryRealtime = enabled && Boolean(path) && Boolean(pathKey) && isFirebaseConfigured();
+  const connKey = canTryRealtime ? `${pathKey}|${orderField}` : null;
   // State hanya di-set dari callback async (bukan langsung di body effect).
   const [rt, setRt] = useState<{
     key: string;
@@ -46,10 +50,10 @@ export function useRealtimeCollection<T>(opts: UseRealtimeCollectionOptions<T>) 
       if (!cancelled) setRt({ key: connKey, ok: false, reason: r, items: [] });
     };
     ensureFirebaseSignIn()
-      .then(({ db }) => {
+      .then(({ db, tenantId }) => {
         if (cancelled) return;
         unsub = onSnapshot(
-          query(collection(db, path), orderBy(orderField)),
+          query(collection(db, path(tenantId)), orderBy(orderField)),
           (snap) => {
             const next: T[] = [];
             snap.forEach((d) => {

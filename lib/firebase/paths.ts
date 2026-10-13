@@ -1,16 +1,17 @@
 /**
- * Path Firestore (read-only dari client).
- *
- * TODO(BE): path belum final — docs/API_AI_CONFIG.md (be/h1-llm-master @ab3e858) belum
- * mendefinisikan dokumen Firestore maupun field-nya. Semua path dikumpulkan di sini supaya
- * cukup diubah satu tempat saat kontrak backend terbit. tenantId hanya dipakai untuk
- * menyusun path baca (aturan keamanan Firestore yang menegakkan akses), tidak dikirim ke API.
+ * Path Firestore (read-only dari client) — sesuai docs/API_AI_CONFIG.md §5 (be/h1-llm-master @c8f4eda).
+ * Aturan: baca hanya bila token.tenantId == tenantId (owner/staff/super_admin); client tidak pernah menulis.
+ * tenantId diambil dari respons POST /auth/firebase-token (klaim server), bukan dari input client.
  */
 export const firestorePaths = {
-  /** Pesan sesi simulator, diurutkan berdasarkan field createdAt. */
-  simulatorMessages: (tenantId: string, sessionId: string) =>
-    `tenants/${tenantId}/simulatorSessions/${sessionId}/messages`,
+  simConversation: (tenantId: string, conversationId: string) =>
+    `tenants/${tenantId}/simConversations/${conversationId}`,
+  /** Pesan simulator; urutkan berdasarkan createdAt (timestamp). */
+  simMessages: (tenantId: string, conversationId: string) =>
+    `tenants/${tenantId}/simConversations/${conversationId}/messages`,
+  /** Mirror order (saat ini hanya order percakapan simulator); field updatedAt. */
+  orders: (tenantId: string) => `tenants/${tenantId}/orders`,
 } as const;
 
-/** TODO(BE): nama field urutan pada dokumen pesan. */
-export const FIRESTORE_ORDER_FIELD = "createdAt";
+export const FIRESTORE_MESSAGES_ORDER_FIELD = "createdAt";
+export const FIRESTORE_ORDERS_ORDER_FIELD = "updatedAt";

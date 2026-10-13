@@ -21,7 +21,24 @@ export class RealtimeUnavailableError extends Error {
 }
 
 let app: FirebaseApp | null = null;
-let signInPromise: Promise<{ auth: Auth; db: Firestore }> | null = null;
+export interface FirebaseSession {
+  auth: Auth;
+  db: Firestore;
+  /** Klaim tenant dari server — dipakai untuk menyusun path baca. */
+  tenantId: string;
+  role: "owner" | "staff" | "super_admin";
+}
+
+/** Respons POST /auth/firebase-token (API_AI_CONFIG.md §5). */
+interface FirebaseTokenResponse {
+  token: string;
+  tenantId: string;
+  role: "owner" | "staff" | "super_admin";
+  expiresAt: string;
+  projectId: string;
+}
+
+let signInPromise: Promise<FirebaseSession> | null = null;
 
 function firebaseApp(): FirebaseApp {
   if (!app) app = getApps().length ? getApp() : initializeApp(firebaseWebConfig);
@@ -29,31 +46,29 @@ function firebaseApp(): FirebaseApp {
 }
 
 /**
- * Ambil custom token dari backend (POST /api/v1/auth/firebase-token, butuh login; tenant dari sesi)
- * lalu signInWithCustomToken. Hasil di-cache per halaman; gagal → cache dibuang agar bisa dicoba lagi.
- * TODO(BE): endpoint & nama field respons belum ada di docs/API_AI_CONFIG.md; diterima `token` atau `customToken`.
+ * POST /api/v1/auth/firebase-token (body diabaikan; klaim dari sesi server) lalu signInWithCustomToken.
+ * 404/503 → realtime tidak tersedia (fallback polling). Di-cache per halaman; gagal → cache dibuang.
  */
-export function ensureFirebaseSignIn(): Promise<{ auth: Auth; db: Firestore }> {
+export function ensureFirebaseSignIn(): Promise<FirebaseSession> {
   if (!isFirebaseConfigured()) return Promise.reject(new RealtimeUnavailableError("not_configured"));
   if (!signInPromise) {
     signInPromise = (async () => {
-      let token: string | undefined;
+      let data: FirebaseTokenResponse;
       try {
-        const res = await api.post<{ token?: string; customToken?: string }>("/auth/firebase-token");
-        token = res.data.token ?? res.data.customToken;
+        data = (await api.post<FirebaseTokenResponse>("/auth/firebase-token")).data;
       } catch (err) {
         const e = toApiError(err);
         if (e.status === 404 || e.status === 503) throw new RealtimeUnavailableError("token_unavailable", e.message);
         throw new RealtimeUnavailableError("auth_failed", e.message);
       }
-      if (!token) throw new RealtimeUnavailableError("auth_failed", "respons token kosong");
+      if (!data?.token || !data.tenantId) throw new RealtimeUnavailableError("auth_failed", "respons token tidak lengkap");
       const auth = getAuth(firebaseApp());
       try {
-        await signInWithCustomToken(auth, token);
+        await signInWithCustomToken(auth, data.token);
       } catch (err) {
         throw new RealtimeUnavailableError("auth_failed", err instanceof Error ? err.message : String(err));
       }
-      return { auth, db: getFirestore(firebaseApp()) };
+      return { auth, db: getFirestore(firebaseApp()), tenantId: data.tenantId, role: data.role };
     })().catch((err) => {
       signInPromise = null;
       throw err;

@@ -20,7 +20,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { InboxMessageBubble } from "@/components/inbox/inbox-message-bubble";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useRealtimeCollection } from "@/hooks/use-realtime-collection";
-import { FIRESTORE_ORDER_FIELD, firestorePaths } from "@/lib/firebase/paths";
+import { FIRESTORE_MESSAGES_ORDER_FIELD, firestorePaths } from "@/lib/firebase/paths";
 import { canPerformOwnerActions, hasTenantDashboardAccess } from "@/lib/api/auth";
 import { SimulatorOrderPanel } from "@/components/simulator/simulator-order-panel";
 import { toApiError } from "@/lib/api/client";
@@ -106,16 +106,20 @@ export default function SimulatorPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const qc = useQueryClient();
-  const tenantId = user?.impersonation?.tenant?.id ?? user?.tenant?.id ?? null;
+  // conversationId dari respons POST/GET; dikunci per sessionId.
+  const [conv, setConv] = useState<{ sessionId: string; id: string } | null>(null);
+  const conversationId = conv && conv.sessionId === sessionId ? conv.id : null;
   const stateKey = ["simulator", "state", sessionId] as const;
   const messagesQuery = useRealtimeCollection<SimMessage>({
     queryKey: ["simulator", "messages", sessionId],
-    path: tenantId ? firestorePaths.simulatorMessages(tenantId, sessionId) : null,
-    orderField: FIRESTORE_ORDER_FIELD,
+    path: conversationId ? (tenantId) => firestorePaths.simMessages(tenantId, conversationId) : null,
+    pathKey: conversationId,
+    orderField: FIRESTORE_MESSAGES_ORDER_FIELD,
     mapDoc: docToSimMessage,
     poll: async () => {
       const r = await simulatorApi.list(sessionId);
       qc.setQueryData<SimMessagesResponse>(stateKey, r);
+      if (r.conversationId) setConv({ sessionId, id: r.conversationId });
       return r.messages;
     },
     enabled: allowed,
@@ -141,8 +145,9 @@ export default function SimulatorPage() {
   const sendMut = useMutation({
     mutationFn: (req: Omit<SimSendRequest, "sessionId" | "buyerName">) =>
       simulatorApi.send({ ...req, sessionId, buyerName: buyerName.trim() || undefined }),
-    onSuccess: () => {
+    onSuccess: (r) => {
       setText("");
+      if (r.conversationId) setConv({ sessionId, id: r.conversationId });
       void messagesQuery.refetch();
     },
     onError: (err) => toast.error(errorMessage(err)),

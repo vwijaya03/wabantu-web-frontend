@@ -60,6 +60,9 @@ export interface Order {
   paymentProofVerifiedAt?: string;
   paymentProofVerifiedBy?: string;
   paymentProofMeta?: PaymentProofMeta;
+  /** Hasil cek bukti (advisory). Tidak ada = bukti belum diproses. API_AI_CONFIG.md §4. */
+  proofCheck?: "cocok" | "perlu_dicek";
+  proofCheckReasons?: string[];
   notes?: string;
   total: number;
   subtotal: number;
@@ -131,6 +134,14 @@ export const ordersApi = {
   },
   async cancel(id: string): Promise<Order> {
     const res = await api.patch(`/orders/${id}/cancel`);
+    return res.data;
+  },
+  /**
+   * Setujui pesanan: verifikasi bukti + selesaikan order + catat pemasukan dalam SATU transaksi
+   * (POST /orders/:id/approve, owner saja, idempotent; 409 bila belum ada bukti).
+   */
+  async approve(id: string): Promise<Order> {
+    const res = await api.post(`/orders/${id}/approve`);
     return res.data;
   },
   async verifyPaymentProof(id: string): Promise<Order> {
