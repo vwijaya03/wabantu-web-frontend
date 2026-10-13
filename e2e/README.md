@@ -17,6 +17,7 @@ Cloud Run: ganti `E2E_BASE_URL` (URL FE) dan `E2E_API_BASE_URL` (URL api-go) saj
 | Var | Wajib untuk | Keterangan |
 |---|---|---|
 | `E2E_BASE_URL` | semua | default `http://localhost:3000` |
+| `E2E_LOCAL_RESET` | opsional | `1` = globalSetup SCAN+DEL `login:*:fail:*`, `login:*:lock:*`, `rl:auth:*` di Redis lokal. Ditolak jika target bukan localhost. |
 | `E2E_API_BASE_URL` | 1–6 | api-go langsung, default `http://localhost:4000`. Tidak terjangkau → spec backend **SKIP** |
 | `E2E_CLIENT_EMAIL` / `E2E_CLIENT_PASSWORD` | 1, 5, 6 | akun owner tenant demo (harus boleh "Setujui pesanan") |
 | `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` | 2, 3, 4 | superadmin (dibuat via bootstrap key lokal, bukan key yang bocor) |

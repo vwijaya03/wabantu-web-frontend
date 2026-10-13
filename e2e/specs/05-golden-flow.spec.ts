@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import zlib from "node:zlib";
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { E2E, requireBackend, requireEnv, step } from "../env";
 import { clientLoginOk } from "../helpers";
 
@@ -41,6 +41,7 @@ test.describe("5) golden flow simulator", () => {
     await clientLoginOk(page, "/dashboard/simulator");
     await expect(page.getByRole("heading", { name: "Simulator Chat" })).toBeVisible();
     await expect(page.getByText("Session ID: reseller-demo")).toBeVisible();
+    const previousOrder = await visibleOrderNumber(page);
 
     await page.getByPlaceholder(/Ketik pesan/).fill(E2E.orderMessage);
     await page.getByRole("button", { name: "Kirim" }).click();
@@ -61,8 +62,14 @@ test.describe("5) golden flow simulator", () => {
     }
     await step(page, "order-created-tier-price");
 
+    const created = page.getByText(/WB-\d+/).first();
+    await expect(created).toBeVisible({ timeout: 90_000 });
+    await expect.poll(async () => (await created.innerText()).trim(), { timeout: 90_000 }).not.toBe(previousOrder);
+    const newOrderNumber = (await created.innerText()).trim();
+
     await page.locator('input[type="file"]').setInputFiles({ name: `bukti-transfer-${Date.now()}.png`, mimeType: "image/png", buffer: uniqueProofPng() });
     await expect(page.getByText("Menunggu balasan bot…")).toHaveCount(0, { timeout: 90_000 });
+    await expect.poll(async () => (await page.getByText(/WB-\d+/).first().innerText()).trim()).toBe(newOrderNumber);
     await step(page, "proof-uploaded");
 
     const approve = page.getByRole("button", { name: "Setujui pesanan" });
@@ -78,3 +85,9 @@ test.describe("5) golden flow simulator", () => {
     await step(page, "order-approved-completed");
   });
 });
+
+async function visibleOrderNumber(page: Page): Promise<string> {
+  const loc = page.getByText(/WB-\d+/).first();
+  if ((await loc.count()) === 0) return "";
+  return (await loc.innerText()).trim();
+}
