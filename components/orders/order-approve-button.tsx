@@ -45,6 +45,9 @@ export function OrderApproveButton({
         toast.error(`Belum bisa disetujui: ${e.message}`);
       } else if (e.status === 403) {
         toast.error("Hanya owner yang bisa menyetujui pesanan.");
+      } else if (e.status === 0 || e.status === undefined || e.status >= 500) {
+        // 5xx / jaringan: aman diulang (backend idempotent, stok dipotong sekali). Tombol tetap aktif.
+        toast.error("Gagal, coba lagi");
       } else {
         toast.error(e.message);
       }
