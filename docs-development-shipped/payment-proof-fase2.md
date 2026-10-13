@@ -106,7 +106,7 @@ Counter penolakan di-reset penuh di backend; pembeli bisa upload lagi (max 5 pen
 - Jangan commit `public/generated-docs/docs-index.json` dari generator lokal kecuali sengaja regenerate docs hub.
 
 ## Approve dengan optimistic concurrency (expectedUpdatedAt)
-- `ordersApi.approve(id, expectedUpdatedAt?)`: bila order punya `updatedAt` (RFC3339 dari GET order / `GET /simulator/messages` field `order.updatedAt`), body `{"expectedUpdatedAt": "<updatedAt>"}` dikirim. Tanpa `updatedAt` → tanpa body (kompatibel backend lama).
+- `ordersApi.approve(id, expectedUpdatedAt?)`: bila order punya `updatedAt` (RFC3339 dari GET order / `GET /simulator/messages` field `order.updatedAt`), dikirim sebagai query param `POST /orders/:id/approve?expectedUpdatedAt=<encodeURIComponent(updatedAt)>` tanpa body JSON (kontrak backend). Tanpa `updatedAt` → tanpa param (kompatibel backend lama).
 - 409 dengan `code: "aborted"` (order berubah sejak dimuat) → `OrderApproveButton` menampilkan "Pesanan berubah, muat ulang" + tombol **Muat ulang** (simulator: invalidate state `["simulator","state",sessionId]`; halaman Pesanan: invalidate `["orders"]`). 409 lain tetap toast "Belum bisa disetujui: …".
 - Banner hilang sendiri bila `updatedAt` order di layar berubah.
 - `expectedUpdatedAt` diteruskan sebagai string apa adanya dari respons GET (RFC3339Nano), tanpa `new Date()`/format ulang.

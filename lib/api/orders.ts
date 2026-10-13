@@ -139,13 +139,12 @@ export const ordersApi = {
   /**
    * Setujui pesanan: verifikasi bukti + selesaikan order + catat pemasukan dalam SATU transaksi
    * (POST /orders/:id/approve, owner saja, idempotent; 409 bila belum ada bukti).
-   * expectedUpdatedAt (RFC3339 dari GET order) → optimistic concurrency: 409 code "aborted" bila order
-   * berubah sejak dimuat. Tanpa argumen → tanpa body (kompatibel dengan backend lama).
+   * expectedUpdatedAt (string persis dari GET order, RFC3339Nano) → query param `?expectedUpdatedAt=` (tanpa body JSON);
+   * 409 code "aborted" bila order berubah sejak dimuat. Kosong/tanpa argumen → tanpa param (kompatibel backend lama).
    */
   async approve(id: string, expectedUpdatedAt?: string): Promise<Order> {
-    const res = expectedUpdatedAt
-      ? await api.post(`/orders/${id}/approve`, { expectedUpdatedAt })
-      : await api.post(`/orders/${id}/approve`);
+    const qs = expectedUpdatedAt ? `?expectedUpdatedAt=${encodeURIComponent(expectedUpdatedAt)}` : "";
+    const res = await api.post(`/orders/${id}/approve${qs}`);
     return res.data;
   },
   async verifyPaymentProof(id: string): Promise<Order> {
