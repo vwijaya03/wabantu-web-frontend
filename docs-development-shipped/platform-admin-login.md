@@ -50,3 +50,7 @@
 - `adminLogout()` (`lib/api/admin-client.ts`): `POST /api/v1/auth/logout` lewat `adminApi` (token admin), best-effort (timeout 5 dtk, error diabaikan, 401 tidak memicu redirect), lalu `clearAdminSession()` selalu dijalankan.
 - Dipakai oleh "Keluar admin" (`useAdminSession().logoutAdmin`) dan "Keluar" saat sesi admin-only (`AuthProvider.logout`). Kedaluwarsa/401 tetap hanya hapus lokal.
 - `/auth/reauth` hanya dipanggil dari dialog reauth sesi client dengan token client di body (`skipAuthHeader`); token impersonasi/admin tidak pernah dikirim ke `/auth/reauth`.
+
+## Tahap 8: Firebase sign-out saat Pantau dimulai + 403 firebase-token
+- `setImpersonationSession()` kini memanggil `firebaseSignOut()` (best-effort) saat Pantau dimulai, agar listener/sesi Firebase dari sesi sebelumnya tidak terbawa. Stop/kedaluwarsa Pantau (`clearImpersonationSession`) dan logout admin (`clearAdminSession`) sudah memanggilnya sejak Tahap 5. `firebaseSignOut()` aman tanpa konfigurasi Firebase (`authInstance` null → return).
+- 403 dari `POST /auth/firebase-token` (mis. sesi impersonate): `ensureFirebaseSignIn()` melempar `RealtimeUnavailableError("auth_failed")`, `useRealtimeCollection` jatuh ke polling REST. Interceptor `api` tidak bereaksi pada 403 (tanpa redirect/logout/toast/console).

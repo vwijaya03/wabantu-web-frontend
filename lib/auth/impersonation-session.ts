@@ -33,6 +33,8 @@ export function setImpersonationSession(accessToken: string, expiresAtRfc3339: s
   }
   token = accessToken;
   expiresAt = exp;
+  // Security: Pantau dimulai → sign-out Firebase dari sesi sebelumnya (best-effort; aman bila Firebase tidak dikonfigurasi).
+  void import("@/lib/firebase/client").then((m) => m.firebaseSignOut()).catch(() => undefined);
   if (timer) clearTimeout(timer);
   timer = setTimeout(() => {
     clearImpersonationSession();
