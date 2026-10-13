@@ -45,3 +45,8 @@
 - Gejala: setelah login admin, `/dashboard/admin/*` terlempar ke `/login?next=…` client.
 - Akar masalah: `NotificationBell` (topbar) memanggil `GET /notifications` lewat klien tenant `api` tanpa token → 401 → interceptor `api` (`lib/api/client.ts`, cabang "tanpa token") `redirectToLogin()`.
 - Fix: query notifikasi hanya `enabled` bila `currentSessionKind() === "tenant"` (client atau Pantau). Sesi admin-only tidak memanggil endpoint tenant.
+
+## Tahap 7: logout admin me-revoke token di BE
+- `adminLogout()` (`lib/api/admin-client.ts`): `POST /api/v1/auth/logout` lewat `adminApi` (token admin), best-effort (timeout 5 dtk, error diabaikan, 401 tidak memicu redirect), lalu `clearAdminSession()` selalu dijalankan.
+- Dipakai oleh "Keluar admin" (`useAdminSession().logoutAdmin`) dan "Keluar" saat sesi admin-only (`AuthProvider.logout`). Kedaluwarsa/401 tetap hanya hapus lokal.
+- `/auth/reauth` hanya dipanggil dari dialog reauth sesi client dengan token client di body (`skipAuthHeader`); token impersonasi/admin tidak pernah dikirim ke `/auth/reauth`.

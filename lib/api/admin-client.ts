@@ -29,7 +29,7 @@ adminApi.interceptors.response.use(
   (error) => {
     const status = error?.response?.status;
     const url: string = error?.config?.url ?? "";
-    if (status === 401 && !url.includes("/platform-admin/login") && typeof window !== "undefined" && !redirecting) {
+    if (status === 401 && !url.includes("/platform-admin/login") && !url.includes("/auth/logout") && typeof window !== "undefined" && !redirecting) {
       redirecting = true;
       clearAdminSession();
       redirectToAdminLogin();
@@ -68,4 +68,18 @@ export interface PlatformAdminMe {
 
 export async function platformAdminMe(): Promise<PlatformAdminMe> {
   return (await adminApi.get<PlatformAdminMe>("/platform-admin/me")).data;
+}
+
+/**
+ * Logout admin: BE kini me-revoke token admin di POST /api/v1/auth/logout.
+ * Best-effort (error diabaikan, timeout pendek) — sesi in-memory SELALU dihapus sesudahnya.
+ */
+export async function adminLogout(): Promise<void> {
+  try {
+    if (getAdminToken()) await adminApi.post("/auth/logout", undefined, { timeout: 5_000 });
+  } catch {
+    /* best-effort */
+  } finally {
+    clearAdminSession();
+  }
 }
