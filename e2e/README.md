@@ -40,3 +40,9 @@ Buka trace: `npx playwright show-trace e2e-artifacts/test-results/<dir>/trace.zi
 - Sesi superadmin hanya di memori: spec menavigasi client-side setelah login admin (reload = login ulang).
 - Skenario 4: UI simulator tidak menampilkan provider; spec memverifikasi PUT config berhasil & simulator tetap membalas. Bukti provider yang dipakai: log backend / ai-activity / DB (QA).
 - Skenario 1: bila Firebase tidak dikonfigurasi, cek IndexedDB `firebaseLocalStorageDb` tetap 0 — revoke Firebase asli = UNVERIFIED.
+
+## Catatan run lokal (13 Okt 2026)
+- Dev server: `NEXT_PUBLIC_API_URL` **harus** berakhiran `/api/v1` (mis. `http://127.0.0.1:4000/api/v1`). `lib/env.ts` tidak menambah prefix untuk `apiUrl` (hanya untuk SSE), jadi tanpa `/api/v1` login client/admin kena 404 ("Endpoint login admin belum tersedia di backend").
+- Spec 2: body response login dibaca di dalam predicate `waitForResponse` (FE langsung navigasi setelah login); alert dipilih via `p[role=alert]` karena Next punya `#__next-route-announcer__` dengan role alert juga.
+- Spec 5: harga dicek dengan format UI `@ Rp 72.000` (atau angka polos); badge tingkat jadi `expect.soft`; bila bot minta nama + HP penerima, spec mengirim data sintetis (1 pesan, hemat rate limit simulator 20/menit).
+- `e2e-artifacts/` berisi page snapshot yang memuat password akun uji: jangan di-commit/diunggah.

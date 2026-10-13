@@ -10,11 +10,19 @@ test.describe("2) login superadmin", () => {
   test("login + /platform-admin/me", async ({ page }) => {
     requireEnv("adminEmail", "adminPassword");
     const meResp = page.waitForResponse((r) => r.url().includes("/api/v1/platform-admin/me"), { timeout: 30_000 }).catch(() => null);
-    const loginResp = page.waitForResponse((r) => r.url().includes("/api/v1/platform-admin/login"));
+    // Body dibaca di dalam predicate: setelah login FE langsung navigasi, dan body response
+    // yang sudah "navigated away" tidak bisa dibaca lagi (Network.getResponseBody error).
+    let loginBody: any = null;
+    const loginResp = page.waitForResponse(async (r) => {
+      if (!r.url().includes("/api/v1/platform-admin/login") || r.request().method() !== "POST") return false;
+      loginBody = await r.json().catch(() => null);
+      return true;
+    });
     await adminLogin(page);
     const lr = await loginResp;
     expect(lr.status()).toBe(200);
-    const { accessToken } = (await lr.json()).data ?? (await lr.json());
+    const { accessToken } = loginBody?.data ?? loginBody ?? {};
+    expect(accessToken).toBeTruthy();
     const me = await meResp;
     if (me) expect(me.status()).toBe(200);
     // Verifikasi langsung ke API dengan token admin.
@@ -40,13 +48,13 @@ test.describe("2) login superadmin", () => {
       const st = (await resp).status();
       if (i === 0) {
         expect([401, 403]).toContain(st);
-        await expect(page.getByRole("alert")).toHaveText("Email atau password salah.");
+        await expect(page.locator("p[role=alert]")).toHaveText("Email atau password salah.");
         await step(page, "admin-wrong-password");
       }
       saw429 = st === 429;
     }
     expect(saw429, `tidak ada 429 setelah ${E2E.lockoutAttempts} percobaan`).toBe(true);
-    await expect(page.getByRole("alert")).toContainText("Terlalu banyak percobaan");
+    await expect(page.locator("p[role=alert]")).toContainText("Terlalu banyak percobaan");
     await step(page, "admin-lockout-429");
   });
 });
