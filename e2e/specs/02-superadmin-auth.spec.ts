@@ -12,7 +12,8 @@ test.describe("2) login superadmin", () => {
     const meResp = page.waitForResponse((r) => r.url().includes("/api/v1/platform-admin/me"), { timeout: 30_000 }).catch(() => null);
     // Body dibaca di dalam predicate: setelah login FE langsung navigasi, dan body response
     // yang sudah "navigated away" tidak bisa dibaca lagi (Network.getResponseBody error).
-    let loginBody: any = null;
+    type LoginBody = { accessToken?: string; expiresAt?: string; data?: { accessToken?: string; expiresAt?: string } };
+    let loginBody: unknown = null;
     const loginResp = page.waitForResponse(async (r) => {
       if (!r.url().includes("/api/v1/platform-admin/login") || r.request().method() !== "POST") return false;
       loginBody = await r.json().catch(() => null);
@@ -21,7 +22,8 @@ test.describe("2) login superadmin", () => {
     await adminLogin(page);
     const lr = await loginResp;
     expect(lr.status()).toBe(200);
-    const { accessToken } = loginBody?.data ?? loginBody ?? {};
+    const lb = loginBody as LoginBody | null;
+    const { accessToken } = lb?.data ?? lb ?? {};
     expect(accessToken).toBeTruthy();
     const me = await meResp;
     if (me) expect(me.status()).toBe(200);
