@@ -101,6 +101,8 @@ export const authApi = {
     } finally {
       clearProfileHint();
       clearClientSession();
+      // Security M-1: Firebase ikut sign-out saat logout client.
+      await import("@/lib/firebase/client").then((m) => m.firebaseSignOut()).catch(() => undefined);
     }
   },
   async me(): Promise<AuthUser> {

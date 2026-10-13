@@ -83,6 +83,11 @@ api.interceptors.response.use(
     const config = error.config as ApiRequestConfig | undefined;
     const status = error.response?.status;
 
+    // Security M-1: setiap 401 dari API client → sign-out Firebase (tutup listener, buang sesi in-memory).
+    if (status === 401 && typeof window !== "undefined") {
+      void import("@/lib/firebase/client").then((m) => m.firebaseSignOut()).catch(() => undefined);
+    }
+
     if (
       status === 401 &&
       shouldHandleSessionExpired(config?.url, config) &&

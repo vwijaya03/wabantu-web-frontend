@@ -15,3 +15,4 @@ Folder ini berisi **catatan implementasi** fitur yang sudah di-merge — bukan s
 | [inbox-media-fase1.md](./inbox-media-fase1.md) | Media di Inbox + lightbox |
 | [payment-proof-fase2.md](./payment-proof-fase2.md) | Panel bukti transfer, verify/reject/unblock |
 | [ai-triage-console.md](./ai-triage-console.md) | Konsol superadmin AI Triage (Insiden / AI Review / Laporan) |
+| [firebase-realtime.md](./firebase-realtime.md) | Realtime Firestore + polling, persistence in-memory, firebaseSignOut |
