@@ -158,7 +158,19 @@ const localDocs = sources.flatMap((source) => {
   return listMarkdownFiles(source.root).map((filePath) => createDoc(source, filePath));
 });
 const remoteDocs = await fetchRemoteDocs(apiGoDocsIndexUrl);
-const docs = mergeDocs(localDocs, remoteDocs);
+// Kalau checkout api-go tidak ada (worktree, CI, Vercel) dan tidak ada remote index,
+// pertahankan doc api-go dari index yang sudah di-commit supaya index tidak menyusut diam-diam.
+const preservedDocs =
+  !statExists(apiGoDocsRoot) && remoteDocs.length === 0 ? readPreservedDocs("api-go") : [];
+if (!statExists(apiGoDocsRoot)) {
+  console.warn(
+    `api-go docs root not found (${apiGoDocsRoot}); ` +
+      (preservedDocs.length
+        ? `keeping ${preservedDocs.length} api-go docs from committed index.`
+        : "no api-go docs included."),
+  );
+}
+const docs = mergeDocs(localDocs, [...preservedDocs, ...remoteDocs]);
 
 const payload = {
   generatedAt: new Date(Math.max(...docs.map((d) => d.modifiedAtMs), 0)).toISOString(),
@@ -219,4 +231,15 @@ function mergeDocs(localDocs, remoteDocs) {
   return Array.from(byKey.values()).sort((a, b) =>
     `${a.source}/${a.path}`.localeCompare(`${b.source}/${b.path}`),
   );
+}
+
+function readPreservedDocs(sourceKey) {
+  try {
+    const previous = JSON.parse(readFileSync(outputFile, "utf8"));
+    return (previous.docs || [])
+      .filter((d) => d.source === sourceKey)
+      .map((d) => ({ ...d, modifiedAtMs: Date.parse(d.updatedAt || d.modifiedAt || "") || 0 }));
+  } catch {
+    return [];
+  }
 }
