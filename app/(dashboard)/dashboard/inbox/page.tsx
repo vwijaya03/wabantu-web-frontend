@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { InboxHandoffBadge } from "@/components/inbox/inbox-handoff-badge";
 import { InboxMessageBubble } from "@/components/inbox/inbox-message-bubble";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
@@ -500,12 +501,11 @@ export default function InboxPage() {
                           ) : null}
                         </div>
                         <div className="mt-1 space-y-1 pl-6">
-                          <Badge
-                            variant={item.aiHandled ? "success" : "warning"}
-                            className="w-fit text-[10px]"
-                          >
-                            {item.aiHandled ? "AI agent" : "Handoff"}
-                          </Badge>
+                          <InboxHandoffBadge
+                            aiHandled={item.aiHandled}
+                            handoffReason={item.handoffReason}
+                            compact
+                          />
                           <p className="line-clamp-2 text-xs text-muted-foreground">
                             {item.lastMessagePreview || "Belum ada pesan"}
                           </p>
@@ -540,12 +540,12 @@ export default function InboxPage() {
                       {selectedConversation.contact.displayName ||
                         selectedConversation.contact.phoneNumber}
                     </p>
-                    <Badge
-                      variant={selectedConversation.aiHandled ? "success" : "warning"}
-                      className="text-[10px]"
-                    >
-                      {selectedConversation.aiHandled ? "AI agent" : "Handoff"}
-                    </Badge>
+                    <InboxHandoffBadge
+                      aiHandled={selectedConversation.aiHandled}
+                      handoffReason={selectedConversation.handoffReason}
+                      showDescription
+                      className="shrink-0"
+                    />
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {selectedConversation.contact.phoneNumber}
