@@ -14,6 +14,14 @@ type HandoffReasonInput = {
   handoffReason: string | null;
 };
 
+/** Fallback untuk handoffReason tidak dikenal atau tidak aman ditampilkan mentah. */
+const UNKNOWN_HANDOFF_DESCRIPTION = "Percakapan ditangani tim.";
+
+/**
+ * Kode alasan backend (field handoffReason) yang dipetakan di KNOWN_HANDOFF:
+ * buyer_requested_human, Sensitive/escalate detected, Auto fallback setelah retry AI gagal,
+ * workflow, image_unhandled, Diambil alih manual oleh staff, Takeover manual dari inbox.
+ */
 const KNOWN_HANDOFF: Record<string, { label: string; description: string }> = {
   buyer_requested_human: {
     label: "Ingin dibantu tim",
@@ -75,10 +83,9 @@ export function getInboxHandoffDisplay(input: HandoffReasonInput): InboxHandoffD
     };
   }
 
-  const safeRaw = sanitizeHandoffReasonForDisplay(reason);
   return {
     badgeLabel: "Handoff",
     badgeVariant: "warning",
-    description: safeRaw,
+    description: UNKNOWN_HANDOFF_DESCRIPTION,
   };
 }

@@ -32,7 +32,6 @@ import {
   type InboxConversation,
 } from "@/lib/api/inbox";
 import { toApiError } from "@/lib/api/client";
-import { getInboxHandoffDisplay } from "@/lib/inbox/handoff-display";
 import { refreshInboxQueries } from "@/lib/query/inbox-queries";
 import { toast } from "sonner";
 
@@ -113,17 +112,6 @@ export default function InboxPage() {
   const selectedConversation = useMemo(
     () => conversations.find((c) => c.id === selectedId) ?? null,
     [conversations, selectedId],
-  );
-
-  const selectedHandoffDisplay = useMemo(
-    () =>
-      selectedConversation
-        ? getInboxHandoffDisplay({
-            aiHandled: selectedConversation.aiHandled,
-            handoffReason: selectedConversation.handoffReason,
-          })
-        : null,
-    [selectedConversation],
   );
 
   const [isEditingContactName, setIsEditingContactName] = useState(false);
@@ -516,6 +504,7 @@ export default function InboxPage() {
                           <InboxHandoffBadge
                             aiHandled={item.aiHandled}
                             handoffReason={item.handoffReason}
+                            compact
                           />
                           <p className="line-clamp-2 text-xs text-muted-foreground">
                             {item.lastMessagePreview || "Belum ada pesan"}
@@ -551,20 +540,13 @@ export default function InboxPage() {
                       {selectedConversation.contact.displayName ||
                         selectedConversation.contact.phoneNumber}
                     </p>
-                    {selectedHandoffDisplay ? (
-                      <Badge
-                        variant={selectedHandoffDisplay.badgeVariant}
-                        className="text-[10px]"
-                      >
-                        {selectedHandoffDisplay.badgeLabel}
-                      </Badge>
-                    ) : null}
+                    <InboxHandoffBadge
+                      aiHandled={selectedConversation.aiHandled}
+                      handoffReason={selectedConversation.handoffReason}
+                      showDescription
+                      className="shrink-0"
+                    />
                   </div>
-                  {selectedHandoffDisplay?.description ? (
-                    <p className="text-xs text-muted-foreground">
-                      {selectedHandoffDisplay.description}
-                    </p>
-                  ) : null}
                   <p className="text-xs text-muted-foreground">
                     {selectedConversation.contact.phoneNumber}
                   </p>
