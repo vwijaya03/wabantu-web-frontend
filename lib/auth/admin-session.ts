@@ -6,10 +6,39 @@
 const STORAGE_KEY = "wabantu_admin_session";
 export const ADMIN_LOGIN_PATH = "/platform-admin/login";
 
+/** Bentuk persist sessionStorage — expiresAt wajib (ms epoch); RFC3339 mirror dari login API. */
 type StoredAdminSession = {
   accessToken: string;
   expiresAt: number;
+  expiresAtRfc3339: string;
 };
+
+function parseExpiresAtMs(value: unknown, rfc3339: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Date.parse(value);
+    if (Number.isFinite(n)) return n;
+  }
+  if (typeof rfc3339 === "string" && rfc3339.trim() !== "") {
+    const n = Date.parse(rfc3339);
+    if (Number.isFinite(n)) return n;
+  }
+  return NaN;
+}
+
+function normalizeStoredSession(
+  accessToken: string,
+  expiresAtMs: number,
+  expiresAtRfc3339: string,
+): StoredAdminSession | null {
+  if (!accessToken || !Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) return null;
+  const rfc =
+    expiresAtRfc3339 && Number.isFinite(Date.parse(expiresAtRfc3339))
+      ? expiresAtRfc3339
+      : new Date(expiresAtMs).toISOString();
+  if (Math.abs(expiresAtMs - Date.parse(rfc)) > 60_000) return null;
+  return { accessToken, expiresAt: expiresAtMs, expiresAtRfc3339: rfc };
+}
 
 let token: string | null = null;
 let expiresAt = 0;
@@ -35,24 +64,31 @@ function readStored(): StoredAdminSession | null {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<StoredAdminSession>;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
     const accessToken = typeof parsed.accessToken === "string" ? parsed.accessToken : "";
-    const exp = typeof parsed.expiresAt === "number" ? parsed.expiresAt : NaN;
-    if (!accessToken || !Number.isFinite(exp) || exp <= Date.now()) {
+    const expiresAtRfc3339 =
+      typeof parsed.expiresAtRfc3339 === "string" ? parsed.expiresAtRfc3339 : "";
+    const exp = parseExpiresAtMs(parsed.expiresAt, expiresAtRfc3339 || parsed.expiresAt);
+    const normalized = normalizeStoredSession(accessToken, exp, expiresAtRfc3339);
+    if (!normalized) {
       clearStored();
       return null;
     }
-    return { accessToken, expiresAt: exp };
+    // Upgrade blob lama (hanya expiresAt numerik) → selalu simpan expiresAt + RFC3339.
+    writeStored(normalized.accessToken, normalized.expiresAt, normalized.expiresAtRfc3339);
+    return normalized;
   } catch {
     clearStored();
     return null;
   }
 }
 
-function writeStored(accessToken: string, expiresAtMs: number): void {
+function writeStored(accessToken: string, expiresAtMs: number, expiresAtRfc3339: string): void {
   if (typeof window === "undefined") return;
+  const normalized = normalizeStoredSession(accessToken, expiresAtMs, expiresAtRfc3339);
+  if (!normalized) return;
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ accessToken, expiresAt: expiresAtMs }));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
     localStorage.removeItem(STORAGE_KEY);
   } catch {
     /* ignore */
@@ -103,7 +139,7 @@ export function setAdminSession(accessToken: string, expiresAtRfc3339: string): 
   }
   token = accessToken;
   expiresAt = exp;
-  writeStored(accessToken, exp);
+  writeStored(accessToken, exp, expiresAtRfc3339);
   scheduleExpiryTimer();
   emit();
 }
