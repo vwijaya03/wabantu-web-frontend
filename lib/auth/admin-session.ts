@@ -13,6 +13,12 @@ type StoredAdminSession = {
   expiresAtRfc3339: string;
 };
 
+type ParsedStored = {
+  session: StoredAdminSession;
+  /** Blob lama tanpa expiresAtRfc3339 perlu ditulis ulang sekali. */
+  needsRfcUpgrade: boolean;
+};
+
 function parseExpiresAtMs(value: unknown, rfc3339: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() !== "") {
@@ -40,6 +46,18 @@ function normalizeStoredSession(
   return { accessToken, expiresAt: expiresAtMs, expiresAtRfc3339: rfc };
 }
 
+function parseStoredRaw(raw: string): ParsedStored | null {
+  const parsed = JSON.parse(raw) as Record<string, unknown>;
+  const accessToken = typeof parsed.accessToken === "string" ? parsed.accessToken : "";
+  const expiresAtRfc3339Raw =
+    typeof parsed.expiresAtRfc3339 === "string" ? parsed.expiresAtRfc3339 : "";
+  const exp = parseExpiresAtMs(parsed.expiresAt, expiresAtRfc3339Raw || parsed.expiresAt);
+  const normalized = normalizeStoredSession(accessToken, exp, expiresAtRfc3339Raw);
+  if (!normalized) return null;
+  const needsRfcUpgrade = expiresAtRfc3339Raw.trim() === "";
+  return { session: normalized, needsRfcUpgrade };
+}
+
 let token: string | null = null;
 let expiresAt = 0;
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -59,24 +77,32 @@ function clearStored(): void {
   }
 }
 
+/** Baca storage tanpa menulis; tidak menghapus blob invalid (untuk deteksi `had` saat logout). */
+function peekStored(): StoredAdminSession | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return parseStoredRaw(raw)?.session ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function readStored(): StoredAdminSession | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const accessToken = typeof parsed.accessToken === "string" ? parsed.accessToken : "";
-    const expiresAtRfc3339 =
-      typeof parsed.expiresAtRfc3339 === "string" ? parsed.expiresAtRfc3339 : "";
-    const exp = parseExpiresAtMs(parsed.expiresAt, expiresAtRfc3339 || parsed.expiresAt);
-    const normalized = normalizeStoredSession(accessToken, exp, expiresAtRfc3339);
-    if (!normalized) {
+    const parsed = parseStoredRaw(raw);
+    if (!parsed) {
       clearStored();
       return null;
     }
-    // Upgrade blob lama (hanya expiresAt numerik) → selalu simpan expiresAt + RFC3339.
-    writeStored(normalized.accessToken, normalized.expiresAt, normalized.expiresAtRfc3339);
-    return normalized;
+    if (parsed.needsRfcUpgrade) {
+      writeStored(parsed.session.accessToken, parsed.session.expiresAt, parsed.session.expiresAtRfc3339);
+    }
+    return parsed.session;
   } catch {
     clearStored();
     return null;
@@ -110,6 +136,15 @@ function hydrateFromStorage(): void {
   token = stored.accessToken;
   expiresAt = stored.expiresAt;
   scheduleExpiryTimer();
+}
+
+function hasStoredAdminKey(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return sessionStorage.getItem(STORAGE_KEY) != null;
+  } catch {
+    return false;
+  }
 }
 
 if (typeof window !== "undefined") {
@@ -160,7 +195,7 @@ export function hasAdminSession(): boolean {
 }
 
 export function clearAdminSession(): void {
-  const had = token !== null || Boolean(readStored());
+  const had = token !== null || peekStored() !== null || hasStoredAdminKey();
   token = null;
   expiresAt = 0;
   if (timer) {
