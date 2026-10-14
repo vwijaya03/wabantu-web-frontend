@@ -5,6 +5,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
 import { AUTH_SESSION_UPDATED } from "@/lib/auth/session-sync";
 import { dispatchInboxRealtimePush, dispatchInboxSSEStatus } from "@/lib/inbox/realtime-events";
+import { subscribeImpersonation } from "@/lib/auth/impersonation-session";
 import { inboxStreamUrl } from "@/lib/inbox/stream-url";
 
 const MAX_SSE_BACKOFF_MS = 30_000;
@@ -82,9 +83,11 @@ export function useInboxActivityStream(): void {
       connect();
     };
     window.addEventListener(AUTH_SESSION_UPDATED, onSessionUpdated);
+    const unsubImpersonation = subscribeImpersonation(onSessionUpdated);
 
     return () => {
       cancelled = true;
+      unsubImpersonation();
       window.removeEventListener(AUTH_SESSION_UPDATED, onSessionUpdated);
       if (retryTimer) clearTimeout(retryTimer);
       if (es) es.onmessage = null;

@@ -19,10 +19,14 @@ const UNKNOWN_HANDOFF_DESCRIPTION = "Percakapan ditangani tim.";
 
 /**
  * Kode alasan backend (field handoffReason) yang dipetakan di KNOWN_HANDOFF:
- * buyer_requested_human, Sensitive/escalate detected, Auto fallback setelah retry AI gagal,
+ * ai_no_answer, buyer_requested_human, Sensitive/escalate detected, Auto fallback setelah retry AI gagal,
  * workflow, image_unhandled, Diambil alih manual oleh staff, Takeover manual dari inbox.
  */
 const KNOWN_HANDOFF: Record<string, { label: string; description: string }> = {
+  ai_no_answer: {
+    label: "Perlu dibantu tim",
+    description: "Asisten tidak menemukan jawaban.",
+  },
   buyer_requested_human: {
     label: "Ingin dibantu tim",
     description: "Pembeli meminta bantuan staf.",
