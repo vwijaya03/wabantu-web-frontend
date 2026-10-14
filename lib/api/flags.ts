@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { adminApi as adminHttp } from "./admin-client";
 
 export type RetrievalMode = "disabled" | "shadow" | "vector";
 
@@ -111,7 +111,7 @@ export function shouldPollRetrievalIndexing(progress: TenantIndexingProgress): b
 
 export const flagsApi = {
   async getRetrievalMode(tenantId: string): Promise<RetrievalModeResponse> {
-    const { data } = await api.get<RetrievalModeResponse>(
+    const { data } = await adminHttp.get<RetrievalModeResponse>(
       `/flags/retrieval-mode/${encodeURIComponent(tenantId)}`,
     );
     return data;
@@ -121,7 +121,7 @@ export const flagsApi = {
     tenantId: string,
     mode: RetrievalMode,
   ): Promise<SetRetrievalModeResponse> {
-    const { data } = await api.put<SetRetrievalModeResponse>("/flags/retrieval-mode", {
+    const { data } = await adminHttp.put<SetRetrievalModeResponse>("/flags/retrieval-mode", {
       tenantId,
       mode,
     });
@@ -134,7 +134,7 @@ export const flagsApi = {
     tenantIds?: string[];
     tenantDelayMs?: number;
   }): Promise<StartRAGRolloutResponse> {
-    const { data } = await api.post<StartRAGRolloutResponse>(
+    const { data } = await adminHttp.post<StartRAGRolloutResponse>(
       "/flags/retrieval-rollout",
       input,
     );
@@ -142,42 +142,42 @@ export const flagsApi = {
   },
 
   async getRAGRolloutJob(jobId: string): Promise<RAGRolloutJobSummary> {
-    const { data } = await api.get<RAGRolloutJobSummary>(
+    const { data } = await adminHttp.get<RAGRolloutJobSummary>(
       `/flags/retrieval-rollout/jobs/${encodeURIComponent(jobId)}`,
     );
     return data;
   },
 
   async listActiveRAGRolloutJobs(): Promise<{ jobs: RAGRolloutJobSummary[] }> {
-    const { data } = await api.get<{ jobs: RAGRolloutJobSummary[] }>(
+    const { data } = await adminHttp.get<{ jobs: RAGRolloutJobSummary[] }>(
       "/flags/retrieval-rollout/active-jobs",
     );
     return data;
   },
 
   async cancelRAGRolloutJob(jobId: string): Promise<RAGRolloutJobSummary> {
-    const { data } = await api.post<RAGRolloutJobSummary>(
+    const { data } = await adminHttp.post<RAGRolloutJobSummary>(
       `/flags/retrieval-rollout/jobs/${encodeURIComponent(jobId)}/cancel`,
     );
     return data;
   },
 
   async getRetrievalIndexingProgress(tenantId: string): Promise<TenantIndexingProgress> {
-    const { data } = await api.get<TenantIndexingProgress>(
+    const { data } = await adminHttp.get<TenantIndexingProgress>(
       `/flags/retrieval-indexing/${encodeURIComponent(tenantId)}`,
     );
     return data;
   },
 
   async getRetrievalObservability(): Promise<{ metrics: RetrievalObservabilitySnapshot }> {
-    const { data } = await api.get<{ metrics: RetrievalObservabilitySnapshot }>(
+    const { data } = await adminHttp.get<{ metrics: RetrievalObservabilitySnapshot }>(
       "/flags/retrieval-observability",
     );
     return data;
   },
 
   async getRetrievalIncidents(): Promise<{ incidents: RetrievalIncident[]; degraded?: boolean }> {
-    const { data } = await api.get<{ incidents: RetrievalIncident[]; degraded?: boolean }>(
+    const { data } = await adminHttp.get<{ incidents: RetrievalIncident[]; degraded?: boolean }>(
       "/admin/ai-retrieval/incidents",
     );
     return data;

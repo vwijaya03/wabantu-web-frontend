@@ -60,6 +60,9 @@ export interface Order {
   paymentProofVerifiedAt?: string;
   paymentProofVerifiedBy?: string;
   paymentProofMeta?: PaymentProofMeta;
+  /** Hasil cek bukti (advisory). Tidak ada = bukti belum diproses. API_AI_CONFIG.md §4. */
+  proofCheck?: "cocok" | "perlu_dicek";
+  proofCheckReasons?: string[];
   notes?: string;
   total: number;
   subtotal: number;
@@ -131,6 +134,17 @@ export const ordersApi = {
   },
   async cancel(id: string): Promise<Order> {
     const res = await api.patch(`/orders/${id}/cancel`);
+    return res.data;
+  },
+  /**
+   * Setujui pesanan: verifikasi bukti + selesaikan order + catat pemasukan dalam SATU transaksi
+   * (POST /orders/:id/approve, owner saja, idempotent; 409 bila belum ada bukti).
+   * expectedUpdatedAt (string persis dari GET order, RFC3339Nano) → query param `?expectedUpdatedAt=` (tanpa body JSON);
+   * 409 code "aborted" bila order berubah sejak dimuat. Kosong/tanpa argumen → tanpa param (kompatibel backend lama).
+   */
+  async approve(id: string, expectedUpdatedAt?: string): Promise<Order> {
+    const qs = expectedUpdatedAt ? `?expectedUpdatedAt=${encodeURIComponent(expectedUpdatedAt)}` : "";
+    const res = await api.post(`/orders/${id}/approve${qs}`);
     return res.data;
   },
   async verifyPaymentProof(id: string): Promise<Order> {

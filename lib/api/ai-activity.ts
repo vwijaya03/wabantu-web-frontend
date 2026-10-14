@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { adminApi as adminHttp } from "./admin-client";
 
 export interface AIActivityEntry {
   id: string;
@@ -53,14 +53,14 @@ export const aiActivityAdminApi = {
     tenantId: string,
     params?: ListAIActivityParams,
   ): Promise<{ period: string; entries: AIActivityEntry[] }> {
-    const res = await api.get(`/admin/tenant/${tenantId}/ai-activity`, { params });
+    const res = await adminHttp.get(`/admin/tenant/${tenantId}/ai-activity`, { params });
     return res.data;
   },
   async summary(
     tenantId: string,
     params?: ListAIActivityParams,
   ): Promise<AIActivitySummary> {
-    const res = await api.get(`/admin/tenant/${tenantId}/ai-activity/summary`, {
+    const res = await adminHttp.get(`/admin/tenant/${tenantId}/ai-activity/summary`, {
       params,
     });
     return res.data;

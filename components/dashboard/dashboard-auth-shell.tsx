@@ -17,6 +17,12 @@ import {
   type AuthUser,
 } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/errors";
+import { ADMIN_LOGIN_PATH } from "@/lib/api/admin-client";
+import {
+  currentSessionKind,
+  isAdminConsolePath,
+  loadSessionUser,
+} from "@/lib/auth/load-session-user";
 import { rateLimitTitle, RATE_LIMIT_USER_MESSAGE } from "@/lib/api/rate-limit";
 import { clearClientSession, hasAccessToken } from "@/lib/auth/session";
 import { installAuthCrossTabSync } from "@/lib/auth/session-cross-tab";
@@ -76,6 +82,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
   const [user, setUser] = useState<AuthUser | null>(null);
   const [ready, setReady] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
+  const [adminMeUnavailable, setAdminMeUnavailable] = useState(false);
 
   useSyncQueriesOnTenantChange(user);
 
@@ -87,8 +94,33 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
 
     async function load() {
       const nextPath = initialNextPathRef.current;
-      if (!hasAccessToken()) {
-        router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
+      const kind = currentSessionKind();
+      if (kind === "none") {
+        // Rute admin → login admin; selain itu → login client. (Tidak saling menautkan di UI login.)
+        router.replace(
+          isAdminConsolePath(nextPath)
+            ? `${ADMIN_LOGIN_PATH}?next=${encodeURIComponent(nextPath)}`
+            : `/login?next=${encodeURIComponent(nextPath)}`,
+        );
+        return;
+      }
+      if (kind === "admin") {
+        try {
+          const me = await loadSessionUser("admin");
+          if (cancelled) return;
+          setUser(me);
+          setReady(true);
+          applyPlatformRouteGuards(me, nextPath, router);
+        } catch (err) {
+          if (cancelled) return;
+          const apiErr = toApiError(err);
+          if (apiErr.status === 404) {
+            setAdminMeUnavailable(true);
+          } else if (apiErr.status === 429) {
+            setRateLimited(true);
+          }
+          // 401: interceptor adminApi sudah menghapus sesi admin dan redirect ke login admin.
+        }
         return;
       }
       try {
@@ -174,6 +206,16 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
     if (!user || !ready) return;
     applyPlatformRouteGuards(user, pathname || "/dashboard", router);
   }, [pathname, ready, router, user]);
+
+  if (adminMeUnavailable && !ready) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-muted/20 px-6 text-center">
+        <p className="text-sm text-muted-foreground">
+          Endpoint belum tersedia: GET /platform-admin/me belum ada di backend yang terhubung.
+        </p>
+      </div>
+    );
+  }
 
   if (rateLimited && !ready) {
     return (

@@ -1,5 +1,7 @@
 "use client";
 
+import { useAdminSession } from "@/hooks/use-admin-session";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -148,7 +150,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const tenantMode = hasTenantDashboardAccess(user);
-  const isSuperAdmin = user?.role === "super_admin";
+  const { isAdmin: isSuperAdmin } = useAdminSession();
 
   const sections = useMemo(() => {
     let tenantSections = tenantMode ? [...TENANT_NAV_SECTIONS] : [];

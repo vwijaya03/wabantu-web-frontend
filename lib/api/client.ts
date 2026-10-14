@@ -3,6 +3,7 @@ import { toApiError } from "@/lib/api/errors";
 import { isTenantContextApiError } from "@/lib/api/tenant-context-error";
 import { isRateLimitError, notifyRateLimitOnce } from "@/lib/api/rate-limit";
 import { clearClientSession, getAccessToken } from "@/lib/auth/session";
+import { clearImpersonationSession, getImpersonationToken } from "@/lib/auth/impersonation-session";
 import { clearProfileHint } from "@/lib/auth/profile-hint";
 import { requestSessionReauth } from "@/lib/auth/session-reauth";
 import { env } from "@/lib/env";
@@ -30,7 +31,8 @@ export const api: AxiosInstance = axios.create({
 api.interceptors.request.use((config) => {
   const cfg = config as ApiRequestConfig;
   if (!cfg.skipAuthHeader) {
-    const token = getAccessToken();
+    // Saat "Pantau" tenant: pakai token impersonation (in-memory). Token admin TIDAK PERNAH dipasang di klien ini (termasuk /auth/me).
+    const token = getImpersonationToken() ?? getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -82,6 +84,18 @@ api.interceptors.response.use(
 
     const config = error.config as ApiRequestConfig | undefined;
     const status = error.response?.status;
+
+    // Security M-1: setiap 401 dari API client → sign-out Firebase (tutup listener, buang sesi in-memory).
+    if (status === 401 && typeof window !== "undefined") {
+      void import("@/lib/firebase/client").then((m) => m.firebaseSignOut()).catch(() => undefined);
+    }
+
+    // 401 dengan token impersonation → sesi pantau habis/dicabut: bersihkan dan kembali ke konsol admin.
+    if (status === 401 && getImpersonationToken() && typeof window !== "undefined") {
+      clearImpersonationSession();
+      window.location.assign("/dashboard/admin?impersonationEnded=1");
+      return Promise.reject(error);
+    }
 
     if (
       status === 401 &&

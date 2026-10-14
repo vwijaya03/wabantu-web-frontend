@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminSession } from "@/hooks/use-admin-session";
+import { AdminSessionRequired } from "@/components/admin/require-admin-session";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -37,6 +40,7 @@ import { toast } from "sonner";
 
 export default function AdminPage() {
   const { user } = useAuth();
+  const { isAdmin } = useAdminSession();
   const searchParams = useSearchParams();
   const needTenantHint = searchParams.get("needTenant") === "1";
   const qc = useQueryClient();
@@ -52,12 +56,12 @@ export default function AdminPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-tenants", search, page, pageSize],
     queryFn: () => adminApi.listTenants({ q: search || undefined, page, pageSize }),
-    enabled: user?.role === "super_admin",
+    enabled: isAdmin,
   });
   const { data: accessRequestsData } = useQuery({
     queryKey: ["admin-access-requests"],
     queryFn: () => tenantAccessApi.listMine(),
-    enabled: user?.role === "super_admin",
+    enabled: isAdmin,
     staleTime: 30_000,
   });
   const accessRequests = accessRequestsData?.requests ?? [];
@@ -70,7 +74,7 @@ export default function AdminPage() {
   const activeMigrateJobsQuery = useQuery({
     queryKey: ["admin-migrate-jobs-active"],
     queryFn: () => adminApi.listActiveMigrateJobs(),
-    enabled: user?.role === "super_admin",
+    enabled: isAdmin,
     refetchInterval: (query) => {
       const jobs = query.state.data?.jobs ?? [];
       const hasActive = jobs.some(
@@ -207,13 +211,8 @@ export default function AdminPage() {
     onError: (e) => toast.error(toApiError(e).message),
   });
 
-  if (user?.role !== "super_admin") {
-    return (
-      <PageHeader
-        title="Admin"
-        description="Akses super admin diperlukan."
-      />
-    );
+  if (!isAdmin) {
+    return <AdminSessionRequired />;
   }
 
   return (

@@ -15,16 +15,23 @@ import {
 import { notificationsApi } from "@/lib/api/notifications";
 import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
+import { useAdminSession } from "@/hooks/use-admin-session";
+import { currentSessionKind } from "@/lib/auth/load-session-user";
 
 const NOTIFICATIONS_QUERY_KEY = ["notifications"];
 
 export function NotificationBell() {
   const router = useRouter();
   const qc = useQueryClient();
+  // /notifications adalah endpoint tenant (klien `api`). Sesi admin-only tidak punya token client,
+  // sehingga 401 → interceptor `api` redirect ke /login client. Hanya fetch untuk sesi tenant.
+  useAdminSession(); // re-render saat sesi admin berubah
+  const tenantSession = currentSessionKind() === "tenant";
 
   const { data } = useQuery({
     queryKey: NOTIFICATIONS_QUERY_KEY,
     queryFn: () => notificationsApi.list(),
+    enabled: tenantSession,
     refetchInterval: 60_000,
     staleTime: 30_000,
   });

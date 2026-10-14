@@ -1,5 +1,7 @@
 "use client";
 
+import { useAdminSession } from "@/hooks/use-admin-session";
+
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
@@ -40,7 +42,7 @@ export function Topbar() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { impersonateMut, stopMut, isBusy } = useTenantImpersonation();
-  const isSuperAdmin = user?.role === "super_admin";
+  const { isAdmin: isSuperAdmin, logoutAdmin } = useAdminSession();
   const platformHome = isPlatformOperatorHome(user);
 
   const { data: tenantsData } = useQuery({
@@ -212,6 +214,12 @@ export function Topbar() {
             {isSuperAdmin && (
               <DropdownMenuItem asChild>
                 <a href="/dashboard/admin">Konsol Admin</a>
+              </DropdownMenuItem>
+            )}
+            {isSuperAdmin && (
+              <DropdownMenuItem onClick={logoutAdmin}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Keluar admin (sesi client tetap)
               </DropdownMenuItem>
             )}
             <DropdownMenuItem

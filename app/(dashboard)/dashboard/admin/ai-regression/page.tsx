@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminSession } from "@/hooks/use-admin-session";
+import { AdminSessionRequired } from "@/components/admin/require-admin-session";
+
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
@@ -9,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { useAuth } from "@/components/providers/auth-provider";
 import {
   aiRegressionApi,
   type AIRegressionSuiteDetail,
@@ -127,7 +129,7 @@ function ResultsPanel({ result }: { result: RunAIRegressionResponse }) {
 }
 
 export default function AIRegressionPage() {
-  const { user } = useAuth();
+  const { isAdmin } = useAdminSession();
   const [lastResult, setLastResult] = useState<RunAIRegressionResponse | null>(null);
 
   const runMut = useMutation({
@@ -143,13 +145,8 @@ export default function AIRegressionPage() {
     onError: (err) => toast.error(toApiError(err).message),
   });
 
-  if (user?.role !== "super_admin") {
-    return (
-      <div className="p-6">
-        <PageHeader title="AI Regression" description="Hanya untuk super admin platform." />
-        <p className="text-sm text-muted-foreground">Anda tidak memiliki akses ke halaman ini.</p>
-      </div>
-    );
+  if (!isAdmin) {
+    return <AdminSessionRequired />;
   }
 
   return (

@@ -2,6 +2,9 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { authApi, type AuthUser } from "@/lib/api/auth";
+import { currentSessionKind, loadSessionUser } from "@/lib/auth/load-session-user";
+import { ADMIN_LOGIN_PATH } from "@/lib/auth/admin-session";
+import { adminLogout } from "@/lib/api/admin-client";
 import { setProfileHint } from "@/lib/auth/profile-hint";
 import { dispatchAuthSessionUpdated } from "@/lib/auth/session-sync";
 
@@ -30,7 +33,8 @@ export function AuthProvider({
 
   const refresh = useCallback(async () => {
     try {
-      const me = await authApi.me();
+      // Sesi tenant (client/Pantau) → /auth/me; hanya admin → /platform-admin/me.
+      const me = await loadSessionUser();
       setProfileHint({ email: me.email, name: me.name });
       setUser(me);
       dispatchAuthSessionUpdated(me);
@@ -40,6 +44,13 @@ export function AuthProvider({
   }, []);
 
   const logout = useCallback(async () => {
+    if (currentSessionKind() === "admin") {
+      // Hanya sesi admin: hapus sesi admin (in-memory), kembali ke login admin.
+      await adminLogout(); // revoke token di BE (best-effort), lalu hapus sesi in-memory
+      setUser(null);
+      if (typeof window !== "undefined") window.location.href = ADMIN_LOGIN_PATH;
+      return;
+    }
     try {
       await authApi.logout();
     } catch {

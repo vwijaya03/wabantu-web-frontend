@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { OrderApproveButton } from "@/components/orders/order-approve-button";
+import { ProofCheckBadge, ProofCheckReasons } from "@/components/orders/proof-check-badge";
 import { inboxApi } from "@/lib/api/inbox";
 import type { Order } from "@/lib/api/orders";
 import { cn } from "@/lib/utils";
@@ -145,7 +147,10 @@ export function PaymentProofPanel({
   onVerify,
   onReject,
   onUnblock,
+  onApproved,
+  readOnly = false,
 }: {
+  onApproved?: (o: Order) => void;
   order: Order;
   canManage: boolean;
   verifyPending: boolean;
@@ -154,6 +159,8 @@ export function PaymentProofPanel({
   onVerify: () => void;
   onReject: () => void;
   onUnblock?: () => void;
+  /** Sesi Pantau: tombol Setujui nonaktif. Verifikasi/tolak bukti tidak diubah di sini. */
+  readOnly?: boolean;
 }) {
   const status = order.paymentStatus ?? "unpaid";
   const meta = order.paymentProofMeta;
@@ -177,8 +184,18 @@ export function PaymentProofPanel({
           <Badge variant={paymentStatusBadgeVariant(status)}>
             {doubtful ? "Diragukan AI" : paymentStatusBadgeLabel(status)}
           </Badge>
+          <ProofCheckBadge value={order.proofCheck} />
         </div>
         <p className="mt-2 text-sm text-muted-foreground">{paymentProofPanelHint(status, meta?.flags)}</p>
+        {order.proofCheck === "perlu_dicek" ? (
+          <div className="mt-2">
+            <ProofCheckReasons value={order.proofCheck} reasons={order.proofCheckReasons} />
+          </div>
+        ) : order.proofCheck === "cocok" ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Nominal sama dengan total dan rekening tujuan cocok — tetap keputusan owner.
+          </p>
+        ) : null}
         {doubtful ? (
           <div className="mt-3 rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm">
             <p className="font-medium text-amber-900 dark:text-amber-100">
@@ -245,6 +262,14 @@ export function PaymentProofPanel({
         </div>
       )}
 
+      {canManage && onApproved ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
+          <OrderApproveButton order={order} canManage={canManage} onApproved={onApproved} readOnly={readOnly} />
+          <p className="text-xs text-muted-foreground">
+            Verifikasi bukti + selesaikan pesanan + catat pemasukan sekaligus.
+          </p>
+        </div>
+      ) : null}
       {showVerifyReject || showReverify || showUnblock ? (
         <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
           {showVerifyReject || showReverify ? (
