@@ -4,6 +4,7 @@ import { isTenantContextApiError } from "@/lib/api/tenant-context-error";
 import { isRateLimitError, notifyRateLimitOnce } from "@/lib/api/rate-limit";
 import { clearClientSession, getAccessToken } from "@/lib/auth/session";
 import { clearImpersonationSession, getImpersonationToken } from "@/lib/auth/impersonation-session";
+import { getTenantAccessToken } from "@/lib/auth/tenant-access-token";
 import { clearProfileHint } from "@/lib/auth/profile-hint";
 import { requestSessionReauth } from "@/lib/auth/session-reauth";
 import { env } from "@/lib/env";
@@ -32,7 +33,7 @@ api.interceptors.request.use((config) => {
   const cfg = config as ApiRequestConfig;
   if (!cfg.skipAuthHeader) {
     // Saat "Pantau" tenant: pakai token impersonation (in-memory). Token admin TIDAK PERNAH dipasang di klien ini (termasuk /auth/me).
-    const token = getImpersonationToken() ?? getAccessToken();
+    const token = getTenantAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

@@ -1,4 +1,4 @@
-import { getAccessToken } from "@/lib/auth/session";
+import { getTenantAccessToken } from "@/lib/auth/tenant-access-token";
 import { env } from "@/lib/env";
 
 function withApiV1Suffix(base: string): string {
@@ -62,7 +62,7 @@ export function resolveInboxStreamBase(): string {
 
 /** Full EventSource URL including access_token query param. */
 export function inboxStreamUrl(): string | null {
-  const token = getAccessToken();
+  const token = getTenantAccessToken();
   if (!token) return null;
 
   const base = resolveInboxStreamBase();

@@ -22,6 +22,7 @@ export function useInboxRealtimeRefresh(): void {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         void refreshInboxQueries(qc, tenantKey);
+        void qc.invalidateQueries({ queryKey: ["notifications"] });
       }, 400);
     };
     window.addEventListener(INBOX_REALTIME_PUSH, onPush);
