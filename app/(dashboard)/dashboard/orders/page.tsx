@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, PlusCircle, RefreshCw, Search, Trash2, X } from "lucide-react";
@@ -55,8 +55,6 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ProofCheckBadge } from "@/components/orders/proof-check-badge";
-import { useRealtimeCollection } from "@/hooks/use-realtime-collection";
-import { FIRESTORE_ORDERS_ORDER_FIELD, firestorePaths } from "@/lib/firebase/paths";
 
 const PaymentProofPanel = dynamic(
   () =>
@@ -350,25 +348,6 @@ export default function OrdersPage() {
   const invalidateOrders = () => {
     void qc.invalidateQueries({ queryKey: ["orders"] });
   };
-
-  // Realtime: mirror Firestore tenants/{tenantId}/orders (API_AI_CONFIG.md §5) memicu refetch;
-  // fallback polling tiap 5 dtk bila Firebase tidak tersedia. Postgres tetap sumber kebenaran.
-  const ordersRealtime = useRealtimeCollection<string>({
-    queryKey: ["orders-realtime-signal", tenantKey],
-    path: (tenantId) => firestorePaths.orders(tenantId),
-    pathKey: tenantKey ? String(tenantKey) : "orders",
-    orderField: FIRESTORE_ORDERS_ORDER_FIELD,
-    mapDoc: (id, d) => `${id}:${String(d.updatedAt?.toMillis?.() ?? d.updatedAt ?? "")}`,
-    poll: async () => {
-      await qc.invalidateQueries({ queryKey: ["orders"], refetchType: "active" });
-      return [];
-    },
-    pollIntervalMs: 5000,
-  });
-  const realtimeSignal = ordersRealtime.mode === "realtime" ? ordersRealtime.items.join("|") : "";
-  useEffect(() => {
-    if (realtimeSignal) void qc.invalidateQueries({ queryKey: ["orders"] });
-  }, [realtimeSignal, qc]);
 
   const createMut = useMutation({
     mutationFn: () => {
@@ -734,12 +713,6 @@ export default function OrdersPage() {
         description="Kelola pesanan dari WhatsApp atau input manual, termasuk update status satuan dan batch."
         actions={
           <div className="flex items-center gap-2">
-          <Badge
-            variant={ordersRealtime.mode === "realtime" ? "default" : "secondary"}
-            title={ordersRealtime.reason ?? undefined}
-          >
-            {ordersRealtime.mode === "realtime" ? "Realtime" : ordersRealtime.mode === "connecting" ? "Menyambung…" : "Polling"}
-          </Badge>
           <Button
             onClick={() => {
               setCreateContactPage(1);
