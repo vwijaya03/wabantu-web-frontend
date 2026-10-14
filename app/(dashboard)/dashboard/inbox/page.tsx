@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { InboxHandoffBadge } from "@/components/inbox/inbox-handoff-badge";
 import { InboxMessageBubble } from "@/components/inbox/inbox-message-bubble";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
@@ -31,6 +32,7 @@ import {
   type InboxConversation,
 } from "@/lib/api/inbox";
 import { toApiError } from "@/lib/api/client";
+import { getInboxHandoffDisplay } from "@/lib/inbox/handoff-display";
 import { refreshInboxQueries } from "@/lib/query/inbox-queries";
 import { toast } from "sonner";
 
@@ -111,6 +113,17 @@ export default function InboxPage() {
   const selectedConversation = useMemo(
     () => conversations.find((c) => c.id === selectedId) ?? null,
     [conversations, selectedId],
+  );
+
+  const selectedHandoffDisplay = useMemo(
+    () =>
+      selectedConversation
+        ? getInboxHandoffDisplay({
+            aiHandled: selectedConversation.aiHandled,
+            handoffReason: selectedConversation.handoffReason,
+          })
+        : null,
+    [selectedConversation],
   );
 
   const [isEditingContactName, setIsEditingContactName] = useState(false);
@@ -500,12 +513,10 @@ export default function InboxPage() {
                           ) : null}
                         </div>
                         <div className="mt-1 space-y-1 pl-6">
-                          <Badge
-                            variant={item.aiHandled ? "success" : "warning"}
-                            className="w-fit text-[10px]"
-                          >
-                            {item.aiHandled ? "AI agent" : "Handoff"}
-                          </Badge>
+                          <InboxHandoffBadge
+                            aiHandled={item.aiHandled}
+                            handoffReason={item.handoffReason}
+                          />
                           <p className="line-clamp-2 text-xs text-muted-foreground">
                             {item.lastMessagePreview || "Belum ada pesan"}
                           </p>
@@ -540,13 +551,20 @@ export default function InboxPage() {
                       {selectedConversation.contact.displayName ||
                         selectedConversation.contact.phoneNumber}
                     </p>
-                    <Badge
-                      variant={selectedConversation.aiHandled ? "success" : "warning"}
-                      className="text-[10px]"
-                    >
-                      {selectedConversation.aiHandled ? "AI agent" : "Handoff"}
-                    </Badge>
+                    {selectedHandoffDisplay ? (
+                      <Badge
+                        variant={selectedHandoffDisplay.badgeVariant}
+                        className="text-[10px]"
+                      >
+                        {selectedHandoffDisplay.badgeLabel}
+                      </Badge>
+                    ) : null}
                   </div>
+                  {selectedHandoffDisplay?.description ? (
+                    <p className="text-xs text-muted-foreground">
+                      {selectedHandoffDisplay.description}
+                    </p>
+                  ) : null}
                   <p className="text-xs text-muted-foreground">
                     {selectedConversation.contact.phoneNumber}
                   </p>
