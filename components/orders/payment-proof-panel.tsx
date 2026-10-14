@@ -148,6 +148,7 @@ export function PaymentProofPanel({
   onReject,
   onUnblock,
   onApproved,
+  readOnly = false,
 }: {
   onApproved?: (o: Order) => void;
   order: Order;
@@ -158,6 +159,8 @@ export function PaymentProofPanel({
   onVerify: () => void;
   onReject: () => void;
   onUnblock?: () => void;
+  /** Sesi Pantau: tombol Setujui nonaktif. Verifikasi/tolak bukti tidak diubah di sini. */
+  readOnly?: boolean;
 }) {
   const status = order.paymentStatus ?? "unpaid";
   const meta = order.paymentProofMeta;
@@ -261,7 +264,7 @@ export function PaymentProofPanel({
 
       {canManage && onApproved ? (
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
-          <OrderApproveButton order={order} canManage={canManage} onApproved={onApproved} />
+          <OrderApproveButton order={order} canManage={canManage} onApproved={onApproved} readOnly={readOnly} />
           <p className="text-xs text-muted-foreground">
             Verifikasi bukti + selesaikan pesanan + catat pemasukan sekaligus.
           </p>

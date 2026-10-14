@@ -1061,6 +1061,7 @@ export default function OrdersPage() {
               <PaymentProofPanel
                 order={editOrder}
                 canManage={canManage}
+                readOnly={Boolean(user?.impersonation?.active)}
                 verifyPending={verifyPaymentMut.isPending}
                 rejectPending={rejectPaymentMut.isPending}
                 unblockPending={unblockPaymentMut.isPending}
