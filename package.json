@@ -2,6 +2,9 @@
   "name": "web-frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24"
+  },
   "scripts": {
     "docs:generate": "node scripts/generate-docs-index.mjs",
     "predev": "npm run docs:generate",
