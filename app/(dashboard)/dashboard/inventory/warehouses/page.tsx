@@ -30,8 +30,10 @@ import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function WarehousesPage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const { user } = useAuth();
@@ -53,30 +55,30 @@ export default function WarehousesPage() {
   const reactivateMut = useMutation({
     mutationFn: (id: string) => inventoryApi.reactivateWarehouse(id),
     onSuccess: () => {
-      toast.success("Gudang diaktifkan kembali");
+      toast.success(t("Gudang diaktifkan kembali"));
       invalidateTenantQueries(qc, tenantKey, "inventory", "warehouses");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => inventoryApi.deleteWarehouse(id),
     onSuccess: () => {
-      toast.success("Gudang dihapus");
+      toast.success(t("Gudang dihapus"));
       invalidateTenantQueries(qc, tenantKey, "inventory", "warehouses");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const warehouses = data?.warehouses ?? [];
   const total = data?.total ?? 0;
 
   return (
-    <RequireTenantDashboard title="Gudang">
+    <RequireTenantDashboard title={t("Gudang")}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <InventoryPageHeader
-          title="Gudang"
-          description="Lokasi penyimpanan stok. Setiap pesanan & pembelian memilih gudang."
+          title={t("Gudang")}
+          description={t("Lokasi penyimpanan stok. Setiap pesanan & pembelian memilih gudang.")}
           helpTopic="warehouses"
         />
         {canManage ? (
@@ -90,7 +92,7 @@ export default function WarehousesPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Daftar Gudang</CardTitle>
+          <CardTitle>{t("Daftar Gudang")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <form
@@ -104,10 +106,10 @@ export default function WarehousesPage() {
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Cari nama, kode, alamat…"
+              placeholder={t("Cari nama, kode, alamat…")}
               className="max-w-sm"
             />
-            <Button type="submit" variant="secondary">Cari</Button>
+            <Button type="submit" variant="secondary">{t("Cari")}</Button>
             {searchQ ? (
               <Button
                 type="button"
@@ -126,16 +128,16 @@ export default function WarehousesPage() {
           <InventoryTable>
             <InventoryTableHeader>
               <InventoryTableRow>
-                <InventoryTableHead>Nama</InventoryTableHead>
-                <InventoryTableHead>Kode</InventoryTableHead>
-                <InventoryTableHead>Alamat</InventoryTableHead>
-                <InventoryTableHead>Status</InventoryTableHead>
-                {canManage ? <InventoryTableHead align="right">Aksi</InventoryTableHead> : null}
+                <InventoryTableHead>{t("Nama")}</InventoryTableHead>
+                <InventoryTableHead>{t("Kode")}</InventoryTableHead>
+                <InventoryTableHead>{t("Alamat")}</InventoryTableHead>
+                <InventoryTableHead>{t("Status")}</InventoryTableHead>
+                {canManage ? <InventoryTableHead align="right">{t("Aksi")}</InventoryTableHead> : null}
               </InventoryTableRow>
             </InventoryTableHeader>
             <InventoryTableBody>
               {isLoading ? (
-                <InventoryTableEmpty colSpan={canManage ? 5 : 4}>Memuat...</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={canManage ? 5 : 4}>{t("Memuat...")}</InventoryTableEmpty>
               ) : warehouses.length === 0 ? (
                 <InventoryTableEmpty colSpan={canManage ? 5 : 4}>
                   {searchQ ? "Tidak ada gudang cocok." : "Belum ada gudang."}
@@ -145,7 +147,7 @@ export default function WarehousesPage() {
                   <InventoryTableRow key={w.id}>
                     <InventoryTableCell>
                       <span className="font-medium">{w.name}</span>
-                      {w.isDefault ? <Badge className="ml-2" variant="secondary">Default</Badge> : null}
+                      {w.isDefault ? <Badge className="ml-2" variant="secondary">{t("Default")}</Badge> : null}
                     </InventoryTableCell>
                     <InventoryTableCell className="text-muted-foreground">{w.code}</InventoryTableCell>
                     <InventoryTableCell className="max-w-[240px] truncate text-muted-foreground" title={w.address ?? ""}>
@@ -153,11 +155,11 @@ export default function WarehousesPage() {
                     </InventoryTableCell>
                     <InventoryTableCell>
                       {w.isDeleted ? (
-                        <Badge variant="warning">Terhapus</Badge>
+                        <Badge variant="warning">{t("Terhapus")}</Badge>
                       ) : w.isActive ? (
-                        <Badge variant="success">Aktif</Badge>
+                        <Badge variant="success">{t("Aktif")}</Badge>
                       ) : (
-                        <Badge variant="destructive">Nonaktif</Badge>
+                        <Badge variant="destructive">{t("Nonaktif")}</Badge>
                       )}
                     </InventoryTableCell>
                     {canManage ? (
@@ -183,8 +185,8 @@ export default function WarehousesPage() {
                               size="icon"
                               className="h-8 w-8 text-muted-foreground"
                               disabled
-                              title="Gudang default tidak bisa dihapus"
-                              aria-label="Gudang default tidak bisa dihapus"
+                              title={t("Gudang default tidak bisa dihapus")}
+                              aria-label={t("Gudang default tidak bisa dihapus")}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -194,7 +196,7 @@ export default function WarehousesPage() {
                               size="icon"
                               className="h-8 w-8 text-destructive hover:text-destructive"
                               disabled={deleteMut.isPending}
-                              title="Hapus gudang (hanya jika belum dipakai transaksi)"
+                              title={t("Hapus gudang (hanya jika belum dipakai transaksi)")}
                               aria-label={`Hapus gudang ${w.name}`}
                               onClick={() => {
                                 setDeleteWarehouseId(w.id);
@@ -245,7 +247,7 @@ export default function WarehousesPage() {
             setDeleteWarehouseName("");
           }
         }}
-        title="Hapus gudang?"
+        title={t("Hapus gudang?")}
         description={
           deleteWarehouseName
             ? `Gudang "${deleteWarehouseName}" akan dihapus. Tidak bisa jika sudah dipakai di transaksi stok, PO, atau pesanan.`
@@ -265,6 +267,7 @@ export default function WarehousesPage() {
 }
 
 function CreateWarehousePanel({ onDone }: { onDone: () => void }) {
+  const { t } = useLocale();
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [customerLabel, setCustomerLabel] = useState("");
@@ -281,42 +284,42 @@ function CreateWarehousePanel({ onDone }: { onDone: () => void }) {
         note: note || undefined,
       }),
     onSuccess: () => {
-      toast.success("Gudang ditambahkan");
+      toast.success(t("Gudang ditambahkan"));
       onDone();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   return (
     <Card className="mt-6">
-      <CardHeader><CardTitle>Tambah Gudang</CardTitle></CardHeader>
+      <CardHeader><CardTitle>{t("Tambah Gudang")}</CardTitle></CardHeader>
       <CardContent className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label>Nama gudang</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Gudang Cabang Bekasi" />
-          <p className="text-xs text-muted-foreground">Nama internal untuk tim Anda. Tampil ke pelanggan lewat label di bawah (atau nama ini jika label kosong).</p>
+          <Label>{t("Nama gudang")}</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("Gudang Cabang Bekasi")} />
+          <p className="text-xs text-muted-foreground">{t("Nama internal untuk tim Anda. Tampil ke pelanggan lewat label di bawah (atau nama ini jika label kosong).")}</p>
         </div>
         <div className="space-y-1.5">
-          <Label>Label untuk pelanggan (opsional)</Label>
-          <Input value={customerLabel} onChange={(e) => setCustomerLabel(e.target.value)} placeholder="Contoh: Jakarta Selatan, Surabaya" />
+          <Label>{t("Label untuk pelanggan (opsional)")}</Label>
+          <Input value={customerLabel} onChange={(e) => setCustomerLabel(e.target.value)} placeholder={t("Contoh: Jakarta Selatan, Surabaya")} />
         </div>
         <div className="space-y-1.5">
-          <Label>Kode (opsional)</Label>
-          <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="otomatis dari nama" />
+          <Label>{t("Kode (opsional)")}</Label>
+          <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("otomatis dari nama")} />
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <Label>Alamat (opsional)</Label>
+          <Label>{t("Alamat (opsional)")}</Label>
           <Input value={address} onChange={(e) => setAddress(e.target.value)} />
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <Label>Catatan (opsional)</Label>
+          <Label>{t("Catatan (opsional)")}</Label>
           <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
         </div>
         <div className="flex gap-2 sm:col-span-2">
           <Button onClick={() => createMut.mutate()} disabled={!name.trim() || createMut.isPending}>
             {createMut.isPending ? "Menyimpan..." : "Simpan"}
           </Button>
-          <Button type="button" variant="outline" onClick={onDone}>Batal</Button>
+          <Button type="button" variant="outline" onClick={onDone}>{t("Batal")}</Button>
         </div>
       </CardContent>
     </Card>
@@ -332,6 +335,7 @@ function EditWarehouseDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useLocale();
   const [name, setName] = useState(warehouse.name);
   const [customerLabel, setCustomerLabel] = useState(warehouse.customerLabel ?? "");
   const [address, setAddress] = useState(warehouse.address ?? "");
@@ -348,39 +352,39 @@ function EditWarehouseDialog({
         isActive: warehouse.isDefault ? true : isActive,
       }),
     onSuccess: () => {
-      toast.success("Gudang diperbarui");
+      toast.success(t("Gudang diperbarui"));
       onSaved();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Gudang</DialogTitle>
-          <DialogDescription className="sr-only">Form edit data gudang</DialogDescription>
+          <DialogTitle>{t("Edit Gudang")}</DialogTitle>
+          <DialogDescription className="sr-only">{t("Form edit data gudang")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Nama</Label>
+            <Label>{t("Nama")}</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
-            <p className="text-xs text-muted-foreground">Nama internal. Jika label pelanggan kosong, nama ini yang dipakai di chat WhatsApp.</p>
+            <p className="text-xs text-muted-foreground">{t("Nama internal. Jika label pelanggan kosong, nama ini yang dipakai di chat WhatsApp.")}</p>
           </div>
           <div className="space-y-1.5">
-            <Label>Label untuk pelanggan (opsional)</Label>
-            <Input value={customerLabel} onChange={(e) => setCustomerLabel(e.target.value)} placeholder="Contoh: Surabaya" />
+            <Label>{t("Label untuk pelanggan (opsional)")}</Label>
+            <Input value={customerLabel} onChange={(e) => setCustomerLabel(e.target.value)} placeholder={t("Contoh: Surabaya")} />
           </div>
           <div className="space-y-1.5">
-            <Label>Kode</Label>
+            <Label>{t("Kode")}</Label>
             <Input value={warehouse.code} disabled className="bg-muted" />
           </div>
           <div className="space-y-1.5">
-            <Label>Alamat</Label>
+            <Label>{t("Alamat")}</Label>
             <Input value={address} onChange={(e) => setAddress(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label>Catatan</Label>
+            <Label>{t("Catatan")}</Label>
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
           </div>
           {!warehouse.isDefault ? (
@@ -393,10 +397,10 @@ function EditWarehouseDialog({
               Gudang aktif (muncul di dropdown)
             </label>
           ) : (
-            <p className="text-xs text-muted-foreground">Gudang default selalu aktif.</p>
+            <p className="text-xs text-muted-foreground">{t("Gudang default selalu aktif.")}</p>
           )}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
+            <Button type="button" variant="outline" onClick={onClose}>{t("Batal")}</Button>
             <Button onClick={() => saveMut.mutate()} disabled={!name.trim() || saveMut.isPending}>
               {saveMut.isPending ? "Menyimpan..." : "Simpan"}
             </Button>

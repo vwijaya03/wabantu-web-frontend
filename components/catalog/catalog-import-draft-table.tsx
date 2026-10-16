@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/lib/i18n/locale";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DescriptionRichEditor } from "@/components/catalog/description-rich-editor";
@@ -11,6 +12,7 @@ type CatalogImportDraftTableProps = {
 };
 
 export function CatalogImportDraftTable({ items, onUpdateItem }: CatalogImportDraftTableProps) {
+  const { t } = useLocale();
   return (
     <div className="space-y-4">
       {items.map((row, idx) => (
@@ -20,22 +22,22 @@ export function CatalogImportDraftTable({ items, onUpdateItem }: CatalogImportDr
               type="checkbox"
               checked={row.include}
               onChange={(e) => onUpdateItem(idx, { include: e.target.checked })}
-              aria-label="Sertakan"
+              aria-label={t("Sertakan")}
             />
           </div>
           <div className="md:col-span-2">
-            <Label className="text-xs">SKU / Kode</Label>
+            <Label className="text-xs">{t("SKU / Kode")}</Label>
             <Input
               value={row.externalCode}
               onChange={(e) => onUpdateItem(idx, { externalCode: e.target.value })}
             />
           </div>
           <div className="md:col-span-4">
-            <Label className="text-xs">Nama</Label>
+            <Label className="text-xs">{t("Nama")}</Label>
             <Input value={row.name} onChange={(e) => onUpdateItem(idx, { name: e.target.value })} />
           </div>
           <div className="md:col-span-2">
-            <Label className="text-xs">Harga (IDR)</Label>
+            <Label className="text-xs">{t("Harga (IDR)")}</Label>
             <Input
               type="number"
               value={row.sellPrice ?? ""}
@@ -47,7 +49,7 @@ export function CatalogImportDraftTable({ items, onUpdateItem }: CatalogImportDr
             />
           </div>
           <div className="md:col-span-2">
-            <Label className="text-xs">Satuan</Label>
+            <Label className="text-xs">{t("Satuan")}</Label>
             <Input
               value={row.sellUnit ?? "pcs"}
               onChange={(e) => onUpdateItem(idx, { sellUnit: e.target.value })}

@@ -16,6 +16,7 @@ import {
   DEFAULT_HIDDEN_PATIENT_EXPORT_COLUMNS,
   type PatientExportColumnKey,
 } from "@/lib/events-export";
+import { useLocale } from "@/lib/i18n/locale";
 
 const ALL_THERAPIES = "__all__";
 
@@ -42,17 +43,21 @@ export function PatientExportFiltersPanel({
   showTherapyHint?: boolean;
   className?: string;
 }) {
+  const { t } = useLocale();
+
   return (
     <div className={className}>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Filter terapi (export pasien)</Label>
+          <Label className="text-xs text-muted-foreground">
+            {t("Filter terapi (export pasien)")}
+          </Label>
           <Select value={therapyId} onValueChange={onTherapyIdChange}>
             <SelectTrigger className="h-9">
-              <SelectValue placeholder="Semua terapi" />
+              <SelectValue placeholder={t("Semua terapi")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_THERAPIES}>Semua terapi</SelectItem>
+              <SelectItem value={ALL_THERAPIES}>{t("Semua terapi")}</SelectItem>
               {therapies.map((t) => (
                 <SelectItem key={t.id} value={t.id}>
                   {t.therapyName}
@@ -62,7 +67,7 @@ export function PatientExportFiltersPanel({
           </Select>
           {showTherapyHint ? (
             <p className="text-[11px] text-muted-foreground">
-              Export mengikuti filter tabel pasien di atas (termasuk pencarian & status).
+              {t("Export mengikuti filter tabel pasien di atas (termasuk pencarian & status).")}
             </p>
           ) : null}
         </div>

@@ -20,6 +20,7 @@ import { inventoryApi, formatIDR, formatStockQty, movementTypeLabel } from "@/li
 import { toApiError } from "@/lib/api/client";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 import {
   InventoryTable,
   InventoryTableBody,
@@ -39,6 +40,7 @@ const StockTransactionEditDialog = dynamic(
 );
 
 function MovementsContent() {
+  const { t } = useLocale();
   const tenantKey = useTenantKey();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -86,14 +88,14 @@ function MovementsContent() {
     <>
       <Card>
         <CardHeader className="flex flex-col gap-3">
-          <CardTitle>Kartu Stok / Pergerakan</CardTitle>
-          <p className="text-sm text-muted-foreground">Pilih produk dulu untuk melihat kartu stok per SKU.</p>
+          <CardTitle>{t("Kartu Stok / Pergerakan")}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t("Pilih produk dulu untuk melihat kartu stok per SKU.")}</p>
           <div className="flex flex-wrap gap-2">
             <div className="min-w-[220px] flex-1">
-              <ItemPicker value={pickedItem} onChange={onItemChange} placeholder="Pilih produk / SKU..." />
+              <ItemPicker value={pickedItem} onChange={onItemChange} placeholder={t("Pilih produk / SKU...")} />
             </div>
             <Input
-              placeholder="Cari no transaksi..."
+              placeholder={t("Cari no transaksi...")}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={(e) => {
@@ -105,7 +107,7 @@ function MovementsContent() {
             <WarehouseSelect
               value={warehouseId}
               onChange={(v) => { setWarehouseId(v); setPage(1); }}
-              placeholder="Semua gudang"
+              placeholder={t("Semua gudang")}
               className="h-9 w-40 rounded-md border border-input bg-background px-3 text-sm"
               disabled={!catalogItemId}
             />
@@ -115,17 +117,17 @@ function MovementsContent() {
               onChange={(e) => { setType(e.target.value); setPage(1); }}
               disabled={!catalogItemId}
             >
-              <option value="">Semua tipe</option>
-              <option value="opening_balance">Saldo awal</option>
+              <option value="">{t("Semua tipe")}</option>
+              <option value="opening_balance">{t("Saldo awal")}</option>
               <option value="purchase_receive">Penerimaan</option>
-              <option value="sale_issue">Penjualan keluar</option>
-              <option value="sale_cancel_restore">Batal pesanan</option>
-              <option value="return_in">Retur masuk</option>
-              <option value="adjustment_plus">Penyesuaian +</option>
-              <option value="adjustment_minus">Penyesuaian -</option>
-              <option value="transfer_out">Transfer keluar</option>
-              <option value="transfer_in">Transfer masuk</option>
-              <option value="revaluation_cost">Revaluasi HPP</option>
+              <option value="sale_issue">{t("Penjualan keluar")}</option>
+              <option value="sale_cancel_restore">{t("Batal pesanan")}</option>
+              <option value="return_in">{t("Retur masuk")}</option>
+              <option value="adjustment_plus">{t("Penyesuaian +")}</option>
+              <option value="adjustment_minus">{t("Penyesuaian -")}</option>
+              <option value="transfer_out">{t("Transfer keluar")}</option>
+              <option value="transfer_in">{t("Transfer masuk")}</option>
+              <option value="revaluation_cost">{t("Revaluasi HPP")}</option>
             </select>
           </div>
         </CardHeader>
@@ -138,22 +140,22 @@ function MovementsContent() {
             <InventoryTable>
               <InventoryTableHeader>
                 <InventoryTableRow>
-                  <InventoryTableHead>Tanggal</InventoryTableHead>
-                  <InventoryTableHead>Gudang</InventoryTableHead>
-                  <InventoryTableHead>Sumber</InventoryTableHead>
-                  <InventoryTableHead>Tipe</InventoryTableHead>
-                  <InventoryTableHead align="right">Qty</InventoryTableHead>
+                  <InventoryTableHead>{t("Tanggal")}</InventoryTableHead>
+                  <InventoryTableHead>{t("Gudang")}</InventoryTableHead>
+                  <InventoryTableHead>{t("Sumber")}</InventoryTableHead>
+                  <InventoryTableHead>{t("Tipe")}</InventoryTableHead>
+                  <InventoryTableHead align="right">{t("Qty")}</InventoryTableHead>
                   <InventoryTableHead align="right">HPP/unit</InventoryTableHead>
-                  <InventoryTableHead align="right">Saldo</InventoryTableHead>
+                  <InventoryTableHead align="right">{t("Saldo")}</InventoryTableHead>
                 </InventoryTableRow>
               </InventoryTableHeader>
               <InventoryTableBody>
                 {isLoading ? (
-                  <InventoryTableEmpty colSpan={7}>Memuat...</InventoryTableEmpty>
+                  <InventoryTableEmpty colSpan={7}>{t("Memuat...")}</InventoryTableEmpty>
                 ) : isError ? (
                   <InventoryTableEmpty colSpan={7}>Gagal memuat: {toApiError(error).message}</InventoryTableEmpty>
                 ) : rows.length === 0 ? (
-                  <InventoryTableEmpty colSpan={7}>Belum ada pergerakan untuk produk ini.</InventoryTableEmpty>
+                  <InventoryTableEmpty colSpan={7}>{t("Belum ada pergerakan untuk produk ini.")}</InventoryTableEmpty>
                 ) : (
                   rows.map((m) => (
                     <InventoryTableRow key={m.id}>
@@ -208,8 +210,9 @@ function MovementsContent() {
 }
 
 export default function MovementsPage() {
+  const { t } = useLocale();
   return (
-    <RequireTenantDashboard title="Pergerakan Stok">
+    <RequireTenantDashboard title={t("Pergerakan Stok")}>
       <div className="mb-4">
         <Button variant="ghost" size="sm" asChild className="-ml-2">
           <Link href="/dashboard/inventory">
@@ -218,8 +221,8 @@ export default function MovementsPage() {
           </Link>
         </Button>
       </div>
-      <InventoryPageHeader title="Pergerakan Stok" description="Buku besar stok per SKU — pilih produk dulu." helpTopic="movements" />
-      <Suspense fallback={<p className="text-sm text-muted-foreground">Memuat...</p>}>
+      <InventoryPageHeader title={t("Pergerakan Stok")} description={t("Buku besar stok per SKU — pilih produk dulu.")} helpTopic="movements" />
+      <Suspense fallback={<p className="text-sm text-muted-foreground">{t("Memuat...")}</p>}>
         <MovementsContent />
       </Suspense>
     </RequireTenantDashboard>

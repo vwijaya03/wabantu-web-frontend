@@ -38,6 +38,7 @@ import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 const StockTransactionEditDialog = dynamic(
   () =>
@@ -56,10 +57,11 @@ export type StockTransactionKindPageConfig = {
   helpTopic: InventoryHelpTopic;
   createTitle: string;
   CreatePanel: React.ComponentType<{ warehouses: import("@/lib/api/inventory").Warehouse[]; onSuccess: () => void }>;
-  renderDetail: (t: StockTransaction) => ReactNode;
+  renderDetail: (txn: StockTransaction, tr: (s: string, v?: Record<string, string | number>) => string) => ReactNode;
 };
 
 export function StockTransactionKindPage({ config }: { config: StockTransactionKindPageConfig }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
@@ -123,11 +125,11 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
   const delMut = useMutation({
     mutationFn: (id: string) => inventoryApi.deleteStockTransaction(id),
     onSuccess: () => {
-      toast.success("Transaksi dihapus — stok disesuaikan");
+      toast.success(t("Transaksi dihapus — stok disesuaikan"));
       setDeleteId(null);
       refresh();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const batchDelMut = useMutation({
@@ -141,25 +143,25 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
       setBatchDeleteOpen(false);
       refresh();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const colSpan = canManage ? 6 : 5;
 
   return (
-    <RequireTenantDashboard title={title}>
+    <RequireTenantDashboard title={t(title)}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <InventoryPageHeader title={title} description={description} helpTopic={helpTopic} />
+        <InventoryPageHeader title={t(title)} description={t(description)} helpTopic={helpTopic} />
         {canManage ? (
           <Button onClick={() => setCreating((v) => !v)} className="shrink-0">
-            {creating ? "Tutup Form" : `Buat ${createTitle}`}
+            {creating ? t("Tutup Form") : t("Buat {title}", { title: t(createTitle) })}
           </Button>
         ) : null}
       </div>
 
       {creating && canManage ? (
         <Card className="border-primary/30">
-          <CardHeader><CardTitle>Buat {createTitle}</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('Buat {title}', { title: t(createTitle) })}</CardTitle></CardHeader>
           <CardContent>
             <CreatePanel
               warehouses={warehouses}
@@ -178,16 +180,16 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
           <span>{selectedCount} baris terpilih</span>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setSelected(new Set())}>Batal pilih</Button>
-            <Button variant="destructive" size="sm" onClick={() => setBatchDeleteOpen(true)}>Hapus terpilih</Button>
+            <Button variant="destructive" size="sm" onClick={() => setBatchDeleteOpen(true)}>{t("Hapus terpilih")}</Button>
           </div>
         </div>
       ) : null}
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Daftar {createTitle}</CardTitle>
+          <CardTitle>{t('Daftar {title}', { title: t(createTitle) })}</CardTitle>
           <Input
-            placeholder="Cari no transaksi..."
+            placeholder={t("Cari no transaksi...")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { setSearchQ(q); setPage(1); } }}
@@ -200,44 +202,44 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
               <InventoryTableRow>
                 {canManage ? (
                   <InventoryTableHead align="center" className="w-10">
-                    <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} aria-label="Pilih semua" />
+                    <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} aria-label={t("Pilih semua")} />
                   </InventoryTableHead>
                 ) : null}
-                <InventoryTableHead>No Transaksi</InventoryTableHead>
-                <InventoryTableHead>Tanggal</InventoryTableHead>
-                <InventoryTableHead>Ringkasan</InventoryTableHead>
-                <InventoryTableHead>Catatan</InventoryTableHead>
+                <InventoryTableHead>{t("No Transaksi")}</InventoryTableHead>
+                <InventoryTableHead>{t("Tanggal")}</InventoryTableHead>
+                <InventoryTableHead>{t("Ringkasan")}</InventoryTableHead>
+                <InventoryTableHead>{t("Catatan")}</InventoryTableHead>
                 {canManage ? <InventoryTableHead /> : null}
               </InventoryTableRow>
             </InventoryTableHeader>
             <InventoryTableBody>
               {isLoading ? (
-                <InventoryTableEmpty colSpan={colSpan}>Memuat...</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={colSpan}>{t("Memuat...")}</InventoryTableEmpty>
               ) : isError ? (
                 <InventoryTableEmpty colSpan={colSpan}>
                   Gagal memuat: {toApiError(error).message}
                 </InventoryTableEmpty>
               ) : rows.length === 0 ? (
-                <InventoryTableEmpty colSpan={colSpan}>Belum ada transaksi.</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={colSpan}>{t("Belum ada transaksi.")}</InventoryTableEmpty>
               ) : (
-                rows.map((t) => (
-                  <InventoryTableRow key={t.id}>
+                rows.map((txn) => (
+                  <InventoryTableRow key={txn.id}>
                     {canManage ? (
                       <InventoryTableCell align="center">
-                        <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggleOne(t.id)} aria-label={`Pilih ${t.docNo}`} />
+                        <input type="checkbox" checked={selected.has(txn.id)} onChange={() => toggleOne(txn.id)} aria-label={`Pilih ${txn.docNo}`} />
                       </InventoryTableCell>
                     ) : null}
                     <InventoryTableCell>
-                      <TransactionDocLink docNo={t.docNo} onClick={() => setEditId(t.id)} />
+                      <TransactionDocLink docNo={txn.docNo} onClick={() => setEditId(txn.id)} />
                     </InventoryTableCell>
-                    <InventoryTableCell className="text-sm">{t.transactionDate}</InventoryTableCell>
-                    <InventoryTableCell className="max-w-xs text-sm">{renderDetail(t)}</InventoryTableCell>
-                    <InventoryTableCell className="max-w-[140px] truncate text-xs text-muted-foreground">{t.note || "—"}</InventoryTableCell>
+                    <InventoryTableCell className="text-sm">{txn.transactionDate}</InventoryTableCell>
+                    <InventoryTableCell className="max-w-xs text-sm">{renderDetail(txn, t)}</InventoryTableCell>
+                    <InventoryTableCell className="max-w-[140px] truncate text-xs text-muted-foreground">{txn.note || "—"}</InventoryTableCell>
                     {canManage ? (
                       <InventoryTableCell align="right">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => setEditId(t.id)}>Edit</Button>
-                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeleteId(t.id)}>Hapus</Button>
+                          <Button variant="ghost" size="sm" onClick={() => setEditId(txn.id)}>{t("Edit")}</Button>
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeleteId(txn.id)}>{t("Hapus")}</Button>
                         </div>
                       </InventoryTableCell>
                     ) : null}
@@ -261,12 +263,12 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus transaksi?</AlertDialogTitle>
-            <AlertDialogDescription>Stok dikembalikan seperti sebelum transaksi ini.</AlertDialogDescription>
+            <AlertDialogTitle>{t("Hapus transaksi?")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("Stok dikembalikan seperti sebelum transaksi ini.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteId && delMut.mutate(deleteId)}>Hapus</AlertDialogAction>
+            <AlertDialogCancel>{t("Batal")}</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteId && delMut.mutate(deleteId)}>{t("Hapus")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -275,10 +277,10 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus {selectedCount} transaksi?</AlertDialogTitle>
-            <AlertDialogDescription>Stok akan disesuaikan untuk setiap transaksi yang dihapus.</AlertDialogDescription>
+            <AlertDialogDescription>{t("Stok akan disesuaikan untuk setiap transaksi yang dihapus.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>{t("Batal")}</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => batchDelMut.mutate()} disabled={batchDelMut.isPending}>
               {batchDelMut.isPending ? "Menghapus..." : "Hapus semua"}
             </AlertDialogAction>
@@ -289,32 +291,32 @@ export function StockTransactionKindPage({ config }: { config: StockTransactionK
   );
 }
 
-export function adjustmentDetail(t: StockTransaction) {
-  const qty = t.signedQty ?? 0;
+export function adjustmentDetail(txn: StockTransaction, tr: (s: string, v?: Record<string, string | number>) => string) {
+  const qty = txn.signedQty ?? 0;
   const sign = qty >= 0 ? "+" : "";
   return (
     <span>
-      {t.itemName || "Produk"} · {t.warehouseName || "Gudang"} · <strong>{sign}{formatStockQty(qty)}</strong>
+      {txn.itemName || tr("Produk")} · {txn.warehouseName || tr("Gudang")} · <strong>{sign}{formatStockQty(qty)}</strong>
     </span>
   );
 }
 
-export function transferDetail(t: StockTransaction) {
+export function transferDetail(txn: StockTransaction, tr: (s: string, v?: Record<string, string | number>) => string) {
   return (
     <span>
-      {t.itemName || "Produk"} · {t.fromWarehouseName || "?"} → {t.toWarehouseName || "?"} · {formatStockQty(t.signedQty ?? 0)}
+      {txn.itemName || tr("Produk")} · {txn.fromWarehouseName || "?"} → {txn.toWarehouseName || "?"} · {formatStockQty(txn.signedQty ?? 0)}
     </span>
   );
 }
 
-export function openingDetail(t: StockTransaction) {
-  return <span>{t.lineCount ?? 0} baris SKU</span>;
+export function openingDetail(txn: StockTransaction, tr: (s: string, v?: Record<string, string | number>) => string) {
+  return <span>{tr("{count} baris SKU", { count: txn.lineCount ?? 0 })}</span>;
 }
 
-export function revaluationDetail(t: StockTransaction) {
+export function revaluationDetail(txn: StockTransaction, tr: (s: string, v?: Record<string, string | number>) => string) {
   return (
     <span>
-      {t.itemName || "Produk"} · {t.warehouseName || "Gudang"} · HPP → {formatIDR(t.newUnitCost ?? 0)}
+      {txn.itemName || tr("Produk")} · {txn.warehouseName || tr("Gudang")} · {tr("HPP")} → {formatIDR(txn.newUnitCost ?? 0)}
     </span>
   );
 }

@@ -22,13 +22,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Patient, TimeSlot } from "@/lib/api/events";
-import {
-  formatEventDateId,
-  formatPatientSlotLabel,
-  formatTimeSlotLine,
-} from "@/lib/events-format";
 import { ListSortControl } from "@/components/events/list-sort-control";
 import { SortableTableHead } from "@/components/events/sortable-table-head";
+import { useEventDateFormat } from "@/components/events/events-i18n";
+import { useLocale } from "@/lib/i18n/locale";
 import {
   SCHEDULE_PATIENT_SORT_DEFAULT,
   SCHEDULE_SLOT_SORT_DEFAULT,
@@ -81,6 +78,8 @@ export function EventScheduleTab({
   deleteSlotPending: boolean;
   deleteBulkPending: boolean;
 }) {
+  const { t } = useLocale();
+  const { formatEventDateId, formatPatientSlotLabel, formatTimeSlotLine } = useEventDateFormat();
   const [hiddenCols, setHiddenCols] = useState<Set<ScheduleColumn>>(new Set());
   const [slotSort, setSlotSort] = useState(SCHEDULE_SLOT_SORT_DEFAULT);
   const [patientSort, setPatientSort] = useState(SCHEDULE_PATIENT_SORT_DEFAULT);
@@ -112,13 +111,13 @@ export function EventScheduleTab({
       <Card>
         <CardContent className="grid gap-2 pt-4 md:grid-cols-3">
           <div>
-            <Label>Filter terapi</Label>
+            <Label>{t("Filter terapi")}</Label>
             <Select value={scheduleTherapy || "__all"} onValueChange={(v) => onScheduleTherapyChange(v === "__all" ? "" : v)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all">Semua</SelectItem>
+                <SelectItem value="__all">{t("Semua")}</SelectItem>
                 {therapies.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.therapyName}
@@ -128,7 +127,7 @@ export function EventScheduleTab({
             </Select>
           </div>
           <div>
-            <Label>Tanggal</Label>
+            <Label>{t("Tanggal")}</Label>
             <DatePicker value={scheduleDate} onChange={onScheduleDateChange} />
           </div>
         </CardContent>
@@ -160,7 +159,7 @@ export function EventScheduleTab({
 
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-          <CardTitle className="text-base">Slot waktu</CardTitle>
+          <CardTitle className="text-base">{t("Slot waktu")}</CardTitle>
           {slots.length > 0 ? (
             <ListSortControl
               options={SCHEDULE_SLOT_SORT_OPTIONS}
@@ -178,12 +177,10 @@ export function EventScheduleTab({
                 type="checkbox"
                 checked={allSlotsSelected}
                 onChange={(e) => onSelectedSlotIdsChange(e.target.checked ? sortedSlots.map((s) => s.id) : [])}
-              />
-              Pilih semua slot
-            </label>
+              />{t("Pilih semua slot")}</label>
           ) : null}
           {sortedSlots.length === 0 ? (
-            <p className="text-muted-foreground">Belum ada slot. Generate dari tab ini atau simpan pengaturan terapi dulu.</p>
+            <p className="text-muted-foreground">{t("Belum ada slot. Generate dari tab ini atau simpan pengaturan terapi dulu.")}</p>
           ) : (
             sortedSlots.map((s) => (
               <div key={s.id} className="flex items-center justify-between gap-2">
@@ -214,9 +211,7 @@ export function EventScheduleTab({
                     disabled={deleteSlotPending || deleteBulkPending}
                     onClick={() => onDeleteSlot(s.id)}
                   >
-                    <Trash2 className="mr-1 h-4 w-4" />
-                    Hapus
-                  </Button>
+                    <Trash2 className="mr-1 h-4 w-4" />{t("Hapus")}</Button>
                 ) : null}
               </div>
             ))
@@ -226,7 +221,7 @@ export function EventScheduleTab({
 
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-          <CardTitle className="text-base">Pasien terjadwal</CardTitle>
+          <CardTitle className="text-base">{t("Pasien terjadwal")}</CardTitle>
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
             {(Object.keys(COLUMN_LABELS) as ScheduleColumn[]).map((col) => (
@@ -240,28 +235,28 @@ export function EventScheduleTab({
         </CardHeader>
         <CardContent>
           {sortedPatients.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Tidak ada pasien untuk filter ini.</p>
+            <p className="text-sm text-muted-foreground">{t("Tidak ada pasien untuk filter ini.")}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <SortableTableHead
-                    label="Pasien"
+                    label={t("Pasien")}
                     sortKey="name"
                     sort={patientSort}
                     onSortChange={setPatientSort}
                   />
-                  <TableHead>Terapi</TableHead>
+                  <TableHead>{t("Terapi")}</TableHead>
                   <SortableTableHead
-                    label="Jadwal"
+                    label={t("Jadwal")}
                     sortKey="slotTime"
                     sort={patientSort}
                     onSortChange={setPatientSort}
                   />
-                  {visibleCols.includes("birthDate") ? <TableHead>Tgl lahir</TableHead> : null}
-                  {visibleCols.includes("complaint") ? <TableHead>Keluhan</TableHead> : null}
-                  {visibleCols.includes("preferredTime") ? <TableHead>Jam preferensi</TableHead> : null}
-                  {visibleCols.includes("status") ? <TableHead>Status</TableHead> : null}
+                  {visibleCols.includes("birthDate") ? <TableHead>{t("Tgl lahir")}</TableHead> : null}
+                  {visibleCols.includes("complaint") ? <TableHead>{t("Keluhan")}</TableHead> : null}
+                  {visibleCols.includes("preferredTime") ? <TableHead>{t("Jam preferensi")}</TableHead> : null}
+                  {visibleCols.includes("status") ? <TableHead>{t("Status")}</TableHead> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>

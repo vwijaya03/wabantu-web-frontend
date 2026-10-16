@@ -17,6 +17,7 @@ import {
 import { eventsApi, type EventTherapySetting, type TherapySlotTemplate } from "@/lib/api/events";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 const CAPACITY_MODES = ["THERAPIST_COUNT", "SHIJIE_COUNT", "FIXED"] as const;
 
@@ -71,6 +72,7 @@ function TherapySettingCard({
   eventBreak?: { start: string; end: string };
   onSaved: () => void;
 }) {
+  const { t } = useLocale();
   const [dur, setDur] = useState(String(setting.slotDurationMinutes));
   const [mode, setMode] = useState(setting.capacityMode);
   const [maxCap, setMaxCap] = useState(setting.maxCapacity != null ? String(setting.maxCapacity) : "");
@@ -112,7 +114,7 @@ function TherapySettingCard({
             }))
           : undefined,
       });
-      toast.success("Pengaturan disimpan");
+      toast.success(t("Pengaturan disimpan"));
       onSaved();
     } catch (e) {
       toast.error(toApiError(e).message);
@@ -129,7 +131,7 @@ function TherapySettingCard({
       <CardContent className="space-y-4">
         <div className="grid gap-2 md:grid-cols-3">
           <div>
-            <Label>Mode kapasitas</Label>
+            <Label>{t("Mode kapasitas")}</Label>
             <Select value={mode} disabled={disabled} onValueChange={setMode}>
               <SelectTrigger>
                 <SelectValue />
@@ -137,7 +139,7 @@ function TherapySettingCard({
               <SelectContent>
                 {CAPACITY_MODES.map((m) => (
                   <SelectItem key={m} value={m}>
-                    {CAPACITY_MODE_LABELS[m]}
+                    {t(CAPACITY_MODE_LABELS[m])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -145,14 +147,20 @@ function TherapySettingCard({
             {!isFixedCapacity ? (
               <p className="mt-1 text-xs text-muted-foreground">
                 {mode === "THERAPIST_COUNT"
-                  ? "Kapasitas per jam = banyaknya staf (terapis/daoshi/fashi) yang terikat terapi ini & dianggap hadir. Bukan dari angka Max di bawah."
-                  : "Kapasitas per jam = jumlah Shijie hadir di acara ini."}
+                  ? t(
+                      "Kapasitas per jam = banyaknya staf (terapis/daoshi/fashi) yang terikat terapi ini & dianggap hadir. Bukan dari angka Max di bawah.",
+                    )
+                  : t("Kapasitas per jam = jumlah Shijie hadir di acara ini.")}
               </p>
             ) : null}
           </div>
           {isFixedCapacity ? (
             <div>
-              <Label>{isManual ? "Total kapasitas slot manual (otomatis)" : "Kapasitas per slot (tetap)"}</Label>
+              <Label>
+                {isManual
+                  ? t("Total kapasitas slot manual (otomatis)")
+                  : t("Kapasitas per slot (tetap)")}
+              </Label>
               <Input
                 type="number"
                 min={1}
@@ -162,22 +170,22 @@ function TherapySettingCard({
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 {isManual
-                  ? "Otomatis dijumlah dari kapasitas tiap slot di daftar manual."
-                  : "Mis. 5 -> setiap jam slot bisa maks. 5 pasien (0/5, 1/5, ...)."}
+                  ? t("Otomatis dijumlah dari kapasitas tiap slot di daftar manual.")
+                  : t("Mis. 5 -> setiap jam slot bisa maks. 5 pasien (0/5, 1/5, ...).")}
               </p>
             </div>
           ) : (
             <div className="hidden md:block" aria-hidden />
           )}
           <div>
-            <Label>Mode jadwal slot</Label>
+            <Label>{t("Mode jadwal slot")}</Label>
             <Select value={schedMode} disabled={disabled} onValueChange={setSchedMode}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="AUTO">Rentang jam (otomatis)</SelectItem>
-                <SelectItem value="MANUAL">Daftar slot manual</SelectItem>
+                <SelectItem value="AUTO">{t("Rentang jam (otomatis)")}</SelectItem>
+                <SelectItem value="MANUAL">{t("Daftar slot manual")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -186,7 +194,7 @@ function TherapySettingCard({
         {isManual ? (
           <div className="space-y-2 rounded-md border p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium">Slot per hari (diulang setiap hari acara)</p>
+              <p className="text-sm font-medium">{t("Slot per hari (diulang setiap hari acara)")}</p>
               {!disabled ? (
                 <Button
                   type="button"
@@ -194,18 +202,17 @@ function TherapySettingCard({
                   variant="outline"
                   onClick={() => setSlots((prev) => [...prev, emptySlotRow(prev.length)])}
                 >
-                  <Plus className="mr-1 h-4 w-4" /> Tambah slot
-                </Button>
+                  <Plus className="mr-1 h-4 w-4" />{t("Tambah slot")}</Button>
               ) : null}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Tentukan setiap rentang waktu sendiri (mis. jeda istirahat 10:30–13:00 cukup tidak ditambahkan).
-            </p>
+            <p className="text-xs text-muted-foreground">{t("Tentukan setiap rentang waktu sendiri (mis. jeda istirahat 10:30–13:00 cukup tidak ditambahkan).")}</p>
             {slots.map((slot, idx) => (
               <div key={idx} className="flex flex-wrap items-end gap-2">
-                <span className="w-14 text-xs text-muted-foreground">Slot {idx + 1}</span>
+                <span className="w-14 text-xs text-muted-foreground">
+                  {t("Slot {n}", { n: idx + 1 })}
+                </span>
                 <div>
-                  <Label className="text-xs">Mulai</Label>
+                  <Label className="text-xs">{t("Mulai")}</Label>
                   <TimePicker
                     className="w-36"
                     disabled={disabled}
@@ -218,7 +225,7 @@ function TherapySettingCard({
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Selesai</Label>
+                  <Label className="text-xs">{t("Selesai")}</Label>
                   <TimePicker
                     className="w-36"
                     disabled={disabled}
@@ -232,7 +239,7 @@ function TherapySettingCard({
                 </div>
                 {isFixedCapacity ? (
                   <div>
-                    <Label className="text-xs">Kapasitas</Label>
+                    <Label className="text-xs">{t("Kapasitas")}</Label>
                     <Input
                       type="number"
                       min={1}
@@ -249,9 +256,7 @@ function TherapySettingCard({
                     />
                   </div>
                 ) : (
-                  <div className="text-xs text-muted-foreground">
-                    Kapasitas mengikuti mode otomatis.
-                  </div>
+                  <div className="text-xs text-muted-foreground">{t("Kapasitas mengikuti mode otomatis.")}</div>
                 )}
                 {!disabled && slots.length > 1 ? (
                   <Button
@@ -269,15 +274,15 @@ function TherapySettingCard({
         ) : (
           <div className="grid gap-2 md:grid-cols-3">
             <div>
-              <Label>Durasi slot (menit)</Label>
+              <Label>{t("Durasi slot (menit)")}</Label>
               <Input type="number" value={dur} disabled={disabled} onChange={(e) => setDur(e.target.value)} />
             </div>
             <div>
-              <Label>Jam mulai jadwal</Label>
+              <Label>{t("Jam mulai jadwal")}</Label>
               <TimePicker value={schedStart} disabled={disabled} onChange={setSchedStart} />
             </div>
             <div>
-              <Label>Jam selesai jadwal</Label>
+              <Label>{t("Jam selesai jadwal")}</Label>
               <TimePicker value={schedEnd} disabled={disabled} onChange={setSchedEnd} />
             </div>
             <p className="md:col-span-3 text-xs text-muted-foreground">
@@ -293,9 +298,7 @@ function TherapySettingCard({
         )}
 
         {disabled ? null : (
-          <Button disabled={saving} onClick={() => void save()}>
-            Simpan
-          </Button>
+          <Button disabled={saving} onClick={() => void save()}>{t("Simpan")}</Button>
         )}
       </CardContent>
     </Card>
@@ -315,11 +318,14 @@ export function EventTherapySettingsTab({
   eventBreak?: { start: string; end: string };
   onSaved: () => void;
 }) {
+  const { t } = useLocale();
+
   return (
     <div className="mt-4 space-y-4">
       <p className="text-sm text-muted-foreground">
-        Terapi 5 Elemen: gunakan <strong>daftar slot manual</strong>. Terapi Shijie / Energi Dewa: gunakan{" "}
-        <strong>rentang jam otomatis</strong>. Setelah disimpan, generate slot di tab Jadwal.
+        {t(
+          "Terapi 5 Elemen: gunakan daftar slot manual. Terapi Shijie / Energi Dewa: gunakan rentang jam otomatis. Setelah disimpan, generate slot di tab Jadwal.",
+        )}
       </p>
       {settings.map((s) => (
         <TherapySettingCard

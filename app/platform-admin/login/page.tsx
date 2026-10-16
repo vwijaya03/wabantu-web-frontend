@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { adminLogin } from "@/lib/api/admin-client";
 import { toApiError } from "@/lib/api/errors";
 import { setAdminSession } from "@/lib/auth/admin-session";
+import { useLocale } from "@/lib/i18n/locale";
 
 /** Halaman login superadmin. Sengaja TIDAK ditautkan dari /login client. */
 function describeError(err: unknown): string {
@@ -32,6 +33,7 @@ function safeNext(n: string | null): string {
 }
 
 function AdminLoginForm() {
+  const { t } = useLocale();
   const router = useRouter();
   const params = useSearchParams();
   const [email, setEmail] = useState("");
@@ -61,14 +63,14 @@ function AdminLoginForm() {
       <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4" autoComplete="on">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">Login Platform Admin</h1>
+          <h1 className="text-lg font-semibold">{t("Login Platform Admin")}</h1>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("Email")}</Label>
           <Input id="email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t("Password")}</Label>
           <Input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

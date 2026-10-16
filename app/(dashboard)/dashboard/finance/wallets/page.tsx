@@ -63,6 +63,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useLocale } from "@/lib/i18n/locale";
 
 type WalletFormState = {
   name: string;
@@ -97,20 +98,21 @@ function WalletFormFields({
   setForm: React.Dispatch<React.SetStateAction<WalletFormState>>;
   isEdit: boolean;
 }) {
+  const { t } = useLocale();
   const IconPreview = WALLET_ICON_MAP[form.icon] ?? Wallet;
 
   return (
     <div className="space-y-3">
       <div>
-        <Label>Nama Dompet</Label>
+        <Label>{t("Nama Dompet")}</Label>
         <Input
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          placeholder="mis. Kas Harian, BCA Bisnis"
+          placeholder={t("mis. Kas Harian, BCA Bisnis")}
         />
       </div>
       <div>
-        <Label>Tipe</Label>
+        <Label>{t("Tipe")}</Label>
         <Select
           value={form.type}
           onValueChange={(v) =>
@@ -129,9 +131,9 @@ function WalletFormFields({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {WALLET_TYPES.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
+            {WALLET_TYPES.map((wt) => (
+              <SelectItem key={wt.value} value={wt.value}>
+                {t(wt.label)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -139,17 +141,17 @@ function WalletFormFields({
       </div>
       {["bank", "ewallet"].includes(form.type) && (
         <div>
-          <Label>Nama Bank / E-Wallet</Label>
+          <Label>{t("Nama Bank / E-Wallet")}</Label>
           <Input
             value={form.institution}
             onChange={(e) => setForm((f) => ({ ...f, institution: e.target.value }))}
-            placeholder="mis. BCA, GoPay, OVO"
+            placeholder={t("mis. BCA, GoPay, OVO")}
           />
         </div>
       )}
       {!isEdit && (
         <div>
-          <Label>Saldo Awal (Rp)</Label>
+          <Label>{t("Saldo Awal (Rp)")}</Label>
           <Input
             type="number"
             value={form.initialBalance}
@@ -160,11 +162,11 @@ function WalletFormFields({
       )}
       {isEdit && (
         <p className="text-xs text-muted-foreground rounded-md bg-muted px-2 py-1.5">
-          Saldo berjalan dihitung dari transaksi. Ubah saldo awal tidak tersedia setelah dompet dibuat.
+          {t("Saldo berjalan dihitung dari transaksi. Ubah saldo awal tidak tersedia setelah dompet dibuat.")}
         </p>
       )}
       <div>
-        <Label>Ikon</Label>
+        <Label>{t("Ikon")}</Label>
         <div className="mt-2 grid grid-cols-5 gap-2">
           {WALLET_ICON_OPTIONS.map((opt) => {
             const Ico = WALLET_ICON_MAP[opt.value] ?? Wallet;
@@ -186,11 +188,11 @@ function WalletFormFields({
           })}
         </div>
         <p className="mt-1.5 text-xs text-muted-foreground flex items-center gap-1.5">
-          Pratinjau: <IconPreview className="h-4 w-4" style={{ color: form.color }} /> {form.icon}
+          {t("Pratinjau:")} <IconPreview className="h-4 w-4" style={{ color: form.color }} /> {form.icon}
         </p>
       </div>
       <div>
-        <Label>Warna aksen</Label>
+        <Label>{t("Warna aksen")}</Label>
         <div className="mt-2 flex flex-wrap gap-2">
           {WALLET_COLOR_PRESETS.map((c) => (
             <button
@@ -213,7 +215,7 @@ function WalletFormFields({
         />
       </div>
       <div>
-        <Label>Visibilitas</Label>
+        <Label>{t("Visibilitas")}</Label>
         <Select
           value={form.visibility}
           onValueChange={(v) => setForm((f) => ({ ...f, visibility: v as "all" | "owner" }))}
@@ -222,8 +224,8 @@ function WalletFormFields({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Semua anggota tim</SelectItem>
-            <SelectItem value="owner">Hanya owner</SelectItem>
+            <SelectItem value="all">{t("Semua anggota tim")}</SelectItem>
+            <SelectItem value="owner">{t("Hanya owner")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -232,6 +234,7 @@ function WalletFormFields({
 }
 
 export default function WalletsPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantKey = useTenantKey();
   const isOwner = canPerformOwnerActions(user);
@@ -261,13 +264,13 @@ export default function WalletsPage() {
         visibility: form.visibility,
       }),
     onSuccess: () => {
-      toast.success("Dompet berhasil dibuat");
+      toast.success(t("Dompet berhasil dibuat"));
       invalidateFinanceCaches(qc, tenantKey);
       setOpenCreate(false);
       setForm(emptyForm());
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
-      toast.error(e?.response?.data?.message ?? "Gagal membuat dompet"),
+      toast.error(e?.response?.data?.message ?? t("Gagal membuat dompet")),
   });
 
   const updateMut = useMutation({
@@ -281,24 +284,24 @@ export default function WalletsPage() {
         visibility: form.visibility,
       }),
     onSuccess: () => {
-      toast.success("Dompet diperbarui");
+      toast.success(t("Dompet diperbarui"));
       invalidateFinanceCaches(qc, tenantKey);
       setEditWalletId(null);
       setForm(emptyForm());
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
-      toast.error(e?.response?.data?.message ?? "Gagal memperbarui dompet"),
+      toast.error(e?.response?.data?.message ?? t("Gagal memperbarui dompet")),
   });
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => financeApi.deleteWallet(id),
     onSuccess: () => {
-      toast.success("Dompet dihapus");
+      toast.success(t("Dompet dihapus"));
       invalidateFinanceCaches(qc, tenantKey);
       setDeleteWalletId(null);
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
-      toast.error(e?.response?.data?.message ?? "Gagal menghapus dompet"),
+      toast.error(e?.response?.data?.message ?? t("Gagal menghapus dompet")),
   });
 
   const wallets = useMemo(() => data?.wallets ?? [], [data?.wallets]);
@@ -347,8 +350,8 @@ export default function WalletsPage() {
   return (
     <>
       <FinanceSubPageHeader
-        title="Dompet & Rekening"
-        description="Kelola semua sumber dana bisnis Anda."
+        title={t("Dompet & Rekening")}
+        description={t("Kelola semua sumber dana bisnis Anda.")}
         actions={
           isOwner ? (
             <Button
@@ -357,7 +360,7 @@ export default function WalletsPage() {
                 setOpenCreate(true);
               }}
             >
-              <PlusCircle className="mr-2 h-4 w-4" /> Tambah Dompet
+              <PlusCircle className="mr-2 h-4 w-4" /> {t("Tambah Dompet")}
             </Button>
           ) : null
         }
@@ -365,7 +368,7 @@ export default function WalletsPage() {
 
       <Card>
         <CardContent className="p-5">
-          <p className="text-sm text-muted-foreground">Total Saldo Semua Dompet</p>
+          <p className="text-sm text-muted-foreground">{t("Total Saldo Semua Dompet")}</p>
           <p className="mt-1 text-3xl font-bold">{formatIDR(totalBalance)}</p>
         </CardContent>
       </Card>
@@ -375,7 +378,7 @@ export default function WalletsPage() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             className="pl-8"
-            placeholder="Cari nama, bank, tipe..."
+            placeholder={t("Cari nama, bank, tipe...")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
@@ -384,7 +387,7 @@ export default function WalletsPage() {
           />
         </div>
         <Button variant="outline" size="sm" onClick={() => setSearch(q.trim())}>
-          Cari
+          {t("Cari")}
         </Button>
         {search && (
           <Button
@@ -395,28 +398,29 @@ export default function WalletsPage() {
               setSearch("");
             }}
           >
-            Reset
+            {t("Reset")}
           </Button>
         )}
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Dompet hanya bisa dihapus jika tidak ada transaksi, aset investasi, atau transaksi berulang yang masih
-        terhubung.
+        {t(
+          "Dompet hanya bisa dihapus jika tidak ada transaksi, aset investasi, atau transaksi berulang yang masih terhubung.",
+        )}
       </p>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
       ) : wallets.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Belum ada dompet. {isOwner ? "Tambahkan dompet pertama Anda." : ""}
+            {t("Belum ada dompet.")} {isOwner ? t("Tambahkan dompet pertama Anda.") : ""}
           </CardContent>
         </Card>
       ) : filteredWallets.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Tidak ada dompet yang cocok dengan pencarian.
+            {t("Tidak ada dompet yang cocok dengan pencarian.")}
           </CardContent>
         </Card>
       ) : (
@@ -431,7 +435,7 @@ export default function WalletsPage() {
                     <div className="min-w-0">
                       <CardTitle className="text-base truncate">{w.name}</CardTitle>
                       <CardDescription className="line-clamp-2">
-                        {WALLET_TYPES.find((t) => t.value === w.type)?.label ?? w.type}
+                        {t(WALLET_TYPES.find((wt) => wt.value === w.type)?.label ?? w.type)}
                         {w.institution ? ` · ${w.institution}` : ""}
                         {w.accountNoMask ? ` · ${w.accountNoMask}` : ""}
                       </CardDescription>
@@ -439,17 +443,19 @@ export default function WalletsPage() {
                   </div>
                   {w.visibility === "owner" && (
                     <Badge variant="outline" className="text-[10px] shrink-0">
-                      <Eye className="mr-1 h-3 w-3" /> Owner
+                      <Eye className="mr-1 h-3 w-3" /> {t("Owner")}
                     </Badge>
                   )}
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">{formatIDR(w.balance)}</p>
-                  <p className="text-xs text-muted-foreground">Saldo awal {formatIDR(w.initialBalance)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("Saldo awal {amount}", { amount: formatIDR(w.initialBalance) })}
+                  </p>
                   {isOwner && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button variant="outline" size="sm" onClick={() => openEdit(w)}>
-                        <Pencil className="mr-1 h-3.5 w-3.5" /> Ubah
+                        <Pencil className="mr-1 h-3.5 w-3.5" /> {t("Ubah")}
                       </Button>
                       <Button
                         variant="outline"
@@ -457,7 +463,7 @@ export default function WalletsPage() {
                         className="text-destructive hover:text-destructive"
                         onClick={() => setDeleteWalletId(w.id)}
                       >
-                        <Trash2 className="mr-1 h-3.5 w-3.5" /> Hapus
+                        <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("Hapus")}
                       </Button>
                     </div>
                   )}
@@ -471,25 +477,26 @@ export default function WalletsPage() {
       <AlertDialog open={!!deleteWalletId} onOpenChange={(open) => !open && setDeleteWalletId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus dompet?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Hapus dompet?")}</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteTarget
-                ? `Dompet "${deleteTarget.name}" akan dihapus dari daftar.`
-                : "Dompet akan dihapus dari daftar."}
+                ? t('Dompet "{name}" akan dihapus dari daftar.', { name: deleteTarget.name })
+                : t("Dompet akan dihapus dari daftar.")}
               <span className="block mt-2">
-                Jika masih ada transaksi terkait dompet ini, hapus transaksi di menu Transaksi (atau ubah dompet aset
-                investasi) terlebih dahulu.
+                {t(
+                  "Jika masih ada transaksi terkait dompet ini, hapus transaksi di menu Transaksi (atau ubah dompet aset investasi) terlebih dahulu.",
+                )}
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>{t("Batal")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={deleteMut.isPending}
               onClick={() => deleteWalletId && deleteMut.mutate(deleteWalletId)}
             >
-              Hapus
+              {t("Hapus")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -498,23 +505,23 @@ export default function WalletsPage() {
       <Dialog open={walletDialogOpen} onOpenChange={(open) => !open && closeWalletDialog()}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editWalletId ? "Ubah Dompet" : "Tambah Dompet Baru"}</DialogTitle>
+            <DialogTitle>{editWalletId ? t("Ubah Dompet") : t("Tambah Dompet Baru")}</DialogTitle>
             <DialogDescription>
               {editWalletId
-                ? "Perbarui nama, ikon, warna, dan visibilitas dompet."
-                : "Tambahkan sumber dana seperti kas, bank, atau e-wallet."}
+                ? t("Perbarui nama, ikon, warna, dan visibilitas dompet.")
+                : t("Tambahkan sumber dana seperti kas, bank, atau e-wallet.")}
             </DialogDescription>
           </DialogHeader>
           <WalletFormFields form={form} setForm={setForm} isEdit={!!editWalletId} />
           <DialogFooter>
             <Button variant="outline" onClick={closeWalletDialog}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button
               onClick={() => (editWalletId ? updateMut.mutate() : createMut.mutate())}
               disabled={!form.name.trim() || createMut.isPending || updateMut.isPending}
             >
-              {createMut.isPending || updateMut.isPending ? "Menyimpan..." : "Simpan"}
+              {createMut.isPending || updateMut.isPending ? t("Menyimpan...") : t("Simpan")}
             </Button>
           </DialogFooter>
         </DialogContent>

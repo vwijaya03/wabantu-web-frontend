@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authApi } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
+import { useLocale } from "@/lib/i18n/locale";
 
 const schema = z.object({
   name: z.string().min(2, "Minimal 2 karakter").max(120),
@@ -26,6 +27,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function RegisterPage() {
+  const { t } = useLocale();
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const {
@@ -38,11 +40,11 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       await authApi.register(values);
-      toast.success("Akun berhasil dibuat");
+      toast.success(t("Akun berhasil dibuat"));
       window.location.assign("/dashboard");
     } catch (err) {
       const e = toApiError(err);
-      toast.error(e.message || "Gagal mendaftar");
+      toast.error(e.message || t("Gagal mendaftar"));
     } finally {
       setSubmitting(false);
     }
@@ -51,20 +53,20 @@ export default function RegisterPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">Daftar gratis</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Daftar gratis")}</h1>
         <p className="text-sm text-muted-foreground">
-          Sudah punya akun?{" "}
+          {t("Sudah punya akun?")}{" "}
           <Link
             href="/login"
             className="font-medium text-primary hover:underline"
           >
-            Masuk
+            {t("Masuk")}
           </Link>
         </p>
       </div>
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
         <div className="space-y-2">
-          <Label htmlFor="name">Nama Anda</Label>
+          <Label htmlFor="name">{t("Nama Anda")}</Label>
           <Input
             id="name"
             autoComplete="name"
@@ -72,11 +74,11 @@ export default function RegisterPage() {
             {...register("name")}
           />
           {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
+            <p className="text-xs text-destructive">{t(errors.name.message ?? "")}</p>
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="businessName">Nama bisnis</Label>
+          <Label htmlFor="businessName">{t("Nama bisnis")}</Label>
           <Input
             id="businessName"
             placeholder="Toko Sembako Pak Budi"
@@ -84,7 +86,7 @@ export default function RegisterPage() {
           />
           {errors.businessName && (
             <p className="text-xs text-destructive">
-              {errors.businessName.message}
+              {t(errors.businessName.message ?? "")}
             </p>
           )}
         </div>
@@ -98,7 +100,7 @@ export default function RegisterPage() {
             {...register("email")}
           />
           {errors.email && (
-            <p className="text-xs text-destructive">{errors.email.message}</p>
+            <p className="text-xs text-destructive">{t(errors.email.message ?? "")}</p>
           )}
         </div>
         <div className="space-y-2">
@@ -108,13 +110,13 @@ export default function RegisterPage() {
               id="password"
               type={showPassword ? "text" : "password"}
               autoComplete="new-password"
-              placeholder="Minimal 8 karakter, huruf dan angka"
+              placeholder={t("Minimal 8 karakter, huruf dan angka")}
               className="pr-10"
               {...register("password")}
             />
             <button
               type="button"
-              aria-label={showPassword ? "Sembunyikan password" : "Lihat password"}
+              aria-label={showPassword ? t("Sembunyikan password") : t("Lihat password")}
               onClick={() => setShowPassword((v) => !v)}
               className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground hover:text-foreground"
             >
@@ -123,16 +125,15 @@ export default function RegisterPage() {
           </div>
           {errors.password && (
             <p className="text-xs text-destructive">
-              {errors.password.message}
+              {t(errors.password.message ?? "")}
             </p>
           )}
         </div>
         <Button type="submit" className="w-full" disabled={submitting}>
-          {submitting ? "Membuat akun..." : "Daftar Sekarang"}
+          {submitting ? t("Membuat akun...") : t("Daftar Sekarang")}
         </Button>
         <p className="text-center text-xs text-muted-foreground">
-          Dengan mendaftar, Anda menyetujui syarat layanan dan kebijakan
-          privasi kami.
+          {t("Dengan mendaftar, Anda menyetujui syarat layanan dan kebijakan privasi kami.")}
         </p>
       </form>
     </div>

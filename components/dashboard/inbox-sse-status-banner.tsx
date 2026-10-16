@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { INBOX_SSE_STATUS, type InboxSSEStatus } from "@/lib/inbox/realtime-events";
+import { useLocale } from "@/lib/i18n/locale";
 
 /** Thin banner when inbox SSE is reconnecting. */
 export function InboxSSEStatusBanner() {
+  const { t } = useLocale();
   const [status, setStatus] = useState<InboxSSEStatus>("connected");
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export function InboxSSEStatusBanner() {
       role="status"
       className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950"
     >
-      Koneksi realtime inbox terputus — mencoba menyambung ulang…
+      {t("Koneksi realtime inbox terputus — mencoba menyambung ulang…")}
     </div>
   );
 }

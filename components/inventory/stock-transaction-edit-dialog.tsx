@@ -14,6 +14,7 @@ import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 const KIND_LABELS: Record<StockTransaction["kind"], string> = {
   adjustment: "Penyesuaian",
@@ -33,6 +34,7 @@ export function StockTransactionEditDialog({
   id: string | null;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const { data: txn, isLoading } = useQuery({
@@ -44,11 +46,11 @@ export function StockTransactionEditDialog({
   const mut = useMutation({
     mutationFn: (body: Record<string, unknown>) => inventoryApi.updateStockTransaction(id!, body),
     onSuccess: () => {
-      toast.success("Transaksi diperbarui — nomor dokumen tetap");
+      toast.success(t("Transaksi diperbarui — nomor dokumen tetap"));
       onClose();
       invalidateTenantQueries(qc, tenantKey, "inventory");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   return (
@@ -66,7 +68,7 @@ export function StockTransactionEditDialog({
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
           {isLoading || !txn ? (
-            <p className="text-sm text-muted-foreground">Memuat...</p>
+            <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
           ) : (
             <EditForm key={txn.id} txn={txn} saving={mut.isPending} onSave={(body) => mut.mutate(body)} />
           )}
@@ -85,6 +87,7 @@ function EditForm({
   saving: boolean;
   onSave: (body: Record<string, unknown>) => void;
 }) {
+  const { t } = useLocale();
   switch (txn.kind) {
     case "adjustment":
       return <AdjustmentEdit txn={txn} saving={saving} onSave={onSave} />;
@@ -95,11 +98,12 @@ function EditForm({
     case "revaluation":
       return <RevaluationEdit txn={txn} saving={saving} onSave={onSave} />;
     default:
-      return <p className="text-sm text-muted-foreground">Jenis tidak didukung.</p>;
+      return <p className="text-sm text-muted-foreground">{t("Jenis tidak didukung.")}</p>;
   }
 }
 
 function AdjustmentEdit({ txn, saving, onSave }: { txn: StockTransaction; saving: boolean; onSave: (b: Record<string, unknown>) => void }) {
+  const { t } = useLocale();
   const signed = txn.signedQty ?? 0;
   const [item, setItem] = useState<PickedItem | null>(
     txn.catalogItemId ? pickedItem(txn.catalogItemId) : null,
@@ -115,19 +119,19 @@ function AdjustmentEdit({ txn, saving, onSave }: { txn: StockTransaction; saving
 
   return (
     <div className="space-y-4">
-      <Field label="Produk"><ItemPicker value={item} onChange={setItem} /></Field>
-      <Field label="Gudang"><WarehouseSelect value={warehouseId} onChange={setWarehouseId} /></Field>
+      <Field label={t("Produk")}><ItemPicker value={item} onChange={setItem} /></Field>
+      <Field label={t("Gudang")}><WarehouseSelect value={warehouseId} onChange={setWarehouseId} /></Field>
       <div className="flex gap-2">
-        <Button type="button" variant={direction === "in" ? "default" : "outline"} size="sm" onClick={() => setDirection("in")}>Tambah (+)</Button>
-        <Button type="button" variant={direction === "out" ? "default" : "outline"} size="sm" onClick={() => setDirection("out")}>Kurangi (−)</Button>
+        <Button type="button" variant={direction === "in" ? "default" : "outline"} size="sm" onClick={() => setDirection("in")}>{t("Tambah (+)")}</Button>
+        <Button type="button" variant={direction === "out" ? "default" : "outline"} size="sm" onClick={() => setDirection("out")}>{t("Kurangi (−)")}</Button>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Jumlah"><Input type="number" min="0" step="any" value={qty} onChange={(e) => setQty(e.target.value)} /></Field>
+        <Field label={t("Jumlah")}><Input type="number" min="0" step="any" value={qty} onChange={(e) => setQty(e.target.value)} /></Field>
         {direction === "in" ? (
-          <Field label="HPP / unit"><Input type="number" min="0" step="any" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} /></Field>
+          <Field label={t("HPP / unit")}><Input type="number" min="0" step="any" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} /></Field>
         ) : null}
       </div>
-      <Field label="Alasan"><Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} /></Field>
+      <Field label={t("Alasan")}><Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} /></Field>
       <DialogFooter className="px-0 sm:justify-start">
         <Button
           disabled={!valid || saving}
@@ -147,6 +151,7 @@ function AdjustmentEdit({ txn, saving, onSave }: { txn: StockTransaction; saving
 }
 
 function TransferEdit({ txn, saving, onSave }: { txn: StockTransaction; saving: boolean; onSave: (b: Record<string, unknown>) => void }) {
+  const { t } = useLocale();
   const [item, setItem] = useState<PickedItem | null>(
     txn.catalogItemId ? pickedItem(txn.catalogItemId) : null,
   );
@@ -160,13 +165,13 @@ function TransferEdit({ txn, saving, onSave }: { txn: StockTransaction; saving: 
 
   return (
     <div className="space-y-4">
-      <Field label="Produk"><ItemPicker value={item} onChange={setItem} /></Field>
+      <Field label={t("Produk")}><ItemPicker value={item} onChange={setItem} /></Field>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Dari"><WarehouseSelect value={fromId} onChange={setFromId} /></Field>
-        <Field label="Ke"><WarehouseSelect value={toId} onChange={setToId} /></Field>
+        <Field label={t("Dari")}><WarehouseSelect value={fromId} onChange={setFromId} /></Field>
+        <Field label={t("Ke")}><WarehouseSelect value={toId} onChange={setToId} /></Field>
       </div>
-      <Field label="Jumlah"><Input type="number" min="0" step="any" value={qty} onChange={(e) => setQty(e.target.value)} /></Field>
-      <Field label="Catatan"><Input value={note} onChange={(e) => setNote(e.target.value)} /></Field>
+      <Field label={t("Jumlah")}><Input type="number" min="0" step="any" value={qty} onChange={(e) => setQty(e.target.value)} /></Field>
+      <Field label={t("Catatan")}><Input value={note} onChange={(e) => setNote(e.target.value)} /></Field>
       <DialogFooter className="px-0 sm:justify-start">
         <Button
           disabled={!valid || saving}
@@ -188,6 +193,7 @@ function TransferEdit({ txn, saving, onSave }: { txn: StockTransaction; saving: 
 type OpeningRow = { item: PickedItem | null; warehouseId: string; qty: string; unitCost: string };
 
 function OpeningEdit({ txn, saving, onSave }: { txn: StockTransaction; saving: boolean; onSave: (b: Record<string, unknown>) => void }) {
+  const { t } = useLocale();
   const [rows, setRows] = useState<OpeningRow[]>(
     (txn.lines ?? []).map((l) => ({
       item: pickedItem(l.catalogItemId, l.itemName),
@@ -210,14 +216,14 @@ function OpeningEdit({ txn, saving, onSave }: { txn: StockTransaction; saving: b
       <div className="space-y-3">
         {rows.map((r, i) => (
           <div key={i} className="space-y-3 rounded-lg border bg-muted/20 p-4">
-            <Field label="Produk">
+            <Field label={t("Produk")}>
               <ItemPicker value={r.item} onChange={(it) => setRow(i, { item: it })} />
             </Field>
             <div className="grid gap-3 sm:grid-cols-3">
-              <Field label="Gudang">
+              <Field label={t("Gudang")}>
                 <WarehouseSelect value={r.warehouseId} onChange={(v) => setRow(i, { warehouseId: v })} />
               </Field>
-              <Field label="Qty">
+              <Field label={t("Qty")}>
                 <Input
                   type="number"
                   min="0"
@@ -226,7 +232,7 @@ function OpeningEdit({ txn, saving, onSave }: { txn: StockTransaction; saving: b
                   onChange={(e) => setRow(i, { qty: e.target.value })}
                 />
               </Field>
-              <Field label="HPP / unit">
+              <Field label={t("HPP / unit")}>
                 <Input
                   type="number"
                   min="0"
@@ -259,6 +265,7 @@ function OpeningEdit({ txn, saving, onSave }: { txn: StockTransaction; saving: b
 }
 
 function RevaluationEdit({ txn, saving, onSave }: { txn: StockTransaction; saving: boolean; onSave: (b: Record<string, unknown>) => void }) {
+  const { t } = useLocale();
   const [item, setItem] = useState<PickedItem | null>(
     txn.catalogItemId ? pickedItem(txn.catalogItemId) : null,
   );
@@ -270,11 +277,11 @@ function RevaluationEdit({ txn, saving, onSave }: { txn: StockTransaction; savin
 
   return (
     <div className="space-y-4">
-      <Field label="Produk"><ItemPicker value={item} onChange={setItem} /></Field>
-      <Field label="Gudang"><WarehouseSelect value={warehouseId} onChange={setWarehouseId} /></Field>
-      <Field label="HPP baru / unit"><Input type="number" min="0" step="any" value={newCost} onChange={(e) => setNewCost(e.target.value)} /></Field>
+      <Field label={t("Produk")}><ItemPicker value={item} onChange={setItem} /></Field>
+      <Field label={t("Gudang")}><WarehouseSelect value={warehouseId} onChange={setWarehouseId} /></Field>
+      <Field label={t("HPP baru / unit")}><Input type="number" min="0" step="any" value={newCost} onChange={(e) => setNewCost(e.target.value)} /></Field>
       <p className="text-xs text-muted-foreground">Nilai baru: {formatIDR((Number(newCost) || 0) * (txn.signedQty ?? 0))}</p>
-      <Field label="Catatan"><Input value={note} onChange={(e) => setNote(e.target.value)} /></Field>
+      <Field label={t("Catatan")}><Input value={note} onChange={(e) => setNote(e.target.value)} /></Field>
       <DialogFooter className="px-0 sm:justify-start">
         <Button
           disabled={!valid || saving}

@@ -5,7 +5,9 @@ import { useAdminSession } from "@/hooks/use-admin-session";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
+import { LocaleSwitch } from "@/components/i18n/locale-switch";
 import { MobileSidebarSheet } from "@/components/dashboard/mobile-sidebar-sheet";
+import { useLocale } from "@/lib/i18n/locale";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -40,6 +42,7 @@ function initials(name?: string | null, email?: string) {
 
 export function Topbar() {
   const router = useRouter();
+  const { t } = useLocale();
   const { user, logout } = useAuth();
   const { impersonateMut, stopMut, isBusy } = useTenantImpersonation();
   const { isAdmin: isSuperAdmin, logoutAdmin } = useAdminSession();
@@ -94,7 +97,7 @@ export function Topbar() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="max-h-80 w-72 overflow-y-auto">
-              <DropdownMenuLabel>Pilih tenant</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("Pilih tenant")}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {user?.impersonation?.active && (
                 <>
@@ -102,46 +105,46 @@ export function Topbar() {
                     disabled={isBusy}
                     onClick={() => stopMut.mutate()}
                   >
-                    Keluar dari tenant saat ini
+                    {t("Keluar dari tenant saat ini")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
-              {(tenantsData?.tenants ?? []).map((t) => {
-                const access = resolveTenantAccessState(accessRequests, t.id);
-                const isCurrent = user?.tenant?.id === t.id;
+              {(tenantsData?.tenants ?? []).map((tenantRow) => {
+                const access = resolveTenantAccessState(accessRequests, tenantRow.id);
+                const isCurrent = user?.tenant?.id === tenantRow.id;
                 return (
                   <DropdownMenuItem
-                    key={t.id}
+                    key={tenantRow.id}
                     disabled={isBusy || isCurrent}
                     onClick={() => {
                       if (access.canImpersonate) {
-                        impersonateMut.mutate(t.id);
+                        impersonateMut.mutate(tenantRow.id);
                         return;
                       }
                       if (access.status === "pending") {
                         toast.info(
-                          "Permintaan akses masih menunggu persetujuan owner.",
+                          t("Permintaan akses masih menunggu persetujuan owner."),
                         );
                         return;
                       }
                       toast.info(
-                        "Minta akses di konsol admin sebelum memantau tenant ini.",
+                        t("Minta akses di konsol admin sebelum memantau tenant ini."),
                       );
                       router.push("/dashboard/admin");
                     }}
                   >
                     <div className="flex w-full flex-col gap-0.5">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium">{t.companyName}</span>
+                        <span className="font-medium">{tenantRow.companyName}</span>
                         {access.status === "pending" ? (
-                          <span className="text-[10px] text-amber-600">Menunggu</span>
+                          <span className="text-[10px] text-amber-600">{t("Menunggu")}</span>
                         ) : access.canImpersonate ? (
-                          <span className="text-[10px] text-green-600">Akses OK</span>
+                          <span className="text-[10px] text-green-600">{t("Akses OK")}</span>
                         ) : null}
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        {t.ownerEmail || t.schemaName}
+                        {tenantRow.ownerEmail || tenantRow.schemaName}
                       </span>
                     </div>
                   </DropdownMenuItem>
@@ -169,6 +172,7 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-2">
+        <LocaleSwitch />
         <NotificationBell />
 
         <DropdownMenu>
@@ -199,13 +203,13 @@ export function Topbar() {
                 <DropdownMenuItem asChild>
                   <a href="/dashboard/team">
                     <User className="mr-2 h-4 w-4" />
-                    Profile saya
+                    {t("Profile saya")}
                   </a>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <a href="/dashboard/ai-settings">
                     <Settings className="mr-2 h-4 w-4" />
-                    Pengaturan
+                    {t("Pengaturan")}
                   </a>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -213,13 +217,13 @@ export function Topbar() {
             )}
             {isSuperAdmin && (
               <DropdownMenuItem asChild>
-                <a href="/dashboard/admin">Konsol Admin</a>
+                <a href="/dashboard/admin">{t("Konsol Admin")}</a>
               </DropdownMenuItem>
             )}
             {isSuperAdmin && (
               <DropdownMenuItem onClick={logoutAdmin}>
                 <LogOut className="mr-2 h-4 w-4" />
-                Keluar admin (sesi client tetap)
+                {t("Keluar admin (sesi client tetap)")}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
@@ -227,7 +231,7 @@ export function Topbar() {
               onClick={() => void logout()}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Keluar
+              {t("Keluar")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

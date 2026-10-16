@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { AITriageBehaviorJob } from "@/lib/api/ai-triage";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale";
 import {
   canRetryBehaviorJob,
   canVerifyBehaviorJob,
@@ -26,6 +27,7 @@ export function BehaviorJobCard({
   onRetry?: () => void;
   onVerify?: () => void;
 }) {
+  const { t } = useLocale();
   const stuck = behaviorJobStuck(job);
   const failed = job.status === "failed" || stuck;
   const retry = canRetryBehaviorJob(job);
@@ -63,7 +65,7 @@ export function BehaviorJobCard({
       {errorText ? <p className="text-destructive whitespace-pre-wrap break-words">{errorText}</p> : null}
       {running ? (
         <p className="text-muted-foreground">
-          Biasanya 5–45 menit. Kalau Actions merah, status di sini berubah jadi gagal.
+          {t("Biasanya 5–45 menit. Kalau Actions merah, status di sini berubah jadi gagal.")}
         </p>
       ) : null}
       {job.expectedRevision ? (
@@ -73,12 +75,12 @@ export function BehaviorJobCard({
         <div className="flex flex-wrap gap-2">
           {retry && onRetry ? (
             <Button type="button" size="sm" onClick={onRetry} disabled={busy}>
-              Coba Composer lagi
+              {t("Coba Composer lagi")}
             </Button>
           ) : null}
           {verify && onVerify ? (
             <Button type="button" size="sm" variant="outline" onClick={onVerify} disabled={busy}>
-              Verifikasi fix kode
+              {t("Verifikasi fix kode")}
             </Button>
           ) : null}
         </div>

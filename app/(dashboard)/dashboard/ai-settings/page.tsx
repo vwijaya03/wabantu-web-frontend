@@ -45,6 +45,7 @@ import {
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 const reportingTimezoneEnum = z.enum(
   REPORTING_TIMEZONE_IDS as unknown as [string, ...string[]],
@@ -68,6 +69,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function AiSettingsPage() {
+  const { t } = useLocale();
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
   const { data: profile, isPending, isError, error, refetch } = useQuery({
@@ -79,11 +81,11 @@ export default function AiSettingsPage() {
   return (
     <>
       <PageHeader
-        title="AI Settings"
-        description="Info bisnis ini dipakai AI sebagai konteks saat membalas pelanggan."
+        title={t("AI Settings")}
+        description={t("Info bisnis ini dipakai AI sebagai konteks saat membalas pelanggan.")}
       />
       {isPending ? (
-        <p className="text-sm text-muted-foreground">Memuat profil…</p>
+        <p className="text-sm text-muted-foreground">{t("Memuat profil…")}</p>
       ) : isError || !profile ? (
         <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3">
           <p className="text-sm font-medium text-destructive">
@@ -111,6 +113,7 @@ export default function AiSettingsPage() {
 }
 
 function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const { user } = useAuth();
@@ -136,7 +139,7 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
     mutationFn: businessApi.update,
     onSuccess: (updated) => {
       qc.setQueryData(tenantQueryKey(tenantKey, "business-profile"), updated);
-      toast.success("Profil disimpan");
+      toast.success(t("Profil disimpan"));
     },
     onError: (err) => toast.error(toApiError(err).message),
   });
@@ -156,14 +159,14 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
       >
         <Card>
           <CardHeader>
-            <CardTitle>Status AI</CardTitle>
+            <CardTitle>{t("Status AI")}</CardTitle>
             <CardDescription>
               Saat dimatikan, semua chat masuk akan diteruskan ke owner/staff.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex items-center justify-between rounded-lg border bg-muted/30 p-4">
             <div>
-              <p className="text-sm font-medium">AI auto-reply</p>
+              <p className="text-sm font-medium">{t("AI auto-reply")}</p>
               <p className="text-xs text-muted-foreground">
                 {aiEnabled ? "Aktif" : "Nonaktif"}
               </p>
@@ -183,14 +186,14 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
         {canAiAssist ? (
           <Card>
             <CardHeader>
-              <CardTitle>Pembayaran &amp; Bukti Transfer</CardTitle>
+              <CardTitle>{t("Pembayaran &amp; Bukti Transfer")}</CardTitle>
               <CardDescription>
                 Atur verifikasi bukti transfer dari WhatsApp. Mode otomatis memakai
                 vision AI (token) dan FAQ rekening di Knowledge Base.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Field label="Mode verifikasi" error={errors.paymentVerificationMode?.message}>
+              <Field label={t("Mode verifikasi")} error={errors.paymentVerificationMode?.message}>
                 <Controller
                   name="paymentVerificationMode"
                   control={control}
@@ -200,8 +203,8 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="manual">Manual (disarankan)</SelectItem>
-                        <SelectItem value="auto_verify">Otomatis (OCR + aturan)</SelectItem>
+                        <SelectItem value="manual">{t("Manual (disarankan)")}</SelectItem>
+                        <SelectItem value="auto_verify">{t("Otomatis (OCR + aturan)")}</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -218,7 +221,7 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
                     .
                   </div>
                   <Field
-                    label="Confidence minimum auto-verify (0–0.99)"
+                    label={t("Confidence minimum auto-verify (0–0.99)")}
                     error={errors.paymentAutoVerifyMinConfidence?.message}
                   >
                     <Input
@@ -241,7 +244,7 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Zona waktu laporan</CardTitle>
+            <CardTitle>{t("Zona waktu laporan")}</CardTitle>
             <CardDescription>
               Menentukan batas &quot;hari ini&quot; untuk statistik dashboard (pesan
               masuk hari ini, dll.). Offset UTC menyesuaikan DST jika zona
@@ -250,7 +253,7 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
           </CardHeader>
           <CardContent className="space-y-2">
             <Field
-              label="Zona waktu bisnis"
+              label={t("Zona waktu bisnis")}
               error={errors.reportingTimezone?.message}
             >
               <Controller
@@ -267,7 +270,7 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
                       className="w-full max-w-md"
                       aria-invalid={Boolean(errors.reportingTimezone)}
                     >
-                      <SelectValue placeholder="Pilih zona waktu">
+                      <SelectValue placeholder={t("Pilih zona waktu")}>
                         {field.value
                           ? isReportingTimezoneId(field.value)
                             ? reportingTimezoneTriggerLabel(field.value)
@@ -300,7 +303,7 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Profil bisnis</CardTitle>
+            <CardTitle>{t("Profil bisnis")}</CardTitle>
             <CardDescription>
               Semakin lengkap, semakin akurat jawaban AI. Butuh FAQ juga?{" "}
               <Link
@@ -314,21 +317,21 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <Field
-              label="Nama bisnis"
+              label={t("Nama bisnis")}
               error={errors.businessName?.message}
               className="sm:col-span-2"
             >
               <Input {...register("businessName")} />
             </Field>
             <Field
-              label="Deskripsi singkat"
+              label={t("Deskripsi singkat")}
               error={errors.description?.message}
               className="sm:col-span-2"
               action={
                 canAiAssist ? (
                   <ProfileAiAssistButton
                     field="description"
-                    label="Deskripsi singkat"
+                    label={t("Deskripsi singkat")}
                     currentValue={description ?? undefined}
                     onApply={(text) =>
                       setValue("description", text, { shouldDirty: true })
@@ -339,31 +342,31 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
             >
               <Textarea
                 rows={3}
-                placeholder="Toko makanan rumahan, melayani pesanan harian..."
+                placeholder={t("Toko makanan rumahan, melayani pesanan harian...")}
                 {...register("description")}
               />
             </Field>
             <Field label="Alamat" error={errors.address?.message}>
               <Input
-                placeholder="Jl. Mawar No. 12, Jakarta Selatan"
+                placeholder={t("Jl. Mawar No. 12, Jakarta Selatan")}
                 {...register("address")}
               />
             </Field>
-            <Field label="Jam buka" error={errors.openingHours?.message}>
+            <Field label={t("Jam buka")} error={errors.openingHours?.message}>
               <Input
-                placeholder="Senin–Sabtu 09:00–21:00"
+                placeholder={t("Senin–Sabtu 09:00–21:00")}
                 {...register("openingHours")}
               />
             </Field>
             <Field
-              label="Produk / jasa"
+              label={t("Produk / jasa")}
               error={errors.productsServices?.message}
               className="sm:col-span-2"
               action={
                 canAiAssist ? (
                   <ProfileAiAssistButton
                     field="productsServices"
-                    label="Produk / jasa"
+                    label={t("Produk / jasa")}
                     currentValue={productsServices ?? undefined}
                     onApply={(text) =>
                       setValue("productsServices", text, { shouldDirty: true })
@@ -374,19 +377,19 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
             >
               <Textarea
                 rows={3}
-                placeholder="Nasi kotak, paket family, prasmanan, catering harian..."
+                placeholder={t("Nasi kotak, paket family, prasmanan, catering harian...")}
                 {...register("productsServices")}
               />
             </Field>
-            <Field label="Harga dasar" error={errors.basePricing?.message}>
+            <Field label={t("Harga dasar")} error={errors.basePricing?.message}>
               <Input
-                placeholder="Mulai Rp 25.000 / porsi"
+                placeholder={t("Mulai Rp 25.000 / porsi")}
                 {...register("basePricing")}
               />
             </Field>
-            <Field label="Area pengiriman" error={errors.deliveryArea?.message}>
+            <Field label={t("Area pengiriman")} error={errors.deliveryArea?.message}>
               <Input
-                placeholder="Jaksel & Jakpus, COD tersedia"
+                placeholder={t("Jaksel & Jakpus, COD tersedia")}
                 {...register("deliveryArea")}
               />
             </Field>
@@ -395,7 +398,7 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Gaya bahasa AI</CardTitle>
+            <CardTitle>{t("Gaya bahasa AI")}</CardTitle>
             <CardDescription>
               Pilih nada bicara yang sesuai dengan brand Anda.
             </CardDescription>
@@ -419,12 +422,12 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
               ))}
             </div>
             <Field
-              label="Template sapaan (opsional)"
+              label={t("Template sapaan (opsional)")}
               error={errors.greetingTemplate?.message}
             >
               <Textarea
                 rows={3}
-                placeholder="Halo kak! Terima kasih sudah chat ke {bisnis}. Ada yang bisa kami bantu?"
+                placeholder={t("Halo kak! Terima kasih sudah chat ke {bisnis}. Ada yang bisa kami bantu?")}
                 {...register("greetingTemplate")}
               />
             </Field>

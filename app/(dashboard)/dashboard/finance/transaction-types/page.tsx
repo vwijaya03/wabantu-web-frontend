@@ -32,6 +32,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
 import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useLocale } from "@/lib/i18n/locale";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const FLOWS: { value: TransactionType["flow"]; label: string }[] = [
@@ -58,6 +59,7 @@ const emptyForm = {
 };
 
 export default function TransactionTypesPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantKey = useTenantKey();
   const canManage = canPerformOwnerActions(user);
@@ -88,7 +90,7 @@ export default function TransactionTypesPage() {
   const createMut = useMutation({
     mutationFn: () => financeApi.createTransactionType(form),
     onSuccess: () => {
-      toast.success("Jenis transaksi ditambahkan");
+      toast.success(t("Jenis transaksi ditambahkan"));
       invalidate();
       setOpenCreate(false);
       setForm(emptyForm);
@@ -106,7 +108,7 @@ export default function TransactionTypesPage() {
         displayOrder: form.displayOrder,
       }),
     onSuccess: () => {
-      toast.success("Jenis transaksi diperbarui");
+      toast.success(t("Jenis transaksi diperbarui"));
       invalidate();
       setEditItem(null);
     },
@@ -117,7 +119,7 @@ export default function TransactionTypesPage() {
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       financeApi.updateTransactionType(id, { isActive }),
     onSuccess: () => {
-      toast.success("Status diperbarui");
+      toast.success(t("Status diperbarui"));
       invalidate();
     },
     onError: (e: unknown) => toast.error(toApiError(e).message),
@@ -126,7 +128,7 @@ export default function TransactionTypesPage() {
   const deleteMut = useMutation({
     mutationFn: (id: string) => financeApi.deleteTransactionType(id),
     onSuccess: () => {
-      toast.success("Jenis transaksi dihapus");
+      toast.success(t("Jenis transaksi dihapus"));
       invalidate();
     },
     onError: (e: unknown) => toast.error(toApiError(e).message),
@@ -136,29 +138,29 @@ export default function TransactionTypesPage() {
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  const openEdit = (t: TransactionType) => {
-    setEditItem(t);
+  const openEdit = (item: TransactionType) => {
+    setEditItem(item);
     setForm({
-      code: t.code,
-      label: t.label,
-      flow: t.flow,
-      categoryKind: t.categoryKind,
-      showInQuick: t.showInQuick,
-      displayOrder: t.displayOrder,
+      code: item.code,
+      label: item.label,
+      flow: item.flow,
+      categoryKind: item.categoryKind,
+      showInQuick: item.showInQuick,
+      displayOrder: item.displayOrder,
     });
   };
 
   if (!canManage) {
     const description =
       user?.role === "super_admin"
-        ? "Pilih tenant lewat Pantau di konsol admin untuk mengelola jenis transaksi."
-        : "Hanya owner yang dapat mengelola jenis transaksi.";
+        ? t("Pilih tenant lewat Pantau di konsol admin untuk mengelola jenis transaksi.")
+        : t("Hanya owner yang dapat mengelola jenis transaksi.");
     return (
       <>
-        <FinanceSubPageHeader title="Jenis Transaksi" description={description} />
+        <FinanceSubPageHeader title={t("Jenis Transaksi")} description={description} />
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Anda tidak memiliki akses ke halaman ini.
+            {t("Anda tidak memiliki akses ke halaman ini.")}
           </CardContent>
         </Card>
       </>
@@ -168,8 +170,8 @@ export default function TransactionTypesPage() {
   return (
     <>
       <FinanceSubPageHeader
-        title="Jenis Transaksi"
-        description="Label tombol Pemasukan, Pengeluaran, dan lainnya di form Catat Transaksi."
+        title={t("Jenis Transaksi")}
+        description={t("Label tombol Pemasukan, Pengeluaran, dan lainnya di form Catat Transaksi.")}
         actions={
           <Button
             onClick={() => {
@@ -177,7 +179,7 @@ export default function TransactionTypesPage() {
               setOpenCreate(true);
             }}
           >
-            <PlusCircle className="mr-2 h-4 w-4" /> Tambah Jenis
+            <PlusCircle className="mr-2 h-4 w-4" /> {t("Tambah Jenis")}
           </Button>
         }
       />
@@ -187,7 +189,7 @@ export default function TransactionTypesPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pl-9"
-            placeholder="Cari label atau kode…"
+            placeholder={t("Cari label atau kode…")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
@@ -205,37 +207,37 @@ export default function TransactionTypesPage() {
             setPage(1);
           }}
         >
-          Cari
+          {t("Cari")}
         </Button>
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Memuat…</p>
+        <p className="text-sm text-muted-foreground">{t("Memuat…")}</p>
       ) : items.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Tidak ada jenis transaksi.
+            {t("Tidak ada jenis transaksi.")}
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-2">
-          {items.map((t) => (
-            <Card key={t.id}>
+          {items.map((item) => (
+            <Card key={item.id}>
               <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
                 <div>
-                  <p className="font-medium">{t.label}</p>
+                  <p className="font-medium">{item.label}</p>
                   <p className="text-xs text-muted-foreground">
-                    <code>{t.code}</code>
+                    <code>{item.code}</code>
                     {" · "}
-                    {FLOWS.find((f) => f.value === t.flow)?.label ?? t.flow}
+                    {FLOWS.find((f) => f.value === item.flow)?.label ?? item.flow}
                     {" · urutan "}
-                    {t.displayOrder}
+                    {item.displayOrder}
                   </p>
                   <div className="mt-1 flex flex-wrap gap-1">
-                    {t.showInQuick && <Badge variant="secondary">Tombol cepat</Badge>}
-                    {t.isSystem && <Badge variant="outline">Sistem</Badge>}
-                    {t.ownerOnly && <Badge variant="outline">Owner</Badge>}
-                    {!t.isActive && <Badge variant="destructive">Nonaktif</Badge>}
+                    {item.showInQuick && <Badge variant="secondary">{t("Tombol cepat")}</Badge>}
+                    {item.isSystem && <Badge variant="outline">{t("Sistem")}</Badge>}
+                    {item.ownerOnly && <Badge variant="outline">{t("Owner")}</Badge>}
+                    {!item.isActive && <Badge variant="destructive">{t("Nonaktif")}</Badge>}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -243,22 +245,22 @@ export default function TransactionTypesPage() {
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      toggleActiveMut.mutate({ id: t.id, isActive: !t.isActive })
+                      toggleActiveMut.mutate({ id: item.id, isActive: !item.isActive })
                     }
                   >
-                    {t.isActive ? "Nonaktifkan" : "Aktifkan"}
+                    {item.isActive ? t("Nonaktifkan") : t("Aktifkan")}
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => openEdit(t)}>
+                  <Button variant="outline" size="sm" onClick={() => openEdit(item)}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                  {!t.isSystem && (
+                  {!item.isSystem && (
                     <Button
                       variant="ghost"
                       size="sm"
                       className="text-destructive"
                       onClick={() => {
-                        setDeleteTypeId(t.id);
-                        setDeleteTypeLabel(t.label);
+                        setDeleteTypeId(item.id);
+                        setDeleteTypeLabel(item.label);
                       }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -274,11 +276,11 @@ export default function TransactionTypesPage() {
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
-            {total} jenis · halaman {page} / {totalPages}
+            {t("{total} jenis · halaman {page} / {totalPages}")}
           </span>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              Sebelumnya
+              {t("Sebelumnya")}
             </Button>
             <Button
               variant="outline"
@@ -286,7 +288,7 @@ export default function TransactionTypesPage() {
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
             >
-              Berikutnya
+              {t("Berikutnya")}
             </Button>
           </div>
         </div>
@@ -295,14 +297,14 @@ export default function TransactionTypesPage() {
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tambah Jenis Transaksi</DialogTitle>
-            <DialogDescription>Definisikan jenis transaksi kustom untuk form Catat Transaksi.</DialogDescription>
+            <DialogTitle>{t("Tambah Jenis Transaksi")}</DialogTitle>
+            <DialogDescription>{t("Definisikan jenis transaksi kustom untuk form Catat Transaksi.")}</DialogDescription>
           </DialogHeader>
           <TypeForm form={form} setForm={setForm} isCreate />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenCreate(false)}>Batal</Button>
+            <Button variant="outline" onClick={() => setOpenCreate(false)}>{t("Batal")}</Button>
             <Button onClick={() => createMut.mutate()} disabled={createMut.isPending}>
-              Simpan
+              {t("Simpan")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -311,14 +313,14 @@ export default function TransactionTypesPage() {
       <Dialog open={!!editItem} onOpenChange={(v) => !v && setEditItem(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Jenis Transaksi</DialogTitle>
-            <DialogDescription>Ubah label, urutan, atau visibilitas tombol cepat.</DialogDescription>
+            <DialogTitle>{t("Edit Jenis Transaksi")}</DialogTitle>
+            <DialogDescription>{t("Ubah label, urutan, atau visibilitas tombol cepat.")}</DialogDescription>
           </DialogHeader>
           <TypeForm form={form} setForm={setForm} isCreate={false} isSystem={editItem?.isSystem} />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditItem(null)}>Batal</Button>
+            <Button variant="outline" onClick={() => setEditItem(null)}>{t("Batal")}</Button>
             <Button onClick={() => updateMut.mutate()} disabled={updateMut.isPending}>
-              Simpan
+              {t("Simpan")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -332,9 +334,9 @@ export default function TransactionTypesPage() {
             setDeleteTypeLabel("");
           }
         }}
-        title="Hapus jenis transaksi?"
+        title={t("Hapus jenis transaksi?")}
         description={deleteTypeLabel ? `Jenis "${deleteTypeLabel}" akan dihapus permanen.` : undefined}
-        confirmLabel="Hapus"
+        confirmLabel={t("Hapus")}
         destructive
         loading={deleteMut.isPending}
         onConfirm={() => {
@@ -358,11 +360,12 @@ function TypeForm({
   isCreate: boolean;
   isSystem?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <div className="space-y-3">
       {isCreate && (
         <div>
-          <Label>Kode (unik, huruf kecil)</Label>
+          <Label>{t("Kode (unik, huruf kecil)")}</Label>
           <Input
             value={form.code}
             onChange={(e) => setForm({ ...form, code: e.target.value.toLowerCase().replace(/\s/g, "_") })}
@@ -371,7 +374,7 @@ function TypeForm({
         </div>
       )}
       <div>
-        <Label>Label tampilan</Label>
+        <Label>{t("Label tampilan")}</Label>
         <Input
           value={form.label}
           onChange={(e) => setForm({ ...form, label: e.target.value })}
@@ -379,7 +382,7 @@ function TypeForm({
         />
       </div>
       <div>
-        <Label>Alur saldo (flow)</Label>
+        <Label>{t("Alur saldo (flow)")}</Label>
         <Select
           value={form.flow}
           onValueChange={(v) => setForm({ ...form, flow: v as TransactionType["flow"] })}
@@ -390,13 +393,13 @@ function TypeForm({
           </SelectTrigger>
           <SelectContent>
             {FLOWS.map((f) => (
-              <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+              <SelectItem key={f.value} value={f.value}>{t(f.label)}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
       <div>
-        <Label>Filter kategori</Label>
+        <Label>{t("Filter kategori")}</Label>
         <Select
           value={form.categoryKind}
           onValueChange={(v) => setForm({ ...form, categoryKind: v as TransactionType["categoryKind"] })}
@@ -407,7 +410,7 @@ function TypeForm({
           </SelectTrigger>
           <SelectContent>
             {CATEGORY_KINDS.map((k) => (
-              <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>
+              <SelectItem key={k.value} value={k.value}>{t(k.label)}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -419,10 +422,10 @@ function TypeForm({
           checked={form.showInQuick}
           onChange={(e) => setForm({ ...form, showInQuick: e.target.checked })}
         />
-        <Label htmlFor="showInQuick">Tampilkan sebagai tombol cepat di Catat Transaksi</Label>
+        <Label htmlFor="showInQuick">{t("Tampilkan sebagai tombol cepat di Catat Transaksi")}</Label>
       </div>
       <div>
-        <Label>Urutan tampil</Label>
+        <Label>{t("Urutan tampil")}</Label>
         <Input
           type="number"
           value={form.displayOrder}

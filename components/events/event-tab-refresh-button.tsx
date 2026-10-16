@@ -3,6 +3,7 @@
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale";
 
 export function EventTabRefreshButton({
   onClick,
@@ -13,6 +14,8 @@ export function EventTabRefreshButton({
   disabled?: boolean;
   isRefreshing?: boolean;
 }) {
+  const { t } = useLocale();
+
   return (
     <Button
       type="button"
@@ -20,10 +23,10 @@ export function EventTabRefreshButton({
       variant="outline"
       onClick={onClick}
       disabled={disabled || isRefreshing}
-      aria-label="Muat ulang data"
+      aria-label={t("Muat ulang data")}
     >
       <RefreshCw className={cn("mr-1 h-4 w-4", isRefreshing && "animate-spin")} />
-      Muat ulang
+      {t("Muat ulang")}
     </Button>
   );
 }

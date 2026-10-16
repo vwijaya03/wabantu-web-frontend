@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 const QUICK_REPLIES = [
   "Jual frozen food, stok cepat keluar",
@@ -97,9 +98,10 @@ function SetAverageButton({
 }
 
 function SkipAverageHint({ onSetAverage, disabled }: { onSetAverage: () => void; disabled?: boolean }) {
+  const { t } = useLocale();
   return (
     <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-sm">
-      <p className="font-medium text-foreground">Sudah yakin pakai Average?</p>
+      <p className="font-medium text-foreground">{t("Sudah yakin pakai Average?")}</p>
       <p className="mt-1 text-xs text-muted-foreground">
         Simpan metode HPP Average sekarang. Wawancara chat tetap wajib sebelum modul persediaan bisa diaktifkan.
       </p>
@@ -123,6 +125,7 @@ function draftLabel(map: Record<string, string>, value: string): string {
 }
 
 export default function InventorySetupPage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const { user } = useAuth();
@@ -148,7 +151,7 @@ export default function InventorySetupPage() {
       stickChatToBottomRef.current = true;
       setSession(normalizeInvSetupSession(data));
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const sendMut = useMutation({
@@ -169,7 +172,7 @@ export default function InventorySetupPage() {
       if (sessionLost && step === 2) {
         startMut.reset();
         setSession(null);
-        toast.info("Sesi chat kedaluwarsa — memulai sesi baru…");
+        toast.info(t("Sesi chat kedaluwarsa — memulai sesi baru…"));
         startMut.mutate();
       }
     },
@@ -185,26 +188,26 @@ export default function InventorySetupPage() {
       setStep(3);
       invalidateTenantQueries(qc, tenantKey, "inventory", "setting");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const applyMethodMut = useMutation({
     mutationFn: (method: CostingMethod) => inventoryApi.updateSetting({ defaultCostingMethod: method }),
     onSuccess: () => {
-      toast.success("Metode HPP diterapkan");
+      toast.success(t("Metode HPP diterapkan"));
       setMethodApplied(true);
       invalidateTenantQueries(qc, tenantKey, "inventory", "setting");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const completeMut = useMutation({
     mutationFn: () => inventoryApi.completeSetup(),
     onSuccess: () => {
-      toast.success("Setup persediaan selesai! Fitur stok aktif.");
+      toast.success(t("Setup persediaan selesai! Fitur stok aktif."));
       invalidateTenantQueries(qc, tenantKey, "inventory", "setting");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   useEffect(() => {
@@ -250,7 +253,7 @@ export default function InventorySetupPage() {
 
   const skipToAverage = () => {
     applyMethodMut.mutate("average");
-    toast.success("Metode Average disimpan. Lanjut wawancara chat untuk bisa mengaktifkan modul stok.");
+    toast.success(t("Metode Average disimpan. Lanjut wawancara chat untuk bisa mengaktifkan modul stok."));
   };
 
   const goToInterview = () => {
@@ -274,8 +277,8 @@ export default function InventorySetupPage() {
 
   if (!canManage) {
     return (
-      <RequireTenantDashboard title="Setup Persediaan">
-        <InventoryPageHeader title="Setup Persediaan" description="Hanya owner yang dapat mengatur persediaan." helpTopic="setup" />
+      <RequireTenantDashboard title={t("Setup Persediaan")}>
+        <InventoryPageHeader title={t("Setup Persediaan")} description={t("Hanya owner yang dapat mengatur persediaan.")} helpTopic="setup" />
       </RequireTenantDashboard>
     );
   }
@@ -283,10 +286,10 @@ export default function InventorySetupPage() {
   const draft = session?.answersDraft;
 
   return (
-    <RequireTenantDashboard title="Setup Persediaan">
+    <RequireTenantDashboard title={t("Setup Persediaan")}>
       <InventoryPageHeader
-        title="Setup Persediaan & HPP"
-        description="Pelajari metode HPP, ceritakan pola bisnis lewat chat, lalu dapatkan rekomendasi AI."
+        title={t("Setup Persediaan & HPP")}
+        description={t("Pelajari metode HPP, ceritakan pola bisnis lewat chat, lalu dapatkan rekomendasi AI.")}
         helpTopic="setup"
       />
 
@@ -294,7 +297,7 @@ export default function InventorySetupPage() {
         {setting?.setupCompleted ? (
           <Badge variant="success">Setup selesai · metode {setting.defaultCostingMethod.toUpperCase()}</Badge>
         ) : (
-          <Badge variant="warning">Setup belum selesai</Badge>
+          <Badge variant="warning">{t("Setup belum selesai")}</Badge>
         )}
       </div>
 
@@ -330,7 +333,7 @@ export default function InventorySetupPage() {
                   <p className="font-medium text-foreground">{g.short}</p>
                   <p>{g.example}</p>
                   <p>
-                    <span className="font-medium text-foreground">Cocok untuk: </span>
+                    <span className="font-medium text-foreground">{t("Cocok untuk:")} </span>
                     {g.bestFor}
                   </p>
                 </CardContent>
@@ -368,11 +371,11 @@ export default function InventorySetupPage() {
                 className="flex max-h-[420px] min-h-[280px] flex-col gap-3 overflow-y-auto rounded-lg border bg-muted/20 p-4"
                 role="log"
                 aria-live="polite"
-                aria-label="Riwayat chat setup persediaan"
+                aria-label={t("Riwayat chat setup persediaan")}
               >
                 {startMut.isError && !session ? (
                   <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-sm">
-                    <p className="text-destructive">Gagal memulai sesi wawancara.</p>
+                    <p className="text-destructive">{t("Gagal memulai sesi wawancara.")}</p>
                     <Button type="button" variant="outline" size="sm" onClick={() => startMut.mutate()}>
                       Coba lagi
                     </Button>
@@ -445,10 +448,10 @@ export default function InventorySetupPage() {
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ceritakan produk & pola stok Anda…"
+                  placeholder={t("Ceritakan produk & pola stok Anda…")}
                   disabled={!session || sendMut.isPending || quotaExhausted || finishMut.isPending}
                   maxLength={2000}
-                  aria-label="Pesan ke AI setup persediaan"
+                  aria-label={t("Pesan ke AI setup persediaan")}
                 />
                 <Button type="submit" disabled={!canSend} size="icon" aria-label="Kirim">
                   <Send className="h-4 w-4" />
@@ -484,32 +487,32 @@ export default function InventorySetupPage() {
                   <Sparkles className="h-4 w-4 text-primary" />
                   Ringkasan otomatis
                 </CardTitle>
-                <CardDescription>Terisi saat Anda chat. Dipakai AI untuk rekomendasi HPP.</CardDescription>
+                <CardDescription>{t("Terisi saat Anda chat. Dipakai AI untuk rekomendasi HPP.")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">Jenis bisnis</span>
+                  <span className="text-muted-foreground">{t("Jenis bisnis")}</span>
                   <span className="text-right font-medium">
                     {draftLabel(BUSINESS_TYPE_LABELS, draft?.businessType ?? "")}
                   </span>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Produk & pola stok</p>
+                  <p className="text-muted-foreground">{t("Produk & pola stok")}</p>
                   <p className="mt-1 rounded-md border bg-muted/30 p-2 text-xs leading-relaxed">
                     {draft?.productDescription?.trim() || "—"}
                   </p>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">Kecepatan stok</span>
+                  <span className="text-muted-foreground">{t("Kecepatan stok")}</span>
                   <span>{draftLabel(STOCK_TURNOVER_LABELS, draft?.stockTurnover ?? "")}</span>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">Tren harga beli</span>
+                  <span className="text-muted-foreground">{t("Tren harga beli")}</span>
                   <span>{draftLabel(PRICE_TREND_LABELS, draft?.priceTrend ?? "")}</span>
                 </div>
                 {draft?.ownerNotes?.trim() ? (
                   <div>
-                    <p className="text-muted-foreground">Catatan</p>
+                    <p className="text-muted-foreground">{t("Catatan")}</p>
                     <p className="mt-1 text-xs">{draft.ownerNotes}</p>
                   </div>
                 ) : null}
@@ -525,7 +528,7 @@ export default function InventorySetupPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Kebijakan operasional</CardTitle>
+                <CardTitle className="text-base">{t("Kebijakan operasional")}</CardTitle>
                 <CardDescription>
                   Blokir stok minus & mode cashflow diatur di halaman pengaturan — tidak perlu diisi saat wawancara.
                 </CardDescription>
@@ -600,7 +603,7 @@ export default function InventorySetupPage() {
 
             <Card className="border-dashed">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">④ Aktifkan modul</CardTitle>
+                <CardTitle className="text-base">{t("④ Aktifkan modul")}</CardTitle>
                 <CardDescription>
                   Setelah gudang & saldo awal siap, aktifkan agar pesanan mulai memotong stok otomatis.
                 </CardDescription>

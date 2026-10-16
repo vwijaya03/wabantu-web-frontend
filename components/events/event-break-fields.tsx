@@ -2,6 +2,7 @@
 
 import { TimePicker } from "@/components/ui/time-picker";
 import { Label } from "@/components/ui/label";
+import { useLocale } from "@/lib/i18n/locale";
 
 export function EventBreakFields({
   enabled,
@@ -20,6 +21,8 @@ export function EventBreakFields({
   onBreakEndChange: (value: string) => void;
   disabled?: boolean;
 }) {
+  const { t } = useLocale();
+
   return (
     <div className="space-y-2 rounded-md border bg-muted/30 p-3">
       <label className="flex items-center gap-2 text-sm font-medium">
@@ -29,15 +32,17 @@ export function EventBreakFields({
           disabled={disabled}
           onChange={(e) => onEnabledChange(e.target.checked)}
         />
-        Ada jeda istirahat
+        {t("Ada jeda istirahat")}
       </label>
       <p className="text-xs text-muted-foreground">
-        Slot otomatis tidak dibuat di jam ini. Berlaku untuk semua terapi mode rentang jam (otomatis).
+        {t(
+          "Slot otomatis tidak dibuat di jam ini. Berlaku untuk semua terapi mode rentang jam (otomatis).",
+        )}
       </p>
       {enabled ? (
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <Label className="text-xs">Mulai jeda</Label>
+            <Label className="text-xs">{t("Mulai jeda")}</Label>
             <TimePicker
               disabled={disabled}
               value={breakStartTime}
@@ -45,7 +50,7 @@ export function EventBreakFields({
             />
           </div>
           <div>
-            <Label className="text-xs">Lanjut kegiatan</Label>
+            <Label className="text-xs">{t("Lanjut kegiatan")}</Label>
             <TimePicker
               disabled={disabled}
               value={breakEndTime}

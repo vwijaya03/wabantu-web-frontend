@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { UsageQuotaSummaryCard } from "@/components/dashboard/usage-quota-summary-card";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/auth-provider";
 import { hasTenantDashboardAccess } from "@/lib/api/auth";
@@ -38,8 +38,10 @@ import {
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function DashboardOverviewPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantKey = useTenantKey();
   const router = useRouter();
@@ -73,42 +75,41 @@ export default function DashboardOverviewPage() {
     enabled: tenantReady,
   });
 
-  if (!tenantDashboardAccess) {
-    return null;
-  }
-
   const kbTotal = kbList?.total ?? 0;
   const hasConnectedWhatsapp = channels.some((c) => c.status === "connected");
   const profileDone = isBusinessProfileCardComplete(businessProfile ?? null);
   const kbDone = kbTotal >= 5;
   const aiReady = profileDone && kbDone;
 
-  const setupSteps = [
-    {
-      key: "register",
-      label: "Buat akun bisnis",
-      done: true,
-      href: "#",
-    },
-    {
-      key: "wa",
-      label: "Sambungkan WhatsApp",
-      done: hasConnectedWhatsapp,
-      href: "/dashboard/whatsapp/onboarding",
-    },
-    {
-      key: "profile",
-      label: "Lengkapi info bisnis",
-      done: profileDone,
-      href: "/dashboard/ai-settings",
-    },
-    {
-      key: "kb",
-      label: "Isi minimal 5 FAQ",
-      done: kbDone,
-      href: "/dashboard/knowledge-base/setup",
-    },
-  ];
+  const setupSteps = useMemo(
+    () => [
+      {
+        key: "register",
+        label: t("Buat akun bisnis"),
+        done: true,
+        href: "#",
+      },
+      {
+        key: "wa",
+        label: t("Sambungkan WhatsApp"),
+        done: hasConnectedWhatsapp,
+        href: "/dashboard/whatsapp/onboarding",
+      },
+      {
+        key: "profile",
+        label: t("Lengkapi info bisnis"),
+        done: profileDone,
+        href: "/dashboard/ai-settings",
+      },
+      {
+        key: "kb",
+        label: t("Isi minimal 5 FAQ"),
+        done: kbDone,
+        href: "/dashboard/knowledge-base/setup",
+      },
+    ],
+    [t, hasConnectedWhatsapp, profileDone, kbDone],
+  );
 
   const windowDays = analytics?.windowDays ?? 30;
   const todayIn = analytics?.today?.inbound ?? 0;
@@ -123,38 +124,55 @@ export default function DashboardOverviewPage() {
     analytics?.overview?.avgFirstResponseSec ?? null,
   );
 
-  const stats = [
-    {
-      label: "Pesan masuk hari ini",
-      value: String(todayIn),
-      icon: Inbox,
-      hint: `Kalender · ${reportingTz}`,
-    },
-    {
-      label: "Dibalas AI",
-      value: String(todayAi),
-      icon: Bot,
-      hint: `${todayAiPct}% dari masuk hari ini`,
-    },
-    {
-      label: "Open rate",
-      value: openFmt.value,
-      icon: TrendingUp,
-      hint: openFmt.hint,
-    },
-    {
-      label: "Avg. respon",
-      value: avgFmt.value,
-      icon: MessageSquare,
-      hint: avgFmt.hint,
-    },
-  ];
+  const stats = useMemo(
+    () => [
+      {
+        label: t("Pesan masuk hari ini"),
+        value: String(todayIn),
+        icon: Inbox,
+        hint: t("Kalender · {tz}", { tz: reportingTz }),
+      },
+      {
+        label: t("Dibalas AI"),
+        value: String(todayAi),
+        icon: Bot,
+        hint: t("{pct}% dari masuk hari ini", { pct: todayAiPct }),
+      },
+      {
+        label: t("Open rate"),
+        value: openFmt.value,
+        icon: TrendingUp,
+        hint:
+          openFmt.hint === "Butuh data"
+            ? t("Butuh data")
+            : t("Pesan keluar terbaca ({windowDays} hari)", { windowDays }),
+      },
+      {
+        label: t("Avg. respon"),
+        value: avgFmt.value,
+        icon: MessageSquare,
+        hint:
+          avgFmt.hint === "Butuh data"
+            ? t("Butuh data")
+            : t("Rata-rata ke balasan pertama"),
+      },
+    ],
+    [t, todayIn, todayAi, todayAiPct, reportingTz, openFmt, avgFmt, windowDays],
+  );
+
+  if (!tenantDashboardAccess) {
+    return null;
+  }
 
   return (
     <>
       <PageHeader
-        title={`Halo, ${user?.name?.split(" ")[0] || "Owner"} 👋`}
-        description={`Berikut ringkasan ${user?.tenant?.name ?? "bisnis Anda"} hari ini.`}
+        title={t("Halo, {name} 👋", {
+          name: user?.name?.split(" ")[0] || t("Owner"),
+        })}
+        description={t("Berikut ringkasan {tenant} hari ini.", {
+          tenant: user?.tenant?.name ?? t("bisnis Anda"),
+        })}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -178,9 +196,9 @@ export default function DashboardOverviewPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Setup checklist</CardTitle>
+          <CardTitle>{t("Setup checklist")}</CardTitle>
           <CardDescription>
-            Selesaikan langkah berikut supaya AI siap balas pelanggan.
+            {t("Selesaikan langkah berikut supaya AI siap balas pelanggan.")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -201,11 +219,11 @@ export default function DashboardOverviewPage() {
                   <p className="text-sm font-medium">{step.label}</p>
                   {step.done ? (
                     <Badge variant="success" className="mt-1">
-                      Selesai
+                      {t("Selesai")}
                     </Badge>
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      Belum dikerjakan
+                      {t("Belum dikerjakan")}
                     </p>
                   )}
                 </div>
@@ -213,7 +231,7 @@ export default function DashboardOverviewPage() {
               {!step.done && (
                 <Button asChild size="sm" variant="outline">
                   <Link href={step.href}>
-                    Kerjakan
+                    {t("Kerjakan")}
                     <ArrowRight className="ml-1 h-4 w-4" />
                   </Link>
                 </Button>
@@ -228,20 +246,24 @@ export default function DashboardOverviewPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Plug className="h-4 w-4 text-primary" />
-              Status WhatsApp
+              {t("Status WhatsApp")}
             </CardTitle>
             <CardDescription>
-              Hubungkan nomor bisnis Anda untuk mulai menerima chat.
+              {t("Hubungkan nomor bisnis Anda untuk mulai menerima chat.")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <Badge variant={hasConnectedWhatsapp ? "success" : "outline"}>
-              {hasConnectedWhatsapp ? "Tersambung" : "Belum tersambung"}
+              {hasConnectedWhatsapp ? t("Tersambung") : t("Belum tersambung")}
             </Badge>
             <p className="text-sm text-muted-foreground">
               {hasConnectedWhatsapp
-                ? "Nomor bisnis Anda sudah aktif dan siap menerima chat masuk."
-                : "Hubungkan nomor bisnis Anda untuk mulai menerima chat masuk."}
+                ? t(
+                    "Nomor bisnis Anda sudah aktif dan siap menerima chat masuk.",
+                  )
+                : t(
+                    "Hubungkan nomor bisnis Anda untuk mulai menerima chat masuk.",
+                  )}
             </p>
             <Button
               asChild
@@ -255,7 +277,9 @@ export default function DashboardOverviewPage() {
                     : "/dashboard/whatsapp/onboarding"
                 }
               >
-                {hasConnectedWhatsapp ? "Kelola koneksi" : "Connect sekarang"}
+                {hasConnectedWhatsapp
+                  ? t("Kelola koneksi")
+                  : t("Connect sekarang")}
               </Link>
             </Button>
           </CardContent>
@@ -264,20 +288,20 @@ export default function DashboardOverviewPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bot className="h-4 w-4 text-primary" />
-              AI status
+              {t("AI status")}
             </CardTitle>
             <CardDescription>
-              AI akan aktif setelah info bisnis & FAQ minimal terisi.
+              {t("AI akan aktif setelah info bisnis & FAQ minimal terisi.")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <Badge variant={aiReady ? "success" : "warning"}>
-              {aiReady ? "Siap membalas" : "Menunggu konfigurasi"}
+              {aiReady ? t("Siap membalas") : t("Menunggu konfigurasi")}
             </Badge>
             <p className="text-sm text-muted-foreground">
               {aiReady
-                ? "Info bisnis dan FAQ sudah memenuhi minimum."
-                : "Lengkapi profil bisnis dan minimal 5 entri FAQ."}
+                ? t("Info bisnis dan FAQ sudah memenuhi minimum.")
+                : t("Lengkapi profil bisnis dan minimal 5 entri FAQ.")}
             </p>
             <Button asChild size="sm" variant="outline">
               <Link
@@ -287,7 +311,7 @@ export default function DashboardOverviewPage() {
                     : "/dashboard/ai-settings"
                 }
               >
-                {profileDone ? "Kelola FAQ" : "Lengkapi profil"}
+                {profileDone ? t("Kelola FAQ") : t("Lengkapi profil")}
               </Link>
             </Button>
           </CardContent>

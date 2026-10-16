@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ordersApi, type Order } from "@/lib/api/orders";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 function orderLabel(o: Order): string {
   const num = o.orderNumber || o.id.slice(0, 8);
@@ -23,6 +24,7 @@ export function OrderPicker({
   onChange: (o: Order | null) => void;
   placeholder?: string;
 }) {
+  const { t } = useLocale();
   const tenantKey = useTenantKey();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
@@ -51,7 +53,7 @@ export function OrderPicker({
     <div className="relative">
       <Input
         value={q}
-        placeholder={placeholder}
+        placeholder={t(placeholder)}
         onChange={(e) => { setQ(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
@@ -59,9 +61,9 @@ export function OrderPicker({
       {open && q.trim().length >= 1 ? (
         <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border bg-popover shadow-md">
           {isFetching ? (
-            <p className="px-3 py-2 text-sm text-muted-foreground">Mencari...</p>
+            <p className="px-3 py-2 text-sm text-muted-foreground">{t("Mencari...")}</p>
           ) : results.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-muted-foreground">Tidak ada pesanan cocok.</p>
+            <p className="px-3 py-2 text-sm text-muted-foreground">{t("Tidak ada pesanan cocok.")}</p>
           ) : (
             results.map((o) => (
               <button

@@ -23,10 +23,11 @@ import {
 import { toApiError } from "@/lib/api/client";
 import {
   IMPERSONATION_MODULE_OPTIONS,
-  accessStatusLabel,
 } from "@/lib/dashboard/impersonation-modules";
+import { translateAccessStatus } from "@/lib/dashboard/translate-impersonation-scope";
 import { useTenantImpersonation } from "@/hooks/use-tenant-impersonation";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 type AccessState = {
   status: TenantAccessRequest["status"] | "none";
@@ -40,6 +41,7 @@ export function TenantAccessActionButton({
   tenant: AdminTenant;
   accessState: AccessState;
 }) {
+  const { t } = useLocale();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [scope, setScope] = useState<AccessScope>("full");
@@ -56,7 +58,7 @@ export function TenantAccessActionButton({
         requestedModules: scope === "limited" ? modules : [],
       }),
     onSuccess: () => {
-      toast.success("Permintaan akses dikirim ke owner tenant");
+      toast.success(t("Permintaan akses dikirim ke owner tenant"));
       setDialogOpen(false);
       setReason("");
       setScope("full");
@@ -78,9 +80,9 @@ export function TenantAccessActionButton({
   if (accessState.status === "pending") {
     return (
       <div className="flex items-center gap-2">
-        <Badge variant="outline">{accessStatusLabel("pending")}</Badge>
+        <Badge variant="outline">{translateAccessStatus(t, "pending")}</Badge>
         <Button size="sm" variant="secondary" disabled>
-          Menunggu
+          {t("Menunggu")}
         </Button>
       </div>
     );
@@ -89,13 +91,13 @@ export function TenantAccessActionButton({
   if (accessState.canImpersonate) {
     return (
       <div className="flex items-center gap-2">
-        <Badge variant="default">{accessStatusLabel("approved")}</Badge>
+        <Badge variant="default">{translateAccessStatus(t, "approved")}</Badge>
         <Button
           size="sm"
           disabled={isBusy || !tenant.isActive}
           onClick={() => impersonateMut.mutate(tenant.id)}
         >
-          Pantau
+          {t("Pantau")}
         </Button>
       </div>
     );
@@ -110,7 +112,7 @@ export function TenantAccessActionButton({
               accessState.status === "rejected" ? "destructive" : "secondary"
             }
           >
-            {accessStatusLabel(accessState.status)}
+            {translateAccessStatus(t, accessState.status)}
           </Badge>
         ) : null}
         <Button
@@ -119,35 +121,37 @@ export function TenantAccessActionButton({
           disabled={!tenant.isActive}
           onClick={() => setDialogOpen(true)}
         >
-          Minta Akses
+          {t("Minta Akses")}
         </Button>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Minta akses ke {tenant.companyName}</DialogTitle>
+            <DialogTitle>
+              {t("Minta akses ke {name}", { name: tenant.companyName })}
+            </DialogTitle>
             <DialogDescription>
-              Owner tenant akan menerima notifikasi dan dapat menyetujui atau
-              menolak permintaan Anda. Tanpa persetujuan, mode Pantau tidak
-              tersedia.
+              {t(
+                "Owner tenant akan menerima notifikasi dan dapat menyetujui atau menolak permintaan Anda. Tanpa persetujuan, mode Pantau tidak tersedia.",
+              )}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor={`reason-${tenant.id}`}>Alasan permintaan</Label>
+              <Label htmlFor={`reason-${tenant.id}`}>{t("Alasan permintaan")}</Label>
               <Textarea
                 id={`reason-${tenant.id}`}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
-                placeholder="Contoh: investigasi tiket support #1234"
+                placeholder={t("Contoh: investigasi tiket support #1234")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Cakupan yang diminta</Label>
+              <Label>{t("Cakupan yang diminta")}</Label>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
@@ -155,7 +159,7 @@ export function TenantAccessActionButton({
                   variant={scope === "full" ? "default" : "outline"}
                   onClick={() => setScope("full")}
                 >
-                  Akses penuh
+                  {t("Akses penuh")}
                 </Button>
                 <Button
                   type="button"
@@ -163,14 +167,14 @@ export function TenantAccessActionButton({
                   variant={scope === "limited" ? "default" : "outline"}
                   onClick={() => setScope("limited")}
                 >
-                  Modul tertentu
+                  {t("Modul tertentu")}
                 </Button>
               </div>
             </div>
 
             {scope === "limited" ? (
               <div className="space-y-2 rounded-md border p-3">
-                <Label>Modul</Label>
+                <Label>{t("Modul")}</Label>
                 <ul className="space-y-2">
                   {IMPERSONATION_MODULE_OPTIONS.map((opt) => (
                     <li key={opt.id} className="flex items-start gap-2 text-sm">
@@ -182,7 +186,7 @@ export function TenantAccessActionButton({
                         onChange={() => toggleModule(opt.id)}
                       />
                       <label htmlFor={`req-mod-${tenant.id}-${opt.id}`}>
-                        {opt.label}
+                        {t(opt.label)}
                       </label>
                     </li>
                   ))}
@@ -193,7 +197,7 @@ export function TenantAccessActionButton({
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button
               disabled={
@@ -203,7 +207,7 @@ export function TenantAccessActionButton({
               }
               onClick={() => requestMut.mutate()}
             >
-              {requestMut.isPending ? "Mengirim…" : "Kirim permintaan"}
+              {requestMut.isPending ? t("Mengirim…") : t("Kirim permintaan")}
             </Button>
           </DialogFooter>
         </DialogContent>

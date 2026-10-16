@@ -22,6 +22,7 @@ import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 const MAX_BATCH = 100;
 
@@ -37,6 +38,7 @@ type ReviewOrder = {
 };
 
 export function BulkSalesReturnPanel({ embedded = false }: { embedded?: boolean }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const [step, setStep] = useState<"select" | "review">("select");
@@ -89,13 +91,13 @@ export function BulkSalesReturnPanel({ embedded = false }: { embedded?: boolean 
     },
     onSuccess: (loaded) => {
       if (loaded.length === 0) {
-        toast.error("Tidak ada baris yang bisa diretur pada pesanan terpilih");
+        toast.error(t("Tidak ada baris yang bisa diretur pada pesanan terpilih"));
         return;
       }
       setReviewOrders(loaded);
       setStep("review");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const batchMut = useMutation({
@@ -127,7 +129,7 @@ export function BulkSalesReturnPanel({ embedded = false }: { embedded?: boolean 
       setSelected(new Set());
       setReviewOrders([]);
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const setLineQty = (orderId: string, catalogItemId: string, qty: string) => {
@@ -163,7 +165,7 @@ export function BulkSalesReturnPanel({ embedded = false }: { embedded?: boolean 
     return wrap(
       "Review Retur Massal",
       <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">Isi qty retur per produk. Kosongkan baris yang tidak diretur.</p>
+        <p className="text-sm text-muted-foreground">{t("Isi qty retur per produk. Kosongkan baris yang tidak diretur.")}</p>
           {reviewOrders.map((o) => (
             <div key={o.orderId} className="rounded-lg border p-3 space-y-2">
               <p className="font-medium">{formatOrderNumber(o.orderId)}</p>
@@ -196,7 +198,7 @@ export function BulkSalesReturnPanel({ embedded = false }: { embedded?: boolean 
           </div>
           {batchResult ? (
             <BulkActionResultPanel
-              title="Hasil retur massal"
+              title={t("Hasil retur massal")}
               processed={batchResult.processed}
               failed={batchResult.failed}
               results={resultLines}
@@ -214,7 +216,7 @@ export function BulkSalesReturnPanel({ embedded = false }: { embedded?: boolean 
       </p>
         <div className="flex flex-wrap items-center gap-2">
           <Input
-            placeholder="Cari pesanan / pelanggan..."
+            placeholder={t("Cari pesanan / pelanggan...")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { setSearchQ(q); setPage(1); } }}
@@ -252,18 +254,18 @@ export function BulkSalesReturnPanel({ embedded = false }: { embedded?: boolean 
                       return next;
                     });
                   }}
-                  aria-label="Pilih semua di halaman ini"
+                  aria-label={t("Pilih semua di halaman ini")}
                 />
               </InventoryTableHead>
-              <InventoryTableHead>Pesanan</InventoryTableHead>
-              <InventoryTableHead>Pelanggan</InventoryTableHead>
+              <InventoryTableHead>{t("Pesanan")}</InventoryTableHead>
+              <InventoryTableHead>{t("Pelanggan")}</InventoryTableHead>
             </InventoryTableRow>
           </InventoryTableHeader>
           <InventoryTableBody>
             {isLoading ? (
-              <InventoryTableEmpty colSpan={3}>Memuat...</InventoryTableEmpty>
+              <InventoryTableEmpty colSpan={3}>{t("Memuat...")}</InventoryTableEmpty>
             ) : orders.length === 0 ? (
-              <InventoryTableEmpty colSpan={3}>Tidak ada pesanan eligible.</InventoryTableEmpty>
+              <InventoryTableEmpty colSpan={3}>{t("Tidak ada pesanan eligible.")}</InventoryTableEmpty>
             ) : (
               orders.map((o) => (
                 <InventoryTableRow key={o.id}>

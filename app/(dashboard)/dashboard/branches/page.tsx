@@ -12,8 +12,10 @@ import { usePlan } from "@/hooks/use-plan";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function BranchesPage() {
+  const { t } = useLocale();
   const { hasMultiBranch } = usePlan();
   const tenantReady = useTenantQueryEnabled();
   const qc = useQueryClient();
@@ -22,22 +24,22 @@ export default function BranchesPage() {
   const { data, isLoading } = useQuery({ queryKey: ["branches"], queryFn: () => branchesApi.list(), enabled: tenantReady && hasMultiBranch });
   const createMut = useMutation({
     mutationFn: () => branchesApi.create({ name, slug }),
-    onSuccess: () => { toast.success("Cabang dibuat"); setName(""); setSlug(""); void qc.invalidateQueries({ queryKey: ["branches"] }); },
+    onSuccess: () => { toast.success(t("Cabang dibuat")); setName(""); setSlug(""); void qc.invalidateQueries({ queryKey: ["branches"] }); },
     onError: (e) => toast.error(toApiError(e).message),
   });
   return (
-    <RequireTenantDashboard title="Multi Cabang">
+    <RequireTenantDashboard title={t("Multi Cabang")}>
   {!hasMultiBranch ? (
-    <PageHeader title="Multi Cabang" description="Tersedia di paket Pro." />
+    <PageHeader title={t("Multi Cabang")} description={t("Tersedia di paket Pro.")} />
   ) : (
     <>
-      <PageHeader title="Multi Cabang" description="Nomor WA dan tim per cabang." />
+      <PageHeader title={t("Multi Cabang")} description={t("Nomor WA dan tim per cabang.")} />
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card><CardHeader><CardTitle>Tambah cabang</CardTitle></CardHeader>
+        <Card><CardHeader><CardTitle>{t("Tambah cabang")}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div><Label>Nama</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
             <div><Label>Slug</Label><Input value={slug} onChange={(e) => setSlug(e.target.value)} /></div>
-            <Button onClick={() => createMut.mutate()} disabled={!name || !slug}>Simpan</Button>
+            <Button onClick={() => createMut.mutate()} disabled={!name || !slug}>{t("Simpan")}</Button>
           </CardContent>
         </Card>
         <Card><CardHeader><CardTitle>Cabang</CardTitle></CardHeader>

@@ -15,6 +15,7 @@ import {
   InventoryTableRow,
 } from "@/components/inventory/inventory-table";
 import { formatStockQty, type BackfillOrdersResult } from "@/lib/api/inventory";
+import { useLocale } from "@/lib/i18n/locale";
 
 type Issue = NonNullable<BackfillOrdersResult["issues"]>[number];
 type Suggested = NonNullable<BackfillOrdersResult["suggestedOpening"]>[number];
@@ -52,6 +53,7 @@ export function BackfillResultPanel({
   result: BackfillOrdersResult;
   mode: "preview" | "execute";
 }) {
+  const { t } = useLocale();
   const blocked = insufficientCount(result);
   const sufficient = result.sufficientOrders ?? Math.max(0, result.pendingOrders - blocked);
   const issueTotal = result.issueCount ?? result.issues?.length ?? 0;
@@ -76,7 +78,7 @@ export function BackfillResultPanel({
       {result.issuesTruncated ? (
         <p className="rounded-md border border-amber-300 bg-amber-100/80 px-3 py-2 text-amber-950">
           Detail pesanan dibatasi {issues.length} dari {issueTotal.toLocaleString("id-ID")} baris.
-          Tabel <strong>saldo awal disarankan</strong> di bawah sudah merangkum semua kekurangan — fokus perbaiki stok dari situ.
+          Tabel <strong>{t("saldo awal disarankan")}</strong> di bawah sudah merangkum semua kekurangan — fokus perbaiki stok dari situ.
         </p>
       ) : null}
 
@@ -118,23 +120,24 @@ function BackfillSummaryStats({
   processed?: number;
   failed?: number;
 }) {
+  const { t } = useLocale();
   if (mode === "execute") {
     return (
       <div className="grid gap-2 sm:grid-cols-3">
         <StatCard label="Berhasil" value={processed ?? 0} tone="ok" />
         <StatCard label="Gagal" value={failed ?? 0} tone={failed ? "warn" : "muted"} />
-        <StatCard label="Stok kurang" value={blocked} tone={blocked ? "warn" : "muted"} />
+        <StatCard label={t("Stok kurang")} value={blocked} tone={blocked ? "warn" : "muted"} />
       </div>
     );
   }
 
   return (
     <div>
-      <p className="font-medium text-amber-950">Ringkasan preview</p>
+      <p className="font-medium text-amber-950">{t("Ringkasan preview")}</p>
       <div className="mt-2 grid gap-2 sm:grid-cols-3">
-        <StatCard label="Akan diproses" value={pending} />
-        <StatCard label="Stok cukup" value={sufficient} tone="ok" />
-        <StatCard label="Stok kurang" value={blocked} tone={blocked ? "warn" : "muted"} />
+        <StatCard label={t("Akan diproses")} value={pending} />
+        <StatCard label={t("Stok cukup")} value={sufficient} tone="ok" />
+        <StatCard label={t("Stok kurang")} value={blocked} tone={blocked ? "warn" : "muted"} />
       </div>
     </div>
   );
@@ -169,6 +172,7 @@ function StatCard({
 }
 
 function SuggestedOpeningSection({ items }: { items: Suggested[] }) {
+  const { t } = useLocale();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const slice = useMemo(() => {
@@ -180,14 +184,14 @@ function SuggestedOpeningSection({ items }: { items: Suggested[] }) {
     <div className="space-y-2 border-t border-amber-200 pt-3">
       <p className="font-medium text-amber-950">Saldo awal disarankan ({items.length.toLocaleString("id-ID")} baris)</p>
       <p className="text-amber-900">
-        Qty = <strong>total kekurangan</strong> semua pesanan per item+gudang. Isi di Operasi Stok → Saldo Awal, lalu ulangi backfill.
+        Qty = <strong>{t("total kekurangan")}</strong> semua pesanan per item+gudang. Isi di Operasi Stok → Saldo Awal, lalu ulangi backfill.
       </p>
       <InventoryTable>
         <InventoryTableHeader>
           <InventoryTableRow>
-            <InventoryTableHead>Item</InventoryTableHead>
-            <InventoryTableHead>Gudang</InventoryTableHead>
-            <InventoryTableHead align="right">Qty total</InventoryTableHead>
+            <InventoryTableHead>{t("Item")}</InventoryTableHead>
+            <InventoryTableHead>{t("Gudang")}</InventoryTableHead>
+            <InventoryTableHead align="right">{t("Qty total")}</InventoryTableHead>
           </InventoryTableRow>
         </InventoryTableHeader>
         <InventoryTableBody>
@@ -217,7 +221,7 @@ function SuggestedOpeningSection({ items }: { items: Suggested[] }) {
         />
       ) : null}
       <Button asChild size="sm" variant="outline">
-        <Link href="/dashboard/inventory/opening-balance">Buka Saldo Awal</Link>
+        <Link href="/dashboard/inventory/opening-balance">{t("Buka Saldo Awal")}</Link>
       </Button>
     </div>
   );
@@ -232,6 +236,7 @@ function IssuesSection({
   total: number;
   truncated: boolean;
 }) {
+  const { t } = useLocale();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [q, setQ] = useState("");
@@ -266,16 +271,16 @@ function IssuesSection({
             setQ(e.target.value);
             setPage(1);
           }}
-          placeholder="Cari nomor pesanan…"
+          placeholder={t("Cari nomor pesanan…")}
           className="max-w-sm bg-background"
         />
         <InventoryTable>
           <InventoryTableHeader>
             <InventoryTableRow>
-              <InventoryTableHead>Pesanan</InventoryTableHead>
-              <InventoryTableHead>Status</InventoryTableHead>
-              <InventoryTableHead align="right">Baris kurang</InventoryTableHead>
-              <InventoryTableHead align="right">Qty kurang</InventoryTableHead>
+              <InventoryTableHead>{t("Pesanan")}</InventoryTableHead>
+              <InventoryTableHead>{t("Status")}</InventoryTableHead>
+              <InventoryTableHead align="right">{t("Baris kurang")}</InventoryTableHead>
+              <InventoryTableHead align="right">{t("Qty kurang")}</InventoryTableHead>
               <InventoryTableHead className="w-[88px]" />
             </InventoryTableRow>
           </InventoryTableHeader>
@@ -294,7 +299,7 @@ function IssuesSection({
           </InventoryTableBody>
         </InventoryTable>
         {filtered.length === 0 ? (
-          <p className="text-muted-foreground">Tidak ada pesanan cocok dengan pencarian.</p>
+          <p className="text-muted-foreground">{t("Tidak ada pesanan cocok dengan pencarian.")}</p>
         ) : (
           <InventoryDataTablePagination
             page={page}
@@ -321,6 +326,7 @@ function IssueRow({
   open: boolean;
   onToggle: () => void;
 }) {
+  const { t } = useLocale();
   const lines = issue.shortages ?? [];
   return (
     <>
@@ -353,11 +359,11 @@ function IssueRow({
               <InventoryTable>
                 <InventoryTableHeader>
                   <InventoryTableRow>
-                    <InventoryTableHead>Item</InventoryTableHead>
-                    <InventoryTableHead>Gudang</InventoryTableHead>
-                    <InventoryTableHead align="right">Butuh</InventoryTableHead>
-                    <InventoryTableHead align="right">Tersedia</InventoryTableHead>
-                    <InventoryTableHead align="right">Kurang</InventoryTableHead>
+                    <InventoryTableHead>{t("Item")}</InventoryTableHead>
+                    <InventoryTableHead>{t("Gudang")}</InventoryTableHead>
+                    <InventoryTableHead align="right">{t("Butuh")}</InventoryTableHead>
+                    <InventoryTableHead align="right">{t("Tersedia")}</InventoryTableHead>
+                    <InventoryTableHead align="right">{t("Kurang")}</InventoryTableHead>
                   </InventoryTableRow>
                 </InventoryTableHeader>
                 <InventoryTableBody>

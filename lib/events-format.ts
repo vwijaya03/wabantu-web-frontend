@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
+import type { Locale } from "date-fns";
 
 import { parseDateValue } from "@/lib/date-format";
 
@@ -18,8 +19,16 @@ const ID_MONTHS = [
   "Desember",
 ];
 
+function isIndonesianDateFnsLocale(dateFnsLocale?: Locale): boolean {
+  if (!dateFnsLocale) return true;
+  return dateFnsLocale.code === idLocale.code;
+}
+
 /** ISO date → "1 Januari 1945" */
-export function formatEventDateId(value: string | null | undefined): string {
+export function formatEventDateId(
+  value: string | null | undefined,
+  dateFnsLocale?: Locale,
+): string {
   const raw = (value ?? "").trim();
   if (!raw) return "—";
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
@@ -28,14 +37,22 @@ export function formatEventDateId(value: string | null | undefined): string {
   const month = parseInt(m[2], 10);
   const year = parseInt(m[1], 10);
   if (month < 1 || month > 12) return raw;
+  if (!isIndonesianDateFnsLocale(dateFnsLocale)) {
+    const d = parseDateValue(raw);
+    if (d) return format(d, "d MMMM yyyy", { locale: dateFnsLocale });
+  }
   return `${day} ${ID_MONTHS[month - 1]} ${year}`;
 }
 
 /** ISO date → "Minggu, 12 Juli 2026" */
-export function formatEventDateIdWithWeekday(value: string | null | undefined): string {
+export function formatEventDateIdWithWeekday(
+  value: string | null | undefined,
+  dateFnsLocale?: Locale,
+): string {
   const d = parseDateValue((value ?? "").trim());
-  if (!d) return formatEventDateId(value);
-  return format(d, "EEEE, d MMMM yyyy", { locale: idLocale });
+  if (!d) return formatEventDateId(value, dateFnsLocale);
+  const locale = isIndonesianDateFnsLocale(dateFnsLocale) ? idLocale : dateFnsLocale!;
+  return format(d, "EEEE, d MMMM yyyy", { locale });
 }
 
 /**
@@ -47,13 +64,14 @@ export function formatEventDateTimeRange(
   startTime?: string | null,
   endDate?: string | null,
   endTime?: string | null,
+  dateFnsLocale?: Locale,
 ): string {
   const sd = (startDate ?? "").trim();
   const ed = (endDate ?? "").trim() || sd;
   const st = formatEventTimeHm(startTime);
   const et = formatEventTimeHm(endTime);
-  const startPart = formatEventDateId(sd);
-  const endPart = formatEventDateId(ed);
+  const startPart = formatEventDateId(sd, dateFnsLocale);
+  const endPart = formatEventDateId(ed, dateFnsLocale);
   if (startPart === "—") return "—";
   if (!st && !et) {
     if (sd === ed || !ed) return startPart;
@@ -81,13 +99,14 @@ export function formatPatientSlotLabel(
   slotDate?: string,
   startTime?: string,
   endTime?: string,
+  dateFnsLocale?: Locale,
 ): string {
   if (slotLabel?.trim()) {
     const iso = /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})(?::\d{2})?(?:\s*[–-]\s*(\d{2}:\d{2})(?::\d{2})?)?/.exec(
       slotLabel.trim(),
     );
     if (iso) {
-      return formatPatientSlotLabel(null, iso[1], iso[2], iso[3]);
+      return formatPatientSlotLabel(null, iso[1], iso[2], iso[3], dateFnsLocale);
     }
     if (!/^\d{4}-\d{2}-\d{2}/.test(slotLabel)) {
       return slotLabel;
@@ -97,7 +116,7 @@ export function formatPatientSlotLabel(
   if (!date) return slotLabel?.trim() || "—";
   const start = formatEventTimeHm(startTime);
   const end = formatEventTimeHm(endTime);
-  const datePart = formatEventDateId(date);
+  const datePart = formatEventDateId(date, dateFnsLocale);
   if (!start) return datePart;
   if (end && end !== start) return `${datePart} ${start}–${end}`;
   return `${datePart} ${start}`;
@@ -122,10 +141,12 @@ export function formatTimeSlotLine(
   therapyName?: string,
   booked?: number,
   capacity?: number,
+  dateFnsLocale?: Locale,
+  patientNoun = "pasien",
 ): string {
-  const when = formatPatientSlotLabel(null, slotDate, startTime, endTime);
+  const when = formatPatientSlotLabel(null, slotDate, startTime, endTime, dateFnsLocale);
   const therapy = therapyName ? ` (${therapyName})` : "";
   const cap =
-    booked != null && capacity != null ? ` · ${booked}/${capacity} pasien` : "";
+    booked != null && capacity != null ? ` · ${booked}/${capacity} ${patientNoun}` : "";
   return `${when}${therapy}${cap}`;
 }

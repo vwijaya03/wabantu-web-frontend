@@ -37,8 +37,10 @@ import {
   tenantAccessApi,
 } from "@/lib/api/tenant-access";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function AdminPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const { isAdmin } = useAdminSession();
   const searchParams = useSearchParams();
@@ -218,13 +220,13 @@ export default function AdminPage() {
   return (
     <>
       <PageHeader
-        title="Konsol Platform"
-        description="Internal WABantu — pantau tenant klien tanpa mendaftar toko."
+        title={t("Konsol Platform")}
+        description={t("Internal WABantu — pantau tenant klien tanpa mendaftar toko.")}
       />
       {needTenantHint && isPlatformOperatorHome(user) && (
         <Card className="mb-4 border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Pilih tenant untuk melanjutkan</CardTitle>
+            <CardTitle className="text-base">{t("Pilih tenant untuk melanjutkan")}</CardTitle>
             <CardDescription>
               Menu Workflow, Cabang, Inbox, dan fitur operasional lain membutuhkan
               konteks tenant. Minta akses lalu klik <strong>Pantau</strong> setelah
@@ -235,16 +237,16 @@ export default function AdminPage() {
       )}
       <div className="mb-4 flex flex-wrap gap-2">
         <Button variant="outline" asChild>
-          <Link href="/dashboard/admin/ai-activity">Log aktivitas AI →</Link>
+          <Link href="/dashboard/admin/ai-activity">{t("Log aktivitas AI →")}</Link>
         </Button>
         <Button variant="outline" asChild>
-          <Link href="/dashboard/admin/ai-triage">AI Triage →</Link>
+          <Link href="/dashboard/admin/ai-triage">{t("AI Triage →")}</Link>
         </Button>
         <Button variant="outline" asChild>
-          <Link href="/dashboard/admin/ai-retrieval">AI Retrieval (RAG) →</Link>
+          <Link href="/dashboard/admin/ai-retrieval">{t("AI Retrieval (RAG) →")}</Link>
         </Button>
         <Button variant="outline" asChild>
-          <Link href="/dashboard/admin/ai-regression">AI Regression →</Link>
+          <Link href="/dashboard/admin/ai-regression">{t("AI Regression →")}</Link>
         </Button>
         <Button
           variant="secondary"
@@ -281,7 +283,7 @@ export default function AdminPage() {
       {trackedJobId && migrateJobQuery.data ? (
         <Card className="mb-4 border-primary/30">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Progress migrasi schema</CardTitle>
+            <CardTitle className="text-base">{t("Progress migrasi schema")}</CardTitle>
             <CardDescription>
               Job {migrateJobQuery.data.jobId.slice(0, 8)}… — patch v
               {migrateJobQuery.data.patchVersion}
@@ -327,10 +329,10 @@ export default function AdminPage() {
       {migrateErrors.length > 0 ? (
         <Card className="mb-4 border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Migrasi schema gagal sebagian</CardTitle>
+            <CardTitle className="text-base">{t("Migrasi schema gagal sebagian")}</CardTitle>
             <CardDescription>
               Di Encore Cloud, jalankan dulu{" "}
-              <code className="text-xs">./scripts/apply-inventory-schema-cloud.sh staging</code>{" "}
+              <code className="text-xs">{t("./scripts/apply-inventory-schema-cloud.sh staging")}</code>{" "}
               dari folder api-go (role admin DB), lalu klik Migrasi schema tenant lagi.
             </CardDescription>
           </CardHeader>
@@ -346,7 +348,7 @@ export default function AdminPage() {
       {isPlatformOperatorHome(user) && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Akun operator internal</CardTitle>
+            <CardTitle className="text-base">{t("Akun operator internal")}</CardTitle>
             <CardDescription>
               Anda login tanpa tenant bisnis. Minta akses ke tenant di bawah; setelah
               disetujui owner, klik Pantau untuk memantau inbox, katalog, dan pengaturan
@@ -381,7 +383,7 @@ export default function AdminPage() {
                   setSearch(q.trim());
                 }
               }}
-              placeholder="Cari nama tenant, email owner, atau schema..."
+              placeholder={t("Cari nama tenant, email owner, atau schema...")}
             />
             <Button
               variant="outline"
@@ -526,9 +528,9 @@ export default function AdminPage() {
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Hapus tenant permanen?</DialogTitle>
+            <DialogTitle>{t("Hapus tenant permanen?")}</DialogTitle>
             <DialogDescription>
-              Aksi ini akan menjalankan <code>DROP SCHEMA CASCADE</code> untuk tenant{" "}
+              Aksi ini akan menjalankan <code>{t("DROP SCHEMA CASCADE")}</code> untuk tenant{" "}
               <strong>{deleteTarget?.companyName}</strong>. Semua data inbox, katalog,
               billing tenant, finance, dan konfigurasi di schema tersebut akan hilang.
             </DialogDescription>

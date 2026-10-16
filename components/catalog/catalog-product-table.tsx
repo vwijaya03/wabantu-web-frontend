@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/lib/i18n/locale";
 import { Copy, MoreHorizontal, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ export function CatalogProductTable({
   onToggleActive,
   onDelete,
 }: CatalogProductTableProps) {
+  const { t } = useLocale();
   return (
     <TooltipProvider>
       <div className="hidden lg:block">
@@ -60,15 +62,15 @@ export function CatalogProductTable({
                   checked={allVisibleSelected}
                   onChange={onToggleSelectAll}
                   disabled={!canManage}
-                  aria-label="Pilih semua produk di halaman ini"
+                  aria-label={t("Pilih semua produk di halaman ini")}
                 />
               </TableHead>
-              <TableHead className="w-[32%]">Produk</TableHead>
-              <TableHead className="w-[18%]">SKU</TableHead>
-              <TableHead className="w-[14%]">Barcode</TableHead>
-              <TableHead className="w-[14%]">Harga</TableHead>
-              <TableHead className="w-[10%]">Status</TableHead>
-              <TableHead className="w-12 text-right">Aksi</TableHead>
+              <TableHead className="w-[32%]">{t("Produk")}</TableHead>
+              <TableHead className="w-[18%]">{t("SKU")}</TableHead>
+              <TableHead className="w-[14%]">{t("Barcode")}</TableHead>
+              <TableHead className="w-[14%]">{t("Harga")}</TableHead>
+              <TableHead className="w-[10%]">{t("Status")}</TableHead>
+              <TableHead className="w-12 text-right">{t("Aksi")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -80,7 +82,7 @@ export function CatalogProductTable({
                     checked={selectedIds.has(item.id)}
                     onChange={() => onToggleSelect(item.id)}
                     disabled={!canManage}
-                    aria-label={`Pilih produk ${item.name}`}
+                    aria-label={t("Pilih produk {name}", { name: item.name })}
                   />
                 </TableCell>
                 <TableCell className="min-w-0">
@@ -105,7 +107,7 @@ export function CatalogProductTable({
                 </TableCell>
                 <TableCell>
                   <Badge variant={item.isActive ? "success" : "destructive"}>
-                    {item.isActive ? "Aktif" : "Nonaktif"}
+                    {item.isActive ? t("Aktif") : t("Nonaktif")}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -134,17 +136,17 @@ export function CatalogProductTable({
                 checked={selectedIds.has(item.id)}
                 onChange={() => onToggleSelect(item.id)}
                 disabled={!canManage}
-                aria-label={`Pilih produk ${item.name}`}
+                aria-label={t("Pilih produk {name}", { name: item.name })}
               />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="font-medium">{item.name}</p>
                   <Badge variant={item.isActive ? "success" : "destructive"} className="shrink-0">
-                    {item.isActive ? "Aktif" : "Nonaktif"}
+                    {item.isActive ? t("Aktif") : t("Nonaktif")}
                   </Badge>
                 </div>
                 <p className="mt-1 font-mono text-xs text-muted-foreground">{item.externalCode}</p>
-                {item.barcode ? <p className="text-xs text-muted-foreground">Barcode: {item.barcode}</p> : null}
+                {item.barcode ? <p className="text-xs text-muted-foreground">{t("Barcode")}: {item.barcode}</p> : null}
                 <p className="mt-1 text-sm">
                   {item.sellPrice != null ? formatRupiah(item.sellPrice) : "—"}
                   {item.sellUnit ? <span className="text-muted-foreground"> / {item.sellUnit}</span> : null}
@@ -196,39 +198,40 @@ function ProductRowActions({
   onToggleActive: (item: CatalogItem) => void;
   onDelete: (item: CatalogItem) => void;
 }) {
+  const { t } = useLocale();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!canManage} aria-label="Aksi produk">
+        <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!canManage} aria-label={t("Aksi produk")}>
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => onEdit(item)}>
           <Pencil className="mr-2 h-4 w-4" />
-          Edit
+          {t("Edit")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onDuplicate(item)}>
           <Copy className="mr-2 h-4 w-4" />
-          Duplikat
+          {t("Duplikat")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onToggleActive(item)}>
           {item.isActive ? (
             <>
               <PowerOff className="mr-2 h-4 w-4" />
-              Nonaktifkan
+              {t("Nonaktifkan")}
             </>
           ) : (
             <>
               <Power className="mr-2 h-4 w-4" />
-              Aktifkan
+              {t("Aktifkan")}
             </>
           )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDelete(item)}>
           <Trash2 className="mr-2 h-4 w-4" />
-          Hapus
+          {t("Hapus")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

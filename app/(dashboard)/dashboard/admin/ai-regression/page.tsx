@@ -19,6 +19,7 @@ import {
 } from "@/lib/api/ai-regression";
 import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale";
 
 function formatMs(ms: number): string {
   if (ms < 1000) return `${ms} ms`;
@@ -26,17 +27,19 @@ function formatMs(ms: number): string {
 }
 
 function SuiteStatusBadge({ passed, skipped }: { passed: boolean; skipped?: boolean }) {
+  const { t } = useLocale();
   if (skipped) {
-    return <Badge variant="outline">Dilewati</Badge>;
+    return <Badge variant="outline">{t("Dilewati")}</Badge>;
   }
   return passed ? (
-    <Badge className="bg-emerald-600 hover:bg-emerald-600">Lulus</Badge>
+    <Badge className="bg-emerald-600 hover:bg-emerald-600">{t("Lulus")}</Badge>
   ) : (
-    <Badge variant="destructive">Gagal</Badge>
+    <Badge variant="destructive">{t("Gagal")}</Badge>
   );
 }
 
 function BuyerflowSuiteCard({ suite }: { suite: AIRegressionSuiteDetail }) {
+  const { t } = useLocale();
   const failed = suite.cases.filter((c) => !c.passed);
   return (
     <Card className={cn(!suite.skipped && !suite.passed && "border-destructive/50")}>
@@ -52,8 +55,8 @@ function BuyerflowSuiteCard({ suite }: { suite: AIRegressionSuiteDetail }) {
           <CardDescription>{suite.skipReason}</CardDescription>
         ) : (
           <CardDescription>
-            {suite.cases.length} skenario
-            {failed.length > 0 ? ` · ${failed.length} gagal` : ""}
+            {t("{count} skenario", { count: suite.cases.length })}
+            {failed.length > 0 ? t(" · {count} gagal", { count: failed.length }) : ""}
           </CardDescription>
         )}
       </CardHeader>
@@ -72,6 +75,7 @@ function BuyerflowSuiteCard({ suite }: { suite: AIRegressionSuiteDetail }) {
 }
 
 function ResultsPanel({ result }: { result: RunAIRegressionResponse }) {
+  const { t } = useLocale();
   return (
     <div className="space-y-6">
       <Card className={cn(result.passed ? "border-emerald-500/40" : "border-destructive/50")}>
@@ -117,7 +121,7 @@ function ResultsPanel({ result }: { result: RunAIRegressionResponse }) {
       </Card>
 
       <div>
-        <h2 className="mb-3 text-lg font-semibold">Detail buyerflow</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t("Detail buyerflow")}</h2>
         <div className="grid gap-3">
           {result.buyerflow.suites.map((suite) => (
             <BuyerflowSuiteCard key={suite.name} suite={suite} />
@@ -129,6 +133,7 @@ function ResultsPanel({ result }: { result: RunAIRegressionResponse }) {
 }
 
 export default function AIRegressionPage() {
+  const { t } = useLocale();
   const { isAdmin } = useAdminSession();
   const [lastResult, setLastResult] = useState<RunAIRegressionResponse | null>(null);
 
@@ -137,9 +142,9 @@ export default function AIRegressionPage() {
     onSuccess: (data) => {
       setLastResult(data);
       if (data.passed) {
-        toast.success("Regression AI lulus");
+        toast.success(t("Regression AI lulus"));
       } else {
-        toast.error("Regression AI ada yang gagal");
+        toast.error(t("Regression AI ada yang gagal"));
       }
     },
     onError: (err) => toast.error(toApiError(err).message),
@@ -152,13 +157,13 @@ export default function AIRegressionPage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader
-        title="AI Regression"
-        description="Jalankan suite yang sama dengan scripts/run-ai-regression-tests.sh — buyerflow golden, retrieval smoke, dan apiregistry structural."
+        title={t("AI Regression")}
+        description={t("Jalankan suite yang sama dengan scripts/run-ai-regression-tests.sh — buyerflow golden, retrieval smoke, dan apiregistry structural.")}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Golden regression</CardTitle>
+          <CardTitle>{t("Golden regression")}</CardTitle>
           <CardDescription>
             Pure Go, tanpa Postgres. Mencakup 13+ skenario acceptance Omah Apparel (catalog, shipping, order, FAQ)
             plus autogen triage. Setara CI job <code className="text-xs">regression-fast</code>.
@@ -179,7 +184,7 @@ export default function AIRegressionPage() {
             )}
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/dashboard/admin">← Konsol platform</Link>
+            <Link href="/dashboard/admin">{t("← Konsol platform")}</Link>
           </Button>
         </CardContent>
       </Card>

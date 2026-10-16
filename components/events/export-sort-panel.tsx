@@ -3,6 +3,7 @@
 import { Label } from "@/components/ui/label";
 import { ListSortControl } from "@/components/events/list-sort-control";
 import type { ListSortState, SortOption } from "@/lib/events-sort";
+import { useLocale } from "@/lib/i18n/locale";
 
 export function ExportSortPanel({
   options,
@@ -21,11 +22,12 @@ export function ExportSortPanel({
   onSyncWithTableChange: (sync: boolean) => void;
   className?: string;
 }) {
+  const { t } = useLocale();
   const active = syncWithTable ? tableSort : exportSort;
 
   return (
     <div className={className}>
-      <p className="mb-2 text-xs font-medium text-muted-foreground">Urutan baris export</p>
+      <p className="mb-2 text-xs font-medium text-muted-foreground">{t("Urutan baris export")}</p>
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <ListSortControl
           options={options}
@@ -49,13 +51,15 @@ export function ExportSortPanel({
             onChange={(e) => onSyncWithTableChange(e.target.checked)}
           />
           <Label htmlFor="export-sync-table-sort" className="text-xs font-normal">
-            Samakan dengan urutan tabel
+            {t("Samakan dengan urutan tabel")}
           </Label>
         </div>
       </div>
       {!syncWithTable ? (
         <p className="mt-1 text-[11px] text-muted-foreground">
-          Export mengurutkan semua baris hasil filter (maks. 2.500), bukan hanya halaman tabel.
+          {t(
+            "Export mengurutkan semua baris hasil filter (maks. 2.500), bukan hanya halaman tabel.",
+          )}
         </p>
       ) : null}
     </div>

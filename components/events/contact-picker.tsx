@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { contactsApi, type Contact } from "@/lib/api/contacts";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
-import { formatEventDateId } from "@/lib/events-format";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale";
+import { useEventDateFormat } from "@/components/events/events-i18n";
 
 export function ContactPicker({
   value,
@@ -21,6 +22,8 @@ export function ContactPicker({
   onSelect: (contact: Contact | null) => void;
   disabled?: boolean;
 }) {
+  const { t } = useLocale();
+  const { formatEventDateId } = useEventDateFormat();
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const tenantKey = useTenantKey();
@@ -36,10 +39,10 @@ export function ContactPicker({
 
   return (
     <div className="space-y-2">
-      <Label>Dari kontak (opsional)</Label>
+      <Label>{t("Dari kontak (opsional)")}</Label>
       <div className="flex gap-2">
         <Input
-          placeholder="Cari nama atau nomor..."
+          placeholder={t("Cari nama atau nomor...")}
           value={q}
           disabled={disabled}
           onChange={(e) => setQ(e.target.value)}
@@ -56,18 +59,18 @@ export function ContactPicker({
       </div>
       {value ? (
         <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2 text-sm">
-          <span>Kontak dipilih</span>
+          <span>{t("Kontak dipilih")}</span>
           <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => onSelect(null)}>
-            Hapus pilihan
+            {t("Hapus pilihan")}
           </Button>
         </div>
       ) : null}
       {search && (
         <ul className="max-h-40 overflow-y-auto rounded-md border">
           {isLoading ? (
-            <li className="px-3 py-2 text-sm text-muted-foreground">Memuat...</li>
+            <li className="px-3 py-2 text-sm text-muted-foreground">{t("Memuat...")}</li>
           ) : items.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-muted-foreground">Tidak ada kontak.</li>
+            <li className="px-3 py-2 text-sm text-muted-foreground">{t("Tidak ada kontak.")}</li>
           ) : (
             items.map((c) => (
               <li key={c.id}>
@@ -96,7 +99,7 @@ export function ContactPicker({
         </ul>
       )}
       <p className="text-xs text-muted-foreground">
-        Tanggal lahir diambil dari kontak jika sudah diisi di menu Contacts.
+        {t("Tanggal lahir diambil dari kontak jika sudah diisi di menu Contacts.")}
       </p>
     </div>
   );
