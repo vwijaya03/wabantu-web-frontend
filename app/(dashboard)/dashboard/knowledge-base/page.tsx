@@ -88,9 +88,9 @@ export default function KnowledgeBasePage() {
         <CardContent className="p-5 text-sm">
           <p className="font-medium">{t("Verifikasi bukti transfer (AI)")}</p>
           <p className="mt-1 text-muted-foreground">
-            Agar bukti transfer bisa diverifikasi AI secara otomatis, tambahkan FAQ berisi nomor
-            rekening dan atas nama penerima pembayaran (kategori mis. &quot;payment&quot; atau
-            &quot;rekening&quot;).
+            {t(
+              "Agar bukti transfer bisa diverifikasi AI secara otomatis, tambahkan FAQ berisi nomor rekening dan atas nama penerima pembayaran (kategori mis. \"payment\" atau \"rekening\").",
+            )}
           </p>
           <Button asChild variant="link" className="mt-2 h-auto p-0">
             <Link href="/dashboard/ai-settings">{t("Atur mode verifikasi di AI Settings")}</Link>
@@ -103,8 +103,9 @@ export default function KnowledgeBasePage() {
           <div className="space-y-1">
             <p className="font-medium">{t("Baru di WABantu?")}</p>
             <p className="text-sm text-muted-foreground">
-              Lewat chat singkat dengan AI, profil toko dan draft FAQ kebijakan bisa disusun otomatis —
-              Anda review dulu sebelum publish.
+              {t(
+                "Lewat chat singkat dengan AI, profil toko dan draft FAQ kebijakan bisa disusun otomatis — Anda review dulu sebelum publish.",
+              )}
             </p>
           </div>
           <Button asChild className="shrink-0">
@@ -117,17 +118,17 @@ export default function KnowledgeBasePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Plus className="h-4 w-4 text-primary" />
-            Tambah FAQ baru
+            {t("Tambah FAQ baru")}
           </CardTitle>
           <CardDescription>
-            Tulis pertanyaan & jawaban yang sering ditanyakan pelanggan.
+            {t("Tulis pertanyaan & jawaban yang sering ditanyakan pelanggan.")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="kb-q">Pertanyaan</Label>
+                <Label htmlFor="kb-q">{t("Pertanyaan")}</Label>
                 <Input
                   id="kb-q"
                   value={draft.question}
@@ -150,7 +151,7 @@ export default function KnowledgeBasePage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="kb-a">Jawaban</Label>
+              <Label htmlFor="kb-a">{t("Jawaban")}</Label>
               <Textarea
                 id="kb-a"
                 rows={3}
@@ -163,7 +164,7 @@ export default function KnowledgeBasePage() {
             </div>
             <div className="flex justify-end">
               <Button type="submit" disabled={createMut.isPending}>
-                {createMut.isPending ? "Menyimpan..." : "Tambah FAQ"}
+                {createMut.isPending ? t("Menyimpan...") : t("Tambah FAQ")}
               </Button>
             </div>
           </form>
@@ -174,7 +175,7 @@ export default function KnowledgeBasePage() {
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div>
             <CardTitle>{t("Daftar FAQ")}</CardTitle>
-            <CardDescription>{items.length} entri</CardDescription>
+            <CardDescription>{t("{count} entri", { count: items.length })}</CardDescription>
           </div>
           <Input
             value={search}
@@ -198,7 +199,7 @@ export default function KnowledgeBasePage() {
             onRetry={() => void refetch()}
             empty={
               <p className="py-8 text-center text-sm text-muted-foreground">
-                Belum ada FAQ. Mulai dengan pertanyaan yang paling sering datang.
+                {t("Belum ada FAQ. Mulai dengan pertanyaan yang paling sering datang.")}
               </p>
             }
           >
@@ -220,7 +221,7 @@ export default function KnowledgeBasePage() {
                       )}
                       {!item.isActive && (
                         <Badge variant="outline" className="text-[10px]">
-                          nonaktif
+                          {t("nonaktif")}
                         </Badge>
                       )}
                     </div>

@@ -192,11 +192,12 @@ export default function WhatsappOnboardingPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Link2 className="h-4 w-4 text-primary" />
-            Langkah 1 dari 1: Connect WhatsApp
+            {t("Langkah 1 dari 1: Connect WhatsApp")}
           </CardTitle>
           <CardDescription>
-            Isi data sederhana, klik Generate OAuth URL, lalu login & authorize di Meta.
-            Setelah kembali ke halaman ini, sistem menyambungkan otomatis.
+            {t(
+              "Isi data sederhana, klik Generate OAuth URL, lalu login & authorize di Meta. Setelah kembali ke halaman ini, sistem menyambungkan otomatis.",
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -222,11 +223,12 @@ export default function WhatsappOnboardingPage() {
             </Field>
             <div className="sm:col-span-2 rounded-lg border bg-muted/30 p-3">
               <p className="text-sm font-medium">
-                Sebelum lanjut, pastikan Anda punya akun Facebook aktif
+                {t("Sebelum lanjut, pastikan Anda punya akun Facebook aktif")}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Meta OAuth selalu meminta login Facebook. Kalau belum punya,
-                klik panduan pemula dulu.
+                {t(
+                  "Meta OAuth selalu meminta login Facebook. Kalau belum punya, klik panduan pemula dulu.",
+                )}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <label className="flex items-center gap-2 text-sm">
@@ -235,24 +237,25 @@ export default function WhatsappOnboardingPage() {
                     className="h-4 w-4"
                     {...register("hasFacebookAccount")}
                   />
-                  Saya sudah punya akun Facebook aktif
+                  {t("Saya sudah punya akun Facebook aktif")}
                 </label>
                 <Button asChild variant="outline" size="sm">
                   <Link href="/dashboard/whatsapp/onboarding/help">
-                    Panduan untuk pemula
+                    {t("Panduan untuk pemula")}
                   </Link>
                 </Button>
               </div>
               {errors.hasFacebookAccount && (
                 <p className="mt-2 text-xs text-destructive">
-                  {errors.hasFacebookAccount.message}
+                  {t(errors.hasFacebookAccount.message ?? "")}
                 </p>
               )}
             </div>
             <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">
-                  Status saat ini: {isConnected ? "Sudah tersambung" : "Belum tersambung"}
+                  {t("Status saat ini:")}{" "}
+                  {isConnected ? t("Sudah tersambung") : t("Belum tersambung")}
                 </p>
                 {isConnected && !showCompletingOAuth ? (
                   <Button asChild variant="link" className="h-auto p-0 text-sm">
@@ -265,11 +268,11 @@ export default function WhatsappOnboardingPage() {
                 disabled={!hasFacebookAccount || initOauthMut.isPending || showCompletingOAuth}
               >
                 {initOauthMut.isPending
-                  ? "Membuat URL..."
+                  ? t("Membuat URL...")
                   : showCompletingOAuth
-                    ? "Menyelesaikan OAuth..."
+                    ? t("Menyelesaikan OAuth...")
                     : isConnected
-                      ? "Hubungkan ulang (OAuth)"
+                      ? t("Hubungkan ulang (OAuth)")
                       : "Generate OAuth URL"}
               </Button>
             </div>
@@ -289,11 +292,12 @@ function Field({
   error?: string;
   children: React.ReactNode;
 }) {
+  const { t } = useLocale();
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
       {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-xs text-destructive">{t(error)}</p>}
     </div>
   );
 }
