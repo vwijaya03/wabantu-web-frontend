@@ -71,6 +71,12 @@ export interface RebuildRetrievalIndexResponse {
   kbEnqueued: number;
   catalogEnqueued: number;
   pineconeWiped: boolean;
+  /** kbEnqueued + catalogEnqueued. Respons kembali setelah wipe + enqueue; embedding jalan di worker. */
+  queued?: number;
+  /** Model embedding yang dipakai untuk vektor baru tenant ini. */
+  embeddingModel?: string;
+  /** true bila server menjalankan drain latar (Cloud Run). */
+  backgroundDrain?: boolean;
 }
 
 export interface RetrievalObservabilitySnapshot {
@@ -189,7 +195,8 @@ export const flagsApi = {
         ...(opts?.wipePinecone !== undefined ? { wipePinecone: opts.wipePinecone } : {}),
         ...(opts?.entities?.length ? { entities: opts.entities } : {}),
       },
-      { timeout: 120_000 },
+      // Server hanya wipe + enqueue lalu balik; embedding tidak ditunggu di request ini.
+      { timeout: 30_000 },
     );
     return data;
   },
