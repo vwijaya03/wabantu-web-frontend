@@ -5,6 +5,7 @@ import {
   PATIENT_EXPORT_OPTIONAL_COLUMNS,
   type PatientExportColumnKey,
 } from "@/lib/events-export";
+import { useLocale } from "@/lib/i18n/locale";
 
 export function PatientExportColumnPicker({
   hidden,
@@ -15,6 +16,8 @@ export function PatientExportColumnPicker({
   onChange: (hidden: Set<PatientExportColumnKey>) => void;
   className?: string;
 }) {
+  const { t } = useLocale();
+
   const toggle = (key: PatientExportColumnKey) => {
     const next = new Set(hidden);
     if (next.has(key)) next.delete(key);
@@ -24,7 +27,9 @@ export function PatientExportColumnPicker({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <p className="text-xs font-medium text-muted-foreground">Kolom export (centang = tampil)</p>
+      <p className="text-xs font-medium text-muted-foreground">
+        {t("Kolom export (centang = tampil)")}
+      </p>
       <div className="flex flex-wrap gap-2">
         {PATIENT_EXPORT_OPTIONAL_COLUMNS.map((col) => {
           const visible = !hidden.has(col.key);
@@ -40,12 +45,12 @@ export function PatientExportColumnPicker({
               )}
               onClick={() => toggle(col.key)}
             >
-              {col.label}
+              {t(col.label)}
             </button>
           );
         })}
       </div>
-      <p className="text-[11px] text-muted-foreground">No dan Nama selalu disertakan.</p>
+      <p className="text-[11px] text-muted-foreground">{t("No dan Nama selalu disertakan.")}</p>
     </div>
   );
 }

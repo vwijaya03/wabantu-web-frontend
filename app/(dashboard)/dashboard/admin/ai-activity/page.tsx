@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { adminApi } from "@/lib/api/admin";
 import { aiActivityAdminApi } from "@/lib/api/ai-activity";
+import { useLocale } from "@/lib/i18n/locale";
 
 function currentPeriod(): string {
   const d = new Date();
@@ -38,6 +39,7 @@ function formatTime(iso: string): string {
 }
 
 export default function AdminAIActivityPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const { isAdmin } = useAdminSession();
   const [period, setPeriod] = useState(currentPeriod);
@@ -77,8 +79,8 @@ export default function AdminAIActivityPage() {
   return (
     <>
       <PageHeader
-        title="Log aktivitas AI"
-        description="Internal — pantau path model, token, dan classifier per tenant (super admin)."
+        title={t("Log aktivitas AI")}
+        description={t("Internal — pantau path model, token, dan classifier per tenant (super admin).")}
       />
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -90,7 +92,7 @@ export default function AdminAIActivityPage() {
             disabled={tenantsLoading || tenants.length === 0}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Pilih tenant" />
+              <SelectValue placeholder={t("Pilih tenant")} />
             </SelectTrigger>
             <SelectContent>
               {tenants.map((t) => (
@@ -102,7 +104,7 @@ export default function AdminAIActivityPage() {
           </Select>
         </div>
         <div className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground">Periode (UTC)</p>
+          <p className="text-xs font-medium text-muted-foreground">{t("Periode (UTC)")}</p>
           <input
             type="month"
             className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -122,7 +124,7 @@ export default function AdminAIActivityPage() {
           </Link>
         </Button>
         <Button variant="outline" asChild>
-          <Link href="/dashboard/admin">← Konsol platform</Link>
+          <Link href="/dashboard/admin">{t("← Konsol platform")}</Link>
         </Button>
       </div>
 
@@ -153,12 +155,12 @@ export default function AdminAIActivityPage() {
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Per path</CardTitle>
-            <CardDescription>Distribusi keputusan routing / handler</CardDescription>
+            <CardTitle className="text-base">{t("Per path")}</CardTitle>
+            <CardDescription>{t("Distribusi keputusan routing / handler")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             {(summary?.byPath ?? []).length === 0 ? (
-              <p className="text-muted-foreground">Belum ada data.</p>
+              <p className="text-muted-foreground">{t("Belum ada data.")}</p>
             ) : (
               (summary?.byPath ?? []).map((row) => (
                 <div
@@ -176,12 +178,12 @@ export default function AdminAIActivityPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Per model</CardTitle>
-            <CardDescription>Estimasi biaya dari token</CardDescription>
+            <CardTitle className="text-base">{t("Per model")}</CardTitle>
+            <CardDescription>{t("Estimasi biaya dari token")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             {(summary?.byModel ?? []).length === 0 ? (
-              <p className="text-muted-foreground">Belum ada panggilan LLM.</p>
+              <p className="text-muted-foreground">{t("Belum ada panggilan LLM.")}</p>
             ) : (
               (summary?.byModel ?? []).map((row) => (
                 <div
@@ -204,7 +206,7 @@ export default function AdminAIActivityPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Event terbaru</CardTitle>
+          <CardTitle>{t("Event terbaru")}</CardTitle>
           <CardDescription>
             Maks. 200 baris untuk periode {list?.period ?? period}
           </CardDescription>

@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale";
 
 type DocsPayload = {
   generatedAt: string;
@@ -61,6 +62,7 @@ const DOCS_REMOTE_URL_KEY = "wabantu_docs_remote_index_url";
 const DOCS_API_ROOT_KEY = "wabantu_docs_api_root_hint";
 
 export default function DocsPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const [localPayload, setLocalPayload] = useState<DocsPayload | null>(null);
   const [remotePayload, setRemotePayload] = useState<DocsPayload | null>(null);
@@ -181,7 +183,7 @@ export default function DocsPage() {
     return (
       <PageHeader
         title="Dokumentasi"
-        description="Akses platform admin diperlukan untuk melihat dokumentasi internal."
+        description={t("Akses platform admin diperlukan untuk melihat dokumentasi internal.")}
       />
     );
   }
@@ -190,7 +192,7 @@ export default function DocsPage() {
     <>
       <PageHeader
         title="Dokumentasi"
-        description="Gabungan README dan file Markdown dari api-go dan web-frontend."
+        description={t("Gabungan README dan file Markdown dari api-go dan web-frontend.")}
         actions={
           payload ? (
             <Badge variant="outline">
@@ -202,7 +204,7 @@ export default function DocsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Cari Dokumentasi</CardTitle>
+          <CardTitle className="text-base">{t("Cari Dokumentasi")}</CardTitle>
           <CardDescription>
             Search ini toleran typo ringan, urutan kata bebas, dan tetap memprioritaskan judul/path yang paling relevan.
           </CardDescription>
@@ -214,7 +216,7 @@ export default function DocsPage() {
               className="pl-9"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari: superadmin bootstrap, export PDF, quota topup, finance timezone..."
+              placeholder={t("Cari: superadmin bootstrap, export PDF, quota topup, finance timezone...")}
             />
           </div>
           <Select value={source} onValueChange={setSource}>
@@ -222,7 +224,7 @@ export default function DocsPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Semua source</SelectItem>
+              <SelectItem value={ALL}>{t("Semua source")}</SelectItem>
               {sources.map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}
@@ -235,7 +237,7 @@ export default function DocsPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Semua kategori</SelectItem>
+              <SelectItem value={ALL}>{t("Semua kategori")}</SelectItem>
               {categories.map((c) => (
                 <SelectItem key={c} value={c}>
                   {c}
@@ -248,14 +250,14 @@ export default function DocsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Sumber Dokumentasi</CardTitle>
+          <CardTitle className="text-base">{t("Sumber Dokumentasi")}</CardTitle>
           <CardDescription>
             Monorepo memakai index lokal. Jika `api-go` pindah repo/server, isi URL remote `docs-index.json` dari service/CDN lalu simpan.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">API_GO_DOCS_ROOT untuk generator lokal</label>
+            <label className="text-xs font-medium text-muted-foreground">{t("API_GO_DOCS_ROOT untuk generator lokal")}</label>
             <Input
               value={apiDocsRoot}
               onChange={(e) => setApiDocsRoot(e.target.value)}
@@ -266,7 +268,7 @@ export default function DocsPage() {
             </p>
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">API_GO_DOCS_INDEX_URL remote</label>
+            <label className="text-xs font-medium text-muted-foreground">{t("API_GO_DOCS_INDEX_URL remote")}</label>
             <Input
               value={remoteIndexUrl}
               onChange={(e) => setRemoteIndexUrl(e.target.value)}
@@ -302,14 +304,14 @@ export default function DocsPage() {
         <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
           <Card className="xl:max-h-[calc(100vh-260px)] xl:overflow-hidden">
             <CardHeader>
-              <CardTitle className="text-base">Hasil Terdekat</CardTitle>
+              <CardTitle className="text-base">{t("Hasil Terdekat")}</CardTitle>
               <CardDescription>
                 {results.length} hasil dari {filteredDocs.length} dokumen
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 xl:max-h-[calc(100vh-360px)] xl:overflow-auto">
               {results.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Tidak ada hasil yang cukup relevan.</p>
+                <p className="text-sm text-muted-foreground">{t("Tidak ada hasil yang cukup relevan.")}</p>
               ) : (
                 results.map(({ doc, score, snippet }) => (
                   <button
@@ -382,7 +384,7 @@ export default function DocsPage() {
                   <div className="space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Heading</p>
                     {selectedDoc.headings.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">Tidak ada heading.</p>
+                      <p className="text-xs text-muted-foreground">{t("Tidak ada heading.")}</p>
                     ) : (
                       <div className="space-y-1">
                         {selectedDoc.headings.slice(0, 24).map((h, i) => (

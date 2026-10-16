@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { INVENTORY_HELP, type InventoryHelpTopic } from "@/lib/inventory/help-content";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale";
 
 interface InventoryHelpButtonProps {
   topic: InventoryHelpTopic;
@@ -22,6 +23,7 @@ interface InventoryHelpButtonProps {
 }
 
 export function InventoryHelpButton({ topic, variant = "inline", className }: InventoryHelpButtonProps) {
+  const { t } = useLocale();
   const content = INVENTORY_HELP[topic];
   if (!content) return null;
 
@@ -37,24 +39,24 @@ export function InventoryHelpButton({ topic, variant = "inline", className }: In
             variant === "page" ? "h-8 w-8" : "h-6 w-6",
             className,
           )}
-          aria-label={`Bantuan: ${content.title}`}
+          aria-label={`Bantuan: ${t(content.title)}`}
         >
           <CircleHelp className={variant === "page" ? "h-5 w-5" : "h-4 w-4"} />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{content.title}</DialogTitle>
-          <DialogDescription>{content.what}</DialogDescription>
+          <DialogTitle>{t(content.title)}</DialogTitle>
+          <DialogDescription>{t(content.what)}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 text-sm">
           {content.useCases.length > 0 ? (
             <div>
-              <p className="font-medium text-foreground">Kapan dipakai</p>
+              <p className="font-medium text-foreground">{t("Kapan dipakai")}</p>
               <ul className="mt-1.5 list-disc space-y-1 pl-5 text-muted-foreground">
                 {content.useCases.map((item) => (
-                  <li key={item}>{item}</li>
+                  <li key={t(item)}>{t(item)}</li>
                 ))}
               </ul>
             </div>
@@ -62,10 +64,10 @@ export function InventoryHelpButton({ topic, variant = "inline", className }: In
 
           {content.howTo && content.howTo.length > 0 ? (
             <div>
-              <p className="font-medium text-foreground">Langkah singkat</p>
+              <p className="font-medium text-foreground">{t("Langkah singkat")}</p>
               <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-muted-foreground">
                 {content.howTo.map((item) => (
-                  <li key={item}>{item}</li>
+                  <li key={t(item)}>{t(item)}</li>
                 ))}
               </ol>
             </div>
@@ -73,10 +75,10 @@ export function InventoryHelpButton({ topic, variant = "inline", className }: In
 
           {content.tips && content.tips.length > 0 ? (
             <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2">
-              <p className="font-medium text-amber-950">Tips</p>
+              <p className="font-medium text-amber-950">{t("Tips")}</p>
               <ul className="mt-1 list-disc space-y-1 pl-5 text-amber-900">
                 {content.tips.map((item) => (
-                  <li key={item}>{item}</li>
+                  <li key={t(item)}>{t(item)}</li>
                 ))}
               </ul>
             </div>
@@ -86,7 +88,7 @@ export function InventoryHelpButton({ topic, variant = "inline", className }: In
             <div className="flex flex-wrap gap-2 border-t pt-3">
               {content.relatedLinks.map((link) => (
                 <Button key={link.href} variant="outline" size="sm" asChild>
-                  <Link href={link.href}>{link.label}</Link>
+                  <Link href={link.href}>{t(link.label)}</Link>
                 </Button>
               ))}
             </div>

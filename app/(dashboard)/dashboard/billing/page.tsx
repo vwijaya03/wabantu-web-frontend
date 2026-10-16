@@ -19,8 +19,9 @@ import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
-async function openQRISForInvoice(inv: Invoice, description: string) {
+async function openQRISForInvoice(inv: Invoice, description: string, qrisOpenedMessage: string) {
   const qris = await paymentApi.createQRIS({
     invoiceId: inv.id,
     amountIdr: inv.amountIdr,
@@ -29,10 +30,11 @@ async function openQRISForInvoice(inv: Invoice, description: string) {
   if (qris.qrUrl) {
     window.open(qris.qrUrl, "_blank", "noopener,noreferrer");
   }
-  toast.success("QRIS dibuka — selesaikan pembayaran di tab baru");
+  toast.success(qrisOpenedMessage);
 }
 
 export default function BillingPage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
@@ -51,17 +53,13 @@ export default function BillingPage() {
       if (!inv) {
         throw new Error("Checkout gagal — invoice tidak dibuat");
       }
-      await openQRISForInvoice(inv, `WABantu ${plan.name}`);
+      await openQRISForInvoice(inv, `WABantu ${plan.name}`, t("QRIS dibuka — selesaikan pembayaran di tab baru"));
       return result;
     },
     onSuccess: () => {
-      toast.message(
-        "Menunggu pembayaran",
-        {
-          description:
-            "Paket aktif setelah QRIS berhasil. Invoice muncul di riwayat setelah dibayar.",
-        },
-      );
+      toast.message(t("Menunggu pembayaran"), {
+        description: t("Paket aktif setelah QRIS berhasil. Invoice muncul di riwayat setelah dibayar."),
+      });
       invalidateTenantQueries(qc, tenantKey, "billing-overview");
       invalidateTenantQueries(qc, tenantKey, "usage-summary");
     },
@@ -74,6 +72,7 @@ export default function BillingPage() {
       await openQRISForInvoice(
         pending,
         `WABantu ${pending.planName}`,
+        t("QRIS dibuka — selesaikan pembayaran di tab baru"),
       );
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -86,13 +85,12 @@ export default function BillingPage() {
       if (!inv) {
         throw new Error("Checkout top-up gagal — invoice tidak dibuat");
       }
-      await openQRISForInvoice(inv, result.topUp.name);
+      await openQRISForInvoice(inv, result.topUp.name, t("QRIS dibuka — selesaikan pembayaran di tab baru"));
       return result;
     },
     onSuccess: () => {
-      toast.message("Menunggu pembayaran top-up", {
-        description:
-          "Kuota tambahan aktif setelah QRIS lunas dan berlaku untuk bulan berjalan.",
+      toast.message(t("Menunggu pembayaran top-up"), {
+        description: t("Kuota tambahan aktif setelah QRIS lunas dan berlaku untuk bulan berjalan."),
       });
       invalidateTenantQueries(qc, tenantKey, "billing-overview");
       invalidateTenantQueries(qc, tenantKey, "usage-summary");
@@ -100,54 +98,52 @@ export default function BillingPage() {
     onError: (e) => toast.error(toApiError(e).message),
   });
 
-  const activePaidPlan =
-    sub && !sub.isTrial ? sub.planCode : null;
+  const activePaidPlan = sub && !sub.isTrial ? sub.planCode : null;
   return (
     <>
-      <PageHeader
-        title="Billing"
-        description="Paket berlangganan dan riwayat tagihan Anda."
-      />
+      <PageHeader title={t("Billing")} description={t("Paket berlangganan dan riwayat tagihan Anda.")} />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            Paket aktif
+            {t("Paket aktif")}
             <Badge variant={sub?.isTrial ? "warning" : "success"}>
-              {sub?.isTrial ? "Trial 7 hari" : sub?.status ?? "active"}
+              {sub?.isTrial ? t("Trial 7 hari") : sub?.status ?? "active"}
             </Badge>
           </CardTitle>
           <CardDescription>
-            Pilih paket lalu bayar via QRIS. Paket dan invoice final aktif setelah
-            pembayaran berhasil.
+            {t("Pilih paket lalu bayar via QRIS. Paket dan invoice final aktif setelah pembayaran berhasil.")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
             <p className="text-sm font-medium">
               {isLoading
-                ? "Memuat..."
+                ? t("Memuat...")
                 : sub?.isTrial
-                  ? `Trial 7 hari — semua fitur aktif (Broadcast, Workflow, CRM, AI hybrid, Cabang)`
+                  ? t("Trial 7 hari — semua fitur aktif (Broadcast, Workflow, CRM, AI hybrid, Cabang)")
                   : `${sub?.planName ?? "Starter"} (${sub?.planCode ?? "starter"})`}
             </p>
             <p className="text-xs text-muted-foreground">
               {sub?.trialEndsAt
-                ? `Trial berakhir: ${new Date(sub.trialEndsAt).toLocaleDateString("id-ID")}`
+                ? t("Trial berakhir: {date}", {
+                    date: new Date(sub.trialEndsAt).toLocaleDateString("id-ID"),
+                  })
                 : sub?.isTrial
-                  ? "Upgrade dengan memilih paket di bawah"
-                  : "Berlangganan aktif"}
+                  ? t("Upgrade dengan memilih paket di bawah")
+                  : t("Berlangganan aktif")}
             </p>
           </div>
 
           {pending ? (
             <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
               <p className="font-medium text-amber-950 dark:text-amber-50">
-                Menunggu pembayaran — {pending.planName}
+                {t("Menunggu pembayaran — {planName}", { planName: pending.planName })}
               </p>
               <p className="mt-1 text-muted-foreground">
-                {pending.invoiceNo} · Rp{" "}
-                {pending.amountIdr.toLocaleString("id-ID")} · Invoice akan masuk
-                riwayat setelah QRIS lunas.
+                {t("{invoiceNo} · Rp {amount} · Invoice akan masuk riwayat setelah QRIS lunas.", {
+                  invoiceNo: pending.invoiceNo,
+                  amount: pending.amountIdr.toLocaleString("id-ID"),
+                })}
               </p>
               <Button
                 type="button"
@@ -157,9 +153,7 @@ export default function BillingPage() {
                 disabled={payPendingMut.isPending}
                 onClick={() => payPendingMut.mutate()}
               >
-                {payPendingMut.isPending
-                  ? "Membuka QRIS..."
-                  : "Bayar via QRIS (Midtrans)"}
+                {payPendingMut.isPending ? t("Membuka QRIS...") : t("Bayar via QRIS (Midtrans)")}
               </Button>
             </div>
           ) : null}
@@ -188,31 +182,42 @@ export default function BillingPage() {
                   </p>
                   <ul className="mt-2 space-y-0.5 text-[10px] text-muted-foreground">
                     <li>
-                      {plan.limits.channels} channel · {plan.limits.seats} seat
+                      {t("{channels} channel · {seats} seat", {
+                        channels: plan.limits.channels,
+                        seats: plan.limits.seats,
+                      })}
                     </li>
                     <li>
-                      {plan.limits.aiConversations.toLocaleString("id-ID")} percakapan AI
+                      {t("{count} percakapan AI", {
+                        count: plan.limits.aiConversations.toLocaleString("id-ID"),
+                      })}
                     </li>
                     <li>
-                      {(plan.limits.aiTokens / 1_000_000).toFixed(0)} jt token AI
+                      {t("{count} jt token AI", {
+                        count: (plan.limits.aiTokens / 1_000_000).toFixed(0),
+                      })}
                     </li>
                     <li>
-                      Broadcast:{" "}
-                      {plan.limits.broadcastContacts === 0
-                        ? "—"
-                        : plan.limits.broadcastContacts.toLocaleString("id-ID")}
-                      /bln
+                      {t("Broadcast: {contacts}/bln", {
+                        contacts:
+                          plan.limits.broadcastContacts === 0
+                            ? "—"
+                            : plan.limits.broadcastContacts.toLocaleString("id-ID"),
+                      })}
                     </li>
                     <li>
-                      {plan.limits.storageMb >= 1024
-                        ? `${(plan.limits.storageMb / 1024).toFixed(0)} GB`
-                        : `${plan.limits.storageMb} MB`}{" "}
-                      · {plan.limits.workflowExecs.toLocaleString("id-ID")} workflow
+                      {t("{storage} · {workflows} workflow", {
+                        storage:
+                          plan.limits.storageMb >= 1024
+                            ? `${(plan.limits.storageMb / 1024).toFixed(0)} GB`
+                            : `${plan.limits.storageMb} MB`,
+                        workflows: plan.limits.workflowExecs.toLocaleString("id-ID"),
+                      })}
                     </li>
                   </ul>
                   {isPendingChoice ? (
                     <p className="mt-2 text-[10px] font-medium text-amber-700 dark:text-amber-400">
-                      Menunggu pembayaran
+                      {t("Menunggu pembayaran")}
                     </p>
                   ) : null}
                 </button>
@@ -220,18 +225,18 @@ export default function BillingPage() {
             })}
           </div>
           <p className="text-xs text-muted-foreground">
-            Klik kartu paket untuk membuat checkout dan membuka QRIS. Bukan
-            mengganti paket langsung.
+            {t("Klik kartu paket untuk membuat checkout dan membuka QRIS. Bukan mengganti paket langsung.")}
           </p>
         </CardContent>
       </Card>
       <UsageQuotaPanel />
       <Card>
         <CardHeader>
-          <CardTitle>Top-up kuota AI</CardTitle>
+          <CardTitle>{t("Top-up kuota AI")}</CardTitle>
           <CardDescription>
-            Untuk tenant yang kuota AI-nya habis sebelum akhir bulan. Top-up tidak
-            mengganti paket dan hanya berlaku pada periode bulan berjalan.
+            {t(
+              "Untuk tenant yang kuota AI-nya habis sebelum akhir bulan. Top-up tidak mengganti paket dan hanya berlaku pada periode bulan berjalan.",
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-2">
@@ -244,35 +249,36 @@ export default function BillingPage() {
               className="rounded-lg border p-4 text-left transition hover:border-primary disabled:opacity-60"
             >
               <p className="font-semibold">{opt.name}</p>
-              <p className="text-sm text-muted-foreground">
-                Rp {opt.amountIdr.toLocaleString("id-ID")}
-              </p>
+              <p className="text-sm text-muted-foreground">Rp {opt.amountIdr.toLocaleString("id-ID")}</p>
               <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                <li>+{opt.aiTokens.toLocaleString("id-ID")} token AI</li>
-                <li>+{opt.aiConversations.toLocaleString("id-ID")} percakapan AI</li>
-                <li>Berlaku periode {opt.validForPeriod}</li>
+                <li>
+                  {t("+{tokens} token AI", { tokens: opt.aiTokens.toLocaleString("id-ID") })}
+                </li>
+                <li>
+                  {t("+{conversations} percakapan AI", {
+                    conversations: opt.aiConversations.toLocaleString("id-ID"),
+                  })}
+                </li>
+                <li>{t("Berlaku periode {period}", { period: opt.validForPeriod })}</li>
               </ul>
             </button>
           ))}
           {pending ? (
             <p className="sm:col-span-2 text-xs text-muted-foreground">
-              Selesaikan invoice pending terlebih dahulu sebelum membuat top-up baru.
+              {t("Selesaikan invoice pending terlebih dahulu sebelum membuat top-up baru.")}
             </p>
           ) : null}
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Riwayat invoice</CardTitle>
-          <CardDescription>
-            Hanya tagihan yang sudah dibayar (setelah QRIS berhasil).
-          </CardDescription>
+          <CardTitle>{t("Riwayat invoice")}</CardTitle>
+          <CardDescription>{t("Hanya tagihan yang sudah dibayar (setelah QRIS berhasil).")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {(data?.invoices ?? []).length === 0 ? (
             <p className="py-12 text-center text-sm text-muted-foreground">
-              Belum ada invoice lunas. Invoice muncul di sini setelah pembayaran
-              QRIS berhasil.
+              {t("Belum ada invoice lunas. Invoice muncul di sini setelah pembayaran QRIS berhasil.")}
             </p>
           ) : (
             (data?.invoices ?? []).map((inv) => (
@@ -283,18 +289,13 @@ export default function BillingPage() {
                 <div>
                   <p className="font-medium">{inv.invoiceNo}</p>
                   <p className="text-xs text-muted-foreground">
-                    {inv.planName} ·{" "}
-                    {new Date(inv.paidAt ?? inv.issuedAt).toLocaleDateString(
-                      "id-ID",
-                    )}
+                    {inv.planName} · {new Date(inv.paidAt ?? inv.issuedAt).toLocaleDateString("id-ID")}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold">
-                    Rp {inv.amountIdr.toLocaleString("id-ID")}
-                  </p>
+                  <p className="font-semibold">Rp {inv.amountIdr.toLocaleString("id-ID")}</p>
                   <p className="text-xs text-muted-foreground">
-                    {inv.status === "paid" ? "Lunas" : inv.status}
+                    {inv.status === "paid" ? t("Lunas") : inv.status}
                   </p>
                 </div>
               </div>

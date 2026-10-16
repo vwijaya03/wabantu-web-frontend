@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/lib/i18n/locale";
 import { Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ export function CatalogProductForm({
   isEdit?: boolean;
   priceTypes: PriceType[];
 }) {
+  const { t } = useLocale();
   const update = (patch: Partial<CatalogForm>) => setForm({ ...form, ...patch });
   const updatePrice = (priceTypeId: string, value: string) => {
     const next = { ...form.priceByType, [priceTypeId]: value };
@@ -36,7 +38,7 @@ export function CatalogProductForm({
   const generateSku = () => {
     const name = form.name.trim();
     if (!name) {
-      toast.error("Isi nama produk dulu");
+      toast.error(t("Isi nama produk dulu"));
       return;
     }
     update({ externalCode: generateSkuFromProductName(name) });
@@ -45,17 +47,17 @@ export function CatalogProductForm({
   return (
     <div className="space-y-3">
       <div>
-        <Label htmlFor="catalog-name">Nama</Label>
+        <Label htmlFor="catalog-name">{t("Nama")}</Label>
         <Input
           id="catalog-name"
           value={form.name}
           onChange={(e) => update({ name: e.target.value })}
-          placeholder="Nama produk"
+          placeholder={t("Nama produk")}
         />
       </div>
       <div>
         <div className="mb-1.5 flex items-center justify-between gap-2">
-          <Label htmlFor="catalog-sku">SKU / Kode</Label>
+          <Label htmlFor="catalog-sku">{t("SKU / Kode")}</Label>
           {!isEdit && (
             <Button
               type="button"
@@ -79,12 +81,12 @@ export function CatalogProductForm({
           className="font-mono text-sm uppercase"
         />
         {!isEdit && (
-          <p className="mt-1 text-xs text-muted-foreground">Dari nama, atau ketik manual. Unik per tenant.</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t("Dari nama, atau ketik manual. Unik per tenant.")}</p>
         )}
       </div>
       {priceTypes.length > 0 ? (
         <div className="space-y-2 rounded-md border p-3">
-          <p className="text-sm font-medium">Harga per tipe</p>
+          <p className="text-sm font-medium">{t("Harga per tipe")}</p>
           {priceTypes.map((pt) => (
             <div key={pt.id}>
               <Label>
@@ -103,7 +105,7 @@ export function CatalogProductForm({
         </div>
       ) : (
         <div>
-          <Label>Harga (IDR)</Label>
+          <Label>{t("Harga (IDR)")}</Label>
           <Input
             value={form.sellPrice}
             onChange={(e) => update({ sellPrice: e.target.value })}
@@ -115,12 +117,12 @@ export function CatalogProductForm({
       )}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label>Satuan</Label>
+          <Label>{t("Satuan")}</Label>
           <Input value={form.sellUnit} onChange={(e) => update({ sellUnit: e.target.value })} placeholder="pcs" />
         </div>
         <div>
-          <Label>Barcode</Label>
-          <Input value={form.barcode} onChange={(e) => update({ barcode: e.target.value })} placeholder="Opsional" />
+          <Label>{t("Barcode")}</Label>
+          <Input value={form.barcode} onChange={(e) => update({ barcode: e.target.value })} placeholder={t("Opsional")} />
         </div>
       </div>
       <DescriptionRichEditor
@@ -143,13 +145,14 @@ function ProductActiveToggle({
   onChange: (active: boolean) => void;
   disabled?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <div className="space-y-1.5">
-      <Label>Status produk</Label>
+      <Label>{t("Status produk")}</Label>
       <div
         className="flex rounded-lg border bg-muted/20 p-1"
         role="group"
-        aria-label="Status produk aktif atau nonaktif"
+        aria-label={t("Status produk aktif atau nonaktif")}
       >
         <button
           type="button"
@@ -163,7 +166,7 @@ function ProductActiveToggle({
               : "text-muted-foreground hover:bg-muted/80",
           )}
         >
-          Aktif
+          {t("Aktif")}
         </button>
         <button
           type="button"
@@ -177,11 +180,11 @@ function ProductActiveToggle({
               : "text-muted-foreground hover:bg-muted/80",
           )}
         >
-          Nonaktif
+          {t("Nonaktif")}
         </button>
       </div>
       <p className="text-xs text-muted-foreground">
-        {active ? "Produk tampil di AI & pesanan." : "Produk disembunyikan dari AI & pesanan."}
+        {active ? t("Produk tampil di AI & pesanan.") : t("Produk disembunyikan dari AI & pesanan.")}
       </p>
     </div>
   );

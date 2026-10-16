@@ -42,6 +42,7 @@ import { canPerformOwnerActions } from "@/lib/api/auth";
 import { formatFinanceDate, invalidateFinanceCaches } from "@/lib/finance/utils";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useLocale } from "@/lib/i18n/locale";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 import { toApiError } from "@/lib/api/client";
 
@@ -69,6 +70,7 @@ const emptyForm = {
 };
 
 export default function ChecklistPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantKey = useTenantKey();
   const isOwner = canPerformOwnerActions(user);
@@ -141,11 +143,11 @@ export default function ChecklistPage() {
       qc.setQueryData(["finance-monthly-billing", period], res.billing);
       invalidateFinanceCaches(qc, tenantKey);
       if (!checked && res.item.transactionId == null) {
-        toast.success("Centang dibatalkan — transaksi terkait dihapus");
+        toast.success(t("Centang dibatalkan — transaksi terkait dihapus"));
       } else if (checked && res.item.transactionId) {
-        toast.success("Tagihan dicatat sebagai transaksi pengeluaran");
+        toast.success(t("Tagihan dicatat sebagai transaksi pengeluaran"));
       } else if (checked) {
-        toast.warning("Tagihan dicentang, tetapi transaksi belum tercatat — cek nominal atau periode terkunci");
+        toast.warning(t("Tagihan dicentang, tetapi transaksi belum tercatat — cek nominal atau periode terkunci"));
       }
     },
     onError: (e: unknown) => toast.error(toApiError(e).message),
@@ -183,7 +185,7 @@ export default function ChecklistPage() {
   const deleteMut = useMutation({
     mutationFn: (id: string) => financeApi.deleteChecklistTemplate(id),
     onSuccess: () => {
-      toast.success("Tagihan dihapus");
+      toast.success(t("Tagihan dihapus"));
       qc.invalidateQueries({ queryKey: ["finance-checklist-templates-manage"] });
       qc.invalidateQueries({ queryKey: ["finance-monthly-billing", period] });
     },
@@ -213,16 +215,16 @@ export default function ChecklistPage() {
   const templateForm = (
     <div className="space-y-3">
       <div>
-        <Label>Judul tagihan</Label>
+        <Label>{t("Judul tagihan")}</Label>
         <Input
           value={form.title}
           onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-          placeholder="mis. Listrik, Internet, Sewa"
+          placeholder={t("mis. Listrik, Internet, Sewa")}
         />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Nominal (Rp)</Label>
+          <Label>{t("Nominal (Rp)")}</Label>
           <Input
             type="number"
             min={1}
@@ -231,27 +233,27 @@ export default function ChecklistPage() {
           />
         </div>
         <div>
-          <Label>Tanggal jatuh tempo</Label>
+          <Label>{t("Tanggal jatuh tempo")}</Label>
           <DatePicker
             value={form.dueDate}
             onChange={(dueDate) => setForm((f) => ({ ...f, dueDate }))}
           />
           <p className="mt-1 text-xs text-muted-foreground">
-            Hari dalam tanggal ini dipakai setiap bulan (mis. tgl 28 → setiap bulan tgl 28).
+            {t("Hari dalam tanggal ini dipakai setiap bulan (mis. tgl 28 → setiap bulan tgl 28).")}
           </p>
         </div>
       </div>
       <div>
-        <Label>Dompet (opsional)</Label>
+        <Label>{t("Dompet (opsional)")}</Label>
         <Select
           value={form.walletId || "__none__"}
           onValueChange={(v) => setForm((f) => ({ ...f, walletId: v === "__none__" ? "" : v }))}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Default (kas utama)" />
+            <SelectValue placeholder={t("Default (kas utama)")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none__">Default (kas utama)</SelectItem>
+            <SelectItem value="__none__">{t("Default (kas utama)")}</SelectItem>
             {(wallets?.wallets ?? []).map((w) => (
               <SelectItem key={w.id} value={w.id}>
                 {w.name}
@@ -261,16 +263,16 @@ export default function ChecklistPage() {
         </Select>
       </div>
       <div>
-        <Label>Kategori (opsional)</Label>
+        <Label>{t("Kategori (opsional)")}</Label>
         <Select
           value={form.categoryId || "__none__"}
           onValueChange={(v) => setForm((f) => ({ ...f, categoryId: v === "__none__" ? "" : v }))}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Tanpa kategori" />
+            <SelectValue placeholder={t("Tanpa kategori")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none__">Tanpa kategori</SelectItem>
+            <SelectItem value="__none__">{t("Tanpa kategori")}</SelectItem>
             {expenseCategories.map((c) => (
               <SelectItem key={c.id} value={c.id}>
                 {c.name}
@@ -292,8 +294,8 @@ export default function ChecklistPage() {
   return (
     <>
       <FinanceSubPageHeader
-        title="Tagihan Bulanan"
-        description="Centang tagihan yang sudah dibayar — setiap centang langsung dicatat sebagai pengeluaran di Transaksi."
+        title={t("Tagihan Bulanan")}
+        description={t("Centang tagihan yang sudah dibayar — setiap centang langsung dicatat sebagai pengeluaran di Transaksi.")}
         actions={
           isOwner ? (
             <Button
@@ -303,7 +305,7 @@ export default function ChecklistPage() {
                 setOpenCreate(true);
               }}
             >
-              <PlusCircle className="mr-2 h-4 w-4" /> Tambah Tagihan
+              <PlusCircle className="mr-2 h-4 w-4" /> {t("Tambah Tagihan")}
             </Button>
           ) : null
         }
@@ -323,7 +325,7 @@ export default function ChecklistPage() {
             size="sm"
             onClick={() => setTab("templates")}
           >
-            Kelola Daftar Tagihan
+            {t("Kelola Daftar Tagihan")}
           </Button>
         )}
       </div>
@@ -332,7 +334,7 @@ export default function ChecklistPage() {
         <>
           <div className="flex flex-wrap items-center gap-3">
             <div>
-              <Label className="text-xs text-muted-foreground">Periode</Label>
+              <Label className="text-xs text-muted-foreground">{t("Periode")}</Label>
               <Input
                 type="month"
                 className="w-[180px]"
@@ -362,11 +364,11 @@ export default function ChecklistPage() {
             <Card className="border-green-200 bg-green-50 dark:bg-green-950/20">
               <CardContent className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
                 <span className="text-green-800 dark:text-green-200">
-                  Semua tagihan bulan ini sudah dicatat sebagai transaksi pengeluaran.
+                  {t("Semua tagihan bulan ini sudah dicatat sebagai transaksi pengeluaran.")}
                 </span>
                 <Button variant="outline" size="sm" asChild>
                   <Link href="/dashboard/finance/transactions">
-                    Lihat Transaksi <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                    {t("Lihat Transaksi")} <ExternalLink className="ml-1 h-3.5 w-3.5" />
                   </Link>
                 </Button>
               </CardContent>
@@ -374,7 +376,7 @@ export default function ChecklistPage() {
           )}
 
           {billingLoading ? (
-            <p className="text-sm text-muted-foreground">Memuat...</p>
+            <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
           ) : items.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-sm text-muted-foreground">
@@ -419,7 +421,7 @@ export default function ChecklistPage() {
                       </div>
                       {posted && (
                         <Badge variant="secondary" className="shrink-0">
-                          Tercatat
+                          {t("Tercatat")}
                         </Badge>
                       )}
                     </CardContent>
@@ -431,7 +433,7 @@ export default function ChecklistPage() {
 
           {billing && billing.total > 0 && !billing.allPosted && billing.checked === billing.total && (
             <p className="text-xs text-muted-foreground">
-              Semua tercentang — transaksi akan dibuat otomatis (refresh jika belum muncul).
+              {t("Semua tercentang — transaksi akan dibuat otomatis (refresh jika belum muncul).")}
             </p>
           )}
         </>
@@ -451,50 +453,51 @@ export default function ChecklistPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 className="pl-8"
-                placeholder="Cari tagihan..."
+                placeholder={t("Cari tagihan...")}
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
             </div>
             <Button type="submit" variant="secondary">
-              Cari
+              {t("Cari")}
             </Button>
           </form>
 
           {templatesLoading ? (
-            <p className="text-sm text-muted-foreground">Memuat...</p>
+            <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
           ) : (templatesData?.items?.length ?? 0) === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                Belum ada daftar tagihan. Tambahkan tagihan tetap (listrik, sewa, dll.).
+                {t("Belum ada daftar tagihan. Tambahkan tagihan tetap (listrik, sewa, dll.).")}
               </CardContent>
             </Card>
           ) : (
             <>
               <div className="space-y-2">
-                {templatesData!.items.map((t) => (
-                  <Card key={t.id} className={cn(!t.isActive && "opacity-50")}>
+                {templatesData!.items.map((tpl) => (
+                  <Card key={tpl.id} className={cn(!tpl.isActive && "opacity-50")}>
                     <CardContent className="flex items-center justify-between gap-2 p-4">
                       <div>
-                        <p className="font-medium">{t.title}</p>
+                        <p className="font-medium">{tpl.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          Jatuh tempo{" "}
-                          {t.dueAnchorDate
-                            ? formatDueLabel(t.dueAnchorDate, reportingTimezone)
-                            : `setiap tgl ${t.dayOfMonth ?? 1}`}
-                          {t.amountHint ? ` · ${formatIDR(t.amountHint)}` : ""}
-                          {!t.isActive ? " · Nonaktif" : ""}
+                          {t("Jatuh tempo {date}", {
+                            date: tpl.dueAnchorDate
+                              ? formatDueLabel(tpl.dueAnchorDate, reportingTimezone)
+                              : t("setiap tgl {day}", { day: tpl.dayOfMonth ?? 1 }),
+                          })}
+                          {tpl.amountHint ? ` · ${formatIDR(tpl.amountHint)}` : ""}
+                          {!tpl.isActive ? t(" · Nonaktif") : ""}
                         </p>
                       </div>
                       <div className="flex gap-1 shrink-0">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(t)}>
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(tpl)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="text-destructive"
-                          onClick={() => deleteMut.mutate(t.id)}
+                          onClick={() => deleteMut.mutate(tpl.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -511,7 +514,7 @@ export default function ChecklistPage() {
                     disabled={page <= 1}
                     onClick={() => setPage((p) => p - 1)}
                   >
-                    Sebelumnya
+                    {t("Sebelumnya")}
                   </Button>
                   <span className="text-sm text-muted-foreground">
                     {page} / {totalPages}
@@ -522,7 +525,7 @@ export default function ChecklistPage() {
                     disabled={page >= totalPages}
                     onClick={() => setPage((p) => p + 1)}
                   >
-                    Berikutnya
+                    {t("Berikutnya")}
                   </Button>
                 </div>
               )}
@@ -545,7 +548,7 @@ export default function ChecklistPage() {
           <DialogHeader>
             <DialogTitle>{editItem ? "Edit Tagihan" : "Tambah Tagihan Bulanan"}</DialogTitle>
             <DialogDescription>
-              Tagihan ini muncul di checklist setiap bulan pada tanggal jatuh tempo.
+              {t("Tagihan ini muncul di checklist setiap bulan pada tanggal jatuh tempo.")}
             </DialogDescription>
           </DialogHeader>
           {templateForm}
@@ -557,7 +560,7 @@ export default function ChecklistPage() {
                 setEditItem(null);
               }}
             >
-              Batal
+              {t("Batal")}
             </Button>
             <Button
               onClick={() => saveTemplateMut.mutate()}

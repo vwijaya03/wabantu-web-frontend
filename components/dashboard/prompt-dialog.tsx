@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useLocale } from "@/lib/i18n/locale";
 
 export type PromptDialogProps = {
   open: boolean;
@@ -30,12 +31,15 @@ function PromptDialogForm({
   title,
   description,
   placeholder,
-  confirmLabel = "Simpan",
-  cancelLabel = "Batal",
+  confirmLabel,
+  cancelLabel,
   destructive = false,
   loading = false,
   onSubmit,
 }: Omit<PromptDialogProps, "open" | "onOpenChange">) {
+  const { t } = useLocale();
+  const resolvedConfirm = confirmLabel ?? t("Simpan");
+  const resolvedCancel = cancelLabel ?? t("Batal");
   const [value, setValue] = useState("");
 
   return (
@@ -52,14 +56,14 @@ function PromptDialogForm({
         className="resize-none"
       />
       <AlertDialogFooter>
-        <AlertDialogCancel disabled={loading}>{cancelLabel}</AlertDialogCancel>
+        <AlertDialogCancel disabled={loading}>{resolvedCancel}</AlertDialogCancel>
         <Button
           type="button"
           variant={destructive ? "destructive" : "default"}
           disabled={loading}
           onClick={() => onSubmit(value.trim())}
         >
-          {loading ? "Memproses..." : confirmLabel}
+          {loading ? t("Memproses...") : resolvedConfirm}
         </Button>
       </AlertDialogFooter>
     </>

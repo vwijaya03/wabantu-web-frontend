@@ -15,8 +15,10 @@ import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function BroadcastPage() {
+  const { t } = useLocale();
   const { hasBroadcast } = usePlan();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
@@ -39,63 +41,63 @@ export default function BroadcastPage() {
         recipients: phones.split(/[\n,;]+/).map((p) => p.trim()).filter(Boolean),
       }),
     onSuccess: () => {
-      toast.success("Kampanye dibuat");
+      toast.success(t("Kampanye dibuat"));
       setName("");
       setBody("");
       setPhones("");
       invalidateTenantQueries(qc, tenantKey, "broadcast");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   if (!hasBroadcast) {
     return (
       <PageHeader
-        title="Broadcast"
-        description="Upgrade ke paket Business atau Pro untuk broadcast WhatsApp."
+        title={t("Broadcast")}
+        description={t("Upgrade ke paket Business atau Pro untuk broadcast WhatsApp.")}
       />
     );
   }
 
   return (
     <>
-      <PageHeader title="Broadcast" description="Kirim pesan massal ke kontak." />
+      <PageHeader title={t("Broadcast")} description={t("Kirim pesan massal ke kontak.")} />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Kampanye baru</CardTitle>
+            <CardTitle>{t("Kampanye baru")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <Label>Nama</Label>
+              <Label>{t("Nama")}</Label>
               <Input value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             <div>
-              <Label>Pesan</Label>
+              <Label>{t("Pesan")}</Label>
               <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} />
             </div>
             <div>
-              <Label>Nomor (pisah koma/baris)</Label>
+              <Label>{t("Nomor (pisah koma/baris)")}</Label>
               <Textarea value={phones} onChange={(e) => setPhones(e.target.value)} rows={3} />
             </div>
             <Button onClick={() => createMut.mutate()} disabled={createMut.isPending}>
-              Buat kampanye
+              {t("Buat kampanye")}
             </Button>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Riwayat</CardTitle>
+            <CardTitle>{t("Riwayat")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {isLoading ? (
-              <p className="text-sm text-muted-foreground">Memuat...</p>
+              <p className="text-sm text-muted-foreground">{t("Memuat…")}</p>
             ) : (
               (data?.campaigns ?? []).map((c) => (
                 <div key={c.id} className="rounded border p-3 text-sm">
                   <p className="font-medium">{c.name}</p>
                   <p className="text-muted-foreground">
-                    {c.status} · {c.sentCount}/{c.totalRecipients} terkirim
+                    {c.status} · {t("{sent}/{total} terkirim", { sent: c.sentCount, total: c.totalRecipients })}
                   </p>
                   {c.status === "draft" || c.status === "queued" ? (
                     <Button
@@ -104,12 +106,12 @@ export default function BroadcastPage() {
                       variant="outline"
                       onClick={() =>
                         broadcastApi.send(c.id).then(() => {
-                          toast.success("Broadcast dikirim");
+                          toast.success(t("Broadcast dikirim"));
                           invalidateTenantQueries(qc, tenantKey, "broadcast");
                         })
                       }
                     >
-                      Kirim sekarang
+                      {t("Kirim sekarang")}
                     </Button>
                   ) : null}
                 </div>

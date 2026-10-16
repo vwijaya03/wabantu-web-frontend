@@ -25,6 +25,7 @@ import { incidentUserText } from "@/components/admin/ai-triage/incident-turn-pai
 import { aiTriageAdminApi, isTriageUUID, type AITriageIncident } from "@/lib/api/ai-triage";
 import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale";
 
 const CHANNELS = ["", "whatsapp", "web_chat", "storefront_search"] as const;
 
@@ -39,6 +40,7 @@ function pickJobIncident(incidents: AITriageIncident[], focusedId: string | null
 }
 
 export function IncidentPanel({ tenantId }: { tenantId: string }) {
+  const { t } = useLocale();
   const [reviewing, setReviewing] = useState<AITriageIncident | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [channel, setChannel] = useState<string>("");
@@ -79,7 +81,7 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
   const retryMut = useMutation({
     mutationFn: (id: string) => aiTriageAdminApi.retryBehaviorJob(id),
     onSuccess: () => {
-      toast.success("Composer di-dispatch ulang ke GitHub Actions");
+      toast.success(t("Composer di-dispatch ulang ke GitHub Actions"));
       void jobQuery.refetch();
       void q.refetch();
     },
@@ -88,7 +90,7 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
   const approveMut = useMutation({
     mutationFn: (id: string) => aiTriageAdminApi.approveRepair(id),
     onSuccess: () => {
-      toast.success("Repair disetujui");
+      toast.success(t("Repair disetujui"));
       void repairQuery.refetch();
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -96,7 +98,7 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
   const applyMut = useMutation({
     mutationFn: (id: string) => aiTriageAdminApi.applyRepair(id),
     onSuccess: () => {
-      toast.success("Repair diterapkan");
+      toast.success(t("Repair diterapkan"));
       void repairQuery.refetch();
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -146,7 +148,7 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
         <div className="space-y-1.5">
-          <CardTitle>Insiden self-healing</CardTitle>
+          <CardTitle>{t("Insiden self-healing")}</CardTitle>
           <CardDescription>
             Konfirmasi menjalankan Composer 2.5 (draft PR). Chat WhatsApp lama tidak berubah
             sampai PR di-merge dan Encore di-deploy.
@@ -200,7 +202,7 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
             <Skeleton className="h-16 w-full" />
           </div>
         ) : incidents.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Belum ada insiden.</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">{t("Belum ada insiden.")}</p>
         ) : (
           <div className="divide-y rounded-lg border">
             {incidents.map((inc) => {
@@ -224,7 +226,7 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
                       className="mt-1 h-4 w-4 shrink-0"
                       checked={Boolean(selected[inc.id])}
                       onChange={() => toggleSelected(inc.id)}
-                      aria-label="Pilih insiden"
+                      aria-label={t("Pilih insiden")}
                     />
                     <button
                       type="button"
@@ -268,7 +270,7 @@ export function IncidentPanel({ tenantId }: { tenantId: string }) {
                     <div className="mt-3 space-y-2">
                       {jobQuery.isError ? (
                         <div className="space-y-2 rounded-md border-l-2 border-l-destructive bg-destructive/5 px-3 py-3 text-sm">
-                          <p className="font-medium text-destructive">Composer gagal dimuat</p>
+                          <p className="font-medium text-destructive">{t("Composer gagal dimuat")}</p>
                           <p className="text-destructive">{toApiError(jobQuery.error).message}</p>
                           <div className="flex flex-wrap gap-2">
                             <Button

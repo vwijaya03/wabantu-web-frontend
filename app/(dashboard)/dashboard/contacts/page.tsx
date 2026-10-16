@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 const pageSize = 25;
 
@@ -59,6 +60,7 @@ const emptyForm: ContactForm = {
 };
 
 export default function ContactsPage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
@@ -126,50 +128,50 @@ export default function ContactsPage() {
   const createMut = useMutation({
     mutationFn: () => contactsApi.create(toCreatePayload(createForm)),
     onSuccess: () => {
-      toast.success("Kontak ditambahkan");
+      toast.success(t("Kontak ditambahkan"));
       setCreateForm(emptyForm);
       setCreateOpen(false);
       setPage(1);
       invalidateContacts();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const updateMut = useMutation({
     mutationFn: () => contactsApi.update(editContact!.id, toUpdatePayload(editForm)),
     onSuccess: () => {
-      toast.success("Kontak diperbarui");
+      toast.success(t("Kontak diperbarui"));
       setEditContact(null);
       invalidateContacts();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => contactsApi.remove(id),
     onSuccess: () => {
-      toast.success("Kontak dihapus");
+      toast.success(t("Kontak dihapus"));
       invalidateContacts();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
   const batchStatusMut = useMutation({
     mutationFn: () => contactsApi.batchUpdateStatus({ ids: Array.from(selectedIds), status: batchStatus }),
     onSuccess: (res) => {
-      toast.success(`${res.updated} kontak diperbarui`);
+      toast.success(t("{count} kontak diperbarui", { count: res.updated }));
       setSelectedIds(new Set());
       invalidateContacts();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
   const batchDeleteMut = useMutation({
     mutationFn: () => contactsApi.batchDelete(Array.from(selectedIds)),
     onSuccess: (res) => {
-      toast.success(`${res.deleted} kontak dihapus`);
+      toast.success(t("{count} kontak dihapus", { count: res.deleted }));
       setSelectedIds(new Set());
       invalidateContacts();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const runSearch = () => {
@@ -215,13 +217,13 @@ export default function ContactsPage() {
 
   return (
     <RequireTenantDashboard
-      title="Contacts"
-      description="Kelola kontak customer WhatsApp dengan search dan pagination."
+      title={t("Contacts")}
+      description={t("Kelola kontak customer WhatsApp dengan search dan pagination.")}
     >
     <>
       <PageHeader
-        title="Contacts"
-        description="Kelola kontak customer WhatsApp dengan search dan pagination."
+        title={t("Contacts")}
+        description={t("Kelola kontak customer WhatsApp dengan search dan pagination.")}
         actions={
           <Button onClick={() => setCreateOpen(true)}>
             <PlusCircle className="h-4 w-4" /> Tambah Kontak
@@ -232,9 +234,9 @@ export default function ContactsPage() {
         <CardHeader>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle>Daftar kontak ({total})</CardTitle>
+              <CardTitle>{t("Daftar kontak ({total})", { total })}</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                Data dibatasi {pageSize} kontak per halaman agar tidak memanjang saat data besar.
+                {t("Data dibatasi {pageSize} kontak per halaman agar tidak memanjang saat data besar.", { pageSize })}
               </p>
             </div>
             <div className="flex gap-2">
@@ -247,11 +249,11 @@ export default function ContactsPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") runSearch();
                   }}
-                  placeholder="Cari nama, nomor, tag..."
+                  placeholder={t("Cari nama, nomor, tag...")}
                 />
               </div>
               <Button variant="secondary" onClick={runSearch}>
-                Cari
+                {t("Cari")}
               </Button>
             </div>
           </div>
@@ -259,7 +261,7 @@ export default function ContactsPage() {
         <CardContent>
           {selectedIds.size > 0 && (
             <div className="mb-4 flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <span>{selectedIds.size} kontak dipilih</span>
+              <span>{t("{count} kontak dipilih", { count: selectedIds.size })}</span>
               <div className="flex gap-2">
                 <Select value={batchStatus} onValueChange={setBatchStatus}>
                   <SelectTrigger className="w-40">
@@ -268,20 +270,20 @@ export default function ContactsPage() {
                   <SelectContent>
                     {CONTACT_STATUSES.map((status) => (
                       <SelectItem key={status.value} value={status.value}>
-                        {status.label}
+                        {t(status.label)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <Button disabled={batchStatusMut.isPending} onClick={() => batchStatusMut.mutate()}>
-                  Update Status
+                  {t("Update Status")}
                 </Button>
                 <Button
                   variant="destructive"
                   disabled={batchDeleteMut.isPending}
                   onClick={() => setBatchDeleteOpen(true)}
                 >
-                  Hapus Batch
+                  {t("Hapus Batch")}
                 </Button>
               </div>
             </div>
@@ -292,26 +294,26 @@ export default function ContactsPage() {
             isError={isError}
             error={error}
             isEmpty={contacts.length === 0}
-            loadingLabel="Memuat contacts..."
+            loadingLabel={t("Memuat contacts...")}
             onRetry={() => {
               void refetch();
               void refetchPriceTypes();
             }}
             empty={
               <div className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
-                Belum ada kontak yang cocok.
+                {t("Belum ada kontak yang cocok.")}
               </div>
             }
           >
             <div className="overflow-hidden rounded-lg border">
               <div className="grid grid-cols-[40px_minmax(220px,1fr)_120px_140px_180px_160px_120px] gap-3 border-b bg-muted/60 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground max-lg:hidden">
-                <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectVisible} aria-label="Pilih semua kontak" />
-                <span>Kontak</span>
-                <span>Status</span>
-                <span>Tipe harga</span>
-                <span>Catatan</span>
-                <span>Tag</span>
-                <span className="text-right">Aksi</span>
+                <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectVisible} aria-label={t("Pilih semua kontak")} />
+                <span>{t("Kontak")}</span>
+                <span>{t("Status")}</span>
+                <span>{t("Tipe harga")}</span>
+                <span>{t("Catatan")}</span>
+                <span>{t("Tag")}</span>
+                <span className="text-right">{t("Aksi")}</span>
               </div>
               <div className="max-h-[640px] divide-y overflow-auto">
                 {contacts.map((contact) => (
@@ -324,19 +326,19 @@ export default function ContactsPage() {
                       className="mt-1 lg:mt-0"
                       checked={selectedIds.has(contact.id)}
                       onChange={() => toggleSelected(contact.id)}
-                      aria-label={`Pilih kontak ${contact.phoneNumber}`}
+                      aria-label={t("Pilih kontak {phone}", { phone: contact.phoneNumber })}
                     />
                     <div className="min-w-0">
-                      <p className="truncate font-semibold">{contact.displayName || "Tanpa nama"}</p>
+                      <p className="truncate font-semibold">{contact.displayName || t("Tanpa nama")}</p>
                       <p className="text-xs text-muted-foreground">{contact.phoneNumber}</p>
                     </div>
                     <Badge variant={contact.status === "active" ? "success" : "destructive"}>
-                      {contact.status === "active" ? "Aktif" : "Nonaktif"}
+                      {contact.status === "active" ? t("Aktif") : t("Nonaktif")}
                     </Badge>
                     <p className="text-xs text-muted-foreground">
                       {contact.priceTypeId
-                        ? priceTypeLabelById.get(contact.priceTypeId) ?? "Kustom"
-                        : defaultPriceType?.label ?? "Harga umum"}
+                        ? priceTypeLabelById.get(contact.priceTypeId) ?? t("Kustom")
+                        : defaultPriceType?.label ?? t("Harga umum")}
                     </p>
                     <p className="line-clamp-2 text-xs text-muted-foreground">{contact.notes || "-"}</p>
                     <div className="flex flex-wrap gap-1">
@@ -372,12 +374,16 @@ export default function ContactsPage() {
           <div className="mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
             <span className="text-muted-foreground">
               {total === 0
-                ? "0 kontak"
-                : `Menampilkan ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, total)} dari ${total} kontak`}
+                ? t("0 kontak")
+                : t("Menampilkan {from}-{to} dari {total} kontak", {
+                    from: (page - 1) * pageSize + 1,
+                    to: Math.min(page * pageSize, total),
+                    total,
+                  })}
             </span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                Sebelumnya
+                {t("Sebelumnya")}
               </Button>
               <Button
                 variant="outline"
@@ -385,7 +391,7 @@ export default function ContactsPage() {
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               >
-                Berikutnya
+                {t("Berikutnya")}
               </Button>
             </div>
           </div>
@@ -395,8 +401,8 @@ export default function ContactsPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tambah Kontak</DialogTitle>
-            <DialogDescription>Kontak juga otomatis dibuat saat customer chat ke WhatsApp.</DialogDescription>
+            <DialogTitle>{t("Tambah Kontak")}</DialogTitle>
+            <DialogDescription>{t("Kontak juga otomatis dibuat saat customer chat ke WhatsApp.")}</DialogDescription>
           </DialogHeader>
           <ContactFormFields
             form={createForm}
@@ -406,10 +412,10 @@ export default function ContactsPage() {
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button onClick={() => createMut.mutate()} disabled={!createForm.phoneNumber.trim() || createMut.isPending}>
-              Simpan
+              {t("Simpan")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -418,8 +424,8 @@ export default function ContactsPage() {
       <Dialog open={!!editContact} onOpenChange={(open) => !open && setEditContact(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Kontak</DialogTitle>
-            <DialogDescription>Ubah nama, catatan, dan tag kontak.</DialogDescription>
+            <DialogTitle>{t("Edit Kontak")}</DialogTitle>
+            <DialogDescription>{t("Ubah nama, catatan, dan tag kontak.")}</DialogDescription>
           </DialogHeader>
           <ContactFormFields
             form={editForm}
@@ -430,10 +436,10 @@ export default function ContactsPage() {
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditContact(null)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button onClick={() => updateMut.mutate()} disabled={updateMut.isPending}>
-              Simpan Perubahan
+              {t("Simpan Perubahan")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -442,9 +448,9 @@ export default function ContactsPage() {
       <ConfirmDialog
         open={batchDeleteOpen}
         onOpenChange={setBatchDeleteOpen}
-        title={`Hapus ${selectedIds.size} kontak?`}
-        description="Kontak terpilih akan dihapus permanen."
-        confirmLabel="Hapus"
+        title={t("Hapus {count} kontak?", { count: selectedIds.size })}
+        description={t("Kontak terpilih akan dihapus permanen.")}
+        confirmLabel={t("Hapus")}
         destructive
         loading={batchDeleteMut.isPending}
         onConfirm={() => batchDeleteMut.mutate()}
@@ -453,9 +459,9 @@ export default function ContactsPage() {
       <ConfirmDialog
         open={!!deleteContactId}
         onOpenChange={(open) => !open && setDeleteContactId(null)}
-        title="Hapus kontak?"
-        description="Kontak akan dihapus permanen dari daftar."
-        confirmLabel="Hapus"
+        title={t("Hapus kontak?")}
+        description={t("Kontak akan dihapus permanen dari daftar.")}
+        confirmLabel={t("Hapus")}
         destructive
         loading={deleteMut.isPending}
         onConfirm={() => {
@@ -481,12 +487,13 @@ function ContactFormFields({
   priceTypes: Array<{ id: string; label: string; isDefault: boolean }>;
   defaultPriceTypeId?: string;
 }) {
+  const { t } = useLocale();
   const update = (patch: Partial<ContactForm>) => setForm({ ...form, ...patch });
   const selectValue = form.priceTypeId || defaultPriceTypeId || "";
   return (
     <div className="space-y-3">
       <div>
-        <Label>Nomor WhatsApp</Label>
+        <Label>{t("Nomor WhatsApp")}</Label>
         <Input
           value={form.phoneNumber}
           onChange={(e) => update({ phoneNumber: e.target.value })}
@@ -495,16 +502,16 @@ function ContactFormFields({
         />
       </div>
       <div>
-        <Label>Nama</Label>
+        <Label>{t("Nama")}</Label>
         <Input value={form.displayName} onChange={(e) => update({ displayName: e.target.value })} />
       </div>
       <div>
-        <Label>Tanggal lahir</Label>
+        <Label>{t("Tanggal lahir")}</Label>
         <DatePicker value={form.birthDate} onChange={(birthDate) => update({ birthDate })} />
-        <p className="mt-1 text-xs text-muted-foreground">Dipakai saat mendaftarkan pasien acara dari kontak ini.</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t("Dipakai saat mendaftarkan pasien acara dari kontak ini.")}</p>
       </div>
       <div>
-        <Label>Tipe harga</Label>
+        <Label>{t("Tipe harga")}</Label>
         <Select
           value={selectValue}
           onValueChange={(value) =>
@@ -515,7 +522,7 @@ function ContactFormFields({
           disabled={priceTypes.length === 0}
         >
           <SelectTrigger>
-            <SelectValue placeholder={priceTypes.length === 0 ? "Muat tipe harga…" : "Pilih tipe harga"} />
+            <SelectValue placeholder={priceTypes.length === 0 ? t("Muat tipe harga…") : t("Pilih tipe harga")} />
           </SelectTrigger>
           <SelectContent>
             {priceTypes.map((pt) => (
@@ -527,11 +534,11 @@ function ContactFormFields({
           </SelectContent>
         </Select>
         <p className="mt-1 text-xs text-muted-foreground">
-          Dipakai saat membuat pesanan untuk kontak ini (mis. reseller).
+          {t("Dipakai saat membuat pesanan untuk kontak ini (mis. reseller).")}
         </p>
       </div>
       <div>
-        <Label>Status</Label>
+        <Label>{t("Status")}</Label>
         <Select value={form.status} onValueChange={(status) => update({ status })}>
           <SelectTrigger>
             <SelectValue />
@@ -539,19 +546,19 @@ function ContactFormFields({
           <SelectContent>
             {CONTACT_STATUSES.map((status) => (
               <SelectItem key={status.value} value={status.value}>
-                {status.label}
+                {t(status.label)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
       <div>
-        <Label>Tag</Label>
+        <Label>{t("Tag")}</Label>
         <Input value={form.tags} onChange={(e) => update({ tags: e.target.value })} placeholder="vip, repeat buyer" />
-        <p className="mt-1 text-xs text-muted-foreground">Pisahkan beberapa tag dengan koma.</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t("Pisahkan beberapa tag dengan koma.")}</p>
       </div>
       <div>
-        <Label>Catatan</Label>
+        <Label>{t("Catatan")}</Label>
         <Textarea value={form.notes} onChange={(e) => update({ notes: e.target.value })} rows={3} />
       </div>
     </div>

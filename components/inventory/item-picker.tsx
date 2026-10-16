@@ -8,6 +8,7 @@ import { catalogApi } from "@/lib/api/catalog";
 import { cn } from "@/lib/utils";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 export interface PickedItem {
   id: string;
@@ -24,6 +25,7 @@ export function ItemPicker({
   onChange: (item: PickedItem | null) => void;
   placeholder?: string;
 }) {
+  const { t } = useLocale();
   const tenantKey = useTenantKey();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
@@ -55,7 +57,7 @@ export function ItemPicker({
     <div className="relative">
       <Input
         value={q}
-        placeholder={placeholder}
+        placeholder={t(placeholder)}
         onChange={(e) => {
           setQ(e.target.value);
           setOpen(true);
@@ -66,9 +68,9 @@ export function ItemPicker({
       {open && q.trim().length >= 1 ? (
         <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border bg-popover shadow-md">
           {isFetching ? (
-            <p className="px-3 py-2 text-sm text-muted-foreground">Mencari...</p>
+            <p className="px-3 py-2 text-sm text-muted-foreground">{t("Mencari...")}</p>
           ) : results.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-muted-foreground">Tidak ada produk cocok.</p>
+            <p className="px-3 py-2 text-sm text-muted-foreground">{t("Tidak ada produk cocok.")}</p>
           ) : (
             results.map((it) => (
               <button

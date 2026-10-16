@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import type { BehaviorContract } from "@/lib/api/ai-triage";
+import { useLocale } from "@/lib/i18n/locale";
 
 export function BehaviorContractCard({
   contract,
@@ -10,8 +11,9 @@ export function BehaviorContractCard({
   contract?: BehaviorContract | null;
   title?: string;
 }) {
+  const { t } = useLocale();
   if (!contract) {
-    return <p className="text-sm text-muted-foreground">Belum ada behavior contract.</p>;
+    return <p className="text-sm text-muted-foreground">{t("Belum ada behavior contract.")}</p>;
   }
   return (
     <div className="space-y-2 rounded-md border p-3 text-sm">
@@ -48,7 +50,7 @@ export function BehaviorContractCard({
         </p>
       ) : null}
       {contract.assertions.needCustomerInput ? (
-        <p className="text-amber-700">Menunggu input pelanggan — jangan menebak varian.</p>
+        <p className="text-amber-700">{t("Menunggu input pelanggan — jangan menebak varian.")}</p>
       ) : null}
     </div>
   );

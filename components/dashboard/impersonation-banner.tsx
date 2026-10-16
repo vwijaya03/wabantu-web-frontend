@@ -4,23 +4,27 @@ import { AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useTenantImpersonation } from "@/hooks/use-tenant-impersonation";
-import {
-  formatAccessExpiry,
-  formatImpersonationScope,
-} from "@/lib/dashboard/impersonation-modules";
+import { useLocale } from "@/lib/i18n/locale";
+import { formatAccessExpiry } from "@/lib/dashboard/impersonation-modules";
+import { translateImpersonationScope } from "@/lib/dashboard/translate-impersonation-scope";
 
 export function ImpersonationBanner() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const { stopMut, isBusy } = useTenantImpersonation();
   const active = user?.impersonation?.active && user.tenant;
 
   if (!active) return null;
 
-  const scopeLabel = formatImpersonationScope(
+  const scopeLabel = translateImpersonationScope(
+    t,
     user.impersonation?.scope,
     user.impersonation?.modules,
   );
-  const expiryLabel = formatAccessExpiry(user.impersonation?.expiresAt);
+  const expiresAt = user.impersonation?.expiresAt;
+  const expiryLabel = !expiresAt
+    ? t("Permanen sampai dicabut")
+    : formatAccessExpiry(expiresAt);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-6 py-2 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
@@ -28,12 +32,12 @@ export function ImpersonationBanner() {
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <span>
-            Mode internal — memantau tenant{" "}
+            {t("Mode internal — memantau tenant")}{" "}
             <strong>{user.tenant?.name}</strong>
           </span>
         </div>
         <span className="text-xs text-amber-800/90 dark:text-amber-200/90 sm:ml-1">
-          {scopeLabel} · Berlaku: {expiryLabel}
+          {scopeLabel} · {t("Berlaku")}: {expiryLabel}
         </span>
       </div>
       <Button
@@ -44,7 +48,7 @@ export function ImpersonationBanner() {
         onClick={() => stopMut.mutate()}
       >
         <X className="h-3.5 w-3.5" />
-        Keluar
+        {t("Keluar")}
       </Button>
     </div>
   );

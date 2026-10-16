@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authApi } from "@/lib/api/auth";
 import { hasAccessToken } from "@/lib/auth/session";
+import { useLocale } from "@/lib/i18n/locale";
 
 type SessionPhase = "pending" | "checking" | "guest";
 
@@ -12,6 +13,7 @@ type SessionPhase = "pending" | "checking" | "guest";
  * First paint always matches SSR (children); token in localStorage is read only in useEffect.
  */
 export function LoginSessionGate({ children }: { children: React.ReactNode }) {
+  const { t } = useLocale();
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next") || "/dashboard";
@@ -43,7 +45,7 @@ export function LoginSessionGate({ children }: { children: React.ReactNode }) {
   if (phase === "checking") {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <p className="text-sm text-muted-foreground">Memeriksa sesi…</p>
+        <p className="text-sm text-muted-foreground">{t("Memeriksa sesi…")}</p>
       </div>
     );
   }

@@ -36,6 +36,7 @@ import { usageApi } from "@/lib/api/usage";
 import { cn } from "@/lib/utils";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { invalidateTenantQueries } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 const PHASE_STEPS = [
   { id: "profile", label: "Profil bisnis", hint: "Produk, area kirim, jam buka" },
@@ -81,6 +82,7 @@ function scrollChatContainer(el: HTMLDivElement | null, force = false) {
 }
 
 export default function KnowledgeBaseSetupPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -222,8 +224,8 @@ export default function KnowledgeBaseSetupPage() {
     return (
       <>
         <PageHeader
-          title="Setup AI dengan wawancara"
-          description="Wizard ini untuk owner toko atau admin platform saat mode pantau tenant aktif."
+          title={t("Setup AI dengan wawancara")}
+          description={t("Wizard ini untuk owner toko atau admin platform saat mode pantau tenant aktif.")}
         />
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
@@ -232,7 +234,7 @@ export default function KnowledgeBaseSetupPage() {
               : "Minta owner toko menyelesaikan setup profil & FAQ lewat halaman ini."}
             <div className="mt-4">
               <Button asChild variant="outline">
-                <Link href="/dashboard/knowledge-base">Kembali ke Knowledge Base</Link>
+                <Link href="/dashboard/knowledge-base">{t("Kembali ke Knowledge Base")}</Link>
               </Button>
             </div>
           </CardContent>
@@ -244,8 +246,8 @@ export default function KnowledgeBaseSetupPage() {
   return (
     <>
       <PageHeader
-        title="Setup AI — wawancara singkat"
-        description="Ceritakan bisnis Anda lewat chat; AI susun profil toko dan draft FAQ. Anda review dulu sebelum disimpan."
+        title={t("Setup AI — wawancara singkat")}
+        description={t("Ceritakan bisnis Anda lewat chat; AI susun profil toko dan draft FAQ. Anda review dulu sebelum disimpan.")}
       />
       <p className="mb-4 text-sm">
         <Link
@@ -257,7 +259,7 @@ export default function KnowledgeBaseSetupPage() {
       </p>
 
       <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-        <p className="font-medium">Peringatan kuota AI</p>
+        <p className="font-medium">{t("Peringatan kuota AI")}</p>
         <p className="mt-1">{quotaBanner}</p>
         {quotaExhausted ? (
           <p className="mt-2 font-medium text-red-700 dark:text-red-300">
@@ -322,11 +324,11 @@ export default function KnowledgeBaseSetupPage() {
               className="flex max-h-[420px] min-h-[280px] flex-col gap-3 overflow-y-auto rounded-lg border bg-muted/20 p-4"
               role="log"
               aria-live="polite"
-              aria-label="Riwayat chat setup"
+              aria-label={t("Riwayat chat setup")}
             >
               {startMut.isError && !session ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-sm">
-                <p className="text-destructive">Gagal memulai sesi setup.</p>
+                <p className="text-destructive">{t("Gagal memulai sesi setup.")}</p>
                 <Button type="button" variant="outline" size="sm" onClick={() => startMut.mutate()}>
                   Coba lagi
                 </Button>
@@ -408,7 +410,7 @@ export default function KnowledgeBaseSetupPage() {
                 }
                 disabled={!session || sendMut.isPending || quotaExhausted || publishMut.isPending}
                 maxLength={2000}
-                aria-label="Pesan ke AI setup"
+                aria-label={t("Pesan ke AI setup")}
               />
               <Button type="submit" disabled={!canSend} size="icon" aria-label="Kirim">
                 <Send className="h-4 w-4" />
@@ -431,7 +433,7 @@ export default function KnowledgeBaseSetupPage() {
               <Sparkles className="h-4 w-4 text-primary" />
               Draft otomatis
             </CardTitle>
-            <CardDescription>Perbarui saat Anda chat. Edit final di panel review.</CardDescription>
+            <CardDescription>{t("Perbarui saat Anda chat. Edit final di panel review.")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div>
@@ -453,10 +455,10 @@ export default function KnowledgeBaseSetupPage() {
               </ul>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">FAQ draft</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("FAQ draft")}</p>
               <p className="mt-2">
                 {faqItems.length === 0 ? (
-                  <span className="text-muted-foreground italic">Belum ada — lanjutkan chat</span>
+                  <span className="text-muted-foreground italic">{t("Belum ada — lanjutkan chat")}</span>
                 ) : (
                   <>
                     <span className="font-medium">{faqItems.length}</span> pertanyaan terdeteksi
@@ -477,7 +479,7 @@ export default function KnowledgeBaseSetupPage() {
       {showReview && session ? (
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Review sebelum simpan</CardTitle>
+            <CardTitle>{t("Review sebelum simpan")}</CardTitle>
             <CardDescription>
               Periksa profil dan centang FAQ yang ingin dipublish ke Knowledge Base. Harga produk spesifik
               tidak disimpan di FAQ — arahkan pelanggan ke katalog.
@@ -486,7 +488,7 @@ export default function KnowledgeBaseSetupPage() {
           <CardContent className="space-y-8">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="si-name">Nama bisnis</Label>
+                <Label htmlFor="si-name">{t("Nama bisnis")}</Label>
                 <Input
                   id="si-name"
                   value={profileEdit.businessName}
@@ -495,10 +497,10 @@ export default function KnowledgeBaseSetupPage() {
               </div>
               <div className="space-y-1.5 md:col-span-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Label htmlFor="si-products">Produk / jasa *</Label>
+                  <Label htmlFor="si-products">{t("Produk / jasa *")}</Label>
                   <ProfileAiAssistButton
                     field="productsServices"
-                    label="Produk / jasa"
+                    label={t("Produk / jasa")}
                     currentValue={profileEdit.productsServices}
                     onApply={(text) =>
                       setProfileEdit((p) => ({ ...p, productsServices: text }))
@@ -513,7 +515,7 @@ export default function KnowledgeBaseSetupPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="si-delivery">Area pengiriman *</Label>
+                <Label htmlFor="si-delivery">{t("Area pengiriman *")}</Label>
                 <Input
                   id="si-delivery"
                   value={profileEdit.deliveryArea}
@@ -521,7 +523,7 @@ export default function KnowledgeBaseSetupPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="si-hours">Jam operasional</Label>
+                <Label htmlFor="si-hours">{t("Jam operasional")}</Label>
                 <Input
                   id="si-hours"
                   value={profileEdit.openingHours}
@@ -529,7 +531,7 @@ export default function KnowledgeBaseSetupPage() {
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="si-pay">Cara bayar (metode umum, tanpa nomor rekening)</Label>
+                <Label htmlFor="si-pay">{t("Cara bayar (metode umum, tanpa nomor rekening)")}</Label>
                 <p className="text-xs text-muted-foreground">
                   Untuk auto-verify bukti transfer, tambahkan FAQ rekening terpisah di Knowledge Base.
                 </p>
@@ -541,10 +543,10 @@ export default function KnowledgeBaseSetupPage() {
               </div>
               <div className="space-y-1.5 md:col-span-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Label htmlFor="si-desc">Deskripsi singkat</Label>
+                  <Label htmlFor="si-desc">{t("Deskripsi singkat")}</Label>
                   <ProfileAiAssistButton
                     field="description"
-                    label="Deskripsi singkat"
+                    label={t("Deskripsi singkat")}
                     currentValue={profileEdit.description}
                     onApply={(text) =>
                       setProfileEdit((p) => ({ ...p, description: text }))
@@ -587,7 +589,7 @@ export default function KnowledgeBaseSetupPage() {
                               prev.map((f, i) => (i === idx ? { ...f, include: e.target.checked } : f)),
                             )
                           }
-                          aria-label="Sertakan FAQ"
+                          aria-label={t("Sertakan FAQ")}
                           className="mt-1 h-4 w-4"
                         />
                         <div className="min-w-0 flex-1 space-y-2">
@@ -598,7 +600,7 @@ export default function KnowledgeBaseSetupPage() {
                                 prev.map((f, i) => (i === idx ? { ...f, question: e.target.value } : f)),
                               )
                             }
-                            aria-label="Pertanyaan FAQ"
+                            aria-label={t("Pertanyaan FAQ")}
                           />
                           <Textarea
                             rows={2}
@@ -608,7 +610,7 @@ export default function KnowledgeBaseSetupPage() {
                                 prev.map((f, i) => (i === idx ? { ...f, answer: e.target.value } : f)),
                               )
                             }
-                            aria-label="Jawaban FAQ"
+                            aria-label={t("Jawaban FAQ")}
                           />
                           {item.category ? (
                             <Badge variant="secondary" className="text-[10px]">

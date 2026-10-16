@@ -15,6 +15,7 @@ import { BehaviorContractCard } from "./behavior-contract-card";
 import { BehaviorJobCard } from "./behavior-job-card";
 import { BEHAVIOR_FIX_ACTIONS_URL, confirmHoldToast, incidentHoldHint, jobInFlight } from "./behavior-job-status";
 import { IncidentTurnPair } from "./incident-turn-pair";
+import { useLocale } from "@/lib/i18n/locale";
 
 function asContract(raw: unknown): BehaviorContract | null {
   if (!raw || typeof raw !== "object") return null;
@@ -47,6 +48,7 @@ export function IncidentReviewDialog({
   onChanged: () => void;
   onDelete?: (id: string) => void;
 }) {
+  const { t } = useLocale();
   const draft = asContract(incident.draftContract) ?? asContract(incident.confirmedContract);
   const [busy, setBusy] = useState(false);
 
@@ -64,7 +66,7 @@ export function IncidentReviewDialog({
   const retryMut = useMutation({
     mutationFn: () => aiTriageAdminApi.retryBehaviorJob(incident.behaviorJobId!),
     onSuccess: () => {
-      toast.success("Composer di-dispatch ulang ke GitHub Actions");
+      toast.success(t("Composer di-dispatch ulang ke GitHub Actions"));
       void jobQuery.refetch();
       onChanged();
     },
@@ -78,7 +80,7 @@ export function IncidentReviewDialog({
 
   const confirm = async () => {
     if (!draft) {
-      toast.error("Contract kosong");
+      toast.error(t("Contract kosong"));
       return;
     }
     if (job) {
@@ -107,7 +109,7 @@ export function IncidentReviewDialog({
     setBusy(true);
     try {
       await aiTriageAdminApi.dismissIncident(incident.id);
-      toast.success("Insiden diabaikan — tetap di daftar, badge Diabaikan");
+      toast.success(t("Insiden diabaikan — tetap di daftar, badge Diabaikan"));
       onChanged();
       onClose();
     } catch (e) {
@@ -144,7 +146,7 @@ export function IncidentReviewDialog({
         ) : null}
         {jobQuery.isError ? (
           <div className="mt-3 space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
-            <p className="font-medium text-destructive">Composer gagal dimuat</p>
+            <p className="font-medium text-destructive">{t("Composer gagal dimuat")}</p>
             <p className="text-destructive">{toApiError(jobQuery.error).message}</p>
             <div className="flex flex-wrap gap-2">
               {incident.behaviorJobId ? (

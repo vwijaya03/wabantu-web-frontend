@@ -23,8 +23,10 @@ import { eventsApi } from "@/lib/api/events";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function EventsMastersPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const isOwner = canPerformOwnerActions(user);
   const qc = useQueryClient();
@@ -56,7 +58,7 @@ export default function EventsMastersPage() {
   const createTherapy = useMutation({
     mutationFn: () => eventsApi.createTherapy({ therapyName, active: true }),
     onSuccess: () => {
-      toast.success("Terapi ditambahkan");
+      toast.success(t("Terapi ditambahkan"));
       setTherapyName("");
       invalidate();
     },
@@ -64,7 +66,7 @@ export default function EventsMastersPage() {
   const createRole = useMutation({
     mutationFn: () => eventsApi.createVolunteerRole({ roleName, active: true }),
     onSuccess: () => {
-      toast.success("Peran ditambahkan");
+      toast.success(t("Peran ditambahkan"));
       setRoleName("");
       invalidate();
     },
@@ -72,7 +74,7 @@ export default function EventsMastersPage() {
   const createTask = useMutation({
     mutationFn: () => eventsApi.createTask({ taskName, assignmentType: "PER_HOUR", active: true }),
     onSuccess: () => {
-      toast.success("Tugas ditambahkan");
+      toast.success(t("Tugas ditambahkan"));
       setTaskName("");
       invalidate();
     },
@@ -84,16 +86,16 @@ export default function EventsMastersPage() {
       if (deleteId.type === "therapy") await eventsApi.deleteTherapy(deleteId.id);
       if (deleteId.type === "role") await eventsApi.deleteVolunteerRole(deleteId.id);
       if (deleteId.type === "task") await eventsApi.deleteTask(deleteId.id);
-      toast.success("Dihapus");
+      toast.success(t("Dihapus"));
       invalidate();
     } catch {
-      toast.error("Gagal menghapus");
+      toast.error(t("Gagal menghapus"));
     }
     setDeleteId(null);
   };
 
   if (!isOwner) {
-    return <p className="p-6">Hanya owner yang dapat mengelola master data.</p>;
+    return <p className="p-6">{t("Hanya owner yang dapat mengelola master data.")}</p>;
   }
 
   return (
@@ -103,14 +105,14 @@ export default function EventsMastersPage() {
           ← Acara
         </Link>
       </p>
-      <h1 className="text-2xl font-semibold">Master Data Acara</h1>
+      <h1 className="text-2xl font-semibold">{t("Master Data Acara")}</h1>
 
       <div className="flex gap-2">
         {[
           ["therapies", "Terapi"],
           ["roles", "Peran Relawan"],
           ["tasks", "Tugas"],
-        ].map(([id, label]) => (
+        ].map(([id, labelKey]) => (
           <button
             key={id}
             type="button"
@@ -120,7 +122,7 @@ export default function EventsMastersPage() {
             )}
             onClick={() => setTab(id)}
           >
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>
@@ -129,28 +131,26 @@ export default function EventsMastersPage() {
         <div className="space-y-4">
           <EventImageImportPanel
             kind="therapies"
-            title="Import terapi dari gambar"
-            description="Upload screenshot daftar jenis terapi. AI mengekstrak nama terapi untuk ditambahkan ke master."
+            title={t("Import terapi dari gambar")}
+            description={t(
+              "Upload screenshot daftar jenis terapi. AI mengekstrak nama terapi untuk ditambahkan ke master.",
+            )}
             onCommitted={invalidate}
           />
           <Card>
             <CardContent className="flex gap-2 pt-6">
               <div className="flex-1">
-                <Label>Nama terapi</Label>
+                <Label>{t("Nama terapi")}</Label>
                 <Input value={therapyName} onChange={(e) => setTherapyName(e.target.value)} />
               </div>
-              <Button className="mt-6" onClick={() => createTherapy.mutate()}>
-                Tambah
-              </Button>
+              <Button className="mt-6" onClick={() => createTherapy.mutate()}>{t("Tambah")}</Button>
             </CardContent>
           </Card>
-          {(therapies?.items ?? []).map((t) => (
-            <Card key={t.id}>
+          {(therapies?.items ?? []).map((therapy) => (
+            <Card key={therapy.id}>
               <CardHeader className="flex flex-row items-center justify-between py-3">
-                <CardTitle className="text-base">{t.therapyName}</CardTitle>
-                <Button size="sm" variant="destructive" onClick={() => setDeleteId({ type: "therapy", id: t.id })}>
-                  Hapus
-                </Button>
+                <CardTitle className="text-base">{therapy.therapyName}</CardTitle>
+                <Button size="sm" variant="destructive" onClick={() => setDeleteId({ type: "therapy", id: therapy.id })}>{t("Hapus")}</Button>
               </CardHeader>
             </Card>
           ))}
@@ -162,21 +162,17 @@ export default function EventsMastersPage() {
           <Card>
             <CardContent className="flex gap-2 pt-6">
               <div className="flex-1">
-                <Label>Peran</Label>
+                <Label>{t("Peran")}</Label>
                 <Input value={roleName} onChange={(e) => setRoleName(e.target.value)} />
               </div>
-              <Button className="mt-6" onClick={() => createRole.mutate()}>
-                Tambah
-              </Button>
+              <Button className="mt-6" onClick={() => createRole.mutate()}>{t("Tambah")}</Button>
             </CardContent>
           </Card>
           {(roles?.items ?? []).map((r) => (
             <Card key={r.id}>
               <CardHeader className="flex flex-row items-center justify-between py-3">
                 <CardTitle className="text-base">{r.roleName}</CardTitle>
-                <Button size="sm" variant="destructive" onClick={() => setDeleteId({ type: "role", id: r.id })}>
-                  Hapus
-                </Button>
+                <Button size="sm" variant="destructive" onClick={() => setDeleteId({ type: "role", id: r.id })}>{t("Hapus")}</Button>
               </CardHeader>
             </Card>
           ))}
@@ -188,23 +184,19 @@ export default function EventsMastersPage() {
           <Card>
             <CardContent className="flex gap-2 pt-6">
               <div className="flex-1">
-                <Label>Tugas</Label>
+                <Label>{t("Tugas")}</Label>
                 <Input value={taskName} onChange={(e) => setTaskName(e.target.value)} />
               </div>
-              <Button className="mt-6" onClick={() => createTask.mutate()}>
-                Tambah
-              </Button>
+              <Button className="mt-6" onClick={() => createTask.mutate()}>{t("Tambah")}</Button>
             </CardContent>
           </Card>
-          {(tasks?.items ?? []).map((t) => (
-            <Card key={t.id}>
+          {(tasks?.items ?? []).map((task) => (
+            <Card key={task.id}>
               <CardHeader className="flex flex-row items-center justify-between py-3">
                 <CardTitle className="text-base">
-                  {t.taskName} <span className="text-muted-foreground">({t.assignmentType})</span>
+                  {task.taskName} <span className="text-muted-foreground">({task.assignmentType})</span>
                 </CardTitle>
-                <Button size="sm" variant="destructive" onClick={() => setDeleteId({ type: "task", id: t.id })}>
-                  Hapus
-                </Button>
+                <Button size="sm" variant="destructive" onClick={() => setDeleteId({ type: "task", id: task.id })}>{t("Hapus")}</Button>
               </CardHeader>
             </Card>
           ))}
@@ -214,12 +206,12 @@ export default function EventsMastersPage() {
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus item?</AlertDialogTitle>
-            <AlertDialogDescription>Tindakan ini soft-delete (data tidak hilang permanen).</AlertDialogDescription>
+            <AlertDialogTitle>{t("Hapus item?")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("Tindakan ini soft-delete (data tidak hilang permanen).")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void confirmDelete()}>Hapus</AlertDialogAction>
+            <AlertDialogCancel>{t("Batal")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void confirmDelete()}>{t("Hapus")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

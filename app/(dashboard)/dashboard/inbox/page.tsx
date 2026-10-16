@@ -34,6 +34,7 @@ import {
 import { toApiError } from "@/lib/api/client";
 import { refreshInboxQueries } from "@/lib/query/inbox-queries";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 const CONVO_PAGE = 30;
 /** Message thread page size (server clamps 1–100). */
@@ -56,6 +57,7 @@ function useDebouncedValue<T>(value: T, ms: number): T {
 
 export default function InboxPage() {
   const qc = useQueryClient();
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantKey = tenantContextKey(user);
   const tenantReady = useTenantQueryEnabled();
@@ -131,7 +133,7 @@ export default function InboxPage() {
     mutationFn: ({ contactId, displayName }: { contactId: string; displayName: string }) =>
       inboxApi.updateContact(contactId, { displayName }),
     onSuccess: () => {
-      toast.success("Nama kontak diperbarui");
+      toast.success(t("Nama kontak diperbarui"));
       qc.invalidateQueries({ queryKey: ["inbox-conversations", tenantKey] });
       setIsEditingContactName(false);
     },
@@ -311,7 +313,7 @@ export default function InboxPage() {
       await inboxApi.handoffBatch(ids, "Takeover manual dari inbox");
     },
     onSuccess: () => {
-      toast.success("Percakapan dipindah ke handoff");
+      toast.success(t("Percakapan dipindah ke handoff"));
       setSelectedConversationIds(new Set());
       void invalidateAll();
     },
@@ -325,7 +327,7 @@ export default function InboxPage() {
       await inboxApi.resumeAiBatch(ids);
     },
     onSuccess: () => {
-      toast.success("AI diaktifkan kembali");
+      toast.success(t("AI diaktifkan kembali"));
       setSelectedConversationIds(new Set());
       void invalidateAll();
     },
@@ -385,18 +387,18 @@ export default function InboxPage() {
     <>
       <PageHeader
         title="Inbox"
-        description="Semua percakapan WhatsApp pelanggan dalam satu layar."
+        description={t("Semua percakapan WhatsApp pelanggan dalam satu layar.")}
         actions={
           <div className="flex items-center gap-2">
             <Badge variant={totalUnread > 0 ? "warning" : "outline"}>
-              {totalUnread} belum dibaca
+              {t("{count} belum dibaca", { count: totalUnread })}
             </Badge>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setUnreadOnly((v) => !v)}
             >
-              {unreadOnly ? "Semua chat" : "Hanya unread"}
+              {unreadOnly ? t("Semua chat") : t("Hanya unread")}
             </Button>
           </div>
         }
@@ -408,7 +410,7 @@ export default function InboxPage() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari nama, nomor, isi chat..."
+                placeholder={t("Cari nama, nomor, isi chat...")}
               />
               {selectedConversationIds.size > 0 ? (
                 <div className="space-y-2 rounded-md border bg-background p-2">
@@ -420,7 +422,7 @@ export default function InboxPage() {
                       onChange={() => toggleSelectVisible()}
                     />
                     <span className="truncate">
-                      {selectedConversationIds.size} dipilih
+                      {t("{count} dipilih", { count: selectedConversationIds.size })}
                     </span>
                   </label>
                   <div className="grid grid-cols-1 gap-1.5">
@@ -439,7 +441,7 @@ export default function InboxPage() {
                       disabled={resumeAiBatchMut.isPending}
                       onClick={() => resumeAiBatchMut.mutate()}
                     >
-                      Aktifkan AI
+                      {t("Aktifkan AI")}
                     </Button>
                   </div>
                 </div>
@@ -452,11 +454,11 @@ export default function InboxPage() {
               {convosInfinite.isLoading && conversations.length === 0 ? (
                 <div className="flex items-center justify-center gap-2 p-6 text-xs text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Memuat percakapan...
+                  {t("Memuat percakapan...")}
                 </div>
               ) : conversations.length === 0 ? (
                 <div className="p-3 text-xs text-muted-foreground">
-                  Belum ada percakapan masuk.
+                  {t("Belum ada percakapan masuk.")}
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -480,7 +482,10 @@ export default function InboxPage() {
                               checked={selectedConversationIds.has(item.id)}
                               onChange={() => toggleSelected(item.id)}
                               onClick={(e) => e.stopPropagation()}
-                              aria-label={`Pilih percakapan ${item.contact.displayName || item.contact.phoneNumber}`}
+                              aria-label={t("Pilih percakapan {contact}", {
+                                contact:
+                                  item.contact.displayName || item.contact.phoneNumber,
+                              })}
                             />
                             {unread ? (
                               <Circle
@@ -507,7 +512,7 @@ export default function InboxPage() {
                             compact
                           />
                           <p className="line-clamp-2 text-xs text-muted-foreground">
-                            {item.lastMessagePreview || "Belum ada pesan"}
+                            {item.lastMessagePreview || t("Belum ada pesan")}
                           </p>
                         </div>
                       </button>
@@ -526,9 +531,11 @@ export default function InboxPage() {
           {!selectedConversation ? (
             <CardContent className="flex flex-col items-center justify-center gap-2 text-center">
               <MessageSquare className="h-10 w-10 text-muted-foreground/60" />
-              <p className="text-sm font-medium">Pilih percakapan</p>
+              <p className="text-sm font-medium">{t("Pilih percakapan")}</p>
               <p className="text-xs text-muted-foreground">
-                Pilih chat di kiri untuk melihat pesan. Belum terbaca sampai Anda membukanya.
+                {t(
+                  "Pilih chat di kiri untuk melihat pesan. Belum terbaca sampai Anda membukanya.",
+                )}
               </p>
             </CardContent>
           ) : (
@@ -565,7 +572,7 @@ export default function InboxPage() {
                         );
                       }}
                     >
-                      Ubah nama
+                      {t("Ubah nama")}
                     </Button>
                   ) : (
                     <Button
@@ -580,7 +587,7 @@ export default function InboxPage() {
                         );
                       }}
                     >
-                      Batal
+                      {t("Batal")}
                     </Button>
                   )}
 
@@ -590,7 +597,7 @@ export default function InboxPage() {
                     onClick={() => handoffMut.mutate()}
                     disabled={handoffMut.isPending}
                   >
-                    {selectedConversation.aiHandled ? "Handoff" : "Aktifkan AI"}
+                    {selectedConversation.aiHandled ? "Handoff" : t("Aktifkan AI")}
                   </Button>
                 </div>
               </div>
@@ -602,7 +609,7 @@ export default function InboxPage() {
                       className="h-8"
                       value={contactNameDraft}
                       onChange={(e) => setContactNameDraft(e.target.value)}
-                      placeholder="Nama kontak"
+                      placeholder={t("Nama kontak")}
                     />
                     <Button
                       size="sm"
@@ -614,7 +621,7 @@ export default function InboxPage() {
                         })
                       }
                     >
-                      Simpan
+                      {t("Simpan")}
                     </Button>
                   </div>
                 </div>
@@ -622,7 +629,7 @@ export default function InboxPage() {
               <div
                 ref={scrollRef}
                 role="log"
-                aria-label="Riwayat pesan"
+                aria-label={t("Riwayat pesan")}
                 aria-busy={isFetchingOlderMessages || messagesPending}
                 onScroll={onMessagesScroll}
                 className="relative min-h-0 flex-1 space-y-3 overflow-y-auto p-4"
@@ -634,7 +641,7 @@ export default function InboxPage() {
                   >
                     <div className="flex items-center gap-2 rounded-md border bg-background/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
                       <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-                      Memuat pesan lama…
+                      {t("Memuat pesan lama…")}
                     </div>
                   </div>
                 ) : null}
@@ -646,14 +653,14 @@ export default function InboxPage() {
                 {(isFetchingOlderMessages || messagesPending) && messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin" />
-                    Memuat pesan…
+                    {t("Memuat pesan…")}
                   </div>
                 ) : null}
                 {!isFetchingOlderMessages &&
                 messages.length > 0 &&
                 messagesInfinite.hasNextPage === false ? (
                   <p className="text-center text-[11px] text-muted-foreground">
-                    Awal percakapan
+                    {t("Awal percakapan")}
                   </p>
                 ) : null}
                 {messages.map((m) => (
@@ -665,13 +672,13 @@ export default function InboxPage() {
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={onDraftKeyDown}
-                  placeholder="Ketik balasan manual… (Enter kirim)"
+                  placeholder={t("Ketik balasan manual… (Enter kirim)")}
                 />
                 <Button
                   size="icon"
                   onClick={() => sendMut.mutate()}
                   disabled={sendMut.isPending || !draft.trim()}
-                  aria-label="Kirim pesan"
+                  aria-label={t("Kirim pesan")}
                 >
                   <Send className="h-4 w-4" />
                 </Button>

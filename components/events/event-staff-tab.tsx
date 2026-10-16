@@ -70,6 +70,8 @@ import {
   STAFF_SORT_DEFAULT,
 } from "@/lib/events-sort";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
+import { useEventDateFormat } from "@/components/events/events-i18n";
 
 const PAGE_SIZE = 20;
 const ATTENDANCE = ["PRESENT", "PARTIAL", "ABSENT"] as const;
@@ -153,11 +155,13 @@ function StaffFormFields({
   showRosterPick: boolean;
   isEditing: boolean;
 }) {
+  const { t } = useLocale();
+
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {showRosterPick && roster.length > 0 ? (
         <div className="sm:col-span-2">
-          <Label>Pilih dari roster staf</Label>
+          <Label>{t("Pilih dari roster staf")}</Label>
           <Select
             value={form.rosterId || "__none__"}
             onValueChange={(v) => {
@@ -176,10 +180,10 @@ function StaffFormFields({
             }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Ketik manual atau pilih roster" />
+              <SelectValue placeholder={t("Ketik manual atau pilih roster")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">— Input manual —</SelectItem>
+              <SelectItem value="__none__">{t("— Input manual —")}</SelectItem>
               {roster.map((r) => (
                 <SelectItem key={r.id} value={r.id}>
                   {r.fullName}
@@ -191,11 +195,11 @@ function StaffFormFields({
         </div>
       ) : null}
       <div className="sm:col-span-2">
-        <Label>Nama</Label>
+        <Label>{t("Nama")}</Label>
         <Input value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} />
       </div>
       <div>
-        <Label>Peran</Label>
+        <Label>{t("Peran")}</Label>
         <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v }))}>
           <SelectTrigger>
             <SelectValue />
@@ -210,7 +214,7 @@ function StaffFormFields({
         </Select>
       </div>
       <div>
-        <Label>Kehadiran</Label>
+        <Label>{t("Kehadiran")}</Label>
         <Select
           value={form.attendanceStatus}
           onValueChange={(v) => setForm((f) => ({ ...f, attendanceStatus: v }))}
@@ -230,7 +234,7 @@ function StaffFormFields({
       {roleUsesTherapies(form.role) ? (
         <>
           <div className="sm:col-span-2">
-            <Label>Terapi</Label>
+            <Label>{t("Terapi")}</Label>
             <TherapyMultiPick
               therapies={therapies}
               selected={form.therapyIds}
@@ -238,11 +242,11 @@ function StaffFormFields({
             />
           </div>
           <div>
-            <Label>Tersedia dari</Label>
+            <Label>{t("Tersedia dari")}</Label>
             <TimePicker value={form.availableFrom} onChange={(availableFrom) => setForm((f) => ({ ...f, availableFrom }))} />
           </div>
           <div>
-            <Label>Tersedia sampai</Label>
+            <Label>{t("Tersedia sampai")}</Label>
             <TimePicker value={form.availableUntil} onChange={(availableUntil) => setForm((f) => ({ ...f, availableUntil }))} />
           </div>
         </>
@@ -250,10 +254,10 @@ function StaffFormFields({
       {form.role === "relawan" ? (
         <>
           <div>
-            <Label>Peran relawan</Label>
+            <Label>{t("Peran relawan")}</Label>
             <Select value={form.volunteerRoleId} onValueChange={(v) => setForm((f) => ({ ...f, volunteerRoleId: v }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Pilih" />
+                <SelectValue placeholder={t("Pilih")} />
               </SelectTrigger>
               <SelectContent>
                 {roles.map((r) => (
@@ -270,17 +274,15 @@ function StaffFormFields({
                 type="checkbox"
                 checked={form.isPencatat}
                 onChange={(e) => setForm((f) => ({ ...f, isPencatat: e.target.checked }))}
-              />
-              Pencatat
-            </label>
+              />{t("Pencatat")}</label>
           </div>
           {isEditing ? (
             <div className="sm:col-span-2">
-              <Label>Catatan</Label>
+              <Label>{t("Catatan")}</Label>
               <Textarea
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                placeholder="Info tambahan untuk relawan ini"
+                placeholder={t("Info tambahan untuk relawan ini")}
                 rows={3}
               />
             </div>
@@ -288,11 +290,11 @@ function StaffFormFields({
         </>
       ) : null}
       <div>
-        <Label>Datang</Label>
+        <Label>{t("Datang")}</Label>
         <TimePicker value={form.arrivalTime} onChange={(arrivalTime) => setForm((f) => ({ ...f, arrivalTime }))} />
       </div>
       <div>
-        <Label>Pulang</Label>
+        <Label>{t("Pulang")}</Label>
         <TimePicker value={form.departureTime} onChange={(departureTime) => setForm((f) => ({ ...f, departureTime }))} />
       </div>
       <div className="sm:col-span-2">
@@ -301,9 +303,7 @@ function StaffFormFields({
             type="checkbox"
             checked={form.countsTowardMeals}
             onChange={(e) => setForm((f) => ({ ...f, countsTowardMeals: e.target.checked }))}
-          />
-          Dihitung untuk konsumsi (makan)
-        </label>
+          />{t("Dihitung untuk konsumsi (makan)")}</label>
       </div>
       <div className="sm:col-span-2">
         <label className="flex items-center gap-2 text-sm">
@@ -311,9 +311,7 @@ function StaffFormFields({
             type="checkbox"
             checked={form.saveToRoster}
             onChange={(e) => setForm((f) => ({ ...f, saveToRoster: e.target.checked }))}
-          />
-          Simpan ke roster staf (untuk acara berikutnya)
-        </label>
+          />{t("Simpan ke roster staf (untuk acara berikutnya)")}</label>
       </div>
     </div>
   );
@@ -349,6 +347,9 @@ export function EventStaffTab({
   therapies: { id: string; therapyName: string }[];
   roles: { id: string; roleName: string }[];
 }) {
+  const { t } = useLocale();
+  const { locale } = useEventDateFormat();
+  const dateLocale = locale === "en" ? "en-US" : "id-ID";
   const qc = useQueryClient();
   const { user } = useAuth();
   const tenantKey = tenantContextKey(user);
@@ -395,7 +396,14 @@ export function EventStaffTab({
   const importRosterMut = useMutation({
     mutationFn: () => eventsApi.importStaffRoster(eventId),
     onSuccess: (res) => {
-      toast.success(`${res.added} staf ditambahkan${res.skipped ? `, ${res.skipped} sudah ada` : ""}`);
+      toast.success(
+        res.skipped
+          ? t("{added} staf ditambahkan, {skipped} sudah ada", {
+              added: res.added,
+              skipped: res.skipped,
+            })
+          : t("{added} staf ditambahkan", { added: res.added }),
+      );
       invalidate();
       void qc.invalidateQueries({ queryKey: eventStaffRosterKey(tenantKey) });
     },
@@ -405,7 +413,7 @@ export function EventStaffTab({
   const syncRosterMut = useMutation({
     mutationFn: () => eventsApi.syncStaffRosterFromEvent(eventId),
     onSuccess: (res) => {
-      toast.success(`${res.upserted} staf disimpan ke roster`);
+      toast.success(t("{count} staf disimpan ke roster", { count: res.upserted }));
       void qc.invalidateQueries({ queryKey: eventStaffRosterKey(tenantKey) });
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -417,7 +425,7 @@ export function EventStaffTab({
         ? eventsApi.updatePerson(eventId, editing.id, buildPayload(form, true))
         : eventsApi.createPerson(eventId, buildPayload(form, false)),
     onSuccess: () => {
-      toast.success(editing ? "Staf diperbarui" : "Staf ditambahkan");
+      toast.success(editing ? t("Staf diperbarui") : t("Staf ditambahkan"));
       setDialogOpen(false);
       setEditing(null);
       setForm(emptyForm());
@@ -429,7 +437,7 @@ export function EventStaffTab({
   const deleteMut = useMutation({
     mutationFn: (id: string) => eventsApi.deletePerson(eventId, id),
     onSuccess: () => {
-      toast.success("Staf dihapus");
+      toast.success(t("Staf dihapus"));
       setDeleteTarget(null);
       invalidate();
     },
@@ -464,7 +472,7 @@ export function EventStaffTab({
         staffFilters: { sortBy: sort.sortBy, sortDir: sort.sortDir },
       })
       .then(() => {
-        toast.success("Export masuk antrian — lihat Riwayat export di bawah halaman");
+        toast.success(t("Export masuk antrian — lihat Riwayat export di bawah halaman"));
         void qc.invalidateQueries({ queryKey: eventExportJobsKey(tenantKey, eventId) });
       })
       .catch((e) => toast.error(toApiError(e).message));
@@ -530,16 +538,14 @@ export function EventStaffTab({
               variant="outline"
               disabled={syncRosterMut.isPending || total === 0}
               onClick={() => syncRosterMut.mutate()}
-            >
-              Simpan staf acara ini ke roster
-            </Button>
+            >{t("Simpan staf acara ini ke roster")}</Button>
           </div>
         </>
       ) : null}
 
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
-          <CardTitle className="text-base">Daftar staf</CardTitle>
+          <CardTitle className="text-base">{t("Daftar staf")}</CardTitle>
           <div className="flex flex-wrap gap-2">
             <EventTabRefreshButton onClick={invalidate} isRefreshing={isFetching} />
             {canEdit ? (
@@ -547,23 +553,18 @@ export function EventStaffTab({
                 presentation="dialog"
                 kind="staff"
                 eventId={eventId}
-                title="Import staf dari gambar"
-                description="Upload screenshot daftar staf/relawan."
+                title={t("Import staf dari gambar")}
+                description={t("Upload screenshot daftar staf/relawan.")}
                 onCommitted={invalidate}
               />
             ) : null}
             <Button size="sm" variant="outline" onClick={() => startExport("staff_list")}>
-              <Download className="mr-1 h-4 w-4" />
-              Daftar staf (Excel)
-            </Button>
+              <Download className="mr-1 h-4 w-4" />{t("Daftar staf (Excel)")}</Button>
             <Button size="sm" variant="outline" onClick={() => startExport("staff_sheet")}>
-              <Download className="mr-1 h-4 w-4" />
-              Lembar operasional
-            </Button>
+              <Download className="mr-1 h-4 w-4" />{t("Lembar operasional")}</Button>
             {canEdit ? (
               <Button size="sm" onClick={openCreate}>
-                <Plus className="mr-1 h-4 w-4" /> Tambah staf
-              </Button>
+                <Plus className="mr-1 h-4 w-4" />{t("Tambah staf")}</Button>
             ) : null}
           </div>
         </CardHeader>
@@ -587,7 +588,7 @@ export function EventStaffTab({
             searchPlaceholder="Cari nama staf..."
           >
             <div className="w-full sm:w-48">
-              <Label className="sr-only">Filter peran</Label>
+              <Label className="sr-only">{t("Filter peran")}</Label>
               <Select
                 value={roleFilter}
                 onValueChange={(v) => {
@@ -596,10 +597,10 @@ export function EventStaffTab({
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Semua peran" />
+                  <SelectValue placeholder={t("Semua peran")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ALL_ROLES}>Semua peran</SelectItem>
+                  <SelectItem value={ALL_ROLES}>{t("Semua peran")}</SelectItem>
                   {STAFF_ROLES.map((r) => (
                     <SelectItem key={r.value} value={r.value}>
                       {r.label}
@@ -618,16 +619,14 @@ export function EventStaffTab({
                 variant="destructive"
                 disabled={deleteBulkMut.isPending}
                 onClick={() => setBulkDeleteConfirmOpen(true)}
-              >
-                Hapus terpilih
-              </Button>
+              >{t("Hapus terpilih")}</Button>
             </div>
           ) : null}
 
           {isError ? (
             <p className="text-sm text-destructive">Gagal memuat: {toApiError(error).message}</p>
           ) : isLoading ? (
-            <p className="text-sm text-muted-foreground">Memuat...</p>
+            <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
           ) : (
             <>
               <Table>
@@ -639,12 +638,12 @@ export function EventStaffTab({
                           type="checkbox"
                           checked={allVisibleSelected}
                           onChange={toggleSelectVisible}
-                          aria-label="Pilih semua staf di halaman ini"
+                          aria-label={t("Pilih semua staf di halaman ini")}
                         />
                       </TableHead>
                     ) : null}
                     <SortableTableHead
-                      label="Nama"
+                      label={t("Nama")}
                       sortKey="name"
                       sort={tableSort}
                       onSortChange={(next) => {
@@ -653,7 +652,7 @@ export function EventStaffTab({
                       }}
                     />
                     <SortableTableHead
-                      label="Peran"
+                      label={t("Peran")}
                       sortKey="personType"
                       sort={tableSort}
                       onSortChange={(next) => {
@@ -661,19 +660,17 @@ export function EventStaffTab({
                         setPage(1);
                       }}
                     />
-                    <TableHead>Terapi</TableHead>
-                    <TableHead>Kehadiran</TableHead>
-                    <TableHead>Jam</TableHead>
-                    <TableHead>Terdaftar</TableHead>
-                    {canEdit ? <TableHead className="text-right">Aksi</TableHead> : null}
+                    <TableHead>{t("Terapi")}</TableHead>
+                    <TableHead>{t("Kehadiran")}</TableHead>
+                    <TableHead>{t("Jam")}</TableHead>
+                    <TableHead>{t("Terdaftar")}</TableHead>
+                    {canEdit ? <TableHead className="text-right">{t("Aksi")}</TableHead> : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={canEdit ? 8 : 6} className="h-24 text-center text-muted-foreground">
-                        Tidak ada data staf.
-                      </TableCell>
+                      <TableCell colSpan={canEdit ? 8 : 6} className="h-24 text-center text-muted-foreground">{t("Tidak ada data staf.")}</TableCell>
                     </TableRow>
                   ) : (
                     items.map((p) => (
@@ -700,7 +697,7 @@ export function EventStaffTab({
                           {p.departureTime ? ` – ${p.departureTime.slice(0, 5)}` : ""}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {p.createdAt ? new Date(p.createdAt).toLocaleString("id-ID") : "—"}
+                          {p.createdAt ? new Date(p.createdAt).toLocaleString(dateLocale) : "—"}
                         </TableCell>
                         {canEdit ? (
                           <TableCell className="text-right">
@@ -741,12 +738,8 @@ export function EventStaffTab({
             isEditing={!!editing}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button disabled={saveMut.isPending || !form.fullName.trim()} onClick={() => saveMut.mutate()}>
-              Simpan
-            </Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("Batal")}</Button>
+            <Button disabled={saveMut.isPending || !form.fullName.trim()} onClick={() => saveMut.mutate()}>{t("Simpan")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -754,16 +747,14 @@ export function EventStaffTab({
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus staf?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Hapus staf?")}</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteTarget?.fullName} akan dihapus dari acara ini.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}>
-              Hapus
-            </AlertDialogAction>
+            <AlertDialogCancel>{t("Batal")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}>{t("Hapus")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -771,19 +762,17 @@ export function EventStaffTab({
       <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus staf terpilih?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Hapus staf terpilih?")}</AlertDialogTitle>
             <AlertDialogDescription>
               {selectedIds.size} staf akan dihapus dari acara ini.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>{t("Batal")}</AlertDialogCancel>
             <AlertDialogAction
               disabled={deleteBulkMut.isPending}
               onClick={() => deleteBulkMut.mutate(Array.from(selectedIds))}
-            >
-              Hapus
-            </AlertDialogAction>
+            >{t("Hapus")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

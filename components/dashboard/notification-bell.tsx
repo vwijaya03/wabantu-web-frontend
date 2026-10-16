@@ -17,10 +17,12 @@ import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import { useAdminSession } from "@/hooks/use-admin-session";
 import { currentSessionKind } from "@/lib/auth/load-session-user";
+import { useLocale } from "@/lib/i18n/locale";
 
 const NOTIFICATIONS_QUERY_KEY = ["notifications"];
 
 export function NotificationBell() {
+  const { t } = useLocale();
   const router = useRouter();
   const qc = useQueryClient();
   // /notifications adalah endpoint tenant (klien `api`). Sesi admin-only tidak punya token client,
@@ -59,12 +61,12 @@ export function NotificationBell() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Notifikasi" className="relative">
+        <Button variant="ghost" size="icon" aria-label={t("Notifikasi")} className="relative">
           <Bell className="h-4 w-4" />
           {unreadCount > 0 ? (
             <span
               className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground"
-              aria-label={`${unreadCount} notifikasi belum dibaca`}
+              aria-label={t("{count} notifikasi belum dibaca", { count: unreadCount })}
             >
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
@@ -72,11 +74,11 @@ export function NotificationBell() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
-        <DropdownMenuLabel>Notifikasi</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("Notifikasi")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {notifications.length === 0 ? (
           <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-            Belum ada notifikasi.
+            {t("Belum ada notifikasi.")}
           </p>
         ) : (
           notifications.map((n) => (

@@ -34,11 +34,14 @@ import { toApiError } from "@/lib/api/client";
 import {
   ACCESS_DURATION_OPTIONS,
   IMPERSONATION_MODULE_OPTIONS,
-  accessStatusLabel,
   formatAccessExpiry,
-  formatImpersonationScope,
 } from "@/lib/dashboard/impersonation-modules";
+import {
+  translateAccessStatus,
+  translateImpersonationScope,
+} from "@/lib/dashboard/translate-impersonation-scope";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 function RequestRow({
   request,
@@ -53,6 +56,7 @@ function RequestRow({
   onRevoke: (request: TenantAccessRequest) => void;
   busy: boolean;
 }) {
+  const { t } = useLocale();
   const isActiveGrant = isAccessGrantActive(request);
 
   return (
@@ -60,25 +64,40 @@ function RequestRow({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <p className="font-medium">
-            {request.requesterName || request.requesterEmail || "Operator platform"}
+            {request.requesterName ||
+              request.requesterEmail ||
+              t("Operator platform")}
           </p>
           <p className="text-muted-foreground">{request.reason}</p>
           <p className="text-xs text-muted-foreground">
-            Diminta:{" "}
-            {formatImpersonationScope(request.requestedScope, request.requestedModules)}
+            {t("Diminta")}:{" "}
+            {translateImpersonationScope(
+              t,
+              request.requestedScope,
+              request.requestedModules,
+            )}
             {" · "}
             {new Date(request.createdAt).toLocaleString("id-ID")}
           </p>
           {request.status === "approved" && request.grantedScope ? (
             <p className="text-xs text-muted-foreground">
-              Diberikan:{" "}
-              {formatImpersonationScope(request.grantedScope, request.grantedModules)}
+              {t("Diberikan")}:{" "}
+              {translateImpersonationScope(
+                t,
+                request.grantedScope,
+                request.grantedModules,
+              )}
               {" · "}
-              Berlaku hingga: {formatAccessExpiry(request.expiresAt)}
+              {t("Berlaku hingga")}:{" "}
+              {!request.expiresAt
+                ? t("Permanen sampai dicabut")
+                : formatAccessExpiry(request.expiresAt)}
             </p>
           ) : null}
           {request.rejectReason ? (
-            <p className="text-xs text-destructive">Alasan tolak: {request.rejectReason}</p>
+            <p className="text-xs text-destructive">
+              {t("Alasan tolak")}: {request.rejectReason}
+            </p>
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -91,12 +110,12 @@ function RequestRow({
                   : "secondary"
             }
           >
-            {accessStatusLabel(request.status)}
+            {translateAccessStatus(t, request.status)}
           </Badge>
           {request.status === "pending" ? (
             <>
               <Button size="sm" disabled={busy} onClick={() => onApprove(request)}>
-                Setujui
+                {t("Setujui")}
               </Button>
               <Button
                 size="sm"
@@ -104,7 +123,7 @@ function RequestRow({
                 disabled={busy}
                 onClick={() => onReject(request)}
               >
-                Tolak
+                {t("Tolak")}
               </Button>
             </>
           ) : null}
@@ -115,7 +134,7 @@ function RequestRow({
               disabled={busy}
               onClick={() => onRevoke(request)}
             >
-              Cabut akses
+              {t("Cabut akses")}
             </Button>
           ) : null}
         </div>
@@ -125,6 +144,7 @@ function RequestRow({
 }
 
 export default function AccessRequestsPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantReady = useTenantQueryEnabled();
   const qc = useQueryClient();
@@ -161,8 +181,8 @@ export default function AccessRequestsPage() {
     onSuccess: (_, vars) => {
       toast.success(
         vars.action === "approve"
-          ? "Permintaan akses disetujui"
-          : "Permintaan akses ditolak",
+          ? t("Permintaan akses disetujui")
+          : t("Permintaan akses ditolak"),
       );
       setApproveTarget(null);
       setRejectTarget(null);
@@ -176,7 +196,7 @@ export default function AccessRequestsPage() {
   const revokeMut = useMutation({
     mutationFn: (id: string) => tenantAccessApi.revoke(id),
     onSuccess: () => {
-      toast.success("Akses operator dicabut");
+      toast.success(t("Akses operator dicabut"));
       void qc.invalidateQueries({ queryKey: ["tenant-access-requests"] });
       void qc.invalidateQueries({ queryKey: ["notifications"] });
     },
@@ -210,8 +230,8 @@ export default function AccessRequestsPage() {
   if (user?.role !== "owner") {
     return (
       <PageHeader
-        title="Permintaan Akses"
-        description="Hanya owner yang dapat menyetujui permintaan akses operator platform."
+        title={t("Permintaan Akses")}
+        description={t("Hanya owner yang dapat menyetujui permintaan akses operator platform.")}
       />
     );
   }
@@ -219,23 +239,25 @@ export default function AccessRequestsPage() {
   return (
     <>
       <PageHeader
-        title="Permintaan Akses"
-        description="Kelola permintaan operator WABantu untuk memantau tenant Anda."
+        title={t("Permintaan Akses")}
+        description={t("Kelola permintaan operator WABantu untuk memantau tenant Anda.")}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Menunggu persetujuan ({pending.length})</CardTitle>
+          <CardTitle>
+            {t("Menunggu persetujuan ({count})", { count: pending.length })}
+          </CardTitle>
           <CardDescription>
-            Operator platform tidak dapat masuk tanpa persetujuan Anda.
+            {t("Operator platform tidak dapat masuk tanpa persetujuan Anda.")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Memuat…</p>
+            <p className="text-sm text-muted-foreground">{t("Memuat…")}</p>
           ) : pending.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Tidak ada permintaan yang menunggu.
+              {t("Tidak ada permintaan yang menunggu.")}
             </p>
           ) : (
             pending.map((request) => (
@@ -254,16 +276,18 @@ export default function AccessRequestsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Riwayat</CardTitle>
+          <CardTitle>{t("Riwayat")}</CardTitle>
           <CardDescription>
-            Permintaan yang sudah disetujui, ditolak, dicabut, atau kedaluwarsa.
+            {t(
+              "Permintaan yang sudah disetujui, ditolak, dicabut, atau kedaluwarsa.",
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Memuat…</p>
+            <p className="text-sm text-muted-foreground">{t("Memuat…")}</p>
           ) : history.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada riwayat.</p>
+            <p className="text-sm text-muted-foreground">{t("Belum ada riwayat.")}</p>
           ) : (
             history.map((request) => (
               <RequestRow
@@ -285,15 +309,15 @@ export default function AccessRequestsPage() {
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Setujui permintaan akses</DialogTitle>
+            <DialogTitle>{t("Setujui permintaan akses")}</DialogTitle>
             <DialogDescription>
-              Tentukan modul dan durasi akses untuk operator platform.
+              {t("Tentukan modul dan durasi akses untuk operator platform.")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Cakupan akses</Label>
+              <Label>{t("Cakupan akses")}</Label>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
@@ -301,7 +325,7 @@ export default function AccessRequestsPage() {
                   variant={grantedScope === "full" ? "default" : "outline"}
                   onClick={() => setGrantedScope("full")}
                 >
-                  Akses penuh
+                  {t("Akses penuh")}
                 </Button>
                 <Button
                   type="button"
@@ -309,14 +333,14 @@ export default function AccessRequestsPage() {
                   variant={grantedScope === "limited" ? "default" : "outline"}
                   onClick={() => setGrantedScope("limited")}
                 >
-                  Modul tertentu
+                  {t("Modul tertentu")}
                 </Button>
               </div>
             </div>
 
             {grantedScope === "limited" ? (
               <div className="space-y-2 rounded-md border p-3">
-                <Label>Modul yang diizinkan</Label>
+                <Label>{t("Modul yang diizinkan")}</Label>
                 <ul className="space-y-2">
                   {IMPERSONATION_MODULE_OPTIONS.map((opt) => (
                     <li key={opt.id} className="flex items-start gap-2 text-sm">
@@ -327,7 +351,7 @@ export default function AccessRequestsPage() {
                         checked={grantedModules.includes(opt.id)}
                         onChange={() => toggleGrantedModule(opt.id)}
                       />
-                      <label htmlFor={`grant-mod-${opt.id}`}>{opt.label}</label>
+                      <label htmlFor={`grant-mod-${opt.id}`}>{t(opt.label)}</label>
                     </li>
                   ))}
                 </ul>
@@ -335,7 +359,7 @@ export default function AccessRequestsPage() {
             ) : null}
 
             <div className="space-y-2">
-              <Label>Durasi akses</Label>
+              <Label>{t("Durasi akses")}</Label>
               <div className="flex flex-wrap gap-2">
                 {ACCESS_DURATION_OPTIONS.map((opt) => (
                   <Button
@@ -345,7 +369,7 @@ export default function AccessRequestsPage() {
                     variant={durationHours === opt.hours ? "default" : "outline"}
                     onClick={() => setDurationHours(opt.hours)}
                   >
-                    {opt.label}
+                    {t(opt.label)}
                   </Button>
                 ))}
               </div>
@@ -354,7 +378,7 @@ export default function AccessRequestsPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setApproveTarget(null)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button
               disabled={
@@ -373,7 +397,7 @@ export default function AccessRequestsPage() {
                 });
               }}
             >
-              Setujui
+              {t("Setujui")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -385,13 +409,13 @@ export default function AccessRequestsPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tolak permintaan akses</DialogTitle>
+            <DialogTitle>{t("Tolak permintaan akses")}</DialogTitle>
             <DialogDescription>
-              Berikan alasan singkat — operator akan menerima notifikasi.
+              {t("Berikan alasan singkat — operator akan menerima notifikasi.")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="reject-reason">Alasan penolakan</Label>
+            <Label htmlFor="reject-reason">{t("Alasan penolakan")}</Label>
             <Textarea
               id="reject-reason"
               value={rejectReason}
@@ -401,7 +425,7 @@ export default function AccessRequestsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectTarget(null)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button
               variant="destructive"
@@ -415,7 +439,7 @@ export default function AccessRequestsPage() {
                 });
               }}
             >
-              Tolak
+              {t("Tolak")}
             </Button>
           </DialogFooter>
         </DialogContent>
