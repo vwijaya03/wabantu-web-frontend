@@ -64,6 +64,15 @@ export interface OutboxCounts {
   total: number;
 }
 
+export interface RebuildRetrievalIndexResponse {
+  tenantId: string;
+  kbReset: number;
+  catalogReset: number;
+  kbEnqueued: number;
+  catalogEnqueued: number;
+  pineconeWiped: boolean;
+}
+
 export interface RetrievalObservabilitySnapshot {
   requests: number;
   fallbacks: number;
@@ -165,6 +174,22 @@ export const flagsApi = {
   async getRetrievalIndexingProgress(tenantId: string): Promise<TenantIndexingProgress> {
     const { data } = await adminHttp.get<TenantIndexingProgress>(
       `/flags/retrieval-indexing/${encodeURIComponent(tenantId)}`,
+    );
+    return data;
+  },
+
+  async rebuildRetrievalIndex(
+    tenantId: string,
+    opts?: { wipePinecone?: boolean; entities?: ("kb" | "catalog")[] },
+  ): Promise<RebuildRetrievalIndexResponse> {
+    const { data } = await adminHttp.post<RebuildRetrievalIndexResponse>(
+      "/flags/retrieval-rebuild",
+      {
+        tenantId,
+        ...(opts?.wipePinecone !== undefined ? { wipePinecone: opts.wipePinecone } : {}),
+        ...(opts?.entities?.length ? { entities: opts.entities } : {}),
+      },
+      { timeout: 120_000 },
     );
     return data;
   },
