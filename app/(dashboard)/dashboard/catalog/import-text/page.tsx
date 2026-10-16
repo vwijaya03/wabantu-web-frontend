@@ -15,11 +15,13 @@ import { usageApi } from "@/lib/api/usage";
 import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 const MIN_TEXT_LEN = 10;
 const MAX_TEXT_LEN = 12000;
 
 export default function CatalogImportTextPage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const [preview, setPreview] = useState<CatalogImagePreview | null>(null);
@@ -38,32 +40,37 @@ export default function CatalogImportTextPage() {
   const quotaBanner =
     preview?.quotaNotice ??
     (tokenQuota
-      ? `Setiap penggunaan fitur AI (termasuk import dari teks) akan mengurangi kuota token AI bulanan toko Anda. Sisa kuota token bulan ini: ${tokenQuota.remaining} dari ${tokenQuota.limit}.`
-      : "Setiap penggunaan fitur AI (termasuk import dari teks) akan mengurangi kuota token AI bulanan toko Anda.");
+      ? t(
+          "Setiap penggunaan fitur AI (termasuk import dari teks) akan mengurangi kuota token AI bulanan toko Anda. Sisa kuota token bulan ini: {remaining} dari {limit}.",
+          { remaining: tokenQuota.remaining, limit: tokenQuota.limit },
+        )
+      : t(
+          "Setiap penggunaan fitur AI (termasuk import dari teks) akan mengurangi kuota token AI bulanan toko Anda.",
+        ));
 
   const previewMut = useMutation({
     mutationFn: () => catalogTextApi.preview(text.trim()),
     onSuccess: (d) => {
       setPreview(d);
       setItems(d.items.map((it) => ({ ...it })));
-      toast.success(`Terdeteksi ${d.items.length} baris produk (pakai ${d.tokensUsed} token)`);
+      toast.success(t("Terdeteksi {count} baris produk (pakai {tokens} token)", { count: d.items.length, tokens: d.tokensUsed }));
       if (d.warnings?.length) {
         d.warnings.forEach((w) => toast.warning(w));
       }
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const commitMut = useMutation({
     mutationFn: () => catalogTextApi.commit(preview!.jobId, items),
     onSuccess: (res) => {
-      toast.success(res.message);
+      toast.success(t(res.message));
       void qc.invalidateQueries({ queryKey: ["catalog"] });
       setPreview(null);
       setItems([]);
       setText("");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const updateItem = (idx: number, patch: Partial<CatalogImageDraftItem>) => {
@@ -83,21 +90,21 @@ export default function CatalogImportTextPage() {
   return (
     <>
       <PageHeader
-        title="Import katalog dari teks"
-        description="Tempel deskripsi produk dari WhatsApp atau caption marketplace. AI memecah jadi baris produk; Anda konfirmasi sebelum disimpan."
+        title={t("Import katalog dari teks")}
+        description={t("Tempel deskripsi produk dari WhatsApp atau caption marketplace. AI memecah jadi baris produk; Anda konfirmasi sebelum disimpan.")}
       />
       <p className="mb-4 text-sm">
         <Link href="/dashboard/catalog" className="text-primary underline-offset-4 hover:underline">
-          ← Kembali ke katalog
+          {t("← Kembali ke katalog")}
         </Link>
       </p>
 
       <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-        <p className="font-medium">Peringatan kuota AI</p>
+        <p className="font-medium">{t("Peringatan kuota AI")}</p>
         <p className="mt-1">{quotaBanner}</p>
         {quotaExhausted ? (
           <p className="mt-2 font-medium text-red-700 dark:text-red-300">
-            Kuota token habis — proses teks dengan AI tidak dapat dilanjutkan sampai periode berikutnya atau upgrade paket.
+            {t("Kuota token habis — proses teks dengan AI tidak dapat dilanjutkan sampai periode berikutnya atau upgrade paket.")}
           </p>
         ) : null}
       </div>
@@ -105,9 +112,9 @@ export default function CatalogImportTextPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>1. Tempel teks produk</CardTitle>
+            <CardTitle>{t("1. Tempel teks produk")}</CardTitle>
             <CardDescription>
-              Satu atau beberapa produk/varian. Pisahkan blok produk berbeda dengan baris kosong atau tanda &quot;-&quot;.
+              {t('Satu atau beberapa produk/varian. Pisahkan blok produk berbeda dengan baris kosong atau tanda "-".')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -123,8 +130,8 @@ export default function CatalogImportTextPage() {
               maxLength={MAX_TEXT_LEN}
             />
             <p className="text-xs text-muted-foreground">
-              {trimmedLen} / {MAX_TEXT_LEN} karakter
-              {trimmedLen > 0 && trimmedLen < MIN_TEXT_LEN ? " — minimal 10 karakter" : ""}
+              {t("{len} / {max} karakter", { len: trimmedLen, max: MAX_TEXT_LEN })}
+              {trimmedLen > 0 && trimmedLen < MIN_TEXT_LEN ? t(" — minimal 10 karakter") : ""}
             </p>
 
             <div
@@ -142,15 +149,20 @@ export default function CatalogImportTextPage() {
                 onClick={() => previewMut.mutate()}
               >
                 <Sparkles className="h-4 w-4" aria-hidden />
-                {previewMut.isPending ? "Memproses AI…" : "Proses dengan AI"}
+                {previewMut.isPending ? t("Memproses AI…") : t("Proses dengan AI")}
               </Button>
             </div>
 
             {preview ? (
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p>
-                  Token dipakai: {preview.tokensUsed} (in {preview.inputTokens} / out {preview.outputTokens}). Sisa
-                  kuota: {preview.tokenQuotaRemaining} / {preview.tokenQuotaLimit}
+                  {t("Token dipakai: {used} (in {input} / out {output}). Sisa kuota: {remaining} / {limit}", {
+                    used: preview.tokensUsed,
+                    input: preview.inputTokens,
+                    output: preview.outputTokens,
+                    remaining: preview.tokenQuotaRemaining,
+                    limit: preview.tokenQuotaLimit,
+                  })}
                 </p>
               </div>
             ) : null}
@@ -159,26 +171,26 @@ export default function CatalogImportTextPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>2. Konfirmasi & simpan</CardTitle>
+            <CardTitle>{t("2. Konfirmasi & simpan")}</CardTitle>
             <CardDescription>
-              Periksa SKU, nama, dan harga. Hanya baris yang dicentang yang disimpan ke katalog WABantu.
+              {t("Periksa SKU, nama, dan harga. Hanya baris yang dicentang yang disimpan ke katalog WABantu.")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {!preview ? (
               <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
-                Tempel teks dan tekan <span className="font-medium">Proses dengan AI</span> di langkah 1 terlebih dahulu.
+                {t("Tempel teks dan tekan Proses dengan AI di langkah 1 terlebih dahulu.")}
               </div>
             ) : (
               <div className="space-y-3">
                 {preview.parentTitle ? (
                   <p className="text-sm">
-                    <span className="text-muted-foreground">Judul induk: </span>
+                    <span className="text-muted-foreground">{t("Judul induk: ")}</span>
                     {preview.parentTitle}
                   </p>
                 ) : null}
                 <p className="text-sm text-muted-foreground">
-                  {includedCount} dari {items.length} baris akan disimpan
+                  {t("{included} dari {total} baris akan disimpan", { included: includedCount, total: items.length })}
                 </p>
                 <Button
                   type="button"
@@ -188,7 +200,7 @@ export default function CatalogImportTextPage() {
                   disabled={!canSave}
                   onClick={() => commitMut.mutate()}
                 >
-                  {commitMut.isPending ? "Menyimpan…" : "Simpan ke katalog"}
+                  {commitMut.isPending ? t("Menyimpan…") : t("Simpan ke katalog")}
                 </Button>
               </div>
             )}
@@ -199,7 +211,7 @@ export default function CatalogImportTextPage() {
       {items.length > 0 ? (
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Pratinjau produk</CardTitle>
+            <CardTitle>{t("Pratinjau produk")}</CardTitle>
           </CardHeader>
           <CardContent>
             <CatalogImportDraftTable items={items} onUpdateItem={updateItem} />

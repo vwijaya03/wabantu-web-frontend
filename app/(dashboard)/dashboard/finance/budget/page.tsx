@@ -20,10 +20,12 @@ import { currentFinancePeriod, financeMonthOptions } from "@/lib/finance/utils";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 const NO_CATEGORY = "__no_category__";
 
 export default function BudgetPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantKey = useTenantKey();
   const isOwner = canPerformOwnerActions(user);
@@ -60,19 +62,19 @@ export default function BudgetPage() {
         amount: parseFloat(form.amount),
       }),
     onSuccess: () => {
-      toast.success("Anggaran disimpan");
+      toast.success(t("Anggaran disimpan"));
       qc.invalidateQueries({ queryKey: ["finance-budgets"] });
       qc.invalidateQueries({ queryKey: ["finance-budget-summary"] });
       setOpenCreate(false);
       setForm({ categoryId: "", amount: "" });
     },
-    onError: (e: unknown) => toast.error(toApiError(e).message ?? "Gagal menyimpan"),
+    onError: (e: unknown) => toast.error(toApiError(e).message ?? t("Gagal menyimpan")),
   });
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => financeApi.deleteBudget(id),
     onSuccess: () => {
-      toast.success("Anggaran dihapus");
+      toast.success(t("Anggaran dihapus"));
       qc.invalidateQueries({ queryKey: ["finance-budgets"] });
     },
   });
@@ -86,12 +88,12 @@ export default function BudgetPage() {
   return (
     <>
       <FinanceSubPageHeader
-        title="Anggaran"
-        description="Tetapkan batas pengeluaran per kategori."
+        title={t("Anggaran")}
+        description={t("Tetapkan batas pengeluaran per kategori.")}
         actions={
           isOwner ? (
             <Button onClick={() => setOpenCreate(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Tambah Anggaran
+              <PlusCircle className="mr-2 h-4 w-4" /> {t("Tambah Anggaran")}
             </Button>
           ) : null
         }
@@ -117,14 +119,14 @@ export default function BudgetPage() {
           {summary.overBudget.length > 0 && (
             <Card className="border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30">
               <CardContent className="p-4 text-sm text-red-700 dark:text-red-400">
-                🔴 Melebihi anggaran: <strong>{summary.overBudget.join(", ")}</strong>
+                {t("🔴 Melebihi anggaran: {categories}", { categories: summary.overBudget.join(", ") })}
               </CardContent>
             </Card>
           )}
           {summary.warnBudget.length > 0 && (
             <Card className="border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
               <CardContent className="p-4 text-sm text-amber-700 dark:text-amber-400">
-                ⚠️ Hampir habis: <strong>{summary.warnBudget.join(", ")}</strong>
+                {t("⚠️ Hampir habis: {categories}", { categories: summary.warnBudget.join(", ") })}
               </CardContent>
             </Card>
           )}
@@ -136,19 +138,19 @@ export default function BudgetPage() {
         <div className="grid gap-3 sm:grid-cols-3">
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Total Anggaran</p>
+              <p className="text-xs text-muted-foreground">{t("Total Anggaran")}</p>
               <p className="mt-1 text-xl font-bold">{formatIDR(summary.totalBudget)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Sudah Terpakai</p>
+              <p className="text-xs text-muted-foreground">{t("Sudah Terpakai")}</p>
               <p className="mt-1 text-xl font-bold text-red-600">{formatIDR(summary.totalSpent)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Sisa Anggaran</p>
+              <p className="text-xs text-muted-foreground">{t("Sisa Anggaran")}</p>
               <p className="mt-1 text-xl font-bold text-green-600">
                 {formatIDR(parseFloat(summary.totalBudget) - parseFloat(summary.totalSpent))}
               </p>
@@ -158,12 +160,12 @@ export default function BudgetPage() {
       )}
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
       ) : budgets.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Belum ada anggaran untuk periode ini.
-            {isOwner ? " Klik 'Tambah Anggaran' untuk mulai." : ""}
+            {t("Belum ada anggaran untuk periode ini.")}
+            {isOwner ? t(" Klik 'Tambah Anggaran' untuk mulai.") : ""}
           </CardContent>
         </Card>
       ) : (
@@ -178,12 +180,12 @@ export default function BudgetPage() {
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tambah / Ubah Anggaran</DialogTitle>
-            <DialogDescription>Atur batas pengeluaran per kategori untuk periode yang dipilih.</DialogDescription>
+            <DialogTitle>{t("Tambah / Ubah Anggaran")}</DialogTitle>
+            <DialogDescription>{t("Atur batas pengeluaran per kategori untuk periode yang dipilih.")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Kategori</Label>
+              <Label>{t("Kategori")}</Label>
               <Select
                 value={form.categoryId || NO_CATEGORY}
                 onValueChange={(v) =>
@@ -191,11 +193,11 @@ export default function BudgetPage() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih kategori" />
+                  <SelectValue placeholder={t("Pilih kategori")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NO_CATEGORY} disabled>
-                    Pilih kategori
+                    {t("Pilih kategori")}
                   </SelectItem>
                   {expenseCategories.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
@@ -206,7 +208,7 @@ export default function BudgetPage() {
               </Select>
             </div>
             <div>
-              <Label>Batas Anggaran (Rp)</Label>
+              <Label>{t("Batas Anggaran (Rp)")}</Label>
               <Input
                 type="number"
                 value={form.amount}
@@ -216,12 +218,12 @@ export default function BudgetPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenCreate(false)}>Batal</Button>
+            <Button variant="outline" onClick={() => setOpenCreate(false)}>{t("Batal")}</Button>
             <Button
               onClick={() => upsertMut.mutate()}
               disabled={!form.categoryId || !form.amount || upsertMut.isPending}
             >
-              {upsertMut.isPending ? "Menyimpan..." : "Simpan"}
+              {upsertMut.isPending ? t("Menyimpan...") : t("Simpan")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -231,6 +233,7 @@ export default function BudgetPage() {
 }
 
 function BudgetRow({ budget, isOwner, onDelete }: { budget: Budget; isOwner: boolean; onDelete: () => void }) {
+  const { t } = useLocale();
   const progressColor =
     budget.status === "over" ? "bg-red-500" : budget.status === "warn" ? "bg-amber-500" : "bg-primary";
 
@@ -263,12 +266,19 @@ function BudgetRow({ budget, isOwner, onDelete }: { budget: Budget; isOwner: boo
           />
         </div>
         <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
-          <span>Terpakai {formatIDR(budget.spent)}</span>
+          <span>{t("Terpakai {amount}", { amount: formatIDR(budget.spent) })}</span>
           <span>
             {budget.status === "over" ? (
-              <span className="text-red-600">Melebihi {formatIDR(Math.abs(parseFloat(budget.remaining)))}</span>
+              <span className="text-red-600">
+                {t("Melebihi {amount}", { amount: formatIDR(Math.abs(parseFloat(budget.remaining))) })}
+              </span>
             ) : (
-              <>Sisa {formatIDR(budget.remaining)} dari {formatIDR(budget.amount)}</>
+              <>
+                {t("Sisa {remaining} dari {total}", {
+                  remaining: formatIDR(budget.remaining),
+                  total: formatIDR(budget.amount),
+                })}
+              </>
             )}
           </span>
         </div>

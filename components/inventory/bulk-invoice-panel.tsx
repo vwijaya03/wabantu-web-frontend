@@ -23,6 +23,7 @@ import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 const MAX_BATCH = 100;
 
@@ -34,6 +35,7 @@ function orderStatusLabel(status: string) {
 }
 
 export function BulkInvoicePanel({ embedded = false }: { embedded?: boolean }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const [q, setQ] = useState("");
@@ -90,7 +92,7 @@ export function BulkInvoicePanel({ embedded = false }: { embedded?: boolean }) {
       if (res.failed > 0) toast.error(`${res.failed} pesanan gagal`);
       setSelected(new Set());
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const resultLines = (batchResult?.results ?? []).map((r) => ({
@@ -104,11 +106,11 @@ export function BulkInvoicePanel({ embedded = false }: { embedded?: boolean }) {
   const body = (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Hanya pesanan <strong>Dalam pengiriman</strong> atau <strong>Selesai</strong> yang belum punya faktur. Maks. {MAX_BATCH} per aksi.
+        Hanya pesanan <strong>{t("Dalam pengiriman")}</strong> atau <strong>Selesai</strong> yang belum punya faktur. Maks. {MAX_BATCH} per aksi.
       </p>
       <div className="flex flex-wrap items-center gap-2">
           <Input
-            placeholder="Cari pesanan / pelanggan..."
+            placeholder={t("Cari pesanan / pelanggan...")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { setSearchQ(q); setPage(1); } }}
@@ -133,20 +135,20 @@ export function BulkInvoicePanel({ embedded = false }: { embedded?: boolean }) {
                   type="checkbox"
                   checked={allVisibleSelected}
                   onChange={toggleAllVisible}
-                  aria-label="Pilih semua di halaman ini"
+                  aria-label={t("Pilih semua di halaman ini")}
                 />
               </InventoryTableHead>
-              <InventoryTableHead>Pesanan</InventoryTableHead>
-              <InventoryTableHead>Pelanggan</InventoryTableHead>
-              <InventoryTableHead>Status</InventoryTableHead>
-              <InventoryTableHead align="right">Subtotal</InventoryTableHead>
+              <InventoryTableHead>{t("Pesanan")}</InventoryTableHead>
+              <InventoryTableHead>{t("Pelanggan")}</InventoryTableHead>
+              <InventoryTableHead>{t("Status")}</InventoryTableHead>
+              <InventoryTableHead align="right">{t("Subtotal")}</InventoryTableHead>
             </InventoryTableRow>
           </InventoryTableHeader>
           <InventoryTableBody>
             {isLoading ? (
-              <InventoryTableEmpty colSpan={5}>Memuat...</InventoryTableEmpty>
+              <InventoryTableEmpty colSpan={5}>{t("Memuat...")}</InventoryTableEmpty>
             ) : orders.length === 0 ? (
-              <InventoryTableEmpty colSpan={5}>Tidak ada pesanan eligible.</InventoryTableEmpty>
+              <InventoryTableEmpty colSpan={5}>{t("Tidak ada pesanan eligible.")}</InventoryTableEmpty>
             ) : (
               orders.map((o) => (
                 <InventoryTableRow key={o.id}>
@@ -174,7 +176,7 @@ export function BulkInvoicePanel({ embedded = false }: { embedded?: boolean }) {
 
         {batchResult ? (
           <BulkActionResultPanel
-            title="Hasil buat faktur massal"
+            title={t("Hasil buat faktur massal")}
             processed={batchResult.processed}
             failed={batchResult.failed}
             results={resultLines}
@@ -187,7 +189,7 @@ export function BulkInvoicePanel({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <Card className="mb-4 border-primary/20">
-      <CardHeader><CardTitle>Buat Faktur Massal</CardTitle></CardHeader>
+      <CardHeader><CardTitle>{t("Buat Faktur Massal")}</CardTitle></CardHeader>
       <CardContent>{body}</CardContent>
     </Card>
   );

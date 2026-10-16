@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/lib/i18n/locale";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -36,6 +37,7 @@ export function CatalogProductSheet({
   saving,
   onSave,
 }: CatalogProductSheetProps) {
+  const { t } = useLocale();
   const isEdit = mode === "edit";
   const canSave =
     canManage &&
@@ -47,27 +49,27 @@ export function CatalogProductSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>{isEdit ? "Edit produk" : "Tambah produk"}</SheetTitle>
+          <SheetTitle>{isEdit ? t("Edit produk") : t("Tambah produk")}</SheetTitle>
           <SheetDescription>
             {isEdit
-              ? "Ubah nama, harga, barcode, deskripsi, dan status produk."
-              : "Isi detail produk untuk katalog AI dan pesanan."}
+              ? t("Ubah nama, harga, barcode, deskripsi, dan status produk.")
+              : t("Isi detail produk untuk katalog AI dan pesanan.")}
           </SheetDescription>
         </SheetHeader>
         <div className="mt-6">
           <CatalogProductForm form={form} setForm={setForm} isEdit={isEdit} priceTypes={priceTypes} />
           {!canManage && (
             <p className="mt-3 text-xs text-muted-foreground">
-              Hanya owner atau super admin yang sedang Pantau tenant yang dapat mengubah katalog.
+              {t("Hanya owner atau super admin yang sedang Pantau tenant yang dapat mengubah katalog.")}
             </p>
           )}
         </div>
         <SheetFooter className="mt-6">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Batal
+            {t("Batal")}
           </Button>
           <Button onClick={onSave} disabled={!canSave}>
-            {saving ? "Menyimpan…" : isEdit ? "Simpan perubahan" : "Simpan"}
+            {saving ? t("Menyimpan…") : isEdit ? t("Simpan perubahan") : t("Simpan")}
           </Button>
         </SheetFooter>
       </SheetContent>

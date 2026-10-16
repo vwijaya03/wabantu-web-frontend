@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { eventsApi, type EventRow } from "@/lib/api/events";
-import { formatEventDateTimeRange } from "@/lib/events-format";
+import { useEventDateFormat } from "@/components/events/events-i18n";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
@@ -70,6 +70,7 @@ import {
   eventTherapySettingsKey,
 } from "@/lib/query/events-query-keys";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 const STATUSES = ["DRAFT", "PUBLISHED", "CLOSED", "CANCELLED", "ARCHIVED"] as const;
 
@@ -100,6 +101,7 @@ function EventPublicRegistrationCard({
   eventSlug: string;
   status: string;
 }) {
+  const { t } = useLocale();
   const patientPath = tenantSlug ? `/register/${tenantSlug}/${eventSlug}` : "";
   const staffPath = tenantSlug ? `/register/${tenantSlug}/${eventSlug}/staff` : "";
   const monitorPath = tenantSlug ? `/monitor/${tenantSlug}/${eventSlug}` : "";
@@ -113,7 +115,7 @@ function EventPublicRegistrationCard({
       await navigator.clipboard.writeText(url);
       toast.success(label);
     } catch {
-      toast.error("Gagal menyalin link");
+      toast.error(t("Gagal menyalin link"));
     }
   };
 
@@ -129,25 +131,25 @@ function EventPublicRegistrationCard({
     ? [
         {
           key: "patient",
-          label: "Pasien",
+          label: t("Pasien"),
           path: patientPath,
-          copyMessage: "Link pendaftaran pasien disalin",
+          copyMessage: t("Link pendaftaran pasien disalin"),
           canOpen: published,
         },
         {
           key: "staff",
-          label: "Terapis & relawan",
+          label: t("Terapis & relawan"),
           path: staffPath,
-          copyMessage: "Link pendaftaran staf disalin",
+          copyMessage: t("Link pendaftaran staf disalin"),
           canOpen: published,
         },
         ...(published && monitorPath
           ? [
               {
                 key: "monitor",
-                label: "Pantau staf",
+                label: t("Pantau staf"),
                 path: monitorPath,
-                copyMessage: "Link pantau staf disalin",
+                copyMessage: t("Link pantau staf disalin"),
                 canOpen: true,
               },
             ]
@@ -156,9 +158,9 @@ function EventPublicRegistrationCard({
           ? [
               {
                 key: "jadwal",
-                label: "Jadwal pasien",
+                label: t("Jadwal pasien"),
                 path: jadwalPath,
-                copyMessage: "Link jadwal pasien disalin",
+                copyMessage: t("Link jadwal pasien disalin"),
                 canOpen: true,
               },
             ]
@@ -169,7 +171,7 @@ function EventPublicRegistrationCard({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Link publik</CardTitle>
+        <CardTitle className="text-base">{t("Link publik")}</CardTitle>
         {tenantSlug ? (
           <CardDescription>
             {tenantSlug} / {eventSlug}
@@ -179,14 +181,17 @@ function EventPublicRegistrationCard({
       <CardContent className="space-y-3 text-sm">
         {!tenantSlug ? (
           <p className="text-amber-800 dark:text-amber-200">
-            Slug toko tidak terdeteksi. Pastikan Anda login sebagai owner toko (bukan hanya konsol
-            platform tanpa impersonate).
+            {t(
+              "Slug toko tidak terdeteksi. Pastikan Anda login sebagai owner toko (bukan hanya konsol platform tanpa impersonate).",
+            )}
           </p>
         ) : null}
         {tenantSlug && !published ? (
           <p className="text-amber-800 dark:text-amber-200">
-            Acara masih berstatus <strong>{status}</strong>. Ubah ke <strong>PUBLISHED</strong> lewat
-            &quot;Edit acara&quot; agar pasien bisa mendaftar lewat link ini.
+            {t(
+              "Acara masih berstatus {status}. Ubah ke PUBLISHED lewat Edit acara agar pasien bisa mendaftar lewat link ini.",
+              { status },
+            )}
           </p>
         ) : null}
         {linkRows.length > 0 ? (
@@ -204,15 +209,11 @@ function EventPublicRegistrationCard({
                     variant="outline"
                     onClick={() => void copyLink(row.path, row.copyMessage)}
                   >
-                    <Copy className="size-3.5" />
-                    Salin
-                  </Button>
+                    <Copy className="size-3.5" />{t("Salin")}</Button>
                   {row.canOpen ? (
                     <Button size="sm" variant="secondary" asChild>
                       <Link href={row.path} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="size-3.5" />
-                        Buka
-                      </Link>
+                        <ExternalLink className="size-3.5" />{t("Buka")}</Link>
                     </Button>
                   ) : null}
                 </div>
@@ -221,9 +222,7 @@ function EventPublicRegistrationCard({
           </ul>
         ) : null}
         {linkRows.length > 0 ? (
-          <p className="text-xs text-muted-foreground">
-            Salin menyalin URL penuh ke clipboard — URL tidak ditampilkan sebagai teks panjang.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("Salin menyalin URL penuh ke clipboard — URL tidak ditampilkan sebagai teks panjang.")}</p>
         ) : null}
       </CardContent>
     </Card>
@@ -231,6 +230,8 @@ function EventPublicRegistrationCard({
 }
 
 export default function EventDetailPage({ params }: { params: Promise<{ eventId: string }> }) {
+  const { t } = useLocale();
+  const { formatEventDateTimeRange } = useEventDateFormat();
   const { eventId } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -313,16 +314,16 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   const genSlotsMut = useMutation({
     mutationFn: (therapyId: string) => eventsApi.generateSlots(eventId, therapyId),
     onSuccess: (r) => {
-      toast.success(`${r.created} slot dibuat`);
+      toast.success(t("{count} slot dibuat", { count: r.created }));
       r.warnings?.forEach((w) => toast.warning(w));
       void qc.invalidateQueries({ queryKey: eventSchedulePrefix(tenantKey, eventId) });
     },
-    onError: () => toast.error("Gagal generate slot"),
+    onError: () => toast.error(t("Gagal generate slot")),
   });
   const deleteSlotMut = useMutation({
     mutationFn: (slotId: string) => eventsApi.deleteSlot(eventId, slotId),
     onSuccess: () => {
-      toast.success("Slot dihapus");
+      toast.success(t("Slot dihapus"));
       void qc.invalidateQueries({ queryKey: eventSchedulePrefix(tenantKey, eventId) });
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
@@ -331,7 +332,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   const deleteSlotsBulkMut = useMutation({
     mutationFn: (slotIds: string[]) => eventsApi.deleteSlotsBulk(eventId, slotIds),
     onSuccess: (res) => {
-      toast.success(`${res.deleted} slot dihapus${res.blocked ? `, ${res.blocked} gagal` : ""}`);
+      toast.success(
+        res.blocked
+          ? t("{deleted} slot dihapus, {blocked} gagal", {
+              deleted: res.deleted,
+              blocked: res.blocked,
+            })
+          : t("{deleted} slot dihapus", { deleted: res.deleted }),
+      );
       if (res.errors?.length) {
         toast.error(res.errors.slice(0, 2).join(" | "));
       }
@@ -353,7 +361,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
         breakEndTime: editHasBreak ? editForm.breakEndTime : "",
       } as EventRow),
     onSuccess: () => {
-      toast.success("Acara diperbarui");
+      toast.success(t("Acara diperbarui"));
       void qc.invalidateQueries({ queryKey: eventDetailKey(tenantKey, eventId) });
       void qc.invalidateQueries({ queryKey: ["events", tenantKey] });
       setEditOpen(false);
@@ -365,17 +373,24 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   const deleteEventMut = useMutation({
     mutationFn: () => eventsApi.deleteEvent(eventId),
     onSuccess: () => {
-      toast.success("Acara dihapus");
+      toast.success(t("Acara dihapus"));
       window.location.href = "/dashboard/events";
     },
-    onError: () => toast.error("Gagal menghapus"),
+    onError: () => toast.error(t("Gagal menghapus")),
   });
 
   const duplicateMut = useMutation({
     mutationFn: () => eventsApi.duplicateEvent(eventId),
     onSuccess: (res) => {
       toast.success(
-        `Acara disalin: ${res.peopleCopied} staf, ${res.patientsCopied} pasien, ${res.therapySettingsCopied} pengaturan terapi`,
+        t(
+          "Acara disalin: {staff} staf, {patients} pasien, {settings} pengaturan terapi",
+          {
+            staff: res.peopleCopied,
+            patients: res.patientsCopied,
+            settings: res.therapySettingsCopied,
+          },
+        ),
       );
       router.push(`/dashboard/events/${res.event.id}`);
     },
@@ -392,24 +407,23 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
     const crossTenant = isCrossTenantEventApiError(eventLoadErr);
     return (
       <div className="space-y-3 p-6">
-        <p className="text-sm text-destructive">{apiErr.message || "Gagal memuat acara"}</p>
+        <p className="text-sm text-destructive">{apiErr.message || t("Gagal memuat acara")}</p>
         {crossTenant ? (
           <p className="text-sm text-muted-foreground">
-            Gunakan tombol <strong>Pantau</strong> di konsol platform untuk tenant yang benar, lalu
-            buka acara lagi dari daftar acara tenant tersebut.
+            {t(
+              "Gunakan tombol Pantau di konsol platform untuk tenant yang benar, lalu buka acara lagi dari daftar acara tenant tersebut.",
+            )}
           </p>
         ) : null}
         <div className="flex flex-wrap gap-2">
           {crossTenant ? (
             <Button asChild size="sm">
-              <Link href="/dashboard/admin">Buka konsol platform</Link>
+              <Link href="/dashboard/admin">{t("Buka konsol platform")}</Link>
             </Button>
           ) : null}
-          <Button variant="outline" size="sm" onClick={() => void refetchEvent()}>
-            Coba lagi
-          </Button>
+          <Button variant="outline" size="sm" onClick={() => void refetchEvent()}>{t("Coba lagi")}</Button>
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/dashboard/events">← Daftar acara</Link>
+            <Link href="/dashboard/events">← {t("Daftar acara")}</Link>
           </Button>
         </div>
       </div>
@@ -417,7 +431,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   }
 
   if (eventPending || !event) {
-    return <p className="p-6 text-muted-foreground">Memuat acara...</p>;
+    return <p className="p-6 text-muted-foreground">{t("Memuat acara...")}</p>;
   }
 
   const openEdit = () => {
@@ -434,7 +448,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
     <div className="space-y-4 p-1">
       <p className="text-sm">
         <Link href="/dashboard/events" className="text-primary underline-offset-4 hover:underline">
-          ← Daftar acara
+          ← {t("Daftar acara")}
         </Link>
       </p>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -442,8 +456,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
           <h1 className="text-2xl font-semibold">{event.eventName}</h1>
           <p className="text-sm text-muted-foreground">
             {formatEventDateTimeRange(event.startDate, event.startTime, event.endDate, event.endTime)}
-            {" · "}Status: {event.status}
-            {archived ? " · Hanya baca" : ""}
+            {" · "}
+            {t("Status:")} {event.status}
+            {archived ? ` · ${t("Hanya baca")}` : ""}
           </p>
           {event.eventDescription?.trim() ? (
             <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
@@ -460,16 +475,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
                 disabled={duplicateMut.isPending}
                 onClick={() => duplicateMut.mutate()}
               >
-                <Copy className="mr-1 h-4 w-4" /> Duplikat
-              </Button>
+                <Copy className="mr-1 h-4 w-4" />{t("Duplikat")}</Button>
               {!archived ? (
                 <Button variant="outline" size="sm" onClick={openEdit}>
-                  <Pencil className="mr-1 h-4 w-4" /> Edit acara
-                </Button>
+                  <Pencil className="mr-1 h-4 w-4" />{t("Edit acara")}</Button>
               ) : null}
               <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
-                <Trash2 className="mr-1 h-4 w-4" /> Hapus
-              </Button>
+                <Trash2 className="mr-1 h-4 w-4" />{t("Hapus")}</Button>
             </>
           ) : null}
         </div>
@@ -485,18 +497,18 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
 
       <div className="flex flex-wrap gap-2 border-b pb-2">
         {[
-          ["dashboard", "Dashboard"],
+          ["dashboard", t("Dashboard")],
           [
             "patients",
-            `Pasien${dashboard?.patientsRegistered != null ? ` (${dashboard.patientsRegistered})` : ""}`,
+            `${t("Pasien")}${dashboard?.patientsRegistered != null ? ` (${dashboard.patientsRegistered})` : ""}`,
           ],
           [
             "people",
-            `Staf${dashboard?.uniquePeopleCount != null ? ` (${dashboard.uniquePeopleCount})` : ""}`,
+            `${t("Staf")}${dashboard?.uniquePeopleCount != null ? ` (${dashboard.uniquePeopleCount})` : ""}`,
           ],
-          ["assignments", "Penugasan"],
-          ["therapy", "Pengaturan Terapi"],
-          ["schedule", "Jadwal"],
+          ["assignments", t("Penugasan")],
+          ["therapy", t("Pengaturan Terapi")],
+          ["schedule", t("Jadwal")],
         ].map(([id, label]) => (
           <button
             key={id}
@@ -515,31 +527,31 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
       {tab === "dashboard" ? (
         <div className="mt-4">
           {dashboardPending && (
-            <p className="mb-2 text-sm text-muted-foreground">Memuat ringkasan...</p>
+            <p className="mb-2 text-sm text-muted-foreground">{t("Memuat ringkasan...")}</p>
           )}
           {dashboard ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Terdaftar</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t("Terdaftar")}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-2xl font-bold">{dashboard.patientsRegistered}</CardContent>
               </Card>
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Selesai</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t("Selesai")}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-2xl font-bold">{dashboard.patientsCompleted}</CardContent>
               </Card>
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Unik (konsumsi)</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t("Unik (konsumsi)")}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-2xl font-bold">{dashboard.mealConsumptionCount}</CardContent>
               </Card>
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Terapis</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t("Terapis")}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-2xl font-bold">
                   {(dashboard.peopleByType.THERAPIST ?? 0) +
@@ -558,15 +570,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
               disabled={archived}
             />
           ) : null}
-          <p className="mt-2 text-xs text-muted-foreground">
-            Kelola daftar lengkap di tab <button type="button" className="underline" onClick={() => setTab("people")}>Staf</button>.
+          <p className="mt-2 text-xs text-muted-foreground">{t("Kelola daftar lengkap di tab")}<button type="button" className="underline" onClick={() => setTab("people")}>{t("Staf")}</button>.
           </p>
           <Card className="mt-4">
             <CardHeader className="pb-2">
-              <CardTitle>Kapasitas terapi</CardTitle>
-              <p className="text-xs font-normal text-muted-foreground">
-                Terdaftar / total kapasitas (jumlah slot yang sudah di-generate, atau pengaturan terapi)
-              </p>
+              <CardTitle>{t("Kapasitas terapi")}</CardTitle>
+              <p className="text-xs font-normal text-muted-foreground">{t("Terdaftar / total kapasitas (jumlah slot yang sudah di-generate, atau pengaturan terapi)")}</p>
             </CardHeader>
             <CardContent className="space-y-2">
               {(dashboard?.therapyCapacity ?? []).map((t) => (
@@ -578,7 +587,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
                 </div>
               ))}
               {(dashboard?.therapyCapacity ?? []).length === 0 ? (
-                <p className="text-sm text-muted-foreground">Belum ada terapi dikonfigurasi.</p>
+                <p className="text-sm text-muted-foreground">{t("Belum ada terapi dikonfigurasi.")}</p>
               ) : null}
             </CardContent>
           </Card>
@@ -609,7 +618,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
       {tab === "therapy" ? (
         <div className="mt-4">
           {therapySettingsPending ? (
-            <p className="mb-2 text-sm text-muted-foreground">Memuat pengaturan terapi...</p>
+            <p className="mb-2 text-sm text-muted-foreground">{t("Memuat pengaturan terapi...")}</p>
           ) : null}
           <EventTherapySettingsTab
             eventId={eventId}
@@ -633,7 +642,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
       {tab === "schedule" ? (
         <div className="mt-4">
           {schedulePending ? (
-            <p className="mb-2 text-sm text-muted-foreground">Memuat jadwal...</p>
+            <p className="mb-2 text-sm text-muted-foreground">{t("Memuat jadwal...")}</p>
           ) : null}
           <EventScheduleTab
           canEdit={isOwner && !archived}
@@ -661,28 +670,26 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit acara</DialogTitle>
-            <DialogDescription>
-              Ubah nama, tanggal, jam, catatan acara, pesanan catering, dan status.
-            </DialogDescription>
+            <DialogTitle>{t("Edit acara")}</DialogTitle>
+            <DialogDescription>{t("Ubah nama, tanggal, jam, catatan acara, pesanan catering, dan status.")}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">
             <div>
-              <Label>Nama</Label>
+              <Label>{t("Nama")}</Label>
               <Input
                 value={editForm.eventName ?? ""}
                 onChange={(e) => setEditForm((f) => ({ ...f, eventName: e.target.value }))}
               />
             </div>
             <div>
-              <Label>Lokasi</Label>
+              <Label>{t("Lokasi")}</Label>
               <Input
                 value={editForm.location ?? ""}
                 onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
               />
             </div>
             <div>
-              <Label>Catatan acara</Label>
+              <Label>{t("Catatan acara")}</Label>
               <p className="mb-1 text-xs text-muted-foreground">
                 Catatan internal (diet, kontak, dll.) — tampil di header acara. Beda dari pesanan catering ke
                 vendor.
@@ -697,27 +704,25 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
               />
             </div>
             <div>
-              <Label>Pesanan Catering</Label>
-              <p className="mb-1 text-xs text-muted-foreground">
-                Teks yang disimpan dari panel Pesanan Catering (dashboard) — siap disalin ke WhatsApp vendor.
-              </p>
+              <Label>{t("Pesanan Catering")}</Label>
+              <p className="mb-1 text-xs text-muted-foreground">{t("Teks yang disimpan dari panel Pesanan Catering (dashboard) — siap disalin ke WhatsApp vendor.")}</p>
               <Textarea
                 rows={5}
-                placeholder="Belum ada pesan. Buat lewat panel Pesanan Catering di tab Dashboard, atau ketik di sini."
+                placeholder={t("Belum ada pesan. Buat lewat panel Pesanan Catering di tab Dashboard, atau ketik di sini.")}
                 value={editForm.cateringOrderNotes ?? ""}
                 onChange={(e) => setEditForm((f) => ({ ...f, cateringOrderNotes: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label>Mulai</Label>
+                <Label>{t("Mulai")}</Label>
                 <DatePicker
                   value={editForm.startDate ?? ""}
                   onChange={(startDate) => setEditForm((f) => ({ ...f, startDate }))}
                 />
               </div>
               <div>
-                <Label>Selesai</Label>
+                <Label>{t("Selesai")}</Label>
                 <DatePicker
                   value={editForm.endDate ?? ""}
                   onChange={(endDate) => setEditForm((f) => ({ ...f, endDate }))}
@@ -726,14 +731,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label>Jam mulai</Label>
+                <Label>{t("Jam mulai")}</Label>
                 <TimePicker
                   value={editForm.startTime?.slice(0, 5) ?? ""}
                   onChange={(startTime) => setEditForm((f) => ({ ...f, startTime }))}
                 />
               </div>
               <div>
-                <Label>Jam selesai</Label>
+                <Label>{t("Jam selesai")}</Label>
                 <TimePicker
                   value={editForm.endTime?.slice(0, 5) ?? ""}
                   onChange={(endTime) => setEditForm((f) => ({ ...f, endTime }))}
@@ -749,7 +754,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
               onBreakEndChange={(breakEndTime) => setEditForm((f) => ({ ...f, breakEndTime }))}
             />
             <div>
-              <Label>Status</Label>
+              <Label>{t("Status")}</Label>
               <Select
                 value={editForm.status ?? "DRAFT"}
                 onValueChange={(v) => setEditForm((f) => ({ ...f, status: v as EventRow["status"] }))}
@@ -768,12 +773,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>
-              Batal
-            </Button>
-            <Button onClick={() => updateEventMut.mutate()} disabled={updateEventMut.isPending}>
-              Simpan
-            </Button>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>{t("Batal")}</Button>
+            <Button onClick={() => updateEventMut.mutate()} disabled={updateEventMut.isPending}>{t("Simpan")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -781,15 +782,16 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus acara?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Hapus acara?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Acara &quot;{event.eventName}&quot; akan dihapus (soft delete). Tindakan ini tidak dapat dibatalkan dari
-              UI.
+              {t("Acara {name} akan dihapus (soft delete). Tindakan ini tidak dapat dibatalkan dari UI.", {
+                name: event.eventName,
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteEventMut.mutate()}>Hapus</AlertDialogAction>
+            <AlertDialogCancel>{t("Batal")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteEventMut.mutate()}>{t("Hapus")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

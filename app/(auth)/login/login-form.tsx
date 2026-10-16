@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authApi } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
+import { useLocale } from "@/lib/i18n/locale";
 
 const schema = z.object({
   email: z.email({ message: "Email tidak valid" }),
@@ -21,6 +22,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function LoginForm() {
+  const { t } = useLocale();
   const search = useSearchParams();
   const next = search.get("next") || "/dashboard";
   const [submitting, setSubmitting] = useState(false);
@@ -36,15 +38,15 @@ export function LoginForm() {
     setSubmitting(true);
     try {
       await authApi.login(values);
-      toast.success("Berhasil masuk");
+      toast.success(t("Berhasil masuk"));
       window.location.assign(next);
     } catch (err) {
       const e = toApiError(err);
       // Pesan generik (akun tidak ada / password salah / akun platform ditolak = 401 yang sama).
-      if (e.status === 401) toast.error("Email atau password salah");
-      else if (e.status === 429) toast.error("Terlalu banyak percobaan. Coba lagi nanti.");
-      else if (e.status === 0 || e.status >= 500) toast.error("Gagal, coba lagi.");
-      else toast.error("Gagal masuk");
+      if (e.status === 401) toast.error(t("Email atau password salah"));
+      else if (e.status === 429) toast.error(t("Terlalu banyak percobaan. Coba lagi nanti."));
+      else if (e.status === 0 || e.status >= 500) toast.error(t("Gagal, coba lagi."));
+      else toast.error(t("Gagal masuk"));
     } finally {
       setSubmitting(false);
     }
@@ -53,14 +55,14 @@ export function LoginForm() {
   return (
     <div className="space-y-6">
       <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">Masuk ke akun</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Masuk ke akun")}</h1>
         <p className="text-sm text-muted-foreground">
-          Belum punya akun?{" "}
+          {t("Belum punya akun?")}{" "}
           <Link
             href="/register"
             className="font-medium text-primary hover:underline"
           >
-            Daftar gratis
+            {t("Daftar gratis")}
           </Link>
         </p>
       </div>
@@ -81,7 +83,7 @@ export function LoginForm() {
             {...register("email")}
           />
           {errors.email && (
-            <p className="text-xs text-destructive">{errors.email.message}</p>
+            <p className="text-xs text-destructive">{t(errors.email.message ?? "")}</p>
           )}
         </div>
         <div className="space-y-2">
@@ -91,13 +93,13 @@ export function LoginForm() {
               id="password"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
-              placeholder="Masukkan kata sandi akun Anda"
+              placeholder={t("Masukkan kata sandi akun Anda")}
               className="pr-10"
               {...register("password")}
             />
             <button
               type="button"
-              aria-label={showPassword ? "Sembunyikan password" : "Lihat password"}
+              aria-label={showPassword ? t("Sembunyikan password") : t("Lihat password")}
               onClick={() => setShowPassword((v) => !v)}
               className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground hover:text-foreground"
             >
@@ -106,12 +108,12 @@ export function LoginForm() {
           </div>
           {errors.password && (
             <p className="text-xs text-destructive">
-              {errors.password.message}
+              {t(errors.password.message ?? "")}
             </p>
           )}
         </div>
         <Button type="submit" className="w-full" disabled={submitting}>
-          {submitting ? "Memproses..." : "Masuk"}
+          {submitting ? t("Memproses...") : t("Masuk")}
         </Button>
       </form>
     </div>

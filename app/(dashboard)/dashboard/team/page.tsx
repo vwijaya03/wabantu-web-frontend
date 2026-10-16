@@ -20,8 +20,10 @@ import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { teamApi } from "@/lib/api/team";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function TeamPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantReady = useTenantQueryEnabled();
   const qc = useQueryClient();
@@ -38,7 +40,7 @@ export default function TeamPage() {
   const inviteMut = useMutation({
     mutationFn: () => teamApi.invite({ email, password, name }),
     onSuccess: () => {
-      toast.success("Staff berhasil diundang");
+      toast.success(t("Staff berhasil diundang"));
       setEmail("");
       setName("");
       setPassword("");
@@ -50,7 +52,7 @@ export default function TeamPage() {
   const removeMut = useMutation({
     mutationFn: (id: string) => teamApi.remove(id),
     onSuccess: () => {
-      toast.success("Staff dihapus");
+      toast.success(t("Staff dihapus"));
       void qc.invalidateQueries({ queryKey: ["team-members"] });
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -59,8 +61,8 @@ export default function TeamPage() {
   if (user?.role !== "owner") {
     return (
       <PageHeader
-        title="Team Settings"
-        description="Hanya owner yang dapat mengelola tim."
+        title={t("Team Settings")}
+        description={t("Hanya owner yang dapat mengelola tim.")}
       />
     );
   }
@@ -68,36 +70,38 @@ export default function TeamPage() {
   return (
     <>
       <PageHeader
-        title="Team Settings"
-        description="Kelola anggota tim yang punya akses dashboard."
+        title={t("Team Settings")}
+        description={t("Kelola anggota tim yang punya akses dashboard.")}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Undang staff</CardTitle>
+            <CardTitle>{t("Undang staff")}</CardTitle>
             <CardDescription>
-              Staff dapat membalas chat dan mengelola FAQ.
+              {t("Staff dapat membalas chat dan mengelola FAQ.")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Field label="Email" id="email" value={email} onChange={setEmail} type="email" />
-            <Field label="Nama" id="name" value={name} onChange={setName} />
-            <Field label="Password" id="password" value={password} onChange={setPassword} type="password" />
+            <Field label={t("Email")} id="email" value={email} onChange={setEmail} type="email" />
+            <Field label={t("Nama")} id="name" value={name} onChange={setName} />
+            <Field label={t("Password")} id="password" value={password} onChange={setPassword} type="password" />
             <Button
               onClick={() => inviteMut.mutate()}
               disabled={inviteMut.isPending || !email || password.length < 8}
             >
-              Undang anggota
+              {t("Undang anggota")}
             </Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Anggota tim</CardTitle>
+            <CardTitle>{t("Anggota tim")}</CardTitle>
             <CardDescription>
-              {isLoading ? "Memuat..." : `${data?.total ?? 0} anggota`}
+              {isLoading
+                ? t("Memuat...")
+                : t("{count} anggota", { count: data?.total ?? 0 })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -125,7 +129,7 @@ export default function TeamPage() {
                       onClick={() => removeMut.mutate(m.id)}
                       disabled={removeMut.isPending}
                     >
-                      Hapus
+                      {t("Hapus")}
                     </Button>
                   ) : null}
                 </div>

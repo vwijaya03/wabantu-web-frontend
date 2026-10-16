@@ -56,6 +56,7 @@ import {
   eventTasksMasterKey,
 } from "@/lib/query/events-query-keys";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 const PAGE_SIZE = 20;
 
@@ -97,6 +98,7 @@ export function EventAssignmentsTab({
   eventId: string;
   canEdit: boolean;
 }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const { user } = useAuth();
   const tenantKey = tenantContextKey(user);
@@ -163,7 +165,7 @@ export function EventAssignmentsTab({
   const deleteMut = useMutation({
     mutationFn: (id: string) => eventsApi.deleteAssignment(eventId, id),
     onSuccess: () => {
-      toast.success("Penugasan dihapus");
+      toast.success(t("Penugasan dihapus"));
       setDeleteTarget(null);
       invalidate();
     },
@@ -177,7 +179,7 @@ export function EventAssignmentsTab({
     <div className="mt-4 space-y-4">
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
-          <CardTitle className="text-base">Daftar penugasan</CardTitle>
+          <CardTitle className="text-base">{t("Daftar penugasan")}</CardTitle>
           <div className="flex flex-wrap gap-2">
             <EventTabRefreshButton onClick={invalidate} isRefreshing={isFetching} />
             {canEdit ? (
@@ -189,8 +191,7 @@ export function EventAssignmentsTab({
                   setDialogOpen(true);
                 }}
               >
-                <Plus className="mr-1 h-4 w-4" /> Tambah penugasan
-              </Button>
+                <Plus className="mr-1 h-4 w-4" />{t("Tambah penugasan")}</Button>
             ) : null}
           </div>
         </CardHeader>
@@ -208,14 +209,14 @@ export function EventAssignmentsTab({
           {isError ? (
             <p className="text-sm text-destructive">{toApiError(error).message}</p>
           ) : isLoading ? (
-            <p className="text-sm text-muted-foreground">Memuat...</p>
+            <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
           ) : (
             <>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <SortableTableHead
-                      label="Tugas"
+                      label={t("Tugas")}
                       sortKey="taskName"
                       sort={tableSort}
                       onSortChange={(next) => {
@@ -224,7 +225,7 @@ export function EventAssignmentsTab({
                       }}
                     />
                     <SortableTableHead
-                      label="Staf"
+                      label={t("Staf")}
                       sortKey="personName"
                       sort={tableSort}
                       onSortChange={(next) => {
@@ -233,7 +234,7 @@ export function EventAssignmentsTab({
                       }}
                     />
                     <SortableTableHead
-                      label="Jam"
+                      label={t("Jam")}
                       sortKey="startTime"
                       sort={tableSort}
                       onSortChange={(next) => {
@@ -241,16 +242,14 @@ export function EventAssignmentsTab({
                         setPage(1);
                       }}
                     />
-                    <TableHead>Sesi</TableHead>
-                    {canEdit ? <TableHead className="text-right">Aksi</TableHead> : null}
+                    <TableHead>{t("Sesi")}</TableHead>
+                    {canEdit ? <TableHead className="text-right">{t("Aksi")}</TableHead> : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={canEdit ? 5 : 4} className="h-24 text-center text-muted-foreground">
-                        Tidak ada penugasan.
-                      </TableCell>
+                      <TableCell colSpan={canEdit ? 5 : 4} className="h-24 text-center text-muted-foreground">{t("Tidak ada penugasan.")}</TableCell>
                     </TableRow>
                   ) : (
                     items.map((a) => (
@@ -300,10 +299,10 @@ export function EventAssignmentsTab({
           </DialogHeader>
           <div className="grid gap-3">
             <div>
-              <Label>Tugas</Label>
+              <Label>{t("Tugas")}</Label>
               <Select value={form.taskId} onValueChange={(v) => setForm((f) => ({ ...f, taskId: v }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih tugas" />
+                  <SelectValue placeholder={t("Pilih tugas")} />
                 </SelectTrigger>
                 <SelectContent>
                   {tasks.map((t) => (
@@ -315,10 +314,10 @@ export function EventAssignmentsTab({
               </Select>
             </div>
             <div>
-              <Label>Staf</Label>
+              <Label>{t("Staf")}</Label>
               <Select value={form.personId} onValueChange={(v) => setForm((f) => ({ ...f, personId: v }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih staf" />
+                  <SelectValue placeholder={t("Pilih staf")} />
                 </SelectTrigger>
                 <SelectContent>
                   {people.map((p) => (
@@ -330,28 +329,24 @@ export function EventAssignmentsTab({
               </Select>
             </div>
             <div>
-              <Label>Jam mulai</Label>
+              <Label>{t("Jam mulai")}</Label>
               <TimePicker value={form.startTime} onChange={(startTime) => setForm((f) => ({ ...f, startTime }))} />
             </div>
             <div>
-              <Label>Jam selesai</Label>
+              <Label>{t("Jam selesai")}</Label>
               <TimePicker value={form.endTime} onChange={(endTime) => setForm((f) => ({ ...f, endTime }))} />
             </div>
             <div>
-              <Label>Sesi (opsional)</Label>
+              <Label>{t("Sesi (opsional)")}</Label>
               <Input value={form.sessionName} onChange={(e) => setForm((f) => ({ ...f, sessionName: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Batal
-            </Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("Batal")}</Button>
             <Button
               disabled={saveMut.isPending || !form.taskId || !form.personId}
               onClick={() => saveMut.mutate()}
-            >
-              Simpan
-            </Button>
+            >{t("Simpan")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -359,14 +354,17 @@ export function EventAssignmentsTab({
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus penugasan?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Hapus penugasan?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Penugasan {deleteTarget?.taskName} — {deleteTarget?.personName} akan dihapus.
+              {t("Penugasan {task} — {name} akan dihapus.", {
+                task: deleteTarget?.taskName ?? "",
+                name: deleteTarget?.personName ?? "",
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}>Hapus</AlertDialogAction>
+            <AlertDialogCancel>{t("Batal")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}>{t("Hapus")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { importApi, type ImportTargetTable } from "@/lib/api/import";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 const PRODUCT_TARGET: ImportTargetTable = "business_catalog_item";
 
@@ -24,6 +25,7 @@ const PRODUCT_COLUMNS = [
 ];
 
 export default function ImportPage() {
+  const { t } = useLocale();
   const [file, setFile] = useState<File | null>(null);
   const [targetTable] = useState<ImportTargetTable>(PRODUCT_TARGET);
   const [preview, setPreview] = useState<Awaited<ReturnType<typeof importApi.preview>> | null>(null);
@@ -50,7 +52,7 @@ export default function ImportPage() {
     },
     onSuccess: (res) => {
       setJobId(res.jobId);
-      toast.success("Import masuk antrian");
+      toast.success(t("Import masuk antrian"));
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
@@ -58,20 +60,20 @@ export default function ImportPage() {
   return (
     <>
       <PageHeader
-        title="Import CSV/XLSX"
-        description="Upload data produk/katalog dalam jumlah besar memakai template CSV atau XLSX."
+        title={t("Import CSV/XLSX")}
+        description={t("Upload data produk/katalog dalam jumlah besar memakai template CSV atau XLSX.")}
       />
 
       <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>1. Download template produk</CardTitle>
+            <CardTitle>{t("1. Download template produk")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div className="rounded-lg border bg-muted/30 p-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-medium">Jenis import</span>
-                <Badge>Produk / Katalog</Badge>
+                <span className="font-medium">{t("Jenis import")}</span>
+                <Badge>{t("Produk / Katalog")}</Badge>
               </div>
               <p className="mt-2 text-muted-foreground">
                 Sistem tahu ini import produk karena target import dikirim sebagai{" "}
@@ -91,13 +93,13 @@ export default function ImportPage() {
               </Button>
             </div>
             <div>
-              <p className="font-medium">Kolom yang didukung</p>
+              <p className="font-medium">{t("Kolom yang didukung")}</p>
               <div className="mt-2 space-y-2">
                 {PRODUCT_COLUMNS.map((column) => (
                   <div key={column.name} className="rounded-md border p-2">
                     <div className="flex items-center gap-2">
                       <code className="text-xs">{column.name}</code>
-                      {column.required ? <Badge variant="destructive">Wajib</Badge> : <Badge variant="secondary">Opsional</Badge>}
+                      {column.required ? <Badge variant="destructive">Wajib</Badge> : <Badge variant="secondary">{t("Opsional")}</Badge>}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">{column.description}</p>
                   </div>
@@ -109,11 +111,11 @@ export default function ImportPage() {
 
         <Card>
         <CardHeader>
-          <CardTitle>2. Upload dan preview</CardTitle>
+          <CardTitle>{t("2. Upload dan preview")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-            <p className="font-medium">Target import: Produk / Katalog</p>
+            <p className="font-medium">{t("Target import: Produk / Katalog")}</p>
             <p className="mt-1 text-muted-foreground">
               File akan masuk ke Katalog Produk. Kolom minimal yang wajib ada:{" "}
               <code className="rounded bg-muted px-1">external_code</code> dan{" "}
@@ -122,7 +124,7 @@ export default function ImportPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="import-file">File CSV/XLSX</Label>
+            <Label htmlFor="import-file">{t("File CSV/XLSX")}</Label>
             <input
               id="import-file"
               type="file"
@@ -155,7 +157,7 @@ export default function ImportPage() {
           {preview ? (
             <div className="space-y-3">
               <div className="rounded-lg border p-3 text-sm">
-                <p className="font-medium">Preview file</p>
+                <p className="font-medium">{t("Preview file")}</p>
                 <p className="text-muted-foreground">
                   {preview.totalRows} baris terdeteksi. Mapping otomatis memakai target{" "}
                   <code className="rounded bg-muted px-1">{preview.targetTable ?? targetTable}</code>.

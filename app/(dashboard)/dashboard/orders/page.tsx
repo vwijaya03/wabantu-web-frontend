@@ -25,8 +25,9 @@ import {
   PAYMENT_STATUSES,
   paymentStatusBadgeVariant,
   paymentStatusHint,
+  translatePaymentProofListBadge,
 } from "@/components/orders/payment-proof-panel";
-import { isPaymentProofDoubtful, paymentProofListBadgeLabel } from "@/lib/payment-proof";
+import { isPaymentProofDoubtful } from "@/lib/payment-proof";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -55,6 +56,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ProofCheckBadge } from "@/components/orders/proof-check-badge";
+import { useLocale } from "@/lib/i18n/locale";
 
 const PaymentProofPanel = dynamic(
   () =>
@@ -150,6 +152,7 @@ const emptyCreateForm: CreateForm = {
 };
 
 export default function OrdersPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
@@ -354,7 +357,7 @@ export default function OrdersPage() {
       const fallbackWh = createForm.fulfillmentWarehouseId || defaultWarehouseId;
       const items = normalizeLineWarehouses(createForm.items, fallbackWh);
       if (hasWarehouses && items.some((item) => !item.warehouseId)) {
-        throw new Error("Pilih gudang untuk setiap item pesanan");
+        throw new Error(t("Pilih gudang untuk setiap item pesanan"));
       }
       return ordersApi.create({
         items: items.map((item) => toOrderItemPayload(item, fallbackWh)),
@@ -371,13 +374,13 @@ export default function OrdersPage() {
       });
     },
     onSuccess: () => {
-      toast.success("Pesanan ditambahkan");
+      toast.success(t("Pesanan ditambahkan"));
       setCreateForm(emptyCreateForm);
       setCreateOpen(false);
       setPage(1);
       invalidateOrders();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
   const quickCreateCatalogMut = useMutation({
     mutationFn: () =>
@@ -389,7 +392,7 @@ export default function OrdersPage() {
         isActive: true,
       }),
     onSuccess: (item) => {
-      toast.success("Produk katalog dibuat dan ditambahkan ke pesanan");
+      toast.success(t("Produk katalog dibuat dan ditambahkan ke pesanan"));
       addCatalogItem(item);
       setCreateForm((form) => ({
         ...form,
@@ -400,7 +403,7 @@ export default function OrdersPage() {
       }));
       void qc.invalidateQueries({ queryKey: ["catalog"] });
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
   const quickCreateEditCatalogMut = useMutation({
     mutationFn: () =>
@@ -412,7 +415,7 @@ export default function OrdersPage() {
         isActive: true,
       }),
     onSuccess: (item) => {
-      toast.success("Produk katalog dibuat dan ditambahkan ke pesanan");
+      toast.success(t("Produk katalog dibuat dan ditambahkan ke pesanan"));
       addCatalogItemToEdit(item);
       setEditForm((form) => ({
         ...form,
@@ -423,7 +426,7 @@ export default function OrdersPage() {
       }));
       void qc.invalidateQueries({ queryKey: ["catalog"] });
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const updateMut = useMutation({
@@ -431,7 +434,7 @@ export default function OrdersPage() {
       const fallbackWh = editForm.fulfillmentWarehouseId || defaultWarehouseId;
       const items = normalizeLineWarehouses(editForm.items, fallbackWh);
       if (hasWarehouses && items.some((item) => !item.warehouseId)) {
-        throw new Error("Pilih gudang untuk setiap item pesanan");
+        throw new Error(t("Pilih gudang untuk setiap item pesanan"));
       }
       return ordersApi.update(editOrder!.id, {
         contactId: editForm.contactId.trim(),
@@ -448,41 +451,41 @@ export default function OrdersPage() {
       });
     },
     onSuccess: () => {
-      toast.success("Pesanan diperbarui");
+      toast.success(t("Pesanan diperbarui"));
       setEditOrder(null);
       invalidateOrders();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const verifyPaymentMut = useMutation({
     mutationFn: () => ordersApi.verifyPaymentProof(editOrder!.id),
     onSuccess: (updated) => {
-      toast.success("Bukti transfer diverifikasi");
+      toast.success(t("Bukti transfer diverifikasi"));
       setEditOrder(updated);
       invalidateOrders();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const rejectPaymentMut = useMutation({
     mutationFn: (reason?: string) => ordersApi.rejectPaymentProof(editOrder!.id, { reason }),
     onSuccess: (updated) => {
-      toast.success("Bukti transfer ditolak");
+      toast.success(t("Bukti transfer ditolak"));
       setEditOrder(updated);
       invalidateOrders();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const unblockPaymentMut = useMutation({
     mutationFn: () => ordersApi.unblockPaymentProof(editOrder!.id),
     onSuccess: (updated) => {
-      toast.success("Batas upload bukti dibuka");
+      toast.success(t("Batas upload bukti dibuka"));
       setEditOrder(updated);
       invalidateOrders();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const batchMut = useMutation({
@@ -493,33 +496,33 @@ export default function OrdersPage() {
       }),
     onSuccess: (res) => {
       if (res.updated === 0) {
-        toast.info("Tidak ada pesanan yang diubah — mungkin sudah berstatus yang sama.");
+        toast.info(t("Tidak ada pesanan yang diubah — mungkin sudah berstatus yang sama."));
       } else {
-        toast.success(`${res.updated} pesanan diperbarui`);
+        toast.success(t("{count} pesanan diperbarui", { count: res.updated }));
       }
       setSelectedIds(new Set());
       invalidateOrders();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => ordersApi.remove(id),
     onSuccess: () => {
-      toast.success("Pesanan dihapus");
+      toast.success(t("Pesanan dihapus"));
       setSelectedIds(new Set());
       invalidateOrders();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
   const batchDeleteMut = useMutation({
     mutationFn: () => ordersApi.batchDelete(Array.from(selectedIds)),
     onSuccess: (res) => {
-      toast.success(`${res.deleted} pesanan dihapus`);
+      toast.success(t("{count} pesanan dihapus", { count: res.deleted }));
       setSelectedIds(new Set());
       invalidateOrders();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const runSearch = () => {
@@ -704,13 +707,13 @@ export default function OrdersPage() {
 
   return (
     <RequireTenantDashboard
-      title="Pesanan"
-      description="Kelola pesanan dari WhatsApp atau input manual, termasuk update status satuan dan batch."
+      title={t("Pesanan")}
+      description={t("Kelola pesanan dari WhatsApp atau input manual, termasuk update status satuan dan batch.")}
     >
     <>
       <PageHeader
-        title="Pesanan"
-        description="Kelola pesanan dari WhatsApp atau input manual, termasuk update status satuan dan batch."
+        title={t("Pesanan")}
+        description={t("Kelola pesanan dari WhatsApp atau input manual, termasuk update status satuan dan batch.")}
         actions={
           <div className="flex items-center gap-2">
           <Button
@@ -722,7 +725,7 @@ export default function OrdersPage() {
             }}
             disabled={!canManage}
           >
-            <PlusCircle className="h-4 w-4" /> Tambah Pesanan
+            <PlusCircle className="h-4 w-4" /> {t("Tambah Pesanan")}
           </Button>
           </div>
         }
@@ -732,7 +735,7 @@ export default function OrdersPage() {
         <CardHeader>
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <CardTitle>Daftar pesanan ({total})</CardTitle>
+              <CardTitle>{t("Daftar pesanan ({total})", { total })}</CardTitle>
             </div>
             <div className="flex flex-col gap-2 lg:flex-row">
               <div className="relative min-w-0 lg:w-80">
@@ -744,7 +747,7 @@ export default function OrdersPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") runSearch();
                   }}
-                  placeholder="Cari produk, nama kontak, no resi..."
+                  placeholder={t("Cari produk, nama kontak, no resi...")}
                 />
               </div>
               <Select
@@ -759,10 +762,10 @@ export default function OrdersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ALL}>Semua status</SelectItem>
+                  <SelectItem value={ALL}>{t("Semua status")}</SelectItem>
                   {ORDER_STATUSES.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                      {t(option.label)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -776,28 +779,28 @@ export default function OrdersPage() {
                 }}
               >
                 <SelectTrigger className="lg:w-52">
-                  <SelectValue placeholder="Status pembayaran" />
+                  <SelectValue placeholder={t("Status pembayaran")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ALL}>Semua status bayar</SelectItem>
+                  <SelectItem value={ALL}>{t("Semua status bayar")}</SelectItem>
                   {PAYMENT_STATUSES.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
-                      {option.filter}
+                      {t(option.filter)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Button variant="secondary" onClick={runSearch}>
-                Cari
+                {t("Cari")}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => void refetch()}
                 disabled={isFetching}
-                aria-label="Refresh daftar pesanan"
+                aria-label={t("Refresh daftar pesanan")}
               >
                 <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
-                Refresh
+                {t("Muat ulang")}
               </Button>
             </div>
           </div>
@@ -805,7 +808,7 @@ export default function OrdersPage() {
         <CardContent>
           {selectedIds.size > 0 && (
             <div className="mb-4 flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <span>{selectedIds.size} pesanan dipilih</span>
+              <span>{t("{count} pesanan dipilih", { count: selectedIds.size })}</span>
               <div className="flex gap-2">
                 <Select value={batchStatus} onValueChange={setBatchStatus}>
                   <SelectTrigger className="w-48">
@@ -814,49 +817,44 @@ export default function OrdersPage() {
                   <SelectContent>
                     {ORDER_STATUSES.filter((option) => option.value !== "draft").map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {t(option.label)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <Button disabled={!canManage || batchMut.isPending} onClick={() => batchMut.mutate()}>
-                  Update Batch
+                  {t("Update Batch")}
                 </Button>
                 <Button
                   variant="destructive"
                   disabled={!canManage || batchDeleteMut.isPending}
                   onClick={() => setBatchDeleteOpen(true)}
                 >
-                  Hapus Batch
+                  {t("Hapus Batch")}
                 </Button>
               </div>
             </div>
           )}
 
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Memuat...</p>
+            <p className="text-sm text-muted-foreground">{t("Memuat…")}</p>
           ) : displayedOrders.length === 0 ? (
             <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
               {orders.length > 0 && paymentFilter !== ALL ? (
-                <>
-                  Tidak ada pesanan dengan status pembayaran ini di halaman ini.
-                  <br />
-                  Ubah filter ke <span className="font-medium text-foreground">Semua status bayar</span> atau coba
-                  halaman lain.
-                </>
+                <>{t("Tidak ada pesanan dengan status pembayaran ini di halaman ini.")}<br />{t("Ubah filter ke Semua status bayar atau coba halaman lain.")}</>
               ) : (
-                "Belum ada pesanan yang cocok."
+                t("Belum ada pesanan yang cocok.")
               )}
             </div>
           ) : (
             <div className="overflow-hidden rounded-lg border">
               <div className="grid grid-cols-[40px_minmax(180px,1fr)_minmax(130px,0.75fr)_120px_130px_90px] gap-3 border-b bg-muted/60 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground max-lg:hidden">
-                <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectVisible} aria-label="Pilih semua pesanan" />
-                <span>Pesanan</span>
-                <span>Pembeli</span>
-                <span>Status pesanan</span>
-                <span>Total</span>
-                <span className="text-right">Aksi</span>
+                <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectVisible} aria-label={t("Pilih semua pesanan")} />
+                <span>{t("Pesanan")}</span>
+                <span>{t("Pembeli")}</span>
+                <span>{t("Status pesanan")}</span>
+                <span>{t("Total")}</span>
+                <span className="text-right">{t("Aksi")}</span>
               </div>
               <div className="max-h-[640px] divide-y overflow-auto">
                 {displayedOrders.map((order) => (
@@ -869,55 +867,55 @@ export default function OrdersPage() {
                       className="mt-1 lg:mt-0"
                       checked={selectedIds.has(order.id)}
                       onChange={() => toggleSelected(order.id)}
-                      aria-label={`Pilih pesanan ${formatOrderNumber(order.id)}`}
+                      aria-label={t("Pilih pesanan {id}", { id: formatOrderNumber(order.id) })}
                     />
                     <div className="min-w-0">
                       <button
                         type="button"
                         className="block w-full truncate text-left font-medium text-primary underline-offset-4 hover:underline"
                         onClick={() => openEdit(order)}
-                        aria-label={`Lihat detail pesanan ${formatOrderNumber(order.id)}`}
+                        aria-label={t("Lihat detail pesanan {id}", { id: formatOrderNumber(order.id) })}
                       >
-                        {formatOrderNumber(order.id)} · {order.items.map((item) => item.name).join(", ") || "Tanpa item"}
+                        {formatOrderNumber(order.id)} · {order.items.map((item) => item.name).join(", ") || t("Tanpa item")}
                       </button>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {order.trackingNumber ? `Resi ${order.trackingNumber}` : "Belum ada resi"}
+                        {order.trackingNumber ? t("Resi {tracking}", { tracking: order.trackingNumber }) : t("Belum ada resi")}
                         {order.courier ? ` · ${order.courier}` : ""}
                       </p>
                       {hasWarehouses ? (
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Gudang: {formatOrderWarehouseSummary(order, warehouseNames, defaultWarehouseId) || "—"}
+                          {t("Gudang: {summary}", { summary: formatOrderWarehouseSummary(order, warehouseNames, defaultWarehouseId) || "—" })}
                         </p>
                       ) : null}
                       {inventoryOn && orderHasInsufficientStock(order, stockRows, defaultWarehouseId) ? (
                         <p className="mt-1">
-                          <Badge variant="warning">Stok kurang</Badge>
+                          <Badge variant="warning">{t("Stok kurang")}</Badge>
                         </p>
                       ) : null}
                       {inventoryOn && orderShowsDraftStockHint(order, stockRows) ? (
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Stok belum dikurangi — ubah status ke Sedang diproses untuk mencatat pergerakan stok.
+                          {t("Stok belum dikurangi — ubah status ke Sedang diproses untuk mencatat pergerakan stok.")}
                         </p>
                       ) : null}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground lg:hidden">Pembeli</p>
-                      <p className="truncate font-medium">{formatBuyerLabel(order)}</p>
+                      <p className="text-xs text-muted-foreground lg:hidden">{t("Pembeli")}</p>
+                      <p className="truncate font-medium">{formatBuyerLabel(order, t)}</p>
                       {normalizeBuyerField(order.contactDisplayName) && normalizeBuyerField(order.contactPhone) ? (
                         <p className="mt-1 truncate text-xs text-muted-foreground">{order.contactPhone}</p>
                       ) : null}
                     </div>
                     <div className="flex flex-col gap-1">
-                      <Badge variant={statusBadgeVariant(order.status)}>{statusLabel(order.status)}</Badge>
+                      <Badge variant={statusBadgeVariant(order.status)}>{statusLabel(order.status, t)}</Badge>
                       <Badge
                         variant={paymentStatusBadgeVariant(order.paymentStatus)}
                         title={
                           isPaymentProofDoubtful(order.paymentStatus, order.paymentProofMeta?.flags)
-                            ? "OCR/AI tidak yakin — verifikasi manual diperlukan"
-                            : paymentStatusHint(order.paymentStatus)
+                            ? t("OCR/AI tidak yakin — verifikasi manual diperlukan")
+                            : t(paymentStatusHint(order.paymentStatus))
                         }
                       >
-                        {paymentProofListBadgeLabel(order.paymentStatus, order.paymentProofMeta?.flags)}
+                        {translatePaymentProofListBadge(t, order.paymentStatus, order.paymentProofMeta?.flags)}
                       </Badge>
                       <ProofCheckBadge value={order.proofCheck} />
                     </div>
@@ -950,12 +948,16 @@ export default function OrdersPage() {
           <div className="mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
             <span className="text-muted-foreground">
               {total === 0
-                ? "0 pesanan"
-                : `Menampilkan ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, total)} dari ${total} pesanan`}
+                ? t("0 pesanan")
+                : t("Menampilkan {from}-{to} dari {total} pesanan", {
+                    from: (page - 1) * pageSize + 1,
+                    to: Math.min(page * pageSize, total),
+                    total,
+                  })}
             </span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                Sebelumnya
+                {t("Sebelumnya")}
               </Button>
               <Button
                 variant="outline"
@@ -963,7 +965,7 @@ export default function OrdersPage() {
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               >
-                Berikutnya
+                {t("Berikutnya")}
               </Button>
             </div>
           </div>
@@ -973,9 +975,9 @@ export default function OrdersPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-h-[92vh] max-w-7xl overflow-hidden p-0">
           <DialogHeader className="border-b px-6 pb-4 pt-6">
-            <DialogTitle>Tambah Pesanan</DialogTitle>
+            <DialogTitle>{t("Tambah Pesanan")}</DialogTitle>
             <DialogDescription>
-              Pilih contact jika ada, lalu tambah satu atau beberapa item dari Katalog Produk.
+              {t("Pilih contact jika ada, lalu tambah satu atau beberapa item dari Katalog Produk.")}
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[calc(92vh-180px)] overflow-y-auto px-6 py-4">
@@ -1007,13 +1009,13 @@ export default function OrdersPage() {
           </div>
           <DialogFooter className="border-t px-6 py-4">
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button
               onClick={() => createMut.mutate()}
               disabled={createForm.items.length === 0 || createMut.isPending}
             >
-              Simpan
+              {t("Simpan")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1022,11 +1024,13 @@ export default function OrdersPage() {
       <Dialog open={!!editOrder} onOpenChange={(open) => !open && setEditOrder(null)}>
         <DialogContent className="max-h-[92vh] max-w-7xl overflow-hidden p-0">
           <DialogHeader className="border-b px-6 pb-4 pt-6">
-            <DialogTitle>
-              Detail Pesanan · {editOrder ? (editOrder.orderNumber ?? formatOrderNumber(editOrder.id)) : ""}
-            </DialogTitle>
+            <DialogTitle>{editOrder ? t("Detail Pesanan · {number}", { number: editOrder.orderNumber ?? formatOrderNumber(editOrder.id) }) : ""}</DialogTitle>
             <DialogDescription>
-              Nomor pesanan {editOrder ? (editOrder.orderNumber ?? formatOrderNumber(editOrder.id)) : ""} — update contact, item, status, kurir, resi, ongkir, dan catatan.
+              {editOrder
+              ? t("Nomor pesanan {number} — update contact, item, status, kurir, resi, ongkir, dan catatan.", {
+                  number: editOrder.orderNumber ?? formatOrderNumber(editOrder.id),
+                })
+              : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[calc(92vh-180px)] overflow-y-auto px-6 py-4">
@@ -1052,7 +1056,7 @@ export default function OrdersPage() {
               setForm={setEditForm}
               contactOptions={editContactOptions}
               extraContact={editResolvedContact ? inboxContactToContact(editResolvedContact) : undefined}
-              buyerLabelFallback={editOrder ? formatBuyerLabel(editOrder) : undefined}
+              buyerLabelFallback={editOrder ? formatBuyerLabel(editOrder, t) : undefined}
               shippingAddress={editOrder?.shippingAddress}
               contactPage={editContactPage}
               setContactPage={setEditContactPage}
@@ -1082,10 +1086,10 @@ export default function OrdersPage() {
           </div>
           <DialogFooter className="border-t px-6 py-4">
             <Button variant="outline" onClick={() => setEditOrder(null)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button onClick={() => updateMut.mutate()} disabled={editForm.items.length === 0 || updateMut.isPending}>
-              Simpan Perubahan
+              {t("Simpan Perubahan")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1094,9 +1098,9 @@ export default function OrdersPage() {
       <ConfirmDialog
         open={batchDeleteOpen}
         onOpenChange={setBatchDeleteOpen}
-        title={`Hapus ${selectedIds.size} pesanan?`}
-        description="Pesanan terpilih akan dihapus permanen dari daftar."
-        confirmLabel="Hapus"
+        title={t("Hapus {count} pesanan?", { count: selectedIds.size })}
+        description={t("Pesanan terpilih akan dihapus permanen dari daftar.")}
+        confirmLabel={t("Hapus")}
         destructive
         loading={batchDeleteMut.isPending}
         onConfirm={() => batchDeleteMut.mutate()}
@@ -1105,13 +1109,13 @@ export default function OrdersPage() {
       <ConfirmDialog
         open={!!deleteOrderId}
         onOpenChange={(open) => !open && setDeleteOrderId(null)}
-        title="Hapus pesanan?"
+        title={t("Hapus pesanan?")}
         description={
           deleteOrderId
-            ? `Pesanan ${formatOrderNumber(deleteOrderId)} akan dihapus permanen.`
+            ? t("Pesanan {id} akan dihapus permanen.", { id: formatOrderNumber(deleteOrderId) })
             : undefined
         }
-        confirmLabel="Hapus"
+        confirmLabel={t("Hapus")}
         destructive
         loading={deleteMut.isPending}
         onConfirm={() => {
@@ -1123,10 +1127,10 @@ export default function OrdersPage() {
       <PromptDialog
         open={rejectProofOpen}
         onOpenChange={setRejectProofOpen}
-        title="Tolak bukti transfer?"
-        description="Opsional: beri alasan agar tim ingat saat follow-up ke pelanggan."
-        placeholder="Alasan penolakan (opsional)"
-        confirmLabel="Tolak bukti"
+        title={t("Tolak bukti transfer?")}
+        description={t("Opsional: beri alasan agar tim ingat saat follow-up ke pelanggan.")}
+        placeholder={t("Alasan penolakan (opsional)")}
+        confirmLabel={t("Tolak bukti")}
         destructive
         loading={rejectPaymentMut.isPending}
         onSubmit={(reason) => {
@@ -1138,9 +1142,9 @@ export default function OrdersPage() {
       <ConfirmDialog
         open={unblockProofOpen}
         onOpenChange={setUnblockProofOpen}
-        title="Buka batas upload bukti?"
-        description="Pelanggan bisa mengirim bukti transfer lagi (counter penolakan direset). Pesan WhatsApp akan dikirim ke pelanggan."
-        confirmLabel="Buka batas bukti"
+        title={t("Buka batas upload bukti?")}
+        description={t("Pelanggan bisa mengirim bukti transfer lagi (counter penolakan direset). Pesan WhatsApp akan dikirim ke pelanggan.")}
+        confirmLabel={t("Buka batas bukti")}
         loading={unblockPaymentMut.isPending}
         onConfirm={() => {
           unblockPaymentMut.mutate();
@@ -1205,6 +1209,7 @@ function OrderCreateForm({
   showDraftStockHint?: boolean;
   onContactSelect: (contactId: string) => void;
 }) {
+  const { t } = useLocale();
   const update = (patch: Partial<CreateForm>) => setForm({ ...form, ...patch });
   const subtotal = calculateItemsSubtotal(form.items);
   const shippingCost = optionalNumber(form.shippingCost) ?? 0;
@@ -1228,16 +1233,16 @@ function OrderCreateForm({
   const catalogTotalPages = Math.max(1, Math.ceil((catalogOptions?.total ?? 0) / selectorPageSize));
   const selectedContact = contacts.find((contact) => contact.id === form.contactId);
   const selectedPriceTypeLabel = selectedContact?.priceTypeId
-    ? priceTypeLabelById.get(selectedContact.priceTypeId) ?? "Kustom"
-    : "Harga umum (default)";
+    ? priceTypeLabelById.get(selectedContact.priceTypeId) ?? t("Kustom")
+    : t("Harga umum (default)");
 
   const contactSummaryLabel = selectedContact
     ? `${selectedContact.displayName || selectedContact.phoneNumber} · ${selectedPriceTypeLabel}`
     : buyerLabelFallback?.trim()
       ? buyerLabelFallback.trim()
       : form.contactId
-        ? "Contact terpilih"
-        : "Tanpa contact";
+        ? t("Contact terpilih")
+        : t("Tanpa contact");
 
   const applyFulfillmentToAll = () => {
     const wh = form.fulfillmentWarehouseId || defaultWarehouseId;
@@ -1260,7 +1265,7 @@ function OrderCreateForm({
               activeStep === step.value ? "bg-background shadow-sm" : "text-muted-foreground hover:bg-background/60",
             )}
           >
-            {step.label}
+            {t(step.label)}
           </button>
         ))}
       </div>
@@ -1270,8 +1275,8 @@ function OrderCreateForm({
           {activeStep === "contact" && (
             <div className="rounded-lg border p-4">
               <div className="mb-3">
-                <h3 className="font-medium">Pilih contact</h3>
-                <p className="text-sm text-muted-foreground">Boleh pilih contact yang sudah ada, atau lanjut tanpa contact.</p>
+                <h3 className="font-medium">{t("Pilih contact")}</h3>
+                <p className="text-sm text-muted-foreground">{t("Boleh pilih contact yang sudah ada, atau lanjut tanpa contact.")}</p>
               </div>
               <Input
                 value={form.contactSearch}
@@ -1279,7 +1284,7 @@ function OrderCreateForm({
                   update({ contactSearch: e.target.value });
                   setContactPage(1);
                 }}
-                placeholder="Cari nama atau nomor..."
+                placeholder={t("Cari nama atau nomor...")}
               />
               <div className="mt-3 grid gap-2">
                 <button
@@ -1291,13 +1296,13 @@ function OrderCreateForm({
                     form.contactId === "" && "border-primary bg-primary/5",
                   )}
                 >
-                  Tanpa contact
-                  <span className="block text-xs text-muted-foreground">Pakai harga umum (default).</span>
+                  {t("Tanpa contact")}
+                  <span className="block text-xs text-muted-foreground">{t("Pakai harga umum (default).")}</span>
                 </button>
                 {contacts.map((contact) => {
                   const priceLabel = contact.priceTypeId
-                    ? priceTypeLabelById.get(contact.priceTypeId) ?? "Kustom"
-                    : "Harga umum";
+                    ? priceTypeLabelById.get(contact.priceTypeId) ?? t("Kustom")
+                    : t("Harga umum");
                   return (
                     <button
                       key={contact.id}
@@ -1311,7 +1316,7 @@ function OrderCreateForm({
                       <span className="font-medium">{contact.displayName || contact.phoneNumber}</span>
                       <span className="ml-2 text-xs text-muted-foreground">{contact.phoneNumber}</span>
                       <span className="mt-1 block text-xs text-muted-foreground">
-                        {contact.status} · {priceLabel}
+                        {contact.status === "active" ? t("Aktif") : contact.status === "inactive" ? t("Nonaktif") : contact.status} · {priceLabel}
                       </span>
                     </button>
                   );
@@ -1331,7 +1336,7 @@ function OrderCreateForm({
             <div className="space-y-4">
               {hasWarehouses ? (
                 <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center">
-                  <p className="text-sm font-medium">Gudang default</p>
+                  <p className="text-sm font-medium">{t("Gudang default")}</p>
                   <div className="w-full min-w-0 sm:w-52">
                     <WarehouseSelect
                       value={form.fulfillmentWarehouseId}
@@ -1347,11 +1352,11 @@ function OrderCreateForm({
                     onClick={applyFulfillmentToAll}
                     disabled={form.items.length === 0}
                   >
-                    Terapkan ke semua baris
+                    {t("Terapkan ke semua baris")}
                   </Button>
                   {!inventoryOn ? (
                     <p className="text-xs text-amber-800 sm:ml-auto sm:max-w-xs">
-                      Stok dipotong setelah setup persediaan selesai.
+                      {t("Stok dipotong setelah setup persediaan selesai.")}
                     </p>
                   ) : null}
                 </div>
@@ -1361,9 +1366,9 @@ function OrderCreateForm({
                 <div className="rounded-lg border p-4">
                   <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <h3 className="font-medium">Pilih dari katalog</h3>
+                      <h3 className="font-medium">{t("Pilih dari katalog")}</h3>
                       <p className="text-sm text-muted-foreground">
-                        Harga mengikuti: <span className="font-medium text-foreground">{selectedPriceTypeLabel}</span>
+                        {t("Harga mengikuti: {label}", { label: selectedPriceTypeLabel })}
                       </p>
                     </div>
                     <Input
@@ -1373,7 +1378,7 @@ function OrderCreateForm({
                         update({ catalogSearch: e.target.value });
                         setCatalogPage(1);
                       }}
-                      placeholder="Cari nama / SKU..."
+                      placeholder={t("Cari nama / SKU...")}
                     />
                   </div>
                   <div className="max-h-52 space-y-1.5 overflow-y-auto pr-1">
@@ -1393,7 +1398,7 @@ function OrderCreateForm({
                     ))}
                     {catalogItems.length === 0 ? (
                       <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-                        Produk tidak ditemukan.
+                        {t("Produk tidak ditemukan.")}
                       </p>
                     ) : null}
                   </div>
@@ -1406,29 +1411,29 @@ function OrderCreateForm({
                   />
 
                   <details className="mt-3 rounded-md border bg-muted/20 px-3 py-2">
-                    <summary className="cursor-pointer text-sm font-medium">Buat produk cepat</summary>
+                    <summary className="cursor-pointer text-sm font-medium">{t("Buat produk cepat")}</summary>
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
                       <Input
                         value={form.quickExternalCode}
                         onChange={(e) => update({ quickExternalCode: e.target.value })}
-                        placeholder="SKU opsional"
+                        placeholder={t("SKU opsional")}
                       />
                       <Input
                         value={form.quickName}
                         onChange={(e) => update({ quickName: e.target.value })}
-                        placeholder="Nama produk"
+                        placeholder={t("Nama produk")}
                       />
                       <Input
                         value={form.quickPrice}
                         onChange={(e) => update({ quickPrice: e.target.value })}
                         type="number"
                         min="0"
-                        placeholder="Harga"
+                        placeholder={t("Harga")}
                       />
                       <Input
                         value={form.quickUnit}
                         onChange={(e) => update({ quickUnit: e.target.value })}
-                        placeholder="Satuan"
+                        placeholder={t("Satuan")}
                       />
                     </div>
                     <Button
@@ -1439,7 +1444,7 @@ function OrderCreateForm({
                       disabled={!form.quickName.trim() || quickCreatePending}
                       onClick={quickCreateCatalog}
                     >
-                      Buat & tambahkan
+                      {t("Buat & tambahkan")}
                     </Button>
                   </details>
                 </div>
@@ -1459,10 +1464,10 @@ function OrderCreateForm({
             <div className="space-y-4">
               {showOperationalFields && (
                 <div className="rounded-lg border p-4">
-                  <h3 className="mb-3 font-medium">Status & pengiriman</h3>
+                  <h3 className="mb-3 font-medium">{t("Status & pengiriman")}</h3>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <Label>Status</Label>
+                      <Label>{t("Status")}</Label>
                       <Select value={form.status} onValueChange={(value) => update({ status: value })}>
                         <SelectTrigger>
                           <SelectValue />
@@ -1470,7 +1475,7 @@ function OrderCreateForm({
                         <SelectContent>
                           {ORDER_STATUSES.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
-                              {option.label}
+                              {t(option.label)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1478,11 +1483,11 @@ function OrderCreateForm({
                     </div>
                     {showDraftStockHint ? (
                       <p className="sm:col-span-2 text-sm text-muted-foreground">
-                        Stok belum dikurangi — ubah status ke Sedang diproses untuk mencatat pergerakan stok.
+                        {t("Stok belum dikurangi — ubah status ke Sedang diproses untuk mencatat pergerakan stok.")}
                       </p>
                     ) : null}
                     <div>
-                      <Label>Ongkir</Label>
+                      <Label>{t("Ongkir")}</Label>
                       <Input
                         value={form.shippingCost}
                         onChange={(e) => update({ shippingCost: e.target.value })}
@@ -1492,11 +1497,11 @@ function OrderCreateForm({
                       />
                     </div>
                     <div>
-                      <Label>Kurir</Label>
+                      <Label>{t("Kurir")}</Label>
                       <Input value={form.courier} onChange={(e) => update({ courier: e.target.value })} placeholder="JNE / J&T" />
                     </div>
                     <div>
-                      <Label>No. resi</Label>
+                      <Label>{t("No. resi")}</Label>
                       <Input value={form.trackingNumber} onChange={(e) => update({ trackingNumber: e.target.value })} />
                     </div>
                   </div>
@@ -1504,21 +1509,21 @@ function OrderCreateForm({
               )}
               {showOperationalFields && (
                 <div className="rounded-lg border p-4">
-                  <h3 className="mb-1 font-medium">Pembayaran</h3>
+                  <h3 className="mb-1 font-medium">{t("Pembayaran")}</h3>
                   <p className="mb-3 text-sm text-muted-foreground">
-                    Dompet tujuan pemasukan saat pesanan diselesaikan — terpisah dari logistik pengiriman.
+                    {t("Dompet tujuan pemasukan saat pesanan diselesaikan — terpisah dari logistik pengiriman.")}
                   </p>
                   <div className="space-y-1.5">
-                    <Label>Dompet pemasukan</Label>
+                    <Label>{t("Dompet pemasukan")}</Label>
                     <Select
                       value={form.incomeWalletId}
                       onValueChange={(value) => update({ incomeWalletId: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Dompet default" />
+                        <SelectValue placeholder={t("Dompet default")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={NO_WALLET}>Dompet default (Kas Tunai)</SelectItem>
+                        <SelectItem value={NO_WALLET}>{t("Dompet default (Kas Tunai)")}</SelectItem>
                         {walletOptions.map((wallet) => (
                           <SelectItem key={wallet.id} value={wallet.id}>
                             {wallet.name}
@@ -1527,13 +1532,13 @@ function OrderCreateForm({
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Kosongkan untuk dompet default aktif tenant.
+                      {t("Kosongkan untuk dompet default aktif tenant.")}
                     </p>
                   </div>
                 </div>
               )}
               <div className="rounded-lg border p-4">
-                <Label>Catatan</Label>
+                <Label>{t("Catatan")}</Label>
                 <Textarea value={form.notes} onChange={(e) => update({ notes: e.target.value })} rows={4} />
               </div>
             </div>
@@ -1653,10 +1658,11 @@ function SelectorPagination({
   onPageChange: (page: number) => void;
   className?: string;
 }) {
+  const { t } = useLocale();
   return (
     <div className={cn("flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between", className)}>
       <span>
-        {total === 0 ? "0 data" : `Halaman ${page} dari ${totalPages} · ${total} data`}
+        {total === 0 ? t("0 data") : t("Halaman {page} dari {totalPages} · {total} data", { page, totalPages, total })}
       </span>
       <div className="flex gap-2">
         <Button
@@ -1695,28 +1701,29 @@ function SelectedItemsPanel({
   removeOrderItem: (index: number) => void;
   showWarehouse?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <div className="rounded-lg border p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <h3 className="font-medium">Item pesanan</h3>
+          <h3 className="font-medium">{t("Item pesanan")}</h3>
           <p className="text-sm text-muted-foreground">
             {items.length === 0
-              ? "Belum ada item — pilih dari katalog di atas."
+              ? t("Belum ada item — pilih dari katalog di atas.")
               : showWarehouse
-                ? `${items.length} baris · atur gudang, qty, dan harga per baris.`
-                : `${items.length} baris · atur qty dan harga.`}
+                ? t("{count} baris · atur gudang, qty, dan harga per baris.", { count: items.length })
+                : t("{count} baris · atur qty dan harga.", { count: items.length })}
           </p>
         </div>
         <div className="shrink-0 rounded-md bg-muted/50 px-3 py-2 text-sm">
-          <span className="text-muted-foreground">Subtotal </span>
+          <span className="text-muted-foreground">{t("Subtotal")} </span>
           <span className="font-semibold">{formatRupiah(subtotal)}</span>
         </div>
       </div>
 
       {items.length === 0 ? (
         <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-          Keranjang masih kosong.
+          {t("Keranjang masih kosong.")}
         </p>
       ) : showWarehouse ? (
         <>
@@ -1725,10 +1732,10 @@ function SelectedItemsPanel({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[200px]">Produk</TableHead>
-                  <TableHead className="w-[168px]">Gudang</TableHead>
-                  <TableHead className="w-20 text-right">Qty</TableHead>
-                  <TableHead className="w-28 text-right">Harga</TableHead>
+                  <TableHead className="min-w-[200px]">{t("Produk")}</TableHead>
+                  <TableHead className="w-[168px]">{t("Gudang")}</TableHead>
+                  <TableHead className="w-20 text-right">{t("Qty")}</TableHead>
+                  <TableHead className="w-28 text-right">{t("Harga")}</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
@@ -1737,7 +1744,7 @@ function SelectedItemsPanel({
                   <TableRow key={`${item.catalogItemId}-${item.lineId || index}`}>
                     <TableCell className="align-top">
                       <p className="line-clamp-2 text-sm font-medium leading-snug">{item.name}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{item.externalCode || "Tanpa SKU"}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{item.externalCode || t("Tanpa SKU")}</p>
                     </TableCell>
                     <TableCell className="align-top">
                       <WarehouseSelect
@@ -1771,7 +1778,7 @@ function SelectedItemsPanel({
                         size="icon"
                         className="h-9 w-9 text-destructive"
                         onClick={() => removeOrderItem(index)}
-                        aria-label="Hapus baris"
+                        aria-label={t("Hapus baris")}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -1789,7 +1796,7 @@ function SelectedItemsPanel({
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-medium leading-snug">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.externalCode || "Tanpa SKU"}</p>
+                    <p className="text-xs text-muted-foreground">{item.externalCode || t("Tanpa SKU")}</p>
                   </div>
                   <Button
                     type="button"
@@ -1803,7 +1810,7 @@ function SelectedItemsPanel({
                 </div>
                 <div className="grid gap-2">
                   <div className="space-y-1">
-                    <Label className="text-xs">Gudang</Label>
+                    <Label className="text-xs">{t("Gudang")}</Label>
                     <WarehouseSelect
                       value={item.warehouseId}
                       onChange={(warehouseId) => updateOrderItem(index, { warehouseId })}
@@ -1812,7 +1819,7 @@ function SelectedItemsPanel({
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label className="text-xs">Qty</Label>
+                      <Label className="text-xs">{t("Qty")}</Label>
                       <Input
                         value={item.qty}
                         onChange={(e) => updateOrderItem(index, { qty: e.target.value })}
@@ -1821,7 +1828,7 @@ function SelectedItemsPanel({
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Harga</Label>
+                      <Label className="text-xs">{t("Harga")}</Label>
                       <Input
                         value={item.unitPrice}
                         onChange={(e) => updateOrderItem(index, { unitPrice: e.target.value })}
@@ -1844,7 +1851,7 @@ function SelectedItemsPanel({
             >
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-2 text-sm font-medium">{item.name}</p>
-                <p className="text-xs text-muted-foreground">{item.externalCode || "Tanpa SKU"}</p>
+                <p className="text-xs text-muted-foreground">{item.externalCode || t("Tanpa SKU")}</p>
               </div>
               <div className="grid grid-cols-[72px_1fr_auto] items-center gap-2 sm:w-64">
                 <Input
@@ -1852,14 +1859,14 @@ function SelectedItemsPanel({
                   onChange={(e) => updateOrderItem(index, { qty: e.target.value })}
                   type="number"
                   min="1"
-                  placeholder="Qty"
+                  placeholder={t("Qty")}
                 />
                 <Input
                   value={item.unitPrice}
                   onChange={(e) => updateOrderItem(index, { unitPrice: e.target.value })}
                   type="number"
                   min="0"
-                  placeholder="Harga"
+                  placeholder={t("Harga")}
                 />
                 <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeOrderItem(index)}>
                   <X className="h-4 w-4" />
@@ -1898,32 +1905,33 @@ function OrderSummary({
   showDraftStockHint?: boolean;
   onStepChange: (step: OrderFormStep) => void;
 }) {
-  const recipientSummary = formatShippingRecipientSummary(shippingAddress);
+  const { t } = useLocale();
+  const recipientSummary = formatShippingRecipientSummary(shippingAddress, t);
   return (
     <aside className="h-fit rounded-lg border bg-background p-4 lg:sticky lg:top-0">
       <div className="mb-3">
-        <h3 className="font-medium">Ringkasan pesanan</h3>
-        <p className="text-sm text-muted-foreground">Tetap terlihat saat mengisi form.</p>
+        <h3 className="font-medium">{t("Ringkasan pesanan")}</h3>
+        <p className="text-sm text-muted-foreground">{t("Tetap terlihat saat mengisi form.")}</p>
         {showDraftStockHint ? (
           <p className="mt-2 text-xs text-muted-foreground">
-            Stok belum dikurangi — ubah status ke Sedang diproses untuk mencatat pergerakan stok.
+            {t("Stok belum dikurangi — ubah status ke Sedang diproses untuk mencatat pergerakan stok.")}
           </p>
         ) : null}
       </div>
       <div className="space-y-3 text-sm">
         <button type="button" className="w-full rounded-md bg-muted/40 p-3 text-left" onClick={() => onStepChange("contact")}>
-          <span className="block text-xs text-muted-foreground">Contact</span>
+          <span className="block text-xs text-muted-foreground">{t("Kontak")}</span>
           <span className="font-medium">{contactLabel}</span>
         </button>
         {recipientSummary ? (
           <div className="rounded-md bg-muted/40 p-3">
-            <span className="block text-xs text-muted-foreground">Penerima & alamat</span>
+            <span className="block text-xs text-muted-foreground">{t("Penerima & alamat")}</span>
             <span className="font-medium whitespace-pre-line">{recipientSummary}</span>
           </div>
         ) : null}
         <button type="button" className="w-full rounded-md bg-muted/40 p-3 text-left" onClick={() => onStepChange("items")}>
-          <span className="block text-xs text-muted-foreground">Produk & gudang</span>
-          <span className="font-medium">{items.length} item dipilih</span>
+          <span className="block text-xs text-muted-foreground">{t("Produk & gudang")}</span>
+          <span className="font-medium">{t("{count} item dipilih", { count: items.length })}</span>
           {items.length > 0 ? (
             <ul className="mt-2 max-h-28 space-y-1 overflow-auto text-xs text-muted-foreground">
               {items.map((item, index) => (
@@ -1939,15 +1947,15 @@ function OrderSummary({
         </button>
         <div className="rounded-md bg-muted/40 p-3">
           <div className="flex justify-between">
-            <span>Total harga item</span>
+            <span>{t("Total harga item")}</span>
             <span>{formatRupiah(subtotal)}</span>
           </div>
           <div className="mt-2 flex justify-between">
-            <span>Total ongkir</span>
+            <span>{t("Total ongkir")}</span>
             <span>{formatRupiah(shippingCost)}</span>
           </div>
           <div className="mt-3 flex justify-between border-t pt-3 text-base font-bold">
-            <span>Total pesanan</span>
+            <span>{t("Total pesanan")}</span>
             <span>{formatRupiah(total)}</span>
           </div>
         </div>
@@ -1997,14 +2005,14 @@ function toOrderItemPayload(item: OrderItemForm, fallbackWarehouseId = ""): Orde
   };
 }
 
-function formatBuyerLabel(order: Order): string {
+function formatBuyerLabel(order: Order, t: (s: string) => string): string {
   const name = normalizeBuyerField(order.contactDisplayName);
   const phone = normalizeBuyerField(order.contactPhone);
   if (name) return name;
   if (phone) return phone;
   const shipName = order.shippingAddress?.name?.trim();
   if (shipName) return shipName;
-  return "Tanpa contact";
+  return t("Tanpa contact");
 }
 
 function inboxContactToContact(contact: {
@@ -2024,7 +2032,10 @@ function inboxContactToContact(contact: {
   };
 }
 
-function formatShippingRecipientSummary(addr?: ShippingAddress): string {
+function formatShippingRecipientSummary(
+  addr: ShippingAddress | undefined,
+  t: (source: string, vars?: Record<string, string | number>) => string,
+): string {
   if (!addr) return "";
   const lines: string[] = [];
   const name = addr.name?.trim();
@@ -2038,7 +2049,7 @@ function formatShippingRecipientSummary(addr?: ShippingAddress): string {
   const region = [addr.city, addr.province].map((s) => s?.trim()).filter(Boolean).join(", ");
   if (region) lines.push(region);
   const postal = addr.postalCode?.trim();
-  if (postal) lines.push(`Kode pos: ${postal}`);
+  if (postal) lines.push(t("Kode pos: {postal}", { postal }));
   return lines.join("\n");
 }
 
@@ -2056,9 +2067,9 @@ function normalizeEditableStatus(status: string) {
   return "processing";
 }
 
-function statusLabel(status: string) {
-  if (status === "confirmed" || status === "paid") return "Sedang diproses";
-  return ORDER_STATUSES.find((option) => option.value === status)?.label ?? status;
+function statusLabel(status: string, t: (s: string) => string) {
+  if (status === "confirmed" || status === "paid") return t("Sedang diproses");
+  return t(ORDER_STATUSES.find((option) => option.value === status)?.label ?? status);
 }
 
 function statusBadgeVariant(status: string) {

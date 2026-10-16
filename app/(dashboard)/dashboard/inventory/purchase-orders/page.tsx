@@ -32,6 +32,7 @@ import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 type DraftLine = { item: PickedItem | null; qtyOrdered: string; unitCost: string };
 
@@ -54,6 +55,7 @@ function poStatusBadge(status: string) {
 }
 
 export default function PurchaseOrdersPage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const { user } = useAuth();
@@ -72,9 +74,9 @@ export default function PurchaseOrdersPage() {
   const orders = data?.purchaseOrders ?? [];
 
   return (
-    <RequireTenantDashboard title="Purchase Order">
+    <RequireTenantDashboard title={t("Purchase Order")}>
       <div className="flex items-center justify-between">
-        <InventoryPageHeader title="Purchase Order" description="Rencana pembelian ke supplier. Stok masuk saat Penerimaan (Bill)." helpTopic="purchase-orders" />
+        <InventoryPageHeader title={t("Purchase Order")} description={t("Rencana pembelian ke supplier. Stok masuk saat Penerimaan (Bill).")} helpTopic="purchase-orders" />
         {canManage ? <Button onClick={() => setCreating((v) => !v)}>{creating ? "Tutup" : "Buat PO"}</Button> : null}
       </div>
 
@@ -84,9 +86,9 @@ export default function PurchaseOrdersPage() {
 
       <Card className="mt-4">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Daftar PO</CardTitle>
+          <CardTitle>{t("Daftar PO")}</CardTitle>
           <Input
-            placeholder="Cari no PO / supplier..."
+            placeholder={t("Cari no PO / supplier...")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { setSearchQ(q); setPage(1); } }}
@@ -97,18 +99,18 @@ export default function PurchaseOrdersPage() {
           <InventoryTable>
             <InventoryTableHeader>
               <InventoryTableRow>
-                <InventoryTableHead>No PO</InventoryTableHead>
-                <InventoryTableHead>Supplier</InventoryTableHead>
-                <InventoryTableHead>Status</InventoryTableHead>
-                <InventoryTableHead align="right">Total</InventoryTableHead>
-                <InventoryTableHead>Tanggal</InventoryTableHead>
+                <InventoryTableHead>{t("No PO")}</InventoryTableHead>
+                <InventoryTableHead>{t("Supplier")}</InventoryTableHead>
+                <InventoryTableHead>{t("Status")}</InventoryTableHead>
+                <InventoryTableHead align="right">{t("Total")}</InventoryTableHead>
+                <InventoryTableHead>{t("Tanggal")}</InventoryTableHead>
               </InventoryTableRow>
             </InventoryTableHeader>
             <InventoryTableBody>
               {isLoading ? (
-                <InventoryTableEmpty colSpan={5}>Memuat...</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={5}>{t("Memuat...")}</InventoryTableEmpty>
               ) : orders.length === 0 ? (
-                <InventoryTableEmpty colSpan={5}>Belum ada PO.</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={5}>{t("Belum ada PO.")}</InventoryTableEmpty>
               ) : (
                 orders.map((po) => (
                   <InventoryTableRow key={po.id} className="cursor-pointer" onClick={() => setDetailId(po.id)}>
@@ -140,6 +142,7 @@ export default function PurchaseOrdersPage() {
 }
 
 function CreatePOPanel({ onDone }: { onDone: () => void }) {
+  const { t } = useLocale();
   const [supplierName, setSupplierName] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([{ item: null, qtyOrdered: "", unitCost: "" }]);
@@ -158,31 +161,31 @@ function CreatePOPanel({ onDone }: { onDone: () => void }) {
         warehouseId: warehouseId || undefined,
         lines: validLines.map((l) => ({ catalogItemId: l.item!.id, warehouseId: warehouseId || undefined, qtyOrdered: Number(l.qtyOrdered), unitCost: Number(l.unitCost) || 0 })),
       }),
-    onSuccess: () => { toast.success("PO dibuat"); onDone(); },
-    onError: (e) => toast.error(toApiError(e).message),
+    onSuccess: () => { toast.success(t("PO dibuat")); onDone(); },
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   return (
     <Card className="mt-4 border-primary/30">
-      <CardHeader><CardTitle>Buat Purchase Order</CardTitle></CardHeader>
+      <CardHeader><CardTitle>{t("Buat Purchase Order")}</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>Supplier (opsional)</Label><Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Gudang tujuan</Label><WarehouseSelect value={warehouseId} onChange={setWarehouseId} /></div>
+          <div className="space-y-1.5"><Label>{t("Supplier (opsional)")}</Label><Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>{t("Gudang tujuan")}</Label><WarehouseSelect value={warehouseId} onChange={setWarehouseId} /></div>
         </div>
         <div className="space-y-2">
           {lines.map((l, i) => (
             <div key={i} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_110px_130px_auto] sm:items-end">
-              <div className="space-y-1.5">{i === 0 ? <Label>Produk</Label> : null}<ItemPicker value={l.item} onChange={(it) => setLine(i, { item: it })} /></div>
-              <div className="space-y-1.5">{i === 0 ? <Label>Qty</Label> : null}<Input type="number" min="0" step="any" value={l.qtyOrdered} onChange={(e) => setLine(i, { qtyOrdered: e.target.value })} /></div>
+              <div className="space-y-1.5">{i === 0 ? <Label>{t("Produk")}</Label> : null}<ItemPicker value={l.item} onChange={(it) => setLine(i, { item: it })} /></div>
+              <div className="space-y-1.5">{i === 0 ? <Label>{t("Qty")}</Label> : null}<Input type="number" min="0" step="any" value={l.qtyOrdered} onChange={(e) => setLine(i, { qtyOrdered: e.target.value })} /></div>
               <div className="space-y-1.5">{i === 0 ? <Label>Harga/unit</Label> : null}<Input type="number" min="0" step="any" value={l.unitCost} onChange={(e) => setLine(i, { unitCost: e.target.value })} /></div>
-              <Button type="button" variant="ghost" size="sm" className="text-destructive" disabled={lines.length === 1} onClick={() => removeLine(i)}>Hapus</Button>
+              <Button type="button" variant="ghost" size="sm" className="text-destructive" disabled={lines.length === 1} onClick={() => removeLine(i)}>{t("Hapus")}</Button>
             </div>
           ))}
         </div>
         <div className="flex items-center justify-between">
-          <Button type="button" variant="outline" onClick={addLine}>+ Baris</Button>
-          <p className="text-sm">Total: <span className="font-semibold">{formatIDR(total)}</span></p>
+          <Button type="button" variant="outline" onClick={addLine}>{t("+ Baris")}</Button>
+          <p className="text-sm">{t("Total:")} <span className="font-semibold">{formatIDR(total)}</span></p>
         </div>
         <Button onClick={() => mut.mutate()} disabled={validLines.length === 0 || mut.isPending}>
           {mut.isPending ? "Menyimpan..." : "Simpan PO"}
@@ -193,6 +196,7 @@ function CreatePOPanel({ onDone }: { onDone: () => void }) {
 }
 
 function PODetailDialog({ id, canManage, onClose }: { id: string | null; canManage: boolean; onClose: () => void }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const [editing, setEditing] = useState(false);
@@ -207,16 +211,16 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
     invalidateTenantQueries(qc, tenantKey, "inventory", "purchase-orders");
     void qc.invalidateQueries({ queryKey: ["inventory", "purchase-order", id] });
   };
-  const closeMut = useMutation({ mutationFn: () => inventoryApi.closePurchaseOrder(id!), onSuccess: () => { toast.success("PO ditutup"); refresh(); }, onError: (e) => toast.error(toApiError(e).message) });
-  const cancelMut = useMutation({ mutationFn: () => inventoryApi.cancelPurchaseOrder(id!), onSuccess: () => { toast.success("PO dibatalkan"); refresh(); }, onError: (e) => toast.error(toApiError(e).message) });
+  const closeMut = useMutation({ mutationFn: () => inventoryApi.closePurchaseOrder(id!), onSuccess: () => { toast.success(t("PO ditutup")); refresh(); }, onError: (e) => toast.error(t(toApiError(e).message)) });
+  const cancelMut = useMutation({ mutationFn: () => inventoryApi.cancelPurchaseOrder(id!), onSuccess: () => { toast.success(t("PO dibatalkan")); refresh(); }, onError: (e) => toast.error(t(toApiError(e).message)) });
   const delMut = useMutation({
     mutationFn: () => inventoryApi.deletePurchaseOrder(id!),
     onSuccess: () => {
-      toast.success("PO dihapus");
+      toast.success(t("PO dihapus"));
       onClose();
       invalidateTenantQueries(qc, tenantKey, "inventory", "purchase-orders");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const hasReceipts = (po?.lines ?? []).some((l) => (l.qtyReceived ?? 0) > 0);
@@ -229,7 +233,7 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{po ? `${po.poNo} · ${po.supplierName || "Tanpa supplier"}` : "Memuat..."}</DialogTitle>
-          <DialogDescription className="sr-only">Detail purchase order</DialogDescription>
+          <DialogDescription className="sr-only">{t("Detail purchase order")}</DialogDescription>
         </DialogHeader>
         {po ? (
           editing ? (
@@ -244,10 +248,10 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
             <InventoryTable>
               <InventoryTableHeader>
                 <InventoryTableRow>
-                  <InventoryTableHead>Produk</InventoryTableHead>
-                  <InventoryTableHead align="right">Dipesan</InventoryTableHead>
-                  <InventoryTableHead align="right">Diterima</InventoryTableHead>
-                  <InventoryTableHead align="right">Harga</InventoryTableHead>
+                  <InventoryTableHead>{t("Produk")}</InventoryTableHead>
+                  <InventoryTableHead align="right">{t("Dipesan")}</InventoryTableHead>
+                  <InventoryTableHead align="right">{t("Diterima")}</InventoryTableHead>
+                  <InventoryTableHead align="right">{t("Harga")}</InventoryTableHead>
                 </InventoryTableRow>
               </InventoryTableHeader>
               <InventoryTableBody>
@@ -261,15 +265,15 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
                 ))}
               </InventoryTableBody>
             </InventoryTable>
-            <p className="text-right text-sm">Total: <span className="font-semibold">{formatIDR(po.subtotal)}</span></p>
+            <p className="text-right text-sm">{t("Total:")} <span className="font-semibold">{formatIDR(po.subtotal)}</span></p>
             <div className="flex flex-wrap justify-end gap-2">
               {canManage && canEdit ? (
-                <Button variant="outline" size="sm" onClick={() => setEditing(true)}>Edit PO</Button>
+                <Button variant="outline" size="sm" onClick={() => setEditing(true)}>{t("Edit PO")}</Button>
               ) : null}
               {canManage && (po.status === "open" || po.status === "partial") ? (
                 <>
-                  <Button variant="outline" size="sm" onClick={() => cancelMut.mutate()} disabled={cancelMut.isPending}>Batalkan</Button>
-                  <Button variant="outline" size="sm" onClick={() => closeMut.mutate()} disabled={closeMut.isPending}>Tutup PO</Button>
+                  <Button variant="outline" size="sm" onClick={() => cancelMut.mutate()} disabled={cancelMut.isPending}>{t("Batalkan")}</Button>
+                  <Button variant="outline" size="sm" onClick={() => closeMut.mutate()} disabled={closeMut.isPending}>{t("Tutup PO")}</Button>
                 </>
               ) : null}
               {canManage && canDelete ? (
@@ -292,7 +296,7 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
     <ConfirmDialog
       open={deleteConfirmOpen}
       onOpenChange={setDeleteConfirmOpen}
-      title="Hapus PO?"
+      title={t("Hapus PO?")}
       description={po ? `PO ${po.poNo} akan dihapus permanen.` : undefined}
       confirmLabel="Hapus"
       destructive
@@ -307,6 +311,7 @@ function PODetailDialog({ id, canManage, onClose }: { id: string | null; canMana
 }
 
 function POEditForm({ po, onCancel, onSaved }: { po: import("@/lib/api/inventory").PurchaseOrder; onCancel: () => void; onSaved: () => void }) {
+  const { t } = useLocale();
   const [supplierName, setSupplierName] = useState(po.supplierName ?? "");
   const [warehouseId, setWarehouseId] = useState(po.warehouseId ?? "");
   const [note, setNote] = useState(po.note ?? "");
@@ -336,30 +341,30 @@ function POEditForm({ po, onCancel, onSaved }: { po: import("@/lib/api/inventory
           unitCost: Number(l.unitCost) || 0,
         })),
       }),
-    onSuccess: () => { toast.success("PO diperbarui"); onSaved(); },
-    onError: (e) => toast.error(toApiError(e).message),
+    onSuccess: () => { toast.success(t("PO diperbarui")); onSaved(); },
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5"><Label>Supplier</Label><Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>Gudang</Label><WarehouseSelect value={warehouseId} onChange={setWarehouseId} /></div>
+        <div className="space-y-1.5"><Label>{t("Supplier")}</Label><Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label>{t("Gudang")}</Label><WarehouseSelect value={warehouseId} onChange={setWarehouseId} /></div>
       </div>
-      <div className="space-y-1.5"><Label>Catatan</Label><Input value={note} onChange={(e) => setNote(e.target.value)} /></div>
+      <div className="space-y-1.5"><Label>{t("Catatan")}</Label><Input value={note} onChange={(e) => setNote(e.target.value)} /></div>
       <div className="space-y-2">
         {lines.map((l, i) => (
           <div key={i} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_110px_130px_auto] sm:items-end">
-            <div className="space-y-1.5">{i === 0 ? <Label>Produk</Label> : null}<ItemPicker value={l.item} onChange={(it) => setLine(i, { item: it })} /></div>
-            <div className="space-y-1.5">{i === 0 ? <Label>Qty</Label> : null}<Input type="number" min="0" step="any" value={l.qtyOrdered} onChange={(e) => setLine(i, { qtyOrdered: e.target.value })} /></div>
+            <div className="space-y-1.5">{i === 0 ? <Label>{t("Produk")}</Label> : null}<ItemPicker value={l.item} onChange={(it) => setLine(i, { item: it })} /></div>
+            <div className="space-y-1.5">{i === 0 ? <Label>{t("Qty")}</Label> : null}<Input type="number" min="0" step="any" value={l.qtyOrdered} onChange={(e) => setLine(i, { qtyOrdered: e.target.value })} /></div>
             <div className="space-y-1.5">{i === 0 ? <Label>Harga/unit</Label> : null}<Input type="number" min="0" step="any" value={l.unitCost} onChange={(e) => setLine(i, { unitCost: e.target.value })} /></div>
-            <Button type="button" variant="ghost" size="sm" className="text-destructive" disabled={lines.length === 1} onClick={() => removeLine(i)}>Hapus</Button>
+            <Button type="button" variant="ghost" size="sm" className="text-destructive" disabled={lines.length === 1} onClick={() => removeLine(i)}>{t("Hapus")}</Button>
           </div>
         ))}
       </div>
-      <Button type="button" variant="outline" onClick={addLine}>+ Baris</Button>
+      <Button type="button" variant="outline" onClick={addLine}>{t("+ Baris")}</Button>
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel}>Batal</Button>
+        <Button variant="outline" onClick={onCancel}>{t("Batal")}</Button>
         <Button onClick={() => mut.mutate()} disabled={validLines.length === 0 || mut.isPending}>
           {mut.isPending ? "Menyimpan..." : "Simpan Perubahan"}
         </Button>

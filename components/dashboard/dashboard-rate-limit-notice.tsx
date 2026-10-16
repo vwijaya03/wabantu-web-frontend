@@ -11,12 +11,14 @@ import {
   rateLimitTitle,
 } from "@/lib/api/rate-limit";
 import { toApiError } from "@/lib/api/errors";
+import { useLocale } from "@/lib/i18n/locale";
 
 /**
  * Subscribes to React Query failures and shows a dismissible banner when any
  * dashboard query hits HTTP 429 (global middleware rate limit).
  */
 export function DashboardRateLimitNotice() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const [visible, setVisible] = useState(false);
 
@@ -43,9 +45,9 @@ export function DashboardRateLimitNotice() {
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
       <div className="min-w-0 flex-1">
         <p className="font-medium text-amber-950 dark:text-amber-50">
-          {rateLimitTitle()}
+          {t(rateLimitTitle())}
         </p>
-        <p className="mt-1 text-muted-foreground">{RATE_LIMIT_USER_MESSAGE}</p>
+        <p className="mt-1 text-muted-foreground">{t(RATE_LIMIT_USER_MESSAGE)}</p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <Button
@@ -57,14 +59,14 @@ export function DashboardRateLimitNotice() {
             void qc.refetchQueries({ type: "active" });
           }}
         >
-          Coba lagi
+          {t("Coba lagi")}
         </Button>
         <Button
           type="button"
           size="icon"
           variant="ghost"
           className="h-8 w-8"
-          aria-label="Tutup pemberitahuan"
+          aria-label={t("Tutup pemberitahuan")}
           onClick={() => setVisible(false)}
         >
           <X className="h-4 w-4" />

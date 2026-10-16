@@ -57,7 +57,7 @@ import {
 import type { PatientExportColumnKey } from "@/lib/events-export";
 import { PATIENT_SORT_DEFAULT, PATIENT_SORT_OPTIONS } from "@/lib/events-sort";
 import { eventsApi, EVENTS_MAX_PATIENT_EXPORT_ROWS, type Patient } from "@/lib/api/events";
-import { formatEventDateId, formatPatientSlotLabel } from "@/lib/events-format";
+import { useEventDateFormat } from "@/components/events/events-i18n";
 import { toApiError } from "@/lib/api/client";
 import { useAuth } from "@/components/providers/auth-provider";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
@@ -69,6 +69,7 @@ import {
 } from "@/lib/query/events-query-keys";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 const PAGE_SIZE = 20;
 const ALL = "__all__";
@@ -111,6 +112,8 @@ export function EventPatientsTab({
   canEdit: boolean;
   therapies: { id: string; therapyName: string }[];
 }) {
+  const { t } = useLocale();
+  const { formatEventDateId, formatPatientSlotLabel } = useEventDateFormat();
   const qc = useQueryClient();
   const { user } = useAuth();
   const tenantKey = tenantContextKey(user);
@@ -183,7 +186,7 @@ export function EventPatientsTab({
             preferredTime: form.preferredTime || undefined,
           }),
     onSuccess: () => {
-      toast.success(editing ? "Pasien diperbarui" : "Pasien ditambahkan");
+      toast.success(editing ? t("Pasien diperbarui") : t("Pasien ditambahkan"));
       setDialogOpen(false);
       setEditing(null);
       setForm(emptyPatientForm());
@@ -196,7 +199,7 @@ export function EventPatientsTab({
   const deleteMut = useMutation({
     mutationFn: (id: string) => eventsApi.deletePatient(eventId, id),
     onSuccess: () => {
-      toast.success("Pasien dihapus");
+      toast.success(t("Pasien dihapus"));
       setDeleteTarget(null);
       invalidate();
     },
@@ -230,7 +233,7 @@ export function EventPatientsTab({
         }),
       })
       .then(() => {
-        toast.success("Export masuk antrian — lihat Riwayat export di bawah halaman");
+        toast.success(t("Export masuk antrian — lihat Riwayat export di bawah halaman"));
         void qc.invalidateQueries({ queryKey: eventExportJobsKey(tenantKey, eventId) });
       })
       .catch((e) => toast.error(toApiError(e).message));
@@ -267,7 +270,7 @@ export function EventPatientsTab({
     <div className="mt-4 space-y-4">
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
-          <CardTitle className="text-base">Daftar pasien</CardTitle>
+          <CardTitle className="text-base">{t("Daftar pasien")}</CardTitle>
           <div className="flex flex-wrap gap-2">
             <EventTabRefreshButton onClick={invalidate} isRefreshing={isFetching} />
             {canEdit ? (
@@ -275,8 +278,8 @@ export function EventPatientsTab({
                 presentation="dialog"
                 kind="patients"
                 eventId={eventId}
-                title="Import pasien dari gambar"
-                description="Upload screenshot daftar pasien."
+                title={t("Import pasien dari gambar")}
+                description={t("Upload screenshot daftar pasien.")}
                 onCommitted={invalidate}
               />
             ) : null}
@@ -286,18 +289,14 @@ export function EventPatientsTab({
               disabled={exportTooMany}
               onClick={() => startExport("patients_pdf")}
             >
-              <Download className="mr-1 h-4 w-4" />
-              Export PDF
-            </Button>
+              <Download className="mr-1 h-4 w-4" />{t("Export PDF")}</Button>
             <Button
               size="sm"
               variant="outline"
               disabled={exportTooMany}
               onClick={() => startExport("patients_xlsx")}
             >
-              <Download className="mr-1 h-4 w-4" />
-              Export Excel
-            </Button>
+              <Download className="mr-1 h-4 w-4" />{t("Export Excel")}</Button>
             {canEdit ? (
               <Button
                 size="sm"
@@ -308,8 +307,7 @@ export function EventPatientsTab({
                   setDialogOpen(true);
                 }}
               >
-                <Plus className="mr-1 h-4 w-4" /> Tambah pasien
-              </Button>
+                <Plus className="mr-1 h-4 w-4" />{t("Tambah pasien")}</Button>
             ) : null}
           </div>
         </CardHeader>
@@ -343,10 +341,10 @@ export function EventPatientsTab({
           >
             <Select value={therapyFilter} onValueChange={(v) => { setTherapyFilter(v); setPage(1); }}>
               <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Terapi" />
+                <SelectValue placeholder={t("Terapi")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL}>Semua terapi</SelectItem>
+                <SelectItem value={ALL}>{t("Semua terapi")}</SelectItem>
                 {therapies.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.therapyName}
@@ -356,10 +354,10 @@ export function EventPatientsTab({
             </Select>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
               <SelectTrigger className="w-full sm:w-36">
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder={t("Status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL}>Semua status</SelectItem>
+                <SelectItem value={ALL}>{t("Semua status")}</SelectItem>
                 {["CONFIRMED", "COMPLETED", "CANCELLED"].map((s) => (
                   <SelectItem key={s} value={s}>
                     {s}
@@ -370,12 +368,12 @@ export function EventPatientsTab({
             <DatePicker className="w-full sm:w-36" value={slotDate} onChange={(v) => { setSlotDate(v); setPage(1); }} />
             <Select value={hasSlot} onValueChange={(v) => { setHasSlot(v); setPage(1); }}>
               <SelectTrigger className="w-full sm:w-36">
-                <SelectValue placeholder="Slot" />
+                <SelectValue placeholder={t("Slot")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL}>Semua slot</SelectItem>
-                <SelectItem value="true">Ada slot</SelectItem>
-                <SelectItem value="false">Belum slot</SelectItem>
+                <SelectItem value={ALL}>{t("Semua slot")}</SelectItem>
+                <SelectItem value="true">{t("Ada slot")}</SelectItem>
+                <SelectItem value="false">{t("Belum slot")}</SelectItem>
               </SelectContent>
             </Select>
           </DataTableToolbar>
@@ -394,16 +392,14 @@ export function EventPatientsTab({
                 variant="destructive"
                 disabled={deleteBulkMut.isPending}
                 onClick={() => setBulkDeleteConfirmOpen(true)}
-              >
-                Hapus terpilih
-              </Button>
+              >{t("Hapus terpilih")}</Button>
             </div>
           ) : null}
 
           {isError ? (
             <p className="text-sm text-destructive">{toApiError(error).message}</p>
           ) : isLoading ? (
-            <p className="text-sm text-muted-foreground">Memuat...</p>
+            <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
           ) : (
             <>
               <Table>
@@ -415,12 +411,12 @@ export function EventPatientsTab({
                           type="checkbox"
                           checked={allVisibleSelected}
                           onChange={toggleSelectVisible}
-                          aria-label="Pilih semua pasien di halaman ini"
+                          aria-label={t("Pilih semua pasien di halaman ini")}
                         />
                       </TableHead>
                     ) : null}
                     <SortableTableHead
-                      label="Nama"
+                      label={t("Nama")}
                       sortKey="name"
                       sort={tableSort}
                       onSortChange={(next) => {
@@ -428,9 +424,9 @@ export function EventPatientsTab({
                         setPage(1);
                       }}
                     />
-                    <TableHead>Tgl lahir</TableHead>
+                    <TableHead>{t("Tgl lahir")}</TableHead>
                     <SortableTableHead
-                      label="Terapi"
+                      label={t("Terapi")}
                       sortKey="therapy"
                       sort={tableSort}
                       onSortChange={(next) => {
@@ -439,7 +435,7 @@ export function EventPatientsTab({
                       }}
                     />
                     <SortableTableHead
-                      label="Status"
+                      label={t("Status")}
                       sortKey="status"
                       sort={tableSort}
                       onSortChange={(next) => {
@@ -448,7 +444,7 @@ export function EventPatientsTab({
                       }}
                     />
                     <SortableTableHead
-                      label="Slot"
+                      label={t("Slot")}
                       sortKey="slotDate"
                       sort={tableSort}
                       onSortChange={(next) => {
@@ -456,16 +452,14 @@ export function EventPatientsTab({
                         setPage(1);
                       }}
                     />
-                    <TableHead>Keluhan</TableHead>
-                    {canEdit ? <TableHead className="text-right">Aksi</TableHead> : null}
+                    <TableHead>{t("Keluhan")}</TableHead>
+                    {canEdit ? <TableHead className="text-right">{t("Aksi")}</TableHead> : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={canEdit ? 8 : 6} className="h-24 text-center text-muted-foreground">
-                        Tidak ada pasien.
-                      </TableCell>
+                      <TableCell colSpan={canEdit ? 8 : 6} className="h-24 text-center text-muted-foreground">{t("Tidak ada pasien.")}</TableCell>
                     </TableRow>
                   ) : (
                     items.map((p) => (
@@ -536,18 +530,18 @@ export function EventPatientsTab({
               />
             ) : null}
             <div>
-              <Label>Nama lengkap</Label>
+              <Label>{t("Nama lengkap")}</Label>
               <Input value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} />
             </div>
             <div>
-              <Label>Tanggal lahir</Label>
+              <Label>{t("Tanggal lahir")}</Label>
               <DatePicker value={form.birthDate} onChange={(birthDate) => setForm((f) => ({ ...f, birthDate }))} />
             </div>
             <div>
-              <Label>Terapi</Label>
+              <Label>{t("Terapi")}</Label>
               <Select value={form.therapyId} onValueChange={(v) => setForm((f) => ({ ...f, therapyId: v }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih terapi" />
+                  <SelectValue placeholder={t("Pilih terapi")} />
                 </SelectTrigger>
                 <SelectContent>
                   {therapies.map((t) => (
@@ -560,7 +554,7 @@ export function EventPatientsTab({
             </div>
             {editing ? (
               <div>
-                <Label>Status</Label>
+                <Label>{t("Status")}</Label>
                 <Select value={form.reservationStatus} onValueChange={(v) => setForm((f) => ({ ...f, reservationStatus: v }))}>
                   <SelectTrigger>
                     <SelectValue />
@@ -576,21 +570,19 @@ export function EventPatientsTab({
               </div>
             ) : null}
             <div>
-              <Label>Keluhan</Label>
+              <Label>{t("Keluhan")}</Label>
               <Input value={form.complaint} onChange={(e) => setForm((f) => ({ ...f, complaint: e.target.value }))} />
             </div>
             <div>
-              <Label>Jam preferensi</Label>
+              <Label>{t("Jam preferensi")}</Label>
               <TimePicker value={form.preferredTime} onChange={(preferredTime) => setForm((f) => ({ ...f, preferredTime }))} />
               <p className="text-xs text-muted-foreground">
-                Kolom <strong>Slot</strong> terisi otomatis jika slot sudah di-generate (tab Jadwal) dan jam ini cocok dengan slot tersedia. Simpan ulang pasien jika slot baru dibuat.
+                Kolom <strong>{t("Slot")}</strong> terisi otomatis jika slot sudah di-generate (tab Jadwal) dan jam ini cocok dengan slot tersedia. Simpan ulang pasien jika slot baru dibuat.
               </p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Batal
-            </Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("Batal")}</Button>
             <Button
               disabled={
                 saveMut.isPending ||
@@ -599,9 +591,7 @@ export function EventPatientsTab({
                 (!!editing && (!form.fullName.trim() || !form.birthDate))
               }
               onClick={() => saveMut.mutate()}
-            >
-              Simpan
-            </Button>
+            >{t("Simpan")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -609,12 +599,12 @@ export function EventPatientsTab({
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus pasien?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Hapus pasien?")}</AlertDialogTitle>
             <AlertDialogDescription>{deleteTarget?.fullName} akan dihapus dari acara.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}>Hapus</AlertDialogAction>
+            <AlertDialogCancel>{t("Batal")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}>{t("Hapus")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -622,7 +612,7 @@ export function EventPatientsTab({
       <ConfirmDialog
         open={bulkDeleteConfirmOpen}
         onOpenChange={setBulkDeleteConfirmOpen}
-        title="Hapus pasien terpilih?"
+        title={t("Hapus pasien terpilih?")}
         description={`${selectedIds.size} pasien akan dihapus dari acara.`}
         confirmLabel="Hapus"
         destructive

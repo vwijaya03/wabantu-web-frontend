@@ -7,12 +7,15 @@ import { OrderApproveButton } from "@/components/orders/order-approve-button";
 import { ProofCheckBadge, ProofCheckReasons } from "@/components/orders/proof-check-badge";
 import { inboxApi } from "@/lib/api/inbox";
 import type { Order } from "@/lib/api/orders";
+import { useLocale } from "@/lib/i18n/locale";
 import { cn } from "@/lib/utils";
 import {
   formatPaymentProofFlags,
   isPaymentProofDoubtful,
   paymentProofPanelHint,
 } from "@/lib/payment-proof";
+
+type TranslateFn = (source: string, vars?: Record<string, string | number>) => string;
 
 function formatRupiah(value: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(
@@ -58,6 +61,17 @@ export function paymentStatusBadgeLabel(status?: string) {
 
 export function paymentStatusHint(status?: string) {
   return paymentStatusMeta(status)?.hint ?? "Status pembayaran berdasarkan bukti transfer dari pelanggan.";
+}
+
+export function translatePaymentProofListBadge(t: TranslateFn, status?: string, flags?: string[]): string {
+  if (isPaymentProofDoubtful(status, flags)) return t("Diragukan AI");
+  const meta = paymentStatusMeta(status);
+  if (meta) return t(meta.badge);
+  return t(status ?? "unpaid");
+}
+
+export function translatePaymentStatusBadge(t: TranslateFn, status?: string): string {
+  return translatePaymentProofListBadge(t, status, undefined);
 }
 
 export function paymentStatusBadgeVariant(status?: string) {
@@ -108,6 +122,7 @@ function MetaRow({ label, children }: { label: string; children: React.ReactNode
 }
 
 function OrderProofImage({ messageId }: { messageId: string }) {
+  const { t } = useLocale();
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -130,11 +145,11 @@ function OrderProofImage({ messageId }: { messageId: string }) {
     };
   }, [messageId]);
 
-  if (failed) return <p className="text-xs text-muted-foreground">Gagal memuat bukti</p>;
-  if (!src) return <p className="text-xs text-muted-foreground">Memuat bukti…</p>;
+  if (failed) return <p className="text-xs text-muted-foreground">{t("Gagal memuat bukti")}</p>;
+  if (!src) return <p className="text-xs text-muted-foreground">{t("Memuat bukti…")}</p>;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- blob from auth API
-    <img src={src} alt="Bukti transfer" className="max-h-56 w-full rounded-md border object-contain" />
+    <img src={src} alt={t("Bukti transfer")} className="max-h-56 w-full rounded-md border object-contain" />
   );
 }
 
@@ -162,6 +177,7 @@ export function PaymentProofPanel({
   /** Sesi Pantau: tombol Setujui nonaktif. Verifikasi/tolak bukti tidak diubah di sini. */
   readOnly?: boolean;
 }) {
+  const { t } = useLocale();
   const status = order.paymentStatus ?? "unpaid";
   const meta = order.paymentProofMeta;
   const hasProof = Boolean(order.paymentProofMessageId);
@@ -174,32 +190,32 @@ export function PaymentProofPanel({
   const showUnblock = canManage && proofBlocked && onUnblock != null;
   const showMeta = hasPaymentMetaContent(order);
   const doubtful = isPaymentProofDoubtful(status, meta?.flags);
-  const doubtReasons = formatPaymentProofFlags(meta?.flags);
+  const doubtReasons = formatPaymentProofFlags(meta?.flags).map((reason) => t(reason));
 
   return (
     <div className="mb-6 rounded-lg border p-4">
       <div className={cn("rounded-lg border px-4 py-3", paymentStatusBannerClass(status))}>
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm font-semibold">Bukti transfer</p>
+          <p className="text-sm font-semibold">{t("Bukti transfer")}</p>
           <Badge variant={paymentStatusBadgeVariant(status)}>
-            {doubtful ? "Diragukan AI" : paymentStatusBadgeLabel(status)}
+            {doubtful ? t("Diragukan AI") : translatePaymentStatusBadge(t, status)}
           </Badge>
           <ProofCheckBadge value={order.proofCheck} />
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">{paymentProofPanelHint(status, meta?.flags)}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{t(paymentProofPanelHint(status, meta?.flags))}</p>
         {order.proofCheck === "perlu_dicek" ? (
           <div className="mt-2">
             <ProofCheckReasons value={order.proofCheck} reasons={order.proofCheckReasons} />
           </div>
         ) : order.proofCheck === "cocok" ? (
           <p className="mt-2 text-xs text-muted-foreground">
-            Nominal sama dengan total dan rekening tujuan cocok — tetap keputusan owner.
+            {t("Nominal sama dengan total dan rekening tujuan cocok — tetap keputusan owner.")}
           </p>
         ) : null}
         {doubtful ? (
           <div className="mt-3 rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm">
             <p className="font-medium text-amber-900 dark:text-amber-100">
-              Pembayaran diragukan — hasil OCR/AI tidak lolos auto-verify
+              {t("Pembayaran diragukan — hasil OCR/AI tidak lolos auto-verify")}
             </p>
             {doubtReasons.length > 0 ? (
               <ul className="mt-2 list-disc space-y-1 pl-4 text-muted-foreground">
@@ -213,49 +229,60 @@ export function PaymentProofPanel({
         {proofBlocked ? (
           <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
             <p className="font-medium text-amber-800 dark:text-amber-200">
-              Upload bukti dari pembeli diabaikan ({rejectionCount}/{maxRejections} penolakan)
+              {t("Upload bukti dari pembeli diabaikan ({count}/{max} penolakan)", {
+                count: rejectionCount,
+                max: maxRejections,
+              })}
             </p>
             <p className="mt-1 text-muted-foreground">
-              Buka batas jika ingin menerima bukti transfer lagi dari pelanggan.
+              {t("Buka batas jika ingin menerima bukti transfer lagi dari pelanggan.")}
             </p>
           </div>
         ) : null}
         {status === "rejected" && meta?.rejectReason ? (
           <div className="mt-3 rounded-md border border-destructive/30 bg-background/80 px-3 py-2 text-sm">
-            <span className="font-medium text-destructive">Alasan penolakan: </span>
+            <span className="font-medium text-destructive">{t("Alasan penolakan: ")}</span>
             {meta.rejectReason}
           </div>
         ) : null}
         {status === "verified" && order.paymentProofVerifiedAt ? (
           <p className="mt-2 text-xs text-muted-foreground">
-            Diverifikasi {new Date(order.paymentProofVerifiedAt).toLocaleString("id-ID")}
+            {t("Diverifikasi {date}", {
+              date: new Date(order.paymentProofVerifiedAt).toLocaleString("id-ID"),
+            })}
           </p>
         ) : null}
       </div>
 
       {status === "unpaid" && !hasProof ? (
-        <p className="mt-3 text-sm text-muted-foreground">Menunggu pelanggan mengirim bukti transfer di WhatsApp.</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {t("Menunggu pelanggan mengirim bukti transfer di WhatsApp.")}
+        </p>
       ) : null}
 
       {(hasProof || showMeta) && (
         <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,220px)_1fr]">
           {hasProof && order.paymentProofMessageId ? (
             <div>
-              <p className="mb-2 text-xs font-medium text-muted-foreground">Screenshot</p>
+              <p className="mb-2 text-xs font-medium text-muted-foreground">{t("Screenshot")}</p>
               <OrderProofImage messageId={order.paymentProofMessageId} />
             </div>
           ) : null}
           <div className="space-y-3">
-            <MetaRow label="Total pesanan">{formatRupiah(order.total)}</MetaRow>
-            {meta?.amount != null ? <MetaRow label="Nominal OCR">{formatRupiah(meta.amount)}</MetaRow> : null}
-            {meta?.bank ? <MetaRow label="Bank">{meta.bank}</MetaRow> : null}
-            {meta?.accountNumber ? <MetaRow label="Rekening">{meta.accountNumber}</MetaRow> : null}
+            <MetaRow label={t("Total pesanan")}>{formatRupiah(order.total)}</MetaRow>
+            {meta?.amount != null ? <MetaRow label={t("Nominal OCR")}>{formatRupiah(meta.amount)}</MetaRow> : null}
+            {meta?.bank ? <MetaRow label={t("Bank")}>{meta.bank}</MetaRow> : null}
+            {meta?.accountNumber ? <MetaRow label={t("Rekening")}>{meta.accountNumber}</MetaRow> : null}
             {meta?.confidence != null && meta.confidence > 0 ? (
-              <MetaRow label="Keyakinan OCR">{(meta.confidence * 100).toFixed(0)}%</MetaRow>
+              <MetaRow label={t("Keyakinan OCR")}>{(meta.confidence * 100).toFixed(0)}%</MetaRow>
             ) : null}
             {meta?.flags && meta.flags.length > 0 ? (
-              <MetaRow label="Catatan sistem">
-                <span className="text-muted-foreground">{formatPaymentProofFlags(meta.flags).join(" · ")}</span>
+              <MetaRow label={t("Catatan sistem")}>
+                <span className="text-muted-foreground">
+                  {formatPaymentProofFlags(meta.flags)
+                    .map((flag) => t(flag))
+                    .join(" · ")}
+                </span>
               </MetaRow>
             ) : null}
           </div>
@@ -266,7 +293,7 @@ export function PaymentProofPanel({
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
           <OrderApproveButton order={order} canManage={canManage} onApproved={onApproved} readOnly={readOnly} />
           <p className="text-xs text-muted-foreground">
-            Verifikasi bukti + selesaikan pesanan + catat pemasukan sekaligus.
+            {t("Verifikasi bukti + selesaikan pesanan + catat pemasukan sekaligus.")}
           </p>
         </div>
       ) : null}
@@ -274,17 +301,17 @@ export function PaymentProofPanel({
         <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
           {showVerifyReject || showReverify ? (
             <Button size="sm" disabled={verifyPending} onClick={onVerify}>
-              {showReverify ? "Verifikasi ulang" : "Verifikasi"}
+              {showReverify ? t("Verifikasi ulang") : t("Verifikasi")}
             </Button>
           ) : null}
           {showVerifyReject ? (
             <Button size="sm" variant="outline" disabled={rejectPending} onClick={onReject}>
-              Tolak bukti
+              {t("Tolak bukti")}
             </Button>
           ) : null}
           {showUnblock ? (
             <Button size="sm" variant="outline" disabled={unblockPending} onClick={onUnblock}>
-              Buka batas bukti
+              {t("Buka batas bukti")}
             </Button>
           ) : null}
         </div>

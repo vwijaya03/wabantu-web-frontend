@@ -22,6 +22,7 @@ import {
   type NavSection,
 } from "@/lib/dashboard/nav-config";
 import { filterNavSectionsByModules } from "@/lib/dashboard/impersonation-modules";
+import { useLocale } from "@/lib/i18n/locale";
 import { cn } from "@/lib/utils";
 
 function NavItemLink({
@@ -37,6 +38,7 @@ function NavItemLink({
   inboxUnread: number;
   onNavigate?: () => void;
 }) {
+  const { t } = useLocale();
   return (
     <Link
       href={item.href}
@@ -49,12 +51,12 @@ function NavItemLink({
       )}
     >
       <item.icon className="h-4 w-4 shrink-0" />
-      <span className="truncate">{item.label}</span>
+      <span className="truncate">{t(item.label)}</span>
       {item.href === "/dashboard/inbox" && showInboxDot ? (
         <span
           className="absolute right-2 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary ring-2 ring-sidebar"
-          title={`${inboxUnread} pesan belum dibaca`}
-          aria-label={`${inboxUnread} pesan belum dibaca`}
+          title={t("{count} pesan belum dibaca", { count: inboxUnread })}
+          aria-label={t("{count} pesan belum dibaca", { count: inboxUnread })}
         />
       ) : null}
     </Link>
@@ -74,6 +76,7 @@ function CollapsibleNavSection({
   showInboxDot: boolean;
   onNavigate?: () => void;
 }) {
+  const { t } = useLocale();
   const routeActive = sectionMatchesPath(section, pathname);
   const [manualOpen, setManualOpen] = useState<boolean | null>(null);
   const open = manualOpen ?? (section.collapsible ? routeActive : true);
@@ -96,7 +99,7 @@ function CollapsibleNavSection({
       {section.clusters?.map((cluster) => (
         <li key={cluster.label} className="pt-1 first:pt-0">
           <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-            {cluster.label}
+            {t(cluster.label)}
           </p>
           <ul className="space-y-0.5">
             {cluster.items.map((item) => (
@@ -120,7 +123,7 @@ function CollapsibleNavSection({
     return (
       <div>
         <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {section.label}
+          {t(section.label)}
         </p>
         {content}
       </div>
@@ -138,7 +141,7 @@ function CollapsibleNavSection({
         )}
         aria-expanded={open}
       >
-        <span>{section.label}</span>
+        <span>{t(section.label)}</span>
         <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", open && "rotate-180")} />
       </button>
       {open ? <div className="px-1 pb-2">{content}</div> : null}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/lib/i18n/locale";
 import { useRef, useState, type ReactNode } from "react";
 import { Bold, Eye, Italic, List, ListOrdered, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export function DescriptionRichEditor({
   className,
   hint,
 }: DescriptionRichEditorProps) {
+  const { t } = useLocale();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [mode, setMode] = useState<"edit" | "preview">("edit");
 
@@ -64,7 +66,7 @@ export function DescriptionRichEditor({
   return (
     <div className={cn("space-y-2", className)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Label htmlFor={id}>{label}</Label>
+        <Label htmlFor={id}>{t(label)}</Label>
         <div className="flex items-center gap-1">
           <div className="flex rounded-md border p-0.5">
             <Button
@@ -75,7 +77,7 @@ export function DescriptionRichEditor({
               onClick={() => setMode("edit")}
             >
               <Pencil className="mr-1 h-3.5 w-3.5" />
-              Edit
+              {t("Edit")}
             </Button>
             <Button
               type="button"
@@ -86,7 +88,7 @@ export function DescriptionRichEditor({
               disabled={!value.trim()}
             >
               <Eye className="mr-1 h-3.5 w-3.5" />
-              Preview
+              {t("Preview")}
             </Button>
           </div>
         </div>
@@ -95,16 +97,16 @@ export function DescriptionRichEditor({
       {mode === "edit" ? (
         <>
           <div className="flex flex-wrap gap-1 rounded-t-md border border-b-0 bg-muted/40 p-1">
-            <ToolbarButton label="Tebal" onClick={() => applyWrap("**", "**")}>
+            <ToolbarButton label={t("Tebal")} onClick={() => applyWrap("**", "**")}>
               <Bold className="h-3.5 w-3.5" />
             </ToolbarButton>
-            <ToolbarButton label="Miring" onClick={() => applyWrap("*", "*")}>
+            <ToolbarButton label={t("Miring")} onClick={() => applyWrap("*", "*")}>
               <Italic className="h-3.5 w-3.5" />
             </ToolbarButton>
-            <ToolbarButton label="Bullet" onClick={() => applyLinePrefix("- ")}>
+            <ToolbarButton label={t("Bullet")} onClick={() => applyLinePrefix("- ")}>
               <List className="h-3.5 w-3.5" />
             </ToolbarButton>
-            <ToolbarButton label="Nomor" onClick={() => applyLinePrefix("1. ")}>
+            <ToolbarButton label={t("Nomor")} onClick={() => applyLinePrefix("1. ")}>
               <ListOrdered className="h-3.5 w-3.5" />
             </ToolbarButton>
           </div>
@@ -113,7 +115,7 @@ export function DescriptionRichEditor({
             ref={textareaRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
+            placeholder={t(placeholder)}
             rows={rows}
             className="rounded-t-none font-mono text-sm leading-relaxed"
           />

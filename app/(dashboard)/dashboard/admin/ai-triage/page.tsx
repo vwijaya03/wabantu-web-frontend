@@ -31,6 +31,7 @@ import {
 } from "@/lib/api/ai-triage";
 import { toApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale";
 
 const TRIAGE_TABS = ["insiden", "ai-review", "laporan"] as const;
 type TriageTabId = (typeof TRIAGE_TABS)[number];
@@ -127,6 +128,7 @@ function formatTime(iso: string): string {
 }
 
 export default function AdminAITriagePage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const { isAdmin } = useAdminSession();
   const router = useRouter();
@@ -177,7 +179,7 @@ export default function AdminAITriagePage() {
       reviewNote?: string;
     }) => aiTriageAdminApi.updateReport(id, { status, reviewNote }),
     onSuccess: () => {
-      toast.success("Status laporan diperbarui");
+      toast.success(t("Status laporan diperbarui"));
       void refetchReports();
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -186,7 +188,7 @@ export default function AdminAITriagePage() {
   const openIncidentMut = useMutation({
     mutationFn: (id: string) => aiTriageAdminApi.openIncidentFromReport(id),
     onSuccess: () => {
-      toast.success("Insiden menampilkan pasangan laporan ini");
+      toast.success(t("Insiden menampilkan pasangan laporan ini"));
       setTab("insiden");
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -206,12 +208,12 @@ export default function AdminAITriagePage() {
     mutationFn: aiTriageAdminApi.createLLMScan,
     onSuccess: (res) => {
       setActiveLLMScanId(res.scan.id);
-      toast.success("Scan AI dimulai");
+      toast.success(t("Scan AI dimulai"));
     },
     onError: (e) => {
       const err = toApiError(e);
       if (err.code === "resource_exhausted") {
-        toast.error("Antrian scan penuh — maks. 2 bersamaan");
+        toast.error(t("Antrian scan penuh — maks. 2 bersamaan"));
         return;
       }
       toast.error(err.message);
@@ -238,11 +240,11 @@ export default function AdminAITriagePage() {
 
   const runLLMScan = () => {
     if (!effectiveTenantId) {
-      toast.error("Pilih tenant terlebih dahulu");
+      toast.error(t("Pilih tenant terlebih dahulu"));
       return;
     }
     if (!scanFrom) {
-      toast.error("Isi rentang waktu dari");
+      toast.error(t("Isi rentang waktu dari"));
       return;
     }
     const nowTo = formatDatetimeLocal(new Date());
@@ -262,8 +264,8 @@ export default function AdminAITriagePage() {
   return (
     <>
       <PageHeader
-        title="AI Triage"
-        description="Self-healing: konfirmasi insiden, Composer membuat draft PR. AI Review dan Laporan hanya mengisi antrian Insiden."
+        title={t("AI Triage")}
+        description={t("Self-healing: konfirmasi insiden, Composer membuat draft PR. AI Review dan Laporan hanya mengisi antrian Insiden.")}
       />
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -275,7 +277,7 @@ export default function AdminAITriagePage() {
             disabled={tenantsLoading || tenants.length === 0}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Pilih tenant" />
+              <SelectValue placeholder={t("Pilih tenant")} />
             </SelectTrigger>
             <SelectContent>
               {tenants.map((t) => (
@@ -287,10 +289,10 @@ export default function AdminAITriagePage() {
           </Select>
         </div>
         <Button variant="outline" asChild>
-          <Link href="/dashboard/admin/ai-activity">Log aktivitas AI</Link>
+          <Link href="/dashboard/admin/ai-activity">{t("Log aktivitas AI")}</Link>
         </Button>
         <Button variant="outline" asChild>
-          <Link href="/dashboard/admin">← Konsol platform</Link>
+          <Link href="/dashboard/admin">{t("← Konsol platform")}</Link>
         </Button>
       </div>
 
@@ -366,7 +368,7 @@ export default function AdminAITriagePage() {
                 <Input
                   value={scanConversationId}
                   onChange={(e) => setScanConversationId(e.target.value)}
-                  placeholder="Batasi ke satu percakapan"
+                  placeholder={t("Batasi ke satu percakapan")}
                   className="font-mono text-sm"
                 />
               </div>
@@ -384,7 +386,7 @@ export default function AdminAITriagePage() {
               <div className="rounded-md border p-4 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">Status scan:</span>
+                    <span className="font-medium">{t("Status scan:")}</span>
                     <Badge variant="outline">{llmScanStatusLabel(llmScanData.scan.status)}</Badge>
                     <span className="text-muted-foreground">
                       {llmScanData.scan.turnsChecked} turn · {llmScanData.scan.findingsCount} flagged
@@ -442,8 +444,8 @@ export default function AdminAITriagePage() {
                               <th className="pb-2 pr-3 font-medium">Waktu</th>
                               <th className="pb-2 pr-3 font-medium">Status</th>
                               <th className="pb-2 pr-3 font-medium">Severity</th>
-                              <th className="pb-2 pr-3 font-medium">Pesan masuk</th>
-                              <th className="pb-2 pr-3 font-medium">Balasan AI</th>
+                              <th className="pb-2 pr-3 font-medium">{t("Pesan masuk")}</th>
+                              <th className="pb-2 pr-3 font-medium">{t("Balasan AI")}</th>
                               <th className="pb-2 font-medium">Alasan</th>
                             </tr>
                           </thead>
@@ -538,10 +540,10 @@ export default function AdminAITriagePage() {
                     <tr className="border-b text-muted-foreground">
                       <th className="pb-2 pr-3 font-medium">Waktu</th>
                       <th className="pb-2 pr-3 font-medium">Tenant</th>
-                      <th className="pb-2 pr-3 font-medium">Kategori</th>
+                      <th className="pb-2 pr-3 font-medium">{t("Kategori")}</th>
                       <th className="pb-2 pr-3 font-medium">Status</th>
-                      <th className="pb-2 pr-3 font-medium">Pesan masuk</th>
-                      <th className="pb-2 pr-3 font-medium">Balasan AI</th>
+                      <th className="pb-2 pr-3 font-medium">{t("Pesan masuk")}</th>
+                      <th className="pb-2 pr-3 font-medium">{t("Balasan AI")}</th>
                       <th className="pb-2 pr-3 font-medium">Judge</th>
                       <th className="pb-2 font-medium">Aksi</th>
                     </tr>

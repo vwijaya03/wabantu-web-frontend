@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { Pencil, Trash2 } from "lucide-react";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 type BillDraftLine = {
   item: PickedItem | null;
@@ -43,6 +44,7 @@ type BillDraftLine = {
 };
 
 export default function BillsPage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const { user } = useAuth();
@@ -66,16 +68,16 @@ export default function BillsPage() {
   const deleteBillMut = useMutation({
     mutationFn: (id: string) => inventoryApi.deleteBill(id),
     onSuccess: () => {
-      toast.success("Penerimaan dihapus — stok dikurangi");
+      toast.success(t("Penerimaan dihapus — stok dikurangi"));
       invalidateTenantQueries(qc, tenantKey, "inventory");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   return (
-    <RequireTenantDashboard title="Penerimaan Barang">
+    <RequireTenantDashboard title={t("Penerimaan Barang")}>
       <div className="flex items-center justify-between">
-        <InventoryPageHeader title="Penerimaan Barang (Bill)" description="Terima barang dari supplier — menambah stok & HPP." helpTopic="bills" />
+        <InventoryPageHeader title={t("Penerimaan Barang (Bill)")} description={t("Terima barang dari supplier — menambah stok & HPP.")} helpTopic="bills" />
         {canManage ? <Button onClick={() => setCreating((v) => !v)}>{creating ? "Tutup" : "Terima Barang"}</Button> : null}
       </div>
 
@@ -94,9 +96,9 @@ export default function BillsPage() {
 
       <Card className="mt-4">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Daftar Penerimaan</CardTitle>
+          <CardTitle>{t("Daftar Penerimaan")}</CardTitle>
           <Input
-            placeholder="Cari no bill..."
+            placeholder={t("Cari no bill...")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { setSearchQ(q); setPage(1); } }}
@@ -107,18 +109,18 @@ export default function BillsPage() {
           <InventoryTable>
             <InventoryTableHeader>
               <InventoryTableRow>
-                <InventoryTableHead>No Bill</InventoryTableHead>
-                <InventoryTableHead>Supplier</InventoryTableHead>
-                <InventoryTableHead align="right">Total</InventoryTableHead>
-                <InventoryTableHead>Tanggal</InventoryTableHead>
-                {canManage ? <InventoryTableHead align="right">Aksi</InventoryTableHead> : null}
+                <InventoryTableHead>{t("No Bill")}</InventoryTableHead>
+                <InventoryTableHead>{t("Supplier")}</InventoryTableHead>
+                <InventoryTableHead align="right">{t("Total")}</InventoryTableHead>
+                <InventoryTableHead>{t("Tanggal")}</InventoryTableHead>
+                {canManage ? <InventoryTableHead align="right">{t("Aksi")}</InventoryTableHead> : null}
               </InventoryTableRow>
             </InventoryTableHeader>
             <InventoryTableBody>
               {isLoading ? (
-                <InventoryTableEmpty colSpan={canManage ? 5 : 4}>Memuat...</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={canManage ? 5 : 4}>{t("Memuat...")}</InventoryTableEmpty>
               ) : bills.length === 0 ? (
-                <InventoryTableEmpty colSpan={canManage ? 5 : 4}>Belum ada penerimaan.</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={canManage ? 5 : 4}>{t("Belum ada penerimaan.")}</InventoryTableEmpty>
               ) : (
                 bills.map((b) => (
                   <InventoryTableRow key={b.id} className="cursor-pointer" onClick={() => { setEditOnOpen(false); setDetailId(b.id); }}>
@@ -181,7 +183,7 @@ export default function BillsPage() {
             setDeleteBillNo("");
           }
         }}
-        title="Hapus penerimaan barang?"
+        title={t("Hapus penerimaan barang?")}
         description={deleteBillNo ? `${deleteBillNo} akan dihapus. Stok akan dikurangi.` : undefined}
         confirmLabel="Hapus"
         destructive
@@ -197,6 +199,7 @@ export default function BillsPage() {
 }
 
 function CreateBillPanel({ onDone }: { onDone: () => void }) {
+  const { t } = useLocale();
   const tenantKey = useTenantKey();
   const [poId, setPoId] = useState("");
   const [supplierName, setSupplierName] = useState("");
@@ -229,7 +232,7 @@ function CreateBillPanel({ onDone }: { onDone: () => void }) {
         }));
       setLines(remaining.length > 0 ? remaining : [{ item: null, qty: "", unitCost: "", batchNo: "" }]);
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const total = lines.reduce((s, l) => s + (Number(l.qty) || 0) * (Number(l.unitCost) || 0), 0);
@@ -250,17 +253,17 @@ function CreateBillPanel({ onDone }: { onDone: () => void }) {
           batchNo: l.batchNo || undefined,
         })),
       }),
-    onSuccess: () => { toast.success("Barang diterima — stok bertambah"); onDone(); },
-    onError: (e) => toast.error(toApiError(e).message),
+    onSuccess: () => { toast.success(t("Barang diterima — stok bertambah")); onDone(); },
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   return (
     <Card className="mt-4 border-primary/30">
-      <CardHeader><CardTitle>Terima Barang</CardTitle></CardHeader>
+      <CardHeader><CardTitle>{t("Terima Barang")}</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-1.5">
-            <Label>Dari PO (opsional)</Label>
+            <Label>{t("Dari PO (opsional)")}</Label>
             <select
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               value={poId}
@@ -269,30 +272,30 @@ function CreateBillPanel({ onDone }: { onDone: () => void }) {
                 if (e.target.value) prefillFromPO.mutate(e.target.value);
               }}
             >
-              <option value="">Tanpa PO</option>
+              <option value="">{t("Tanpa PO")}</option>
               {openPOs.map((p) => (
                 <option key={p.id} value={p.id}>{p.poNo} · {p.supplierName || "tanpa supplier"}</option>
               ))}
             </select>
           </div>
-          <div className="space-y-1.5"><Label>Supplier</Label><Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Gudang</Label><WarehouseSelect value={warehouseId} onChange={setWarehouseId} /></div>
+          <div className="space-y-1.5"><Label>{t("Supplier")}</Label><Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>{t("Gudang")}</Label><WarehouseSelect value={warehouseId} onChange={setWarehouseId} /></div>
         </div>
 
         <div className="space-y-2">
           {lines.map((l, i) => (
             <div key={i} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_100px_120px_120px_auto] sm:items-end">
-              <div className="space-y-1.5">{i === 0 ? <Label>Produk</Label> : null}<ItemPicker value={l.item} onChange={(it) => setLine(i, { item: it })} /></div>
-              <div className="space-y-1.5">{i === 0 ? <Label>Qty</Label> : null}<Input type="number" min="0" step="any" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></div>
+              <div className="space-y-1.5">{i === 0 ? <Label>{t("Produk")}</Label> : null}<ItemPicker value={l.item} onChange={(it) => setLine(i, { item: it })} /></div>
+              <div className="space-y-1.5">{i === 0 ? <Label>{t("Qty")}</Label> : null}<Input type="number" min="0" step="any" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></div>
               <div className="space-y-1.5">{i === 0 ? <Label>Harga/unit</Label> : null}<Input type="number" min="0" step="any" value={l.unitCost} onChange={(e) => setLine(i, { unitCost: e.target.value })} /></div>
-              <div className="space-y-1.5">{i === 0 ? <Label>Batch (opsional)</Label> : null}<Input value={l.batchNo} onChange={(e) => setLine(i, { batchNo: e.target.value })} /></div>
-              <Button type="button" variant="ghost" size="sm" className="text-destructive" disabled={lines.length === 1} onClick={() => removeLine(i)}>Hapus</Button>
+              <div className="space-y-1.5">{i === 0 ? <Label>{t("Batch (opsional)")}</Label> : null}<Input value={l.batchNo} onChange={(e) => setLine(i, { batchNo: e.target.value })} /></div>
+              <Button type="button" variant="ghost" size="sm" className="text-destructive" disabled={lines.length === 1} onClick={() => removeLine(i)}>{t("Hapus")}</Button>
             </div>
           ))}
         </div>
         <div className="flex items-center justify-between">
-          <Button type="button" variant="outline" onClick={addLine}>+ Baris</Button>
-          <p className="text-sm">Total: <span className="font-semibold">{formatIDR(total)}</span></p>
+          <Button type="button" variant="outline" onClick={addLine}>{t("+ Baris")}</Button>
+          <p className="text-sm">{t("Total:")} <span className="font-semibold">{formatIDR(total)}</span></p>
         </div>
         <Button onClick={() => mut.mutate()} disabled={validLines.length === 0 || mut.isPending}>
           {mut.isPending ? "Memproses..." : "Terima & Tambah Stok"}
@@ -303,6 +306,7 @@ function CreateBillPanel({ onDone }: { onDone: () => void }) {
 }
 
 function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; initialEditing?: boolean; onClose: () => void }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const { user } = useAuth();
@@ -317,11 +321,11 @@ function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; 
   const delMut = useMutation({
     mutationFn: () => inventoryApi.deleteBill(id!),
     onSuccess: () => {
-      toast.success("Penerimaan dihapus — stok dikurangi");
+      toast.success(t("Penerimaan dihapus — stok dikurangi"));
       onClose();
       invalidateTenantQueries(qc, tenantKey, "inventory");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
   return (
     <>
@@ -329,7 +333,7 @@ function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; 
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{bill ? `${bill.billNo} · ${bill.supplierName || "Tanpa supplier"}` : "Memuat..."}</DialogTitle>
-          <DialogDescription className="sr-only">Detail tagihan pembelian</DialogDescription>
+          <DialogDescription className="sr-only">{t("Detail tagihan pembelian")}</DialogDescription>
         </DialogHeader>
         {bill ? (
           (editing || initialEditing) ? (
@@ -352,7 +356,7 @@ function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; 
               </div>
               {canManage ? (
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setEditing(true)}>Edit</Button>
+                  <Button variant="outline" size="sm" onClick={() => setEditing(true)}>{t("Edit")}</Button>
                   <Button
                     variant="destructive"
                     size="sm"
@@ -367,10 +371,10 @@ function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; 
             <InventoryTable>
               <InventoryTableHeader>
                 <InventoryTableRow>
-                  <InventoryTableHead>Produk</InventoryTableHead>
-                  <InventoryTableHead align="right">Qty</InventoryTableHead>
-                  <InventoryTableHead align="right">Harga</InventoryTableHead>
-                  <InventoryTableHead>Batch</InventoryTableHead>
+                  <InventoryTableHead>{t("Produk")}</InventoryTableHead>
+                  <InventoryTableHead align="right">{t("Qty")}</InventoryTableHead>
+                  <InventoryTableHead align="right">{t("Harga")}</InventoryTableHead>
+                  <InventoryTableHead>{t("Batch")}</InventoryTableHead>
                 </InventoryTableRow>
               </InventoryTableHeader>
               <InventoryTableBody>
@@ -384,7 +388,7 @@ function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; 
                 ))}
               </InventoryTableBody>
             </InventoryTable>
-            <p className="text-right text-sm">Total: <span className="font-semibold">{formatIDR(bill.subtotal)}</span></p>
+            <p className="text-right text-sm">{t("Total:")} <span className="font-semibold">{formatIDR(bill.subtotal)}</span></p>
           </div>
           )
         ) : null}
@@ -394,7 +398,7 @@ function BillDetailDialog({ id, initialEditing, onClose }: { id: string | null; 
     <ConfirmDialog
       open={deleteConfirmOpen}
       onOpenChange={setDeleteConfirmOpen}
-      title="Hapus penerimaan barang?"
+      title={t("Hapus penerimaan barang?")}
       description={bill ? `${bill.billNo} akan dihapus. Stok akan dikurangi.` : undefined}
       confirmLabel="Hapus"
       destructive
@@ -417,6 +421,7 @@ function BillEditForm({
   onCancel: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useLocale();
   const [supplierName, setSupplierName] = useState(bill.supplierName ?? "");
   const [note, setNote] = useState(bill.note ?? "");
   const [lines, setLines] = useState<BillDraftLine[]>(
@@ -445,29 +450,29 @@ function BillEditForm({
           batchNo: l.batchNo || undefined,
         })),
       }),
-    onSuccess: () => { toast.success("Penerimaan diperbarui — stok disesuaikan"); onSaved(); },
-    onError: (e) => toast.error(toApiError(e).message),
+    onSuccess: () => { toast.success(t("Penerimaan diperbarui — stok disesuaikan")); onSaved(); },
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Nomor bill tetap: <span className="font-mono font-medium">{bill.billNo}</span></p>
-      <div className="space-y-1.5"><Label>Supplier</Label><Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} /></div>
-      <div className="space-y-1.5"><Label>Catatan</Label><Input value={note} onChange={(e) => setNote(e.target.value)} /></div>
+      <p className="text-sm text-muted-foreground">{t("Nomor bill tetap:")} <span className="font-mono font-medium">{bill.billNo}</span></p>
+      <div className="space-y-1.5"><Label>{t("Supplier")}</Label><Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} /></div>
+      <div className="space-y-1.5"><Label>{t("Catatan")}</Label><Input value={note} onChange={(e) => setNote(e.target.value)} /></div>
       <div className="space-y-2">
         {lines.map((l, i) => (
           <div key={i} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_100px_120px_120px_auto] sm:items-end">
-            <div className="space-y-1.5">{i === 0 ? <Label>Produk</Label> : null}<ItemPicker value={l.item} onChange={(it) => setLine(i, { item: it })} /></div>
-            <div className="space-y-1.5">{i === 0 ? <Label>Qty</Label> : null}<Input type="number" min="0" step="any" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></div>
+            <div className="space-y-1.5">{i === 0 ? <Label>{t("Produk")}</Label> : null}<ItemPicker value={l.item} onChange={(it) => setLine(i, { item: it })} /></div>
+            <div className="space-y-1.5">{i === 0 ? <Label>{t("Qty")}</Label> : null}<Input type="number" min="0" step="any" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></div>
             <div className="space-y-1.5">{i === 0 ? <Label>Harga/unit</Label> : null}<Input type="number" min="0" step="any" value={l.unitCost} onChange={(e) => setLine(i, { unitCost: e.target.value })} /></div>
-            <div className="space-y-1.5">{i === 0 ? <Label>Batch</Label> : null}<Input value={l.batchNo} onChange={(e) => setLine(i, { batchNo: e.target.value })} /></div>
-            <Button type="button" variant="ghost" size="sm" className="text-destructive" disabled={lines.length === 1} onClick={() => removeLine(i)}>Hapus</Button>
+            <div className="space-y-1.5">{i === 0 ? <Label>{t("Batch")}</Label> : null}<Input value={l.batchNo} onChange={(e) => setLine(i, { batchNo: e.target.value })} /></div>
+            <Button type="button" variant="ghost" size="sm" className="text-destructive" disabled={lines.length === 1} onClick={() => removeLine(i)}>{t("Hapus")}</Button>
           </div>
         ))}
       </div>
-      <Button type="button" variant="outline" onClick={addLine}>+ Baris</Button>
+      <Button type="button" variant="outline" onClick={addLine}>{t("+ Baris")}</Button>
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel}>Batal</Button>
+        <Button variant="outline" onClick={onCancel}>{t("Batal")}</Button>
         <Button onClick={() => mut.mutate()} disabled={validLines.length === 0 || mut.isPending}>
           {mut.isPending ? "Menyimpan..." : "Simpan Perubahan"}
         </Button>

@@ -62,6 +62,7 @@ import {
 } from "@/lib/finance/utils";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useLocale } from "@/lib/i18n/locale";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 const AddTransactionSheet = dynamic(
@@ -89,6 +90,7 @@ function txnTitle(txn: Transaction, txnTypes: TransactionType[]) {
 }
 
 export default function TransactionsPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantKey = useTenantKey();
   const isOwner = canPerformOwnerActions(user);
@@ -150,21 +152,21 @@ export default function TransactionsPage() {
     mutationFn: ({ id, action }: { id: string; action: "approve" | "reject" }) =>
       financeApi.approveTransaction(id, action),
     onSuccess: (_, vars) => {
-      toast.success(vars.action === "approve" ? "Transaksi disetujui" : "Transaksi ditolak");
+      toast.success(vars.action === "approve" ? t("Transaksi disetujui") : t("Transaksi ditolak"));
       invalidateFinanceCaches(qc, tenantKey);
     },
-    onError: () => toast.error("Gagal memproses"),
+    onError: () => toast.error(t("Gagal memproses")),
   });
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => financeApi.deleteTransaction(id),
     onSuccess: () => {
-      toast.success("Transaksi dihapus");
+      toast.success(t("Transaksi dihapus"));
       invalidateFinanceCaches(qc, tenantKey);
       setDeleteTxnId(null);
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
-      toast.error(e?.response?.data?.message ?? "Gagal menghapus"),
+      toast.error(e?.response?.data?.message ?? t("Gagal menghapus")),
   });
 
   const updateMut = useMutation({
@@ -185,12 +187,12 @@ export default function TransactionsPage() {
       return financeApi.updateTransaction(editTxn.id, payload);
     },
     onSuccess: () => {
-      toast.success("Transaksi diperbarui");
+      toast.success(t("Transaksi diperbarui"));
       invalidateFinanceCaches(qc, tenantKey);
       setEditTxn(null);
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
-      toast.error(e?.response?.data?.message ?? "Gagal memperbarui"),
+      toast.error(e?.response?.data?.message ?? t("Gagal memperbarui")),
   });
 
   const items = data?.items ?? [];
@@ -216,24 +218,24 @@ export default function TransactionsPage() {
   return (
     <>
       <FinanceSubPageHeader
-        title="Transaksi"
-        description={`${total} transaksi ditemukan`}
+        title={t("Transaksi")}
+        description={t("{total} transaksi ditemukan", { total })}
         actions={
           isOwner ? (
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" asChild>
                 <Link href="/dashboard/finance/transactions/import-image">
                   <ImageUp className="mr-2 h-4 w-4" />
-                  Import dari gambar
+                  {t("Import dari gambar")}
                 </Link>
               </Button>
               <Button onClick={() => setOpenAdd(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Catat Transaksi
+                <PlusCircle className="mr-2 h-4 w-4" /> {t("Catat Transaksi")}
               </Button>
             </div>
           ) : (
             <Button onClick={() => setOpenAdd(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Catat Transaksi
+              <PlusCircle className="mr-2 h-4 w-4" /> {t("Catat Transaksi")}
             </Button>
           )
         }
@@ -244,7 +246,7 @@ export default function TransactionsPage() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             className="pl-8"
-            placeholder="Cari deskripsi, dompet, kategori, aset, jumlah..."
+            placeholder={t("Cari deskripsi, dompet, kategori, aset, jumlah...")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
@@ -263,7 +265,7 @@ export default function TransactionsPage() {
             setFilters((f) => ({ ...f, page: 1 }));
           }}
         >
-          Cari
+          {t("Cari")}
         </Button>
         {search && (
           <Button
@@ -275,7 +277,7 @@ export default function TransactionsPage() {
               setFilters((f) => ({ ...f, page: 1 }));
             }}
           >
-            Reset pencarian
+            {t("Reset pencarian")}
           </Button>
         )}
       </div>
@@ -283,7 +285,7 @@ export default function TransactionsPage() {
       <div className="flex flex-wrap gap-2">
         <Select value={effectivePeriod} onValueChange={(v) => setFilter("period", v)}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Periode" />
+            <SelectValue placeholder={t("Periode")} />
           </SelectTrigger>
           <SelectContent>
             {monthOptions.map((opt) => (
@@ -299,10 +301,10 @@ export default function TransactionsPage() {
           onValueChange={(v) => setFilter("type", v === FILTER_ALL ? "" : v)}
         >
           <SelectTrigger className="w-44">
-            <SelectValue placeholder="Semua jenis" />
+            <SelectValue placeholder={t("Semua jenis")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={FILTER_ALL}>Semua Jenis</SelectItem>
+            <SelectItem value={FILTER_ALL}>{t("Semua Jenis")}</SelectItem>
             {txnTypes.filter((t) => t.isActive).map((t) => (
               <SelectItem key={t.code} value={t.code}>
                 {t.label}
@@ -317,13 +319,13 @@ export default function TransactionsPage() {
             onValueChange={(v) => setFilter("status", v === FILTER_ALL ? "" : v)}
           >
             <SelectTrigger className="w-44">
-              <SelectValue placeholder="Semua status" />
+              <SelectValue placeholder={t("Semua status")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={FILTER_ALL}>Semua Status</SelectItem>
-              <SelectItem value="approved">Disetujui</SelectItem>
-              <SelectItem value="pending_approval">Menunggu Persetujuan</SelectItem>
-              <SelectItem value="rejected">Ditolak</SelectItem>
+              <SelectItem value={FILTER_ALL}>{t("Semua Status")}</SelectItem>
+              <SelectItem value="approved">{t("Disetujui")}</SelectItem>
+              <SelectItem value="pending_approval">{t("Menunggu Persetujuan")}</SelectItem>
+              <SelectItem value="rejected">{t("Ditolak")}</SelectItem>
             </SelectContent>
           </Select>
         )}
@@ -334,21 +336,21 @@ export default function TransactionsPage() {
             size="sm"
             onClick={() => setFilters((f) => ({ ...f, type: "", status: "", page: 1 }))}
           >
-            <X className="mr-1 h-3.5 w-3.5" /> Reset filter
+            <X className="mr-1 h-3.5 w-3.5" /> {t("Reset filter")}
           </Button>
         )}
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Termasuk transaksi dari <strong>Investasi & Aset</strong> (Beli/Jual Aset). Filter periode default: bulan berjalan.
+        Termasuk transaksi dari <strong>{t("Investasi & Aset")}</strong> (Beli/Jual Aset). Filter periode default: bulan berjalan.
       </p>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
       ) : items.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Tidak ada transaksi untuk filter ini. Coba ubah periode atau reset pencarian.
+            {t("Tidak ada transaksi untuk filter ini. Coba ubah periode atau reset pencarian.")}
           </CardContent>
         </Card>
       ) : (
@@ -382,7 +384,7 @@ export default function TransactionsPage() {
               disabled={filters.page <= 1}
               onClick={() => setFilters((f) => ({ ...f, page: f.page - 1 }))}
             >
-              Sebelumnya
+              {t("Sebelumnya")}
             </Button>
             <Button
               variant="outline"
@@ -390,7 +392,7 @@ export default function TransactionsPage() {
               disabled={filters.page >= totalPages}
               onClick={() => setFilters((f) => ({ ...f, page: f.page + 1 }))}
             >
-              Berikutnya
+              {t("Berikutnya")}
             </Button>
           </div>
         </div>
@@ -405,7 +407,7 @@ export default function TransactionsPage() {
       <Dialog open={!!editTxn} onOpenChange={(open) => !open && setEditTxn(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ubah Transaksi</DialogTitle>
+            <DialogTitle>{t("Ubah Transaksi")}</DialogTitle>
             <DialogDescription>
               {editTxn && isInvestmentTxn(editTxn.type) ? (
                 <>
@@ -429,7 +431,7 @@ export default function TransactionsPage() {
                 </p>
               )}
               <div>
-                <Label>Deskripsi</Label>
+                <Label>{t("Deskripsi")}</Label>
                 <Input
                   value={editForm.description}
                   onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
@@ -437,7 +439,7 @@ export default function TransactionsPage() {
               </div>
               {!isInvestmentTxn(editTxn.type) && isOwner && (
                 <div>
-                  <Label>Jumlah (Rp)</Label>
+                  <Label>{t("Jumlah (Rp)")}</Label>
                   <Input
                     type="number"
                     value={editForm.amount}
@@ -447,7 +449,7 @@ export default function TransactionsPage() {
               )}
               {!isInvestmentTxn(editTxn.type) && categories?.categories && (
                 <div>
-                  <Label>Kategori</Label>
+                  <Label>{t("Kategori")}</Label>
                   <Select
                     value={editForm.categoryId || FILTER_ALL}
                     onValueChange={(v) =>
@@ -455,7 +457,7 @@ export default function TransactionsPage() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Pilih kategori" />
+                      <SelectValue placeholder={t("Pilih kategori")} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={FILTER_ALL}>—</SelectItem>
@@ -469,14 +471,14 @@ export default function TransactionsPage() {
                 </div>
               )}
               <div>
-                <Label>Tanggal</Label>
+                <Label>{t("Tanggal")}</Label>
                 <DatePicker
                   value={editForm.transactionDate}
                   onChange={(transactionDate) => setEditForm((f) => ({ ...f, transactionDate }))}
                 />
               </div>
               <div>
-                <Label>Catatan</Label>
+                <Label>{t("Catatan")}</Label>
                 <Textarea
                   value={editForm.notes}
                   onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
@@ -484,7 +486,7 @@ export default function TransactionsPage() {
                 />
               </div>
               <div>
-                <Label>No. Referensi</Label>
+                <Label>{t("No. Referensi")}</Label>
                 <Input
                   value={editForm.referenceNo}
                   onChange={(e) => setEditForm((f) => ({ ...f, referenceNo: e.target.value }))}
@@ -494,7 +496,7 @@ export default function TransactionsPage() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditTxn(null)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button onClick={() => updateMut.mutate()} disabled={updateMut.isPending}>
               {updateMut.isPending ? "Menyimpan..." : "Simpan"}
@@ -506,20 +508,20 @@ export default function TransactionsPage() {
       <AlertDialog open={!!deleteTxnId} onOpenChange={(open) => !open && setDeleteTxnId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus transaksi?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Hapus transaksi?")}</AlertDialogTitle>
             <AlertDialogDescription>
               Transaksi akan dihapus dan saldo dompet disesuaikan. Untuk transaksi investasi, kepemilikan aset ikut
               berubah.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>{t("Batal")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={deleteMut.isPending}
               onClick={() => deleteTxnId && deleteMut.mutate(deleteTxnId)}
             >
-              Hapus
+              {t("Hapus")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -549,6 +551,7 @@ function TransactionRow({
   onApprove: () => void;
   onReject: () => void;
 }) {
+  const { t } = useLocale();
   const flow = txnTypeFlow(txn.type, txnTypes);
   const amountPrefix = flow === "income" ? "+" : flow === "transfer" ? "" : "-";
   const investment = isInvestmentTxn(txn.type);
@@ -589,40 +592,40 @@ function TransactionRow({
           <div className="mt-1 flex items-center justify-end gap-1 flex-wrap">
             {investment && (
               <Badge variant="secondary" className="text-[10px]">
-                Investasi
+                {t("Investasi")}
               </Badge>
             )}
             {txn.status === "pending_approval" && (
               <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-400">
-                <Clock className="mr-1 h-3 w-3" /> {statusLabel(txn.status)}
+                <Clock className="mr-1 h-3 w-3" /> {t(statusLabel(txn.status))}
               </Badge>
             )}
             {txn.status === "rejected" && (
               <Badge variant="destructive" className="text-[10px]">
-                Ditolak
+                {t("Ditolak")}
               </Badge>
             )}
           </div>
           {isOwner && txn.status === "pending_approval" && (
             <div className="mt-2 flex gap-1.5 justify-end">
               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onReject}>
-                Tolak
+                {t("Tolak")}
               </Button>
               <Button size="sm" className="h-7 text-xs" onClick={onApprove}>
-                <CheckCircle2 className="mr-1 h-3 w-3" /> Setujui
+                <CheckCircle2 className="mr-1 h-3 w-3" /> {t("Setujui")}
               </Button>
             </div>
           )}
           {isOwner && (txn.status === "approved" || txn.status === "rejected") && (
             <div className="mt-2 flex gap-1 justify-end">
-              <Button variant="ghost" size="icon" className="h-7 w-7" title="Ubah" onClick={onEdit}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" title={t("Ubah")} onClick={onEdit}>
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-destructive hover:text-destructive"
-                title="Hapus"
+                title={t("Hapus")}
                 onClick={onDelete}
               >
                 <Trash2 className="h-3.5 w-3.5" />

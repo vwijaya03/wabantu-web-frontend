@@ -1,4 +1,7 @@
+"use client";
+
 import type { AITriageIncident, AITriageTurnEvidence } from "@/lib/api/ai-triage";
+import { useLocale } from "@/lib/i18n/locale";
 
 function asTurnEvidence(raw: unknown): AITriageTurnEvidence | undefined {
   if (!raw) return undefined;
@@ -16,22 +19,23 @@ function asTurnEvidence(raw: unknown): AITriageTurnEvidence | undefined {
 }
 
 export function IncidentTurnPair({ incident }: { incident: AITriageIncident }) {
+  const { t } = useLocale();
   const ev = asTurnEvidence(incident.evidence);
   if (!ev?.userText && !ev?.finalText) {
     return (
       <p className="text-sm text-muted-foreground">
-        Evidence turn belum ada pada insiden ini.
+        {t("Evidence turn belum ada pada insiden ini.")}
       </p>
     );
   }
   return (
     <div className="space-y-2 rounded-md border bg-muted/30 p-3 text-sm">
       <p>
-        <span className="text-muted-foreground">Pesan masuk: </span>
+        <span className="text-muted-foreground">{t("Pesan masuk: ")}</span>
         <span className="whitespace-pre-wrap break-words">{ev.userText || "—"}</span>
       </p>
       <p>
-        <span className="text-muted-foreground">Balasan AI: </span>
+        <span className="text-muted-foreground">{t("Balasan AI: ")}</span>
         <span className="whitespace-pre-wrap break-words">{ev.finalText || "—"}</span>
       </p>
       {ev.path ? (

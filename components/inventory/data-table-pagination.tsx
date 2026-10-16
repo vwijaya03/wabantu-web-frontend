@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/i18n/locale";
 
 const PAGE_SIZES = [10, 25, 50, 100] as const;
 
@@ -17,6 +18,7 @@ export function InventoryDataTablePagination({
   onPageChange: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
 }) {
+  const { t } = useLocale();
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
@@ -24,10 +26,10 @@ export function InventoryDataTablePagination({
   return (
     <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        <span>Menampilkan {from}–{to} dari {total}</span>
+        <span>{t("Menampilkan {from}–{to} dari {total}", { from, to, total })}</span>
         {onPageSizeChange ? (
           <label className="inline-flex items-center gap-1">
-            Baris
+            {t("Baris")}
             <select
               className="h-8 rounded-md border border-input bg-background px-2 text-sm"
               value={pageSize}
@@ -42,11 +44,11 @@ export function InventoryDataTablePagination({
       </div>
       <div className="flex items-center gap-2">
         <Button type="button" variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
-          Sebelumnya
+          {t("Sebelumnya")}
         </Button>
         <span className="text-sm tabular-nums">{page} / {totalPages}</span>
         <Button type="button" variant="outline" size="sm" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
-          Berikutnya
+          {t("Berikutnya")}
         </Button>
       </div>
     </div>

@@ -18,8 +18,10 @@ import {
 } from "@/lib/inventory/getting-started";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function InventoryGuidePage() {
+  const { t } = useLocale();
   const tenantKey = useTenantKey();
   const { data: setting } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "inventory", "setting"),
@@ -44,7 +46,7 @@ export default function InventoryGuidePage() {
   const complete = inventoryGuideComplete(steps);
 
   return (
-    <RequireTenantDashboard title="Panduan Persediaan">
+    <RequireTenantDashboard title={t("Panduan Persediaan")}>
       <div className="mb-4">
         <Button variant="ghost" size="sm" asChild className="-ml-2">
           <Link href="/dashboard/inventory">
@@ -55,13 +57,13 @@ export default function InventoryGuidePage() {
       </div>
 
       <PageHeader
-        title="Panduan Persediaan untuk Pemula"
-        description="Langkah demi langkah mengaktifkan dan mengoperasikan modul stok & HPP."
+        title={t("Panduan Persediaan untuk Pemula")}
+        description={t("Langkah demi langkah mengaktifkan dan mengoperasikan modul stok & HPP.")}
       />
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-base">Progress setup</CardTitle>
+          <CardTitle className="text-base">{t("Progress setup")}</CardTitle>
           <CardDescription>
             {complete
               ? "Selamat — langkah wajib sudah selesai. Anda bisa lanjut operasional harian."
@@ -72,10 +74,10 @@ export default function InventoryGuidePage() {
           <Progress value={progressPct} className="h-2" />
           {next ? (
             <div className="rounded-md border bg-muted/30 p-3 text-sm">
-              <p className="font-medium text-primary">Langkah berikutnya</p>
+              <p className="font-medium text-primary">{t("Langkah berikutnya")}</p>
               <p className="mt-1">{next.title}</p>
               <Button asChild size="sm" className="mt-2">
-                <Link href={next.href}>Kerjakan sekarang</Link>
+                <Link href={next.href}>{t("Kerjakan sekarang")}</Link>
               </Button>
             </div>
           ) : null}
@@ -99,7 +101,7 @@ export default function InventoryGuidePage() {
                     <CardTitle className="text-base">
                       {step.order}. {step.title}
                     </CardTitle>
-                    {step.optional ? <Badge variant="secondary">Opsional</Badge> : null}
+                    {step.optional ? <Badge variant="secondary">{t("Opsional")}</Badge> : null}
                     {step.done ? (
                       <Badge variant="outline" className="border-emerald-300 text-emerald-800">
                         Selesai

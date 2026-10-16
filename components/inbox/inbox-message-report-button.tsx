@@ -28,8 +28,10 @@ import {
   REPORT_CATEGORY_OPTIONS,
   type InboxReportCategory,
 } from "@/lib/api/inbox-report";
+import { useLocale } from "@/lib/i18n/locale";
 
 export function InboxMessageReportButton({ messageId }: { messageId: string }) {
+  const { t } = useLocale();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<InboxReportCategory>("wrong_answer");
@@ -48,7 +50,7 @@ export function InboxMessageReportButton({ messageId }: { messageId: string }) {
         reporterNote: note.trim() || undefined,
       }),
     onSuccess: () => {
-      toast.success("Laporan terkirim — tim platform akan review");
+      toast.success(t("Laporan terkirim — tim platform akan review"));
       setOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["inbox-message-report", messageId] });
     },
@@ -70,7 +72,7 @@ export function InboxMessageReportButton({ messageId }: { messageId: string }) {
   }
   if (data?.reported) {
     return (
-      <span className="text-[10px] text-muted-foreground">Sudah dilapor</span>
+      <span className="text-[10px] text-muted-foreground">{t("Sudah dilapor")}</span>
     );
   }
 
@@ -89,15 +91,16 @@ export function InboxMessageReportButton({ messageId }: { messageId: string }) {
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Laporkan balasan AI</DialogTitle>
+            <DialogTitle>{t("Laporkan balasan AI")}</DialogTitle>
             <DialogDescription>
-              Laporkan balasan yang salah, bug, atau tidak pantas. Superadmin akan mereview di AI
-              Triage.
+              {t(
+                "Laporkan balasan yang salah, bug, atau tidak pantas. Superadmin akan mereview di AI Triage.",
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">
-              <Label>Kategori</Label>
+              <Label>{t("Kategori")}</Label>
               <Select value={category} onValueChange={(v) => setCategory(v as InboxReportCategory)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -105,18 +108,18 @@ export function InboxMessageReportButton({ messageId }: { messageId: string }) {
                 <SelectContent>
                   {REPORT_CATEGORY_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {t(opt.label)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Catatan (opsional)</Label>
+              <Label>{t("Catatan (opsional)")}</Label>
               <Textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Jelaskan masalahnya…"
+                placeholder={t("Jelaskan masalahnya…")}
                 maxLength={500}
                 rows={3}
               />
@@ -124,11 +127,11 @@ export function InboxMessageReportButton({ messageId }: { messageId: string }) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button disabled={reportMut.isPending} onClick={() => reportMut.mutate()}>
               {reportMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Kirim laporan
+              {t("Kirim laporan")}
             </Button>
           </DialogFooter>
         </DialogContent>

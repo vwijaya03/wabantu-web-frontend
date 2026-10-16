@@ -24,8 +24,10 @@ import { knowledgeBaseApi } from "@/lib/api/knowledge-base";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function KnowledgeBasePage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
@@ -48,7 +50,7 @@ export default function KnowledgeBasePage() {
     mutationFn: knowledgeBaseApi.create,
     onSuccess: () => {
       setDraft({ question: "", answer: "", category: "" });
-      toast.success("FAQ ditambahkan");
+      toast.success(t("FAQ ditambahkan"));
       invalidateTenantQueries(qc, tenantKey, "kb-list");
     },
     onError: (err) => toast.error(toApiError(err).message),
@@ -65,7 +67,7 @@ export default function KnowledgeBasePage() {
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.question.trim() || !draft.answer.trim()) {
-      toast.error("Pertanyaan dan jawaban wajib diisi");
+      toast.error(t("Pertanyaan dan jawaban wajib diisi"));
       return;
     }
     createMut.mutate({
@@ -78,20 +80,20 @@ export default function KnowledgeBasePage() {
   return (
     <>
       <PageHeader
-        title="Knowledge Base"
-        description="Daftar FAQ yang dipakai AI untuk menjawab pelanggan."
+        title={t("Knowledge Base")}
+        description={t("Daftar FAQ yang dipakai AI untuk menjawab pelanggan.")}
       />
 
       <Card className="mb-6 border-amber-500/30 bg-amber-500/5">
         <CardContent className="p-5 text-sm">
-          <p className="font-medium">Verifikasi bukti transfer (AI)</p>
+          <p className="font-medium">{t("Verifikasi bukti transfer (AI)")}</p>
           <p className="mt-1 text-muted-foreground">
             Agar bukti transfer bisa diverifikasi AI secara otomatis, tambahkan FAQ berisi nomor
             rekening dan atas nama penerima pembayaran (kategori mis. &quot;payment&quot; atau
             &quot;rekening&quot;).
           </p>
           <Button asChild variant="link" className="mt-2 h-auto p-0">
-            <Link href="/dashboard/ai-settings">Atur mode verifikasi di AI Settings</Link>
+            <Link href="/dashboard/ai-settings">{t("Atur mode verifikasi di AI Settings")}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -99,14 +101,14 @@ export default function KnowledgeBasePage() {
       <Card className="mb-6 border-primary/30 bg-primary/5">
         <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <p className="font-medium">Baru di WABantu?</p>
+            <p className="font-medium">{t("Baru di WABantu?")}</p>
             <p className="text-sm text-muted-foreground">
               Lewat chat singkat dengan AI, profil toko dan draft FAQ kebijakan bisa disusun otomatis —
               Anda review dulu sebelum publish.
             </p>
           </div>
           <Button asChild className="shrink-0">
-            <Link href="/dashboard/knowledge-base/setup">Mulai setup dengan AI</Link>
+            <Link href="/dashboard/knowledge-base/setup">{t("Mulai setup dengan AI")}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -132,18 +134,18 @@ export default function KnowledgeBasePage() {
                   onChange={(e) =>
                     setDraft((d) => ({ ...d, question: e.target.value }))
                   }
-                  placeholder="Berapa harga paket family?"
+                  placeholder={t("Berapa harga paket family?")}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="kb-cat">Kategori (opsional)</Label>
+                <Label htmlFor="kb-cat">{t("Kategori (opsional)")}</Label>
                 <Input
                   id="kb-cat"
                   value={draft.category}
                   onChange={(e) =>
                     setDraft((d) => ({ ...d, category: e.target.value }))
                   }
-                  placeholder="harga / pengiriman / produk"
+                  placeholder={t("harga / pengiriman / produk")}
                 />
               </div>
             </div>
@@ -156,7 +158,7 @@ export default function KnowledgeBasePage() {
                 onChange={(e) =>
                   setDraft((d) => ({ ...d, answer: e.target.value }))
                 }
-                placeholder="Paket family Rp 95.000 untuk 4 orang, sudah termasuk minum."
+                placeholder={t("Paket family Rp 95.000 untuk 4 orang, sudah termasuk minum.")}
               />
             </div>
             <div className="flex justify-end">
@@ -171,7 +173,7 @@ export default function KnowledgeBasePage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div>
-            <CardTitle>Daftar FAQ</CardTitle>
+            <CardTitle>{t("Daftar FAQ")}</CardTitle>
             <CardDescription>{items.length} entri</CardDescription>
           </div>
           <Input
@@ -183,7 +185,7 @@ export default function KnowledgeBasePage() {
             onKeyDown={(e) => {
               if (e.key === "Enter") setActiveSearch(search);
             }}
-            placeholder="Cari pertanyaan..."
+            placeholder={t("Cari pertanyaan...")}
             className="max-w-xs"
           />
         </CardHeader>
@@ -230,7 +232,7 @@ export default function KnowledgeBasePage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => deleteMut.mutate(item.id)}
-                    aria-label="Hapus"
+                    aria-label={t("Hapus")}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>

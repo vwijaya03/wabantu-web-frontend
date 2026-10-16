@@ -8,8 +8,10 @@ import { InboxMessageReportButton } from "@/components/inbox/inbox-message-repor
 import { inboxApi, type InboxMessage } from "@/lib/api/inbox";
 import { formatOrderNumber } from "@/lib/format-order-number";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale";
 
 function InboxMessageImage({ messageId, alt, className }: { messageId: string; alt?: string; className?: string }) {
+  const { t } = useLocale();
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -36,12 +38,12 @@ function InboxMessageImage({ messageId, alt, className }: { messageId: string; a
   }, [messageId]);
 
   if (failed) {
-    return <p className="text-xs text-muted-foreground">Gagal memuat gambar</p>;
+    return <p className="text-xs text-muted-foreground">{t("Gagal memuat gambar")}</p>;
   }
   if (!src) {
-    return <p className="text-xs text-muted-foreground">Memuat gambar…</p>;
+    return <p className="text-xs text-muted-foreground">{t("Memuat gambar…")}</p>;
   }
-  const imageAlt = alt || "Gambar WhatsApp";
+  const imageAlt = alt || t("Gambar WhatsApp");
 
   return (
     <>
@@ -56,7 +58,7 @@ function InboxMessageImage({ messageId, alt, className }: { messageId: string; a
         <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-[100vw] max-w-[100vw] items-center justify-center border-0 bg-black/90 p-4 shadow-none sm:rounded-none [&>button]:text-white [&>button]:opacity-80 [&>button]:hover:opacity-100">
           <DialogTitle className="sr-only">{imageAlt}</DialogTitle>
           <DialogDescription className="sr-only">
-            Pratinjau gambar pesan WhatsApp dalam layar penuh
+            {t("Pratinjau gambar pesan WhatsApp dalam layar penuh")}
           </DialogDescription>
           {/* eslint-disable-next-line @next/next/no-img-element -- same blob URL as thumbnail */}
           <img src={src} alt={imageAlt} className="max-h-[90dvh] max-w-[90vw] object-contain" />
@@ -74,6 +76,7 @@ const NON_TEXT_LABELS: Record<string, { icon: typeof FileText; label: string }> 
 };
 
 export function InboxMessageBubble({ message }: { message: InboxMessage }) {
+  const { t } = useLocale();
   const isOut = message.direction === "out";
   const isSystem = message.author === "system" && !isOut;
   const isReportable =
@@ -96,11 +99,13 @@ export function InboxMessageBubble({ message }: { message: InboxMessage }) {
     content = (
       <div className="flex items-center gap-2 text-muted-foreground">
         <Icon className="h-4 w-4 shrink-0" />
-        <span>{body || nonText.label} — pratinjau media belum didukung</span>
+        <span>
+          {body || t(nonText.label)} — {t("pratinjau media belum didukung")}
+        </span>
       </div>
     );
   } else {
-    content = <p className="whitespace-pre-wrap">{body || "(pesan non-text)"}</p>;
+    content = <p className="whitespace-pre-wrap">{body || t("(pesan non-text)")}</p>;
   }
 
   if (isSystem) {
@@ -108,7 +113,7 @@ export function InboxMessageBubble({ message }: { message: InboxMessage }) {
       <div className="mx-auto max-w-[90%] rounded-lg border border-dashed bg-muted/50 px-3 py-2 text-center text-xs text-muted-foreground">
         {content}
         <p className="mt-1 text-[10px] opacity-70">
-          sistem · {new Date(message.createdAt).toLocaleTimeString("id-ID")}
+          {t("sistem")} · {new Date(message.createdAt).toLocaleTimeString("id-ID")}
         </p>
       </div>
     );
@@ -127,7 +132,9 @@ export function InboxMessageBubble({ message }: { message: InboxMessage }) {
           href={`/dashboard/orders?highlight=${message.linkedOrderId}`}
           className="mt-2 inline-flex rounded-full border bg-background px-2 py-0.5 text-[11px] font-medium text-primary hover:underline"
         >
-          Lihat order terkait ({formatOrderNumber(message.linkedOrderId)})
+          {t("Lihat order terkait ({order})", {
+            order: formatOrderNumber(message.linkedOrderId),
+          })}
         </Link>
       ) : null}
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
