@@ -152,7 +152,8 @@ function TenantRetrievalRow({
           kbEnqueued: r.kbEnqueued,
           catalogEnqueued: r.catalogEnqueued,
         }) +
-        (r.pineconeWiped ? t(" · namespace Pinecone dihapus") : "");
+        (r.pineconeWiped ? t(" · namespace Pinecone dihapus") : "") +
+        t(" · embedding berjalan di latar belakang, pantau progres di bawah");
       if (r.pineconeWiped) {
         toast.success(msg);
       } else {
