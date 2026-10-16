@@ -8,6 +8,16 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Database, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -128,6 +138,33 @@ function TenantRetrievalRow({
     refetchOnReconnect: false,
   });
 
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+
+  const rebuildMut = useMutation({
+    mutationFn: () => flagsApi.rebuildRetrievalIndex(tenant.id),
+    onSuccess: (r) => {
+      setResetDialogOpen(false);
+      void qc.invalidateQueries({ queryKey: ["retrieval-indexing", tenant.id] });
+      const msg =
+        t("Indexing di-reset: {kbReset} KB + {catalogReset} katalog · {kbEnqueued} + {catalogEnqueued} diantrekan", {
+          kbReset: r.kbReset,
+          catalogReset: r.catalogReset,
+          kbEnqueued: r.kbEnqueued,
+          catalogEnqueued: r.catalogEnqueued,
+        }) +
+        (r.pineconeWiped ? t(" · namespace Pinecone dihapus") : "");
+      if (r.pineconeWiped) {
+        toast.success(msg);
+      } else {
+        toast.warning(
+          msg +
+            t(" · namespace Pinecone tidak terhapus (cek log API); vektor lama mungkin masih ada sampai re-index selesai"),
+        );
+      }
+    },
+    onError: (e) => toast.error(toApiError(e).message),
+  });
+
   const saveMut = useMutation({
     mutationFn: (mode: RetrievalMode) => flagsApi.setRetrievalMode(tenant.id, mode),
     onSuccess: (r) => {
@@ -205,10 +242,51 @@ function TenantRetrievalRow({
         </Button>
       </div>
       </div>
-      {trackIndexing && indexingQuery.data ? (
-        <IndexingProgressBar progress={indexingQuery.data} />
-      ) : trackIndexing && indexingQuery.isLoading ? (
-        <p className="text-xs text-muted-foreground">{t("Memuat progress indexing…")}</p>
+      {trackIndexing ? (
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-0 flex-1">
+            {indexingQuery.data ? (
+              <IndexingProgressBar progress={indexingQuery.data} />
+            ) : indexingQuery.isLoading ? (
+              <p className="text-xs text-muted-foreground">{t("Memuat progress indexing…")}</p>
+            ) : null}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-destructive/50 text-destructive hover:bg-destructive/10"
+            disabled={!tenant.isActive || rebuildMut.isPending}
+            onClick={() => setResetDialogOpen(true)}
+          >
+            {rebuildMut.isPending ? t("Mereset…") : t("Reset indexing")}
+          </Button>
+          <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("Reset indexing tenant ini?")}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t(
+                    "Semua vektor di namespace Pinecone {schema} akan dihapus. Entri KB dan katalog aktif di-reset ke pending lalu diantrekan ulang untuk embedding.",
+                    { schema: tenant.schemaName },
+                  )}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={rebuildMut.isPending}>{t("Batal")}</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={rebuildMut.isPending}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    rebuildMut.mutate();
+                  }}
+                >
+                  {rebuildMut.isPending ? t("Mereset…") : t("Reset indexing")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       ) : null}
     </div>
   );
