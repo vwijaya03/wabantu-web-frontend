@@ -189,6 +189,7 @@ export const flagsApi = {
         ...(opts?.wipePinecone !== undefined ? { wipePinecone: opts.wipePinecone } : {}),
         ...(opts?.entities?.length ? { entities: opts.entities } : {}),
       },
+      { timeout: 120_000 },
     );
     return data;
   },

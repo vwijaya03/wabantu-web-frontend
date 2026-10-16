@@ -145,15 +145,22 @@ function TenantRetrievalRow({
     onSuccess: (r) => {
       setResetDialogOpen(false);
       void qc.invalidateQueries({ queryKey: ["retrieval-indexing", tenant.id] });
-      toast.success(
+      const msg =
         t("Indexing di-reset: {kbReset} KB + {catalogReset} katalog · {kbEnqueued} + {catalogEnqueued} diantrekan", {
           kbReset: r.kbReset,
           catalogReset: r.catalogReset,
           kbEnqueued: r.kbEnqueued,
           catalogEnqueued: r.catalogEnqueued,
         }) +
-          (r.pineconeWiped ? t(" · namespace Pinecone dihapus") : ""),
-      );
+        (r.pineconeWiped ? t(" · namespace Pinecone dihapus") : "");
+      if (r.pineconeWiped) {
+        toast.success(msg);
+      } else {
+        toast.warning(
+          msg +
+            t(" · namespace Pinecone tidak terhapus (cek log API); vektor lama mungkin masih ada sampai re-index selesai"),
+        );
+      }
     },
     onError: (e) => toast.error(toApiError(e).message),
   });
