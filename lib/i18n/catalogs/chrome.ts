@@ -84,7 +84,7 @@ export const chromeEn: Record<string, string> = {
   "Sembunyikan password": "Hide password",
   "Lihat password": "Show password",
   "Memproses...": "Please wait...",
-  Masuk: "Sign in",
+  Masuk: "Sign In",
   "Berhasil masuk": "Signed in",
   "Email atau password salah": "Wrong email or password",
   "Terlalu banyak percobaan. Coba lagi nanti.": "Too many attempts. Try again later.",

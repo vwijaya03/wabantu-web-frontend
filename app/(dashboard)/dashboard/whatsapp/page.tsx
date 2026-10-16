@@ -59,7 +59,7 @@ export default function WhatsappPage() {
   const deleteMut = useMutation({
     mutationFn: (id: string) => whatsappApi.removePermanent(id),
     onSuccess: (res) => {
-      toast.success(res.message || "Channel dihapus permanen.");
+      toast.success(res.message || t("Channel dihapus permanen."));
       setChannelToDelete(null);
       invalidateTenantQueries(qc, tenantKey, "whatsapp-channels");
     },
@@ -82,22 +82,24 @@ export default function WhatsappPage() {
             </Button>
           </div>
           <CardDescription>
-            {channels.length} nomor · untuk client baru gunakan onboarding OAuth.
+            {t("{count} nomor · untuk client baru gunakan onboarding OAuth.", {
+              count: channels.length,
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              Memuat...
+              {t("Memuat...")}
             </p>
           ) : channels.length === 0 ? (
             <div className="space-y-4 py-8 text-center">
               <p className="text-sm text-muted-foreground">
-                Belum ada nomor terhubung.
+                {t("Belum ada nomor terhubung.")}
               </p>
               <Button asChild>
                 <Link href="/dashboard/whatsapp/onboarding">
-                  Mulai onboarding WhatsApp
+                  {t("Mulai onboarding WhatsApp")}
                 </Link>
               </Button>
             </div>
@@ -122,11 +124,11 @@ export default function WhatsappPage() {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {c.phoneNumber} · provider: {c.provider}
+                      {c.phoneNumber} · {t("provider:")} {c.provider}
                     </p>
                     {c.metaPhoneNumberId ? (
                       <p className="text-xs text-muted-foreground">
-                        Phone number ID: {c.metaPhoneNumberId}
+                        {t("Phone number ID:")} {c.metaPhoneNumberId}
                       </p>
                     ) : null}
                     {c.lastError ? (
@@ -155,7 +157,7 @@ export default function WhatsappPage() {
                       onClick={() => setChannelToDelete(c)}
                     >
                       <Trash2 className="mr-1 h-3.5 w-3.5" />
-                      Hapus
+                      {t("Hapus")}
                     </Button>
                   </div>
                 </li>
@@ -179,8 +181,9 @@ export default function WhatsappPage() {
               <span className="font-medium text-foreground">
                 {channelToDelete?.displayName} ({channelToDelete?.phoneNumber})
               </span>{" "}
-              akan dihapus dari database beserta percakapan inbox terkait. Tindakan
-              ini tidak bisa dibatalkan.
+              {t(
+                "akan dihapus dari database beserta percakapan inbox terkait. Tindakan ini tidak bisa dibatalkan.",
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -193,7 +196,7 @@ export default function WhatsappPage() {
                 if (channelToDelete) deleteMut.mutate(channelToDelete.id);
               }}
             >
-              {deleteMut.isPending ? "Menghapus..." : "Hapus permanen"}
+              {deleteMut.isPending ? t("Menghapus...") : t("Hapus permanen")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

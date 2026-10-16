@@ -89,12 +89,12 @@ export default function AiSettingsPage() {
       ) : isError || !profile ? (
         <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3">
           <p className="text-sm font-medium text-destructive">
-            {isError ? formatQueryError(error).title : "Profil bisnis tidak ditemukan"}
+            {isError ? formatQueryError(error).title : t("Profil bisnis tidak ditemukan")}
           </p>
           <p className="text-sm text-muted-foreground">
             {isError
               ? formatQueryError(error).detail
-              : "Profil bisnis tidak bisa dimuat. Coba muat ulang halaman."}
+              : t("Profil bisnis tidak bisa dimuat. Coba muat ulang halaman.")}
           </p>
           <Button
             type="button"
@@ -102,7 +102,7 @@ export default function AiSettingsPage() {
             variant="outline"
             onClick={() => void refetch()}
           >
-            Coba lagi
+            {t("Coba lagi")}
           </Button>
         </div>
       ) : (
@@ -161,14 +161,14 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
           <CardHeader>
             <CardTitle>{t("Status AI")}</CardTitle>
             <CardDescription>
-              Saat dimatikan, semua chat masuk akan diteruskan ke owner/staff.
+              {t("Saat dimatikan, semua chat masuk akan diteruskan ke owner/staff.")}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex items-center justify-between rounded-lg border bg-muted/30 p-4">
             <div>
               <p className="text-sm font-medium">{t("AI auto-reply")}</p>
               <p className="text-xs text-muted-foreground">
-                {aiEnabled ? "Aktif" : "Nonaktif"}
+                {aiEnabled ? t("Aktif") : t("Nonaktif")}
               </p>
             </div>
             <Button
@@ -178,7 +178,7 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
                 setValue("aiEnabled", !aiEnabled, { shouldDirty: true })
               }
             >
-              {aiEnabled ? "Matikan" : "Aktifkan"}
+              {aiEnabled ? t("Matikan") : t("Aktifkan")}
             </Button>
           </CardContent>
         </Card>
@@ -188,8 +188,9 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
             <CardHeader>
               <CardTitle>{t("Pembayaran &amp; Bukti Transfer")}</CardTitle>
               <CardDescription>
-                Atur verifikasi bukti transfer dari WhatsApp. Mode otomatis memakai
-                vision AI (token) dan FAQ rekening di Knowledge Base.
+                {t(
+                  "Atur verifikasi bukti transfer dari WhatsApp. Mode otomatis memakai vision AI (token) dan FAQ rekening di Knowledge Base.",
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -213,10 +214,11 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
               {paymentMode === "auto_verify" ? (
                 <>
                   <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
-                    Mode otomatis memakai token vision untuk setiap bukti transfer.
-                    Pastikan FAQ rekening sudah lengkap di{" "}
+                    {t(
+                      "Mode otomatis memakai token vision untuk setiap bukti transfer. Pastikan FAQ rekening sudah lengkap di",
+                    )}{" "}
                     <Link href="/dashboard/knowledge-base" className="underline">
-                      Knowledge Base
+                      {t("Knowledge Base")}
                     </Link>
                     .
                   </div>
@@ -233,7 +235,9 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
                       {...register("paymentAutoVerifyMinConfidence", { valueAsNumber: true })}
                     />
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Rekomendasi 0.95. Nilai 1 atau terlalu tinggi membuat auto-verify hampir tidak pernah lolos.
+                      {t(
+                        "Rekomendasi 0.95. Nilai 1 atau terlalu tinggi membuat auto-verify hampir tidak pernah lolos.",
+                      )}
                     </p>
                   </Field>
                 </>
@@ -246,9 +250,9 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
           <CardHeader>
             <CardTitle>{t("Zona waktu laporan")}</CardTitle>
             <CardDescription>
-              Menentukan batas &quot;hari ini&quot; untuk statistik dashboard (pesan
-              masuk hari ini, dll.). Offset UTC menyesuaikan DST jika zona
-              memakainya.
+              {t(
+                "Menentukan batas \"hari ini\" untuk statistik dashboard (pesan masuk hari ini, dll.). Offset UTC menyesuaikan DST jika zona memakainya.",
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -295,8 +299,9 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
               />
             </Field>
             <p className="text-xs text-muted-foreground">
-              Daftar mengikuti identifier IANA (tzdb). Backend dan query analitik
-              memakai zona yang sama.
+              {t(
+                "Daftar mengikuti identifier IANA (tzdb). Backend dan query analitik memakai zona yang sama.",
+              )}
             </p>
           </CardContent>
         </Card>
@@ -305,12 +310,12 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
           <CardHeader>
             <CardTitle>{t("Profil bisnis")}</CardTitle>
             <CardDescription>
-              Semakin lengkap, semakin akurat jawaban AI. Butuh FAQ juga?{" "}
+              {t("Semakin lengkap, semakin akurat jawaban AI. Butuh FAQ juga?")}{" "}
               <Link
                 href="/dashboard/knowledge-base/setup"
                 className="text-primary underline-offset-4 hover:underline"
               >
-                Setup lengkap dengan wawancara AI
+                {t("Setup lengkap dengan wawancara AI")}
               </Link>
               .
             </CardDescription>
@@ -346,7 +351,7 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
                 {...register("description")}
               />
             </Field>
-            <Field label="Alamat" error={errors.address?.message}>
+            <Field label={t("Alamat")} error={errors.address?.message}>
               <Input
                 placeholder={t("Jl. Mawar No. 12, Jakarta Selatan")}
                 {...register("address")}
@@ -400,24 +405,24 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
           <CardHeader>
             <CardTitle>{t("Gaya bahasa AI")}</CardTitle>
             <CardDescription>
-              Pilih nada bicara yang sesuai dengan brand Anda.
+              {t("Pilih nada bicara yang sesuai dengan brand Anda.")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap gap-2">
-              {(["friendly", "casual", "formal"] as const).map((t) => (
+              {(["friendly", "casual", "formal"] as const).map((toneOpt) => (
                 <Button
-                  key={t}
+                  key={toneOpt}
                   type="button"
                   size="sm"
-                  variant={tone === t ? "default" : "outline"}
-                  onClick={() => setValue("tone", t, { shouldDirty: true })}
+                  variant={tone === toneOpt ? "default" : "outline"}
+                  onClick={() => setValue("tone", toneOpt, { shouldDirty: true })}
                 >
-                  {t === "friendly"
-                    ? "Ramah"
-                    : t === "casual"
-                      ? "Santai"
-                      : "Formal"}
+                  {toneOpt === "friendly"
+                    ? t("Ramah")
+                    : toneOpt === "casual"
+                      ? t("Santai")
+                      : t("Formal")}
                 </Button>
               ))}
             </div>
@@ -436,7 +441,7 @@ function AiSettingsForm({ profile }: { profile: BusinessProfile }) {
 
         <div className="flex items-center justify-end gap-2">
           <Button type="submit" disabled={saveMut.isPending}>
-            {saveMut.isPending ? "Menyimpan..." : "Simpan perubahan"}
+            {saveMut.isPending ? t("Menyimpan...") : t("Simpan perubahan")}
           </Button>
         </div>
       </form>
