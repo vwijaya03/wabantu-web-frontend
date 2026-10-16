@@ -4,10 +4,22 @@ import { useAdminSession } from "@/hooks/use-admin-session";
 import { AdminSessionRequired } from "@/components/admin/require-admin-session";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -25,8 +37,12 @@ import { useLocale } from "@/lib/i18n/locale";
 import {
   AI_FUNCTIONS,
   AI_PROVIDERS,
+  DEFAULT_EMBEDDING_MODEL,
+  EMBEDDING_FUNCTION,
   PROVIDER_DEFAULT_MODEL,
   aiProvidersApi,
+  allowsDefaultModel,
+  embeddingModelChanged,
   modelsFor,
   normalizeModel,
   providerAllowedFor,
@@ -47,6 +63,10 @@ const FUNCTION_LABELS: Record<AIFunction, { title: string; desc: string }> = {
   intent: { title: "Intent", desc: "Klasifikasi maksud pesan." },
   memory: { title: "Memory", desc: "Ringkasan percakapan & memori pelanggan." },
   payment_ocr: { title: "OCR Bukti Transfer", desc: "Membaca bukti transfer (vision)." },
+  embedding: {
+    title: "Embedding (RAG)",
+    desc: "Vektor FAQ & katalog untuk pencarian semantik. Satu model aktif per namespace; ganti model = reindex.",
+  },
 };
 
 const PROVIDER_LABELS: Record<AIProviderId, string> = {
@@ -57,6 +77,9 @@ const PROVIDER_LABELS: Record<AIProviderId, string> = {
 
 /** Fungsi tanpa baris config memakai default kode backend: Anthropic, model default (API_AI_CONFIG.md §1). */
 function codeDefault(fn: AIFunction, tenantId: string | null): AIFunctionConfig {
+  if (fn === EMBEDDING_FUNCTION) {
+    return { function: fn, tenantId, chain: [{ provider: "openai", model: DEFAULT_EMBEDDING_MODEL }], maxRetries: 1 };
+  }
   return { function: fn, tenantId, chain: [{ provider: "anthropic", model: PROVIDER_DEFAULT_MODEL }], maxRetries: 1 };
 }
 
@@ -108,7 +131,13 @@ function LinkEditor({
       <div className="space-y-1">
         <Label>{label} — model</Label>
         <Select
-          value={link.model === PROVIDER_DEFAULT_MODEL ? DEFAULT_MODEL_VALUE : link.model}
+          value={
+            link.model === PROVIDER_DEFAULT_MODEL
+              ? fn === EMBEDDING_FUNCTION
+                ? DEFAULT_EMBEDDING_MODEL
+                : DEFAULT_MODEL_VALUE
+              : link.model
+          }
           onValueChange={(v) =>
             onChange({ ...link, model: v === DEFAULT_MODEL_VALUE ? PROVIDER_DEFAULT_MODEL : v })
           }
@@ -118,7 +147,9 @@ function LinkEditor({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={DEFAULT_MODEL_VALUE}>{t("Default provider")}</SelectItem>
+            {allowsDefaultModel(fn, link.provider) && fn !== EMBEDDING_FUNCTION && (
+              <SelectItem value={DEFAULT_MODEL_VALUE}>{t("Default provider")}</SelectItem>
+            )}
             {models.map((m) => (
               <SelectItem key={m.id} value={m.id}>
                 {m.label}
@@ -148,28 +179,61 @@ function FunctionCard({
 }) {
   const { t } = useLocale();
   const qc = useQueryClient();
+  const router = useRouter();
+  const isEmbedding = fn === EMBEDDING_FUNCTION;
   const [cfg, setCfg] = useState<AIFunctionConfig>(initial);
+  const [confirm, setConfirm] = useState<"save" | "reset" | null>(null);
+
+  const afterReindex = (info: AIFunctionConfig["reindex"]) => {
+    if (!info) return;
+    toast.success(
+      t("Reindex diantrekan untuk {tenants} tenant ({from} → {to}). Embedding berjalan di latar belakang.", {
+        tenants: info.tenants,
+        from: info.fromModel,
+        to: info.toModel,
+      }),
+      {
+        action: {
+          label: t("Lihat progres"),
+          onClick: () => router.push("/dashboard/admin/ai-retrieval"),
+        },
+      },
+    );
+  };
 
   const error = validateChain(catalog, fn, cfg.chain);
   const primary = cfg.chain[0];
   const fallback = cfg.chain[1];
 
   const saveMut = useMutation({
-    mutationFn: () => aiProvidersApi.saveConfig({ ...cfg, tenantId }),
-    onSuccess: () => {
+    mutationFn: (confirmReindex: boolean) => aiProvidersApi.saveConfig({ ...cfg, tenantId }, { confirmReindex }),
+    onSuccess: (saved) => {
+      setConfirm(null);
       toast.success(`Konfigurasi ${FUNCTION_LABELS[fn].title} disimpan`);
+      afterReindex(saved.reindex);
       void qc.invalidateQueries({ queryKey: ["admin", "ai-providers"] });
     },
-    onError: (err) => toast.error(toApiError(err).message),
+    onError: (err) => {
+      setConfirm(null);
+      toast.error(toApiError(err).message);
+    },
   });
   const resetMut = useMutation({
-    mutationFn: () => aiProvidersApi.deleteTenantOverride(fn, tenantId as string),
-    onSuccess: () => {
+    mutationFn: (confirmReindex: boolean) => aiProvidersApi.deleteTenantOverride(fn, tenantId as string, { confirmReindex }),
+    onSuccess: (res) => {
+      setConfirm(null);
       toast.success(t("Override tenant dihapus, kembali ke default global"));
+      afterReindex(res.reindex);
       void qc.invalidateQueries({ queryKey: ["admin", "ai-providers"] });
     },
-    onError: (err) => toast.error(toApiError(err).message),
+    onError: (err) => {
+      setConfirm(null);
+      toast.error(toApiError(err).message);
+    },
   });
+  // Embedding: ganti model menghapus vektor, jadi simpan hanya setelah dikonfirmasi.
+  const needsReindexConfirm = isEmbedding && embeddingModelChanged(initial.chain[0], primary);
+  const busy = saveMut.isPending || resetMut.isPending;
 
   return (
     <Card className={error ? "border-destructive/50" : undefined}>
@@ -193,6 +257,15 @@ function FunctionCard({
           link={primary}
           onChange={(l) => setCfg({ ...cfg, chain: [l, ...cfg.chain.slice(1)] })}
         />
+        {isEmbedding && (
+          <p className="text-xs text-muted-foreground">
+            {t("Tanpa fallback: OpenAI dan Gemini memakai ruang vektor berbeda. Mengganti model menghapus vektor namespace terkait lalu mengantrekan reindex di latar belakang (halaman tidak menunggu sampai selesai).")}{" "}
+            <Link href="/dashboard/admin/ai-retrieval" className="underline">
+              {t("Pantau progres indexing")}
+            </Link>
+          </p>
+        )}
+        {!isEmbedding && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Label>Fallback</Label>
@@ -227,10 +300,11 @@ function FunctionCard({
             />
           )}
         </div>
+        )}
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button
-          onClick={() => saveMut.mutate()}
-          disabled={Boolean(error) || !backendReady || saveMut.isPending}
+          onClick={() => (needsReindexConfirm ? setConfirm("save") : saveMut.mutate(false))}
+          disabled={Boolean(error) || !backendReady || busy}
         >
           {saveMut.isPending ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -240,9 +314,43 @@ function FunctionCard({
           Simpan
         </Button>
         {tenantId && isOverride && (
-          <Button variant="outline" className="ml-2" onClick={() => resetMut.mutate()} disabled={resetMut.isPending}>
+          <Button
+            variant="outline"
+            className="ml-2"
+            onClick={() => (isEmbedding ? setConfirm("reset") : resetMut.mutate(false))}
+            disabled={busy}
+          >
             Hapus override
           </Button>
+        )}
+        {isEmbedding && (
+          <AlertDialog open={confirm !== null} onOpenChange={(open) => !open && setConfirm(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("Ganti model embedding?")}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t(
+                    "Vektor lama di namespace {scope} akan dihapus dan FAQ + katalog diantrekan ulang untuk di-embed dengan model baru. Pencarian semantik memakai pencarian leksikal sampai indexing selesai. Halaman ini tidak menunggu embedding; pantau progres di halaman AI Retrieval.",
+                    { scope: tenantId ? t("tenant ini") : t("semua tenant tanpa override") },
+                  )}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={busy}>{t("Batal")}</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={busy}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (confirm === "reset") resetMut.mutate(true);
+                    else saveMut.mutate(true);
+                  }}
+                >
+                  {busy ? t("Menyimpan…") : t("Ganti & reindex")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </CardContent>
     </Card>
