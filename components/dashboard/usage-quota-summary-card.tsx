@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { usageApi } from "@/lib/api/usage";
+import { useLocale } from "@/lib/i18n/locale";
 import {
   formatQuotaLimit,
   formatQuotaUsed,
@@ -23,7 +24,18 @@ import { cn } from "@/lib/utils";
 
 const HIGHLIGHT_TYPES = ["ai_token", "ai_conversation"] as const;
 
+function localizeQuotaFigure(
+  raw: string,
+  locale: "id" | "en",
+  t: (source: string) => string,
+) {
+  if (raw === "Tidak termasuk paket") return t("Tidak termasuk paket");
+  if (locale === "en") return raw.replace(/ jt$/, "M");
+  return raw;
+}
+
 export function UsageQuotaSummaryCard() {
+  const { t, locale } = useLocale();
   const { data: usage, isLoading } = useQuery({
     queryKey: ["usage-summary"],
     queryFn: () => usageApi.summary(),
@@ -38,14 +50,15 @@ export function UsageQuotaSummaryCard() {
     return (
       <div key={eventType}>
         <div className="flex justify-between text-sm">
-          <span className="font-medium">{meta.label}</span>
+          <span className="font-medium">{t(meta.label)}</span>
           <span
             className={cn(
               "tabular-nums text-muted-foreground",
               status === "exhausted" && "font-medium text-destructive",
             )}
           >
-            {formatQuotaUsed(item, meta)} / {formatQuotaLimit(item, meta)}
+            {localizeQuotaFigure(formatQuotaUsed(item, meta), locale, t)} /{" "}
+            {localizeQuotaFigure(formatQuotaLimit(item, meta), locale, t)}
           </span>
         </div>
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
@@ -67,28 +80,31 @@ export function UsageQuotaSummaryCard() {
     <Card>
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
         <div>
-          <CardTitle className="text-base">Kuota bulan ini</CardTitle>
+          <CardTitle className="text-base">{t("Kuota bulan ini")}</CardTitle>
           <CardDescription>
-            {usage?.period ?? "—"} · paket {usage?.plan ?? "—"}
+            {t("{period} · paket {plan}", {
+              period: usage?.period ?? "—",
+              plan: usage?.plan ?? "—",
+            })}
           </CardDescription>
         </div>
         <Button variant="ghost" size="sm" className="shrink-0" asChild>
           <Link href="/dashboard/billing">
-            Detail
+            {t("Detail")}
             <ArrowRight className="ml-1 h-3.5 w-3.5" />
           </Link>
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Memuat…</p>
+          <p className="text-sm text-muted-foreground">{t("Memuat…")}</p>
         ) : highlights.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Buka Billing untuk detail kuota.</p>
+          <p className="text-sm text-muted-foreground">{t("Buka Billing untuk detail kuota.")}</p>
         ) : (
           highlights
         )}
         <p className="text-xs text-muted-foreground">
-          Tagihan template WhatsApp ke Meta terpisah dari kuota di atas.
+          {t("Tagihan template WhatsApp ke Meta terpisah dari kuota di atas.")}
         </p>
       </CardContent>
     </Card>
