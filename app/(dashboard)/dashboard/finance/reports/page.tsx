@@ -362,14 +362,14 @@ function MonthBar({ item, maxExpense }: { item: MonthlyComparisonItem; maxExpens
       </div>
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <span className="w-14 text-right text-[10px] text-muted-foreground">{t("Masuk")}</span>
+          <span className="w-14 text-right text-[10px] text-muted-foreground">{t("Dana masuk")}</span>
           <div className="flex-1 h-2 rounded bg-muted overflow-hidden">
             <div className="h-full rounded bg-green-500" style={{ width: `${incPct}%` }} />
           </div>
           <span className="w-20 text-[10px] tabular-nums text-right">{formatIDR(item.income)}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-14 text-right text-[10px] text-muted-foreground">{t("Keluar")}</span>
+          <span className="w-14 text-right text-[10px] text-muted-foreground">{t("Dana keluar")}</span>
           <div className="flex-1 h-2 rounded bg-muted overflow-hidden">
             <div className="h-full rounded bg-red-500" style={{ width: `${expPct}%` }} />
           </div>
