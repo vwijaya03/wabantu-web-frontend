@@ -39,9 +39,9 @@ import { invalidateTenantQueries } from "@/lib/query/tenant-query-key";
 import { useLocale } from "@/lib/i18n/locale";
 
 const PHASE_STEPS = [
-  { id: "profile", label: "Profil bisnis", hint: "Produk, area kirim, jam buka" },
-  { id: "faq", label: "FAQ kebijakan", hint: "Pengiriman, bayar, retur" },
-  { id: "review", label: "Review & simpan", hint: "Cek sebelum publish" },
+  { id: "profile", labelKey: "Profil bisnis", hintKey: "Produk, area kirim, jam buka" },
+  { id: "faq", labelKey: "FAQ kebijakan", hintKey: "Pengiriman, bayar, retur" },
+  { id: "review", labelKey: "Review & simpan", hintKey: "Cek sebelum publish" },
 ] as const;
 
 const QUICK_REPLIES = [
@@ -130,7 +130,9 @@ export default function KnowledgeBaseSetupPage() {
         setShowReview(true);
       }
       if (data.tokensUsed > 0) {
-        toast.success(`Balasan AI (${data.tokensUsed} token)`, { duration: 2500 });
+        toast.success(t("Balasan AI ({tokens} token)", { tokens: data.tokensUsed }), {
+          duration: 2500,
+        });
       }
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -190,8 +192,11 @@ export default function KnowledgeBaseSetupPage() {
   const quotaBanner =
     session?.quotaNotice ??
     (tokenQuota
-      ? `Setiap balasan AI setup memakai kuota token bulanan. Sisa: ${tokenQuota.remaining} dari ${tokenQuota.limit}.`
-      : "Setiap balasan AI setup memakai kuota token bulanan toko Anda.");
+      ? t("Setiap balasan AI setup memakai kuota token bulanan. Sisa: {remaining} dari {limit}.", {
+          remaining: tokenQuota.remaining,
+          limit: tokenQuota.limit,
+        })
+      : t("Setiap balasan AI setup memakai kuota token bulanan toko Anda."));
 
   const quotaExhausted =
     (session?.tokenQuotaRemaining ?? tokenQuota?.remaining ?? 1) <= 0 &&
@@ -230,8 +235,8 @@ export default function KnowledgeBaseSetupPage() {
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
             {user?.role === "super_admin"
-              ? "Aktifkan mode pantau tenant di banner atas, lalu buka halaman ini lagi."
-              : "Minta owner toko menyelesaikan setup profil & FAQ lewat halaman ini."}
+              ? t("Aktifkan mode pantau tenant di banner atas, lalu buka halaman ini lagi.")
+              : t("Minta owner toko menyelesaikan setup profil & FAQ lewat halaman ini.")}
             <div className="mt-4">
               <Button asChild variant="outline">
                 <Link href="/dashboard/knowledge-base">{t("Kembali ke Knowledge Base")}</Link>
@@ -254,7 +259,7 @@ export default function KnowledgeBaseSetupPage() {
           href="/dashboard/knowledge-base"
           className="text-primary underline-offset-4 hover:underline"
         >
-          ← Kembali ke Knowledge Base
+          {t("← Kembali ke Knowledge Base")}
         </Link>
       </p>
 
@@ -263,8 +268,9 @@ export default function KnowledgeBaseSetupPage() {
         <p className="mt-1">{quotaBanner}</p>
         {quotaExhausted ? (
           <p className="mt-2 font-medium text-red-700 dark:text-red-300">
-            Kuota token habis — chat AI tidak bisa dilanjutkan sampai periode berikutnya atau upgrade
-            paket.
+            {t(
+              "Kuota token habis — chat AI tidak bisa dilanjutkan sampai periode berikutnya atau upgrade paket.",
+            )}
           </p>
         ) : null}
       </div>
@@ -297,9 +303,9 @@ export default function KnowledgeBaseSetupPage() {
                     {idx + 1}
                   </span>
                 )}
-                <span className="text-sm font-medium">{step.label}</span>
+                <span className="text-sm font-medium">{t(step.labelKey)}</span>
               </div>
-              <p className="mt-1 pl-8 text-xs text-muted-foreground">{step.hint}</p>
+              <p className="mt-1 pl-8 text-xs text-muted-foreground">{t(step.hintKey)}</p>
             </li>
           );
         })}
@@ -311,11 +317,12 @@ export default function KnowledgeBaseSetupPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <MessageSquare className="h-4 w-4 text-primary" />
-              Percakapan setup
+              {t("Percakapan setup")}
             </CardTitle>
             <CardDescription>
-              Jawab santai seperti chat WhatsApp. Setup umum tidak perlu harga SKU. FAQ rekening
-              untuk verifikasi bukti transfer bisa ditambah manual setelah publish (opsional).
+              {t(
+                "Jawab santai seperti chat WhatsApp. Setup umum tidak perlu harga SKU. FAQ rekening untuk verifikasi bukti transfer bisa ditambah manual setelah publish (opsional).",
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -330,14 +337,14 @@ export default function KnowledgeBaseSetupPage() {
               <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-sm">
                 <p className="text-destructive">{t("Gagal memulai sesi setup.")}</p>
                 <Button type="button" variant="outline" size="sm" onClick={() => startMut.mutate()}>
-                  Coba lagi
+                  {t("Coba lagi")}
                 </Button>
               </div>
             ) : null}
             {startMut.isPending && !session ? (
                 <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Menyiapkan sesi…
+                  {t("Menyiapkan sesi…")}
                 </div>
               ) : null}
               {session?.messages.map((m, i) => (
@@ -370,7 +377,7 @@ export default function KnowledgeBaseSetupPage() {
               {sendMut.isPending ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  AI mengetik…
+                  {t("AI mengetik…")}
                 </div>
               ) : null}
             </div>
@@ -387,7 +394,7 @@ export default function KnowledgeBaseSetupPage() {
                     disabled={!session || sendMut.isPending || quotaExhausted}
                     onClick={() => sendMessage(chip)}
                   >
-                    {chip}
+                    {t(chip)}
                   </Button>
                 ))}
               </div>
@@ -404,22 +411,20 @@ export default function KnowledgeBaseSetupPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={
-                  showReview
-                    ? "Masih bisa koreksi lewat chat…"
-                    : "Ketik jawaban Anda…"
+                  showReview ? t("Masih bisa koreksi lewat chat…") : t("Ketik jawaban Anda…")
                 }
                 disabled={!session || sendMut.isPending || quotaExhausted || publishMut.isPending}
                 maxLength={2000}
                 aria-label={t("Pesan ke AI setup")}
               />
-              <Button type="submit" disabled={!canSend} size="icon" aria-label="Kirim">
+              <Button type="submit" disabled={!canSend} size="icon" aria-label={t("Kirim")}>
                 <Send className="h-4 w-4" />
               </Button>
             </form>
 
             {session?.readyForReview && !showReview ? (
               <Button type="button" variant="secondary" className="w-full" onClick={() => setShowReview(true)}>
-                Lanjut ke review
+                {t("Lanjut ke review")}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : null}
@@ -431,22 +436,26 @@ export default function KnowledgeBaseSetupPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4 text-primary" />
-              Draft otomatis
+              {t("Draft otomatis")}
             </CardTitle>
             <CardDescription>{t("Perbarui saat Anda chat. Edit final di panel review.")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Profil</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t("Profil")}
+              </p>
               <ul className="mt-2 space-y-1.5">
-                {[
-                  ["Produk/jasa", profileEdit.productsServices],
-                  ["Area kirim", profileEdit.deliveryArea],
-                  ["Jam buka", profileEdit.openingHours],
-                  ["Pembayaran", profileEdit.basePricing],
-                ].map(([label, val]) => (
-                  <li key={label} className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">{label}</span>
+                {(
+                  [
+                    ["Produk/jasa", profileEdit.productsServices],
+                    ["Area kirim", profileEdit.deliveryArea],
+                    ["Jam buka", profileEdit.openingHours],
+                    ["Pembayaran", profileEdit.basePricing],
+                  ] as const
+                ).map(([labelKey, val]) => (
+                  <li key={labelKey} className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">{t(labelKey)}</span>
                     <span className={cn("text-right", !val && "italic text-muted-foreground/70")}>
                       {val || "—"}
                     </span>
@@ -461,14 +470,17 @@ export default function KnowledgeBaseSetupPage() {
                   <span className="text-muted-foreground italic">{t("Belum ada — lanjutkan chat")}</span>
                 ) : (
                   <>
-                    <span className="font-medium">{faqItems.length}</span> pertanyaan terdeteksi
+                    {t("{count} pertanyaan terdeteksi", { count: faqItems.length })}
                   </>
                 )}
               </p>
             </div>
             {session ? (
               <p className="text-xs text-muted-foreground">
-                Sisa kuota: {session.tokenQuotaRemaining} / {session.tokenQuotaLimit}
+                {t("Sisa kuota: {remaining} / {limit}", {
+                  remaining: session.tokenQuotaRemaining,
+                  limit: session.tokenQuotaLimit,
+                })}
               </p>
             ) : null}
           </CardContent>
@@ -481,8 +493,9 @@ export default function KnowledgeBaseSetupPage() {
           <CardHeader>
             <CardTitle>{t("Review sebelum simpan")}</CardTitle>
             <CardDescription>
-              Periksa profil dan centang FAQ yang ingin dipublish ke Knowledge Base. Harga produk spesifik
-              tidak disimpan di FAQ — arahkan pelanggan ke katalog.
+              {t(
+                "Periksa profil dan centang FAQ yang ingin dipublish ke Knowledge Base. Harga produk spesifik tidak disimpan di FAQ — arahkan pelanggan ke katalog.",
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
@@ -533,7 +546,9 @@ export default function KnowledgeBaseSetupPage() {
               <div className="space-y-1.5 md:col-span-2">
                 <Label htmlFor="si-pay">{t("Cara bayar (metode umum, tanpa nomor rekening)")}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Untuk auto-verify bukti transfer, tambahkan FAQ rekening terpisah di Knowledge Base.
+                  {t(
+                    "Untuk auto-verify bukti transfer, tambahkan FAQ rekening terpisah di Knowledge Base.",
+                  )}
                 </p>
                 <Input
                   id="si-pay"
@@ -564,17 +579,23 @@ export default function KnowledgeBaseSetupPage() {
 
             <div>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="font-medium">FAQ ({includedFaq} dari {faqItems.length} akan disimpan)</p>
+                <p className="font-medium">
+                  {t("FAQ ({included} dari {total} akan disimpan)", {
+                    included: includedFaq,
+                    total: faqItems.length,
+                  })}
+                </p>
                 {faqItems.length === 0 ? (
                   <Button type="button" variant="outline" size="sm" onClick={() => setShowReview(false)}>
-                    Kembali chat untuk tambah FAQ
+                    {t("Kembali chat untuk tambah FAQ")}
                   </Button>
                 ) : null}
               </div>
               {faqItems.length === 0 ? (
                 <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-                  Belum ada draft FAQ. Lanjutkan percakapan atau ketik &quot;Cukup, lanjut review&quot; setelah
-                  menjawab pertanyaan kebijakan.
+                  {t(
+                    "Belum ada draft FAQ. Lanjutkan percakapan atau ketik \"Cukup, lanjut review\" setelah menjawab pertanyaan kebijakan.",
+                  )}
                 </p>
               ) : (
                 <ul className="space-y-3">
@@ -633,11 +654,15 @@ export default function KnowledgeBaseSetupPage() {
             >
               {!canPublish ? (
                 <p className="mb-3 text-sm text-muted-foreground">
-                  Lengkapi produk/jasa, area kirim, dan centang minimal satu FAQ untuk publish.
+                  {t(
+                    "Lengkapi produk/jasa, area kirim, dan centang minimal satu FAQ untuk publish.",
+                  )}
                 </p>
               ) : (
                 <p className="mb-3 text-sm font-medium text-primary">
-                  Siap disimpan — profil toko dan {includedFaq} FAQ akan masuk ke sistem.
+                  {t("Siap disimpan — profil toko dan {count} FAQ akan masuk ke sistem.", {
+                    count: includedFaq,
+                  })}
                 </p>
               )}
               <Button
@@ -647,7 +672,7 @@ export default function KnowledgeBaseSetupPage() {
                 disabled={!canPublish}
                 onClick={() => publishMut.mutate()}
               >
-                {publishMut.isPending ? "Menyimpan…" : "Publish profil & FAQ"}
+                {publishMut.isPending ? t("Menyimpan…") : t("Publish profil & FAQ")}
               </Button>
             </div>
           </CardContent>
