@@ -168,6 +168,7 @@ export default function ContactsPage() {
     mutationFn: () => contactsApi.batchDelete(Array.from(selectedIds)),
     onSuccess: (res) => {
       toast.success(t("{count} kontak dihapus", { count: res.deleted }));
+      setBatchDeleteOpen(false);
       setSelectedIds(new Set());
       invalidateContacts();
     },
