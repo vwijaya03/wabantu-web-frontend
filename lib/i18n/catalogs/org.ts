@@ -475,4 +475,13 @@ export const orgEn: Record<string, string> = {
   "Publish profil & FAQ": "Publish profile & FAQs",
   "Balasan AI ({tokens} token)": "AI reply ({tokens} tokens)",
   Ganti: "Replace",
+  "Kuota bulan ini": "This month's quota",
+  "{period} · paket {plan}": "{period} · plan {plan}",
+  Detail: "Details",
+  "Buka Billing untuk detail kuota.": "Open Billing for quota details.",
+  "Tagihan template WhatsApp ke Meta terpisah dari kuota di atas.":
+    "WhatsApp template charges from Meta are separate from the quota above.",
+  "Percakapan AI": "AI conversations",
+  "Token AI": "AI tokens",
+  "Tidak termasuk paket": "Not included in this plan",
 };
