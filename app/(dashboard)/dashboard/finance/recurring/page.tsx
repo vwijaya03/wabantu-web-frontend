@@ -36,6 +36,7 @@ import { toApiError } from "@/lib/api/client";
 import { formatFinanceDate, NO_WALLET, todayISOInTimezone } from "@/lib/finance/utils";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useLocale } from "@/lib/i18n/locale";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 type RecurringFrequency = Recurring["frequency"];
@@ -47,6 +48,7 @@ function canCloneToBilling(r: Recurring): boolean {
 }
 
 export default function RecurringPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantKey = useTenantKey();
   const canManage = canPerformOwnerActions(user);
@@ -87,7 +89,7 @@ export default function RecurringPage() {
   const createMut = useMutation({
     mutationFn: () => financeApi.createRecurring({ ...form, amount: parseFloat(form.amount) }),
     onSuccess: () => {
-      toast.success("Transaksi berulang berhasil dibuat");
+      toast.success(t("Transaksi berulang berhasil dibuat"));
       qc.invalidateQueries({ queryKey: ["finance-recurring"] });
       setOpenCreate(false);
       setForm({
@@ -106,7 +108,7 @@ export default function RecurringPage() {
   const deleteMut = useMutation({
     mutationFn: (id: string) => financeApi.deleteRecurring(id),
     onSuccess: () => {
-      toast.success("Transaksi berulang dihentikan");
+      toast.success(t("Transaksi berulang dihentikan"));
       qc.invalidateQueries({ queryKey: ["finance-recurring"] });
     },
   });
@@ -167,8 +169,8 @@ export default function RecurringPage() {
   return (
     <>
       <FinanceSubPageHeader
-        title="Transaksi Otomatis"
-        description="Kelola tagihan dan transaksi berulang."
+        title={t("Transaksi Otomatis")}
+        description={t("Kelola tagihan dan transaksi berulang.")}
         actions={
           <div className="flex flex-wrap gap-2">
             {canManage && cloneableItems.length > 0 && (
@@ -188,7 +190,7 @@ export default function RecurringPage() {
                 setOpenCreate(true);
               }}
             >
-              <PlusCircle className="mr-2 h-4 w-4" /> Tambah Berulang
+              <PlusCircle className="mr-2 h-4 w-4" /> {t("Tambah Berulang")}
             </Button>
           </div>
         }
@@ -204,12 +206,12 @@ export default function RecurringPage() {
               onChange={toggleSelectAll}
               disabled={cloneableItems.length === 0}
             />
-            <span>Pilih semua yang bisa di-clone</span>
+            <span>{t("Pilih semua yang bisa di-clone")}</span>
           </label>
           <span className="text-muted-foreground text-xs">
             Hanya <strong>bulanan</strong> + <strong>pengeluaran</strong> aktif. Hasilnya di{" "}
             <Link href="/dashboard/finance/checklist" className="text-primary underline-offset-4 hover:underline">
-              Tagihan Bulanan
+              {t("Tagihan Bulanan")}
             </Link>
             .
           </span>
@@ -217,11 +219,11 @@ export default function RecurringPage() {
       )}
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
       ) : items.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Belum ada transaksi berulang. Contoh: gaji karyawan, sewa tempat, langganan bulanan.
+            {t("Belum ada transaksi berulang. Contoh: gaji karyawan, sewa tempat, langganan bulanan.")}
           </CardContent>
         </Card>
       ) : (
@@ -299,21 +301,21 @@ export default function RecurringPage() {
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tambah Transaksi Berulang</DialogTitle>
-            <DialogDescription>Jadwalkan transaksi otomatis atau pengingat berkala.</DialogDescription>
+            <DialogTitle>{t("Tambah Transaksi Berulang")}</DialogTitle>
+            <DialogDescription>{t("Jadwalkan transaksi otomatis atau pengingat berkala.")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Judul</Label>
+              <Label>{t("Judul")}</Label>
               <Input
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                placeholder="mis. Gaji karyawan, Bayar sewa"
+                placeholder={t("mis. Gaji karyawan, Bayar sewa")}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Jenis</Label>
+                <Label>{t("Jenis")}</Label>
                 <Select
                   value={
                     txnTypes.some((t) => t.code === form.type)
@@ -326,16 +328,16 @@ export default function RecurringPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {txnTypes.map((t) => (
-                      <SelectItem key={t.code} value={t.code}>
-                        {t.label}
+                    {txnTypes.map((txnType) => (
+                      <SelectItem key={txnType.code} value={txnType.code}>
+                        {txnType.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Jumlah (Rp)</Label>
+                <Label>{t("Jumlah (Rp)")}</Label>
                 <Input
                   type="number"
                   value={form.amount}
@@ -345,7 +347,7 @@ export default function RecurringPage() {
               </div>
             </div>
             <div>
-              <Label>Dompet</Label>
+              <Label>{t("Dompet")}</Label>
               <Select
                 value={form.walletId || NO_WALLET}
                 onValueChange={(v) =>
@@ -353,7 +355,7 @@ export default function RecurringPage() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih dompet" />
+                  <SelectValue placeholder={t("Pilih dompet")} />
                 </SelectTrigger>
                 <SelectContent>
                   {wallets?.wallets.map((w) => (
@@ -366,7 +368,7 @@ export default function RecurringPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Frekuensi</Label>
+                <Label>{t("Frekuensi")}</Label>
                 <Select
                   value={form.frequency}
                   onValueChange={(v) =>
@@ -377,15 +379,15 @@ export default function RecurringPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="daily">Harian</SelectItem>
-                    <SelectItem value="weekly">Mingguan</SelectItem>
-                    <SelectItem value="monthly">Bulanan</SelectItem>
-                    <SelectItem value="yearly">Tahunan</SelectItem>
+                    <SelectItem value="daily">{t("Harian")}</SelectItem>
+                    <SelectItem value="weekly">{t("Mingguan")}</SelectItem>
+                    <SelectItem value="monthly">{t("Bulanan")}</SelectItem>
+                    <SelectItem value="yearly">{t("Tahunan")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Mode</Label>
+                <Label>{t("Mode")}</Label>
                 <Select
                   value={form.mode}
                   onValueChange={(v) => setForm((f) => ({ ...f, mode: v as RecurringMode }))}
@@ -394,14 +396,14 @@ export default function RecurringPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto">Otomatis dicatat</SelectItem>
-                    <SelectItem value="reminder">Hanya pengingat</SelectItem>
+                    <SelectItem value="auto">{t("Otomatis dicatat")}</SelectItem>
+                    <SelectItem value="reminder">{t("Hanya pengingat")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div>
-              <Label>Mulai dari</Label>
+              <Label>{t("Mulai dari")}</Label>
               <DatePicker
                 value={form.startDate}
                 onChange={(startDate) => setForm((f) => ({ ...f, startDate }))}
@@ -410,7 +412,7 @@ export default function RecurringPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenCreate(false)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button
               onClick={() => createMut.mutate()}
@@ -429,9 +431,9 @@ export default function RecurringPage() {
         onOpenChange={(open) => {
           if (!open) setStopRecurringId(null);
         }}
-        title="Hentikan transaksi berulang?"
-        description="Transaksi berulang ini akan dinonaktifkan dan tidak lagi dijadwalkan."
-        confirmLabel="Hentikan"
+        title={t("Hentikan transaksi berulang?")}
+        description={t("Transaksi berulang ini akan dinonaktifkan dan tidak lagi dijadwalkan.")}
+        confirmLabel={t("Hentikan")}
         destructive
         loading={deleteMut.isPending}
         onConfirm={() => {

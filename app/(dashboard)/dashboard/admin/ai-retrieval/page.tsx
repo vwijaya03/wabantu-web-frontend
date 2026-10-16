@@ -23,6 +23,7 @@ import {
 import { adminApi, type AdminTenant } from "@/lib/api/admin";
 import { toApiError } from "@/lib/api/client";
 import { flagsApi, type RAGRolloutScope, type RetrievalMode, type RetrievalObservabilitySnapshot, type TenantIndexingProgress, shouldPollRetrievalIndexing } from "@/lib/api/flags";
+import { useLocale } from "@/lib/i18n/locale";
 
 const MODE_LABELS: Record<RetrievalMode, string> = {
   disabled: "Lexical (lama)",
@@ -51,10 +52,14 @@ function modeBadgeVariant(mode: RetrievalMode): "default" | "secondary" | "outli
 }
 
 function IndexingProgressBar({ progress }: { progress: TenantIndexingProgress }) {
+  const { t } = useLocale();
   if (progress.isComplete) {
     return (
       <p className="w-full text-xs text-muted-foreground">
-        Indexing selesai · {progress.kb.indexed} KB + {progress.catalog.indexed} katalog ter-embed
+        {t("Indexing selesai · {kb} KB + {catalog} katalog ter-embed", {
+          kb: progress.kb.indexed,
+          catalog: progress.catalog.indexed,
+        })}
       </p>
     );
   }
@@ -62,13 +67,20 @@ function IndexingProgressBar({ progress }: { progress: TenantIndexingProgress })
     <div className="w-full space-y-1">
       <div className="flex flex-wrap justify-between gap-1 text-xs text-muted-foreground">
         <span>
-          Indexing {progress.percentComplete}% · outbox {progress.outboxPercentDone}%
+          {t("Indexing {percent}% · outbox {outbox}%", {
+            percent: progress.percentComplete,
+            outbox: progress.outboxPercentDone,
+          })}
         </span>
         <span>
-          {progress.outbox.pending} antrian · {progress.kb.pending + progress.catalog.pending} entitas
-          pending
+          {t("{pending} antrian · {entities} entitas pending", {
+            pending: progress.outbox.pending,
+            entities: progress.kb.pending + progress.catalog.pending,
+          })}
           {(progress.kb.failed + progress.catalog.failed + progress.outbox.failed) > 0
-            ? ` · ${progress.kb.failed + progress.catalog.failed + progress.outbox.failed} gagal`
+            ? t(" · {count} gagal", {
+                count: progress.kb.failed + progress.catalog.failed + progress.outbox.failed,
+              })
             : ""}
         </span>
       </div>
@@ -89,6 +101,7 @@ function TenantRetrievalRow({
   tenant: AdminTenant;
   onUpdated: () => void;
 }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const modeQuery = useQuery({
     queryKey: ["retrieval-mode", tenant.id],
@@ -148,7 +161,7 @@ function TenantRetrievalRow({
           <Loader2 className="size-4 animate-spin text-muted-foreground" />
         ) : modeQuery.isError ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-destructive">Gagal memuat mode</span>
+            <span className="text-xs text-destructive">{t("Gagal memuat mode")}</span>
             <Button variant="outline" size="sm" onClick={() => void modeQuery.refetch()}>
               Coba lagi
             </Button>
@@ -195,7 +208,7 @@ function TenantRetrievalRow({
       {trackIndexing && indexingQuery.data ? (
         <IndexingProgressBar progress={indexingQuery.data} />
       ) : trackIndexing && indexingQuery.isLoading ? (
-        <p className="text-xs text-muted-foreground">Memuat progress indexing…</p>
+        <p className="text-xs text-muted-foreground">{t("Memuat progress indexing…")}</p>
       ) : null}
     </div>
   );
@@ -228,6 +241,7 @@ function statusBannerMessage(m: RetrievalObservabilitySnapshot): string {
 }
 
 function ObservabilityPanel() {
+  const { t } = useLocale();
   const obsQuery = useQuery({
     queryKey: ["retrieval-observability"],
     queryFn: () => flagsApi.getRetrievalObservability(),
@@ -257,7 +271,7 @@ function ObservabilityPanel() {
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <CardTitle className="text-base">Observability retrieval (proses ini)</CardTitle>
+            <CardTitle className="text-base">{t("Observability retrieval (proses ini)")}</CardTitle>
             <CardDescription>
               Counter in-process + Encore metrics. Reset saat deploy/restart instance — bukan agregat
               lintas instance.
@@ -289,21 +303,21 @@ function ObservabilityPanel() {
             </p>
           </div>
           <div className="rounded border p-2">
-            <p className="text-xs text-muted-foreground">p95 embed / store</p>
+            <p className="text-xs text-muted-foreground">{t("p95 embed / store")}</p>
             <p className="font-medium">
               {m.embedLatencyP95Ms}ms · {m.storeLatencyP95Ms}ms
             </p>
             <p className="text-xs text-muted-foreground">budget {m.budgetMs}ms · total p95 {m.latencyP95Ms}ms</p>
           </div>
           <div className="rounded border p-2">
-            <p className="text-xs text-muted-foreground">Query embed cache</p>
+            <p className="text-xs text-muted-foreground">{t("Query embed cache")}</p>
             <p className="font-medium">hit {(m.embedCacheHitRatio * 100).toFixed(1)}%</p>
             <p className="text-xs text-muted-foreground">
               {m.embedCacheHits} hit · {m.embedCacheMisses} miss
             </p>
           </div>
           <div className="rounded border p-2">
-            <p className="text-xs text-muted-foreground">Indexing worker</p>
+            <p className="text-xs text-muted-foreground">{t("Indexing worker")}</p>
             <p className="font-medium">
               {m.indexingSuccess} ok · {m.indexingFailure} gagal
             </p>
@@ -312,7 +326,7 @@ function ObservabilityPanel() {
         </div>
         {errorEntries.length > 0 ? (
           <div className="rounded border p-2 text-sm">
-            <p className="mb-1 text-xs font-medium text-muted-foreground">Error per kategori</p>
+            <p className="mb-1 text-xs font-medium text-muted-foreground">{t("Error per kategori")}</p>
             <ul className="space-y-0.5 text-xs">
               {errorEntries.map(([key, count]) => (
                 <li key={key} className="flex justify-between gap-2">
@@ -330,7 +344,7 @@ function ObservabilityPanel() {
         ) : null}
         {incidents.length > 0 ? (
           <div className="rounded border p-2 text-sm">
-            <p className="mb-2 text-xs font-medium text-muted-foreground">Insiden terakhir</p>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">{t("Insiden terakhir")}</p>
             <div className="max-h-48 overflow-auto">
               <table className="w-full text-xs">
                 <thead>
@@ -339,7 +353,7 @@ function ObservabilityPanel() {
                     <th className="pb-1 pr-2">Tenant</th>
                     <th className="pb-1 pr-2">Sumber</th>
                     <th className="pb-1 pr-2">Provider</th>
-                    <th className="pb-1 pr-2">Kategori</th>
+                    <th className="pb-1 pr-2">{t("Kategori")}</th>
                     <th className="pb-1">Latency</th>
                   </tr>
                 </thead>
@@ -367,6 +381,7 @@ function ObservabilityPanel() {
 }
 
 function BulkRolloutPanel({ onJobDone }: { onJobDone: () => void }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const [rolloutMode, setRolloutMode] = useState<"shadow" | "vector">("shadow");
   const [scope, setScope] = useState<RAGRolloutScope>("lexical_only");
@@ -419,7 +434,7 @@ function BulkRolloutPanel({ onJobDone }: { onJobDone: () => void }) {
         void qc.invalidateQueries({ queryKey: ["rag-rollout-active-jobs"] });
         toast.info(`Rollout diantrekan (${r.enqueued} tenant)…`);
       } else {
-        toast.info("Tidak ada tenant yang perlu di-rollout.");
+        toast.info(t("Tidak ada tenant yang perlu di-rollout."));
       }
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -430,7 +445,7 @@ function BulkRolloutPanel({ onJobDone }: { onJobDone: () => void }) {
     onSuccess: () => {
       setActiveJobId(null);
       void qc.invalidateQueries({ queryKey: ["rag-rollout-active-jobs"] });
-      toast.info("Job rollout dibatalkan.");
+      toast.info(t("Job rollout dibatalkan."));
       onJobDone();
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -465,10 +480,10 @@ function BulkRolloutPanel({ onJobDone }: { onJobDone: () => void }) {
   return (
     <Card className="mb-4">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Rollout massal (aman)</CardTitle>
+        <CardTitle className="text-base">{t("Rollout massal (aman)")}</CardTitle>
         <CardDescription>
           Proses per tenant via antrian async dengan jeda antar tenant. Canary: mulai dengan mode{" "}
-          <strong>shadow</strong> + scope <strong>hanya lexical</strong>, pantau progress, lalu
+          <strong>shadow</strong> {t("+ scope")} <strong>{t("hanya lexical")}</strong>, pantau progress, lalu
           ulangi untuk <strong>vector</strong>.
         </CardDescription>
       </CardHeader>
@@ -483,8 +498,8 @@ function BulkRolloutPanel({ onJobDone }: { onJobDone: () => void }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="shadow">Shadow RAG</SelectItem>
-              <SelectItem value="vector">Vector RAG</SelectItem>
+              <SelectItem value="shadow">{t("Shadow RAG")}</SelectItem>
+              <SelectItem value="vector">{t("Vector RAG")}</SelectItem>
             </SelectContent>
           </Select>
           <Select
@@ -496,8 +511,8 @@ function BulkRolloutPanel({ onJobDone }: { onJobDone: () => void }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="lexical_only">Hanya tenant lexical</SelectItem>
-              <SelectItem value="all_active">Semua tenant aktif</SelectItem>
+              <SelectItem value="lexical_only">{t("Hanya tenant lexical")}</SelectItem>
+              <SelectItem value="all_active">{t("Semua tenant aktif")}</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -551,6 +566,7 @@ function BulkRolloutPanel({ onJobDone }: { onJobDone: () => void }) {
 }
 
 export default function AIRetrievalAdminPage() {
+  const { t } = useLocale();
   const { isAdmin } = useAdminSession();
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
@@ -576,12 +592,12 @@ export default function AIRetrievalAdminPage() {
   return (
     <>
       <PageHeader
-        title="AI Retrieval (RAG)"
-        description="Kelola mode retrieval per tenant — lexical, shadow, atau vector dengan backfill otomatis."
+        title={t("AI Retrieval (RAG)")}
+        description={t("Kelola mode retrieval per tenant — lexical, shadow, atau vector dengan backfill otomatis.")}
       />
       <div className="mb-4 flex flex-wrap gap-2">
         <Button variant="outline" asChild>
-          <Link href="/dashboard/admin">← Konsol Platform</Link>
+          <Link href="/dashboard/admin">{t("← Konsol Platform")}</Link>
         </Button>
       </div>
 
@@ -615,7 +631,7 @@ export default function AIRetrievalAdminPage() {
       <Card>
         <CardHeader>
           <CardTitle>Tenant ({data?.total ?? 0})</CardTitle>
-          <CardDescription>Pilih mode retrieval dan klik Simpan. Tidak perlu cURL.</CardDescription>
+          <CardDescription>{t("Pilih mode retrieval dan klik Simpan. Tidak perlu cURL.")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           <div className="mb-3 flex flex-col gap-2 sm:flex-row">
@@ -631,7 +647,7 @@ export default function AIRetrievalAdminPage() {
                     setSearch(q.trim());
                   }
                 }}
-                placeholder="Cari tenant, email owner, atau schema…"
+                placeholder={t("Cari tenant, email owner, atau schema…")}
               />
             </div>
             <Button
@@ -648,7 +664,7 @@ export default function AIRetrievalAdminPage() {
           {isLoading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Memuat…</p>
           ) : tenants.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">Tenant tidak ditemukan.</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">{t("Tenant tidak ditemukan.")}</p>
           ) : (
             tenants.map((t) => (
               <TenantRetrievalRow key={t.id} tenant={t} onUpdated={() => void refetch()} />

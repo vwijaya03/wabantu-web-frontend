@@ -33,8 +33,10 @@ import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function SalesReturnsPage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const { user } = useAuth();
@@ -72,29 +74,29 @@ export default function SalesReturnsPage() {
       invalidateTenantQueries(qc, tenantKey, "inventory", "sales-returns");
       invalidateTenantQueries(qc, tenantKey, "inventory", "stock");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const returnableItems = (order?.items ?? []).filter((it) => it.catalogItemId);
   const hasQty = returnableItems.some((it) => Number(qtys[it.catalogItemId!]) > 0);
 
   return (
-    <RequireTenantDashboard title="Retur Penjualan">
-      <InventoryPageHeader title="Retur Penjualan" description="Barang kembali dari pelanggan — stok masuk lagi dengan HPP asli." helpTopic="sales-returns" />
+    <RequireTenantDashboard title={t("Retur Penjualan")}>
+      <InventoryPageHeader title={t("Retur Penjualan")} description={t("Barang kembali dari pelanggan — stok masuk lagi dengan HPP asli.")} helpTopic="sales-returns" />
 
       {canManage ? (
         <Card className="mb-4">
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>Buat Retur</CardTitle>
+            <CardTitle>{t("Buat Retur")}</CardTitle>
             <InventoryFormModeSwitch mode={createMode} onChange={setCreateMode} />
           </CardHeader>
           <CardContent>
             {createMode === "single" ? (
               <div className="space-y-4">
-                <div className="space-y-1.5"><Label>Pesanan</Label><OrderPicker value={order} onChange={(o) => { setOrder(o); setQtys({}); }} /></div>
+                <div className="space-y-1.5"><Label>{t("Pesanan")}</Label><OrderPicker value={order} onChange={(o) => { setOrder(o); setQtys({}); }} /></div>
                 {order && returnableItems.length > 0 ? (
                   <div className="space-y-2">
-                    <Label>Jumlah diretur per produk</Label>
+                    <Label>{t("Jumlah diretur per produk")}</Label>
                     {returnableItems.map((it) => (
                       <div key={it.catalogItemId} className="grid grid-cols-[1fr_120px] items-center gap-2 rounded border p-2 text-sm">
                         <div>
@@ -112,13 +114,13 @@ export default function SalesReturnsPage() {
                         />
                       </div>
                     ))}
-                    <div className="space-y-1.5"><Label>Catatan (opsional)</Label><Input value={note} onChange={(e) => setNote(e.target.value)} /></div>
+                    <div className="space-y-1.5"><Label>{t("Catatan (opsional)")}</Label><Input value={note} onChange={(e) => setNote(e.target.value)} /></div>
                     <Button onClick={() => createMut.mutate()} disabled={!hasQty || createMut.isPending}>
                       {createMut.isPending ? "Memproses..." : "Simpan Retur"}
                     </Button>
                   </div>
                 ) : order ? (
-                  <p className="text-sm text-muted-foreground">Pesanan ini tidak punya item yang bisa diretur.</p>
+                  <p className="text-sm text-muted-foreground">{t("Pesanan ini tidak punya item yang bisa diretur.")}</p>
                 ) : null}
               </div>
             ) : (
@@ -132,9 +134,9 @@ export default function SalesReturnsPage() {
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Daftar Retur</CardTitle>
+          <CardTitle>{t("Daftar Retur")}</CardTitle>
           <Input
-            placeholder="Cari no retur..."
+            placeholder={t("Cari no retur...")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { setSearchQ(q); setPage(1); } }}
@@ -145,16 +147,16 @@ export default function SalesReturnsPage() {
           <InventoryTable>
             <InventoryTableHeader>
               <InventoryTableRow>
-                <InventoryTableHead>No Retur</InventoryTableHead>
-                <InventoryTableHead align="right">Nilai HPP</InventoryTableHead>
-                <InventoryTableHead>Tanggal</InventoryTableHead>
+                <InventoryTableHead>{t("No Retur")}</InventoryTableHead>
+                <InventoryTableHead align="right">{t("Nilai HPP")}</InventoryTableHead>
+                <InventoryTableHead>{t("Tanggal")}</InventoryTableHead>
               </InventoryTableRow>
             </InventoryTableHeader>
             <InventoryTableBody>
               {isLoading ? (
-                <InventoryTableEmpty colSpan={3}>Memuat...</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={3}>{t("Memuat...")}</InventoryTableEmpty>
               ) : returns.length === 0 ? (
-                <InventoryTableEmpty colSpan={3}>Belum ada retur.</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={3}>{t("Belum ada retur.")}</InventoryTableEmpty>
               ) : (
                 returns.map((r) => (
                   <InventoryTableRow key={r.id} className="cursor-pointer" onClick={() => setDetailId(r.id)}>
@@ -184,6 +186,7 @@ export default function SalesReturnsPage() {
 }
 
 function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; canManage: boolean; onClose: () => void }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -195,11 +198,11 @@ function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; can
   const delMut = useMutation({
     mutationFn: () => inventoryApi.deleteSalesReturn(id!),
     onSuccess: () => {
-      toast.success("Retur dihapus — stok disesuaikan");
+      toast.success(t("Retur dihapus — stok disesuaikan"));
       onClose();
       invalidateTenantQueries(qc, tenantKey, "inventory");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
   return (
     <>
@@ -207,7 +210,7 @@ function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; can
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>{r ? r.returnNo : "Memuat..."}</DialogTitle>
-          <DialogDescription className="sr-only">Detail retur penjualan</DialogDescription>
+          <DialogDescription className="sr-only">{t("Detail retur penjualan")}</DialogDescription>
         </DialogHeader>
         {r ? (
           <div className="space-y-3">
@@ -226,8 +229,8 @@ function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; can
             <InventoryTable>
               <InventoryTableHeader>
                 <InventoryTableRow>
-                  <InventoryTableHead>Produk</InventoryTableHead>
-                  <InventoryTableHead align="right">Qty</InventoryTableHead>
+                  <InventoryTableHead>{t("Produk")}</InventoryTableHead>
+                  <InventoryTableHead align="right">{t("Qty")}</InventoryTableHead>
                   <InventoryTableHead align="right">HPP/unit</InventoryTableHead>
                 </InventoryTableRow>
               </InventoryTableHeader>
@@ -241,7 +244,7 @@ function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; can
                 ))}
               </InventoryTableBody>
             </InventoryTable>
-            <p className="text-right text-sm">Total HPP kembali: <span className="font-semibold">{formatIDR(r.totalCost)}</span></p>
+            <p className="text-right text-sm">{t("Total HPP kembali:")} <span className="font-semibold">{formatIDR(r.totalCost)}</span></p>
           </div>
         ) : null}
       </DialogContent>
@@ -250,7 +253,7 @@ function ReturnDetailDialog({ id, canManage, onClose }: { id: string | null; can
     <ConfirmDialog
       open={deleteConfirmOpen}
       onOpenChange={setDeleteConfirmOpen}
-      title="Hapus retur?"
+      title={t("Hapus retur?")}
       description={r ? `Retur ${r.returnNo} akan dihapus. Stok akan dikurangi.` : undefined}
       confirmLabel="Hapus"
       destructive

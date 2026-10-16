@@ -37,6 +37,7 @@ import {
 import { usePlan } from "@/hooks/use-plan";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { toApiError } from "@/lib/api/client";
+import { useLocale } from "@/lib/i18n/locale";
 
 const WORKFLOWS_KEY = ["workflows"] as const;
 
@@ -81,6 +82,7 @@ function ruleToDraft(r: WorkflowRule): Draft {
 }
 
 export default function WorkflowPage() {
+  const { t } = useLocale();
   const { hasWorkflow } = usePlan();
   const tenantReady = useTenantQueryEnabled();
   const qc = useQueryClient();
@@ -110,7 +112,7 @@ export default function WorkflowPage() {
   const createMut = useMutation({
     mutationFn: () => workflowApi.create(savePayload()),
     onSuccess: () => {
-      toast.success("Rule dibuat");
+      toast.success(t("Rule dibuat"));
       resetForm();
       void qc.invalidateQueries({ queryKey: WORKFLOWS_KEY });
     },
@@ -120,7 +122,7 @@ export default function WorkflowPage() {
   const updateMut = useMutation({
     mutationFn: () => workflowApi.update(editingId!, savePayload()),
     onSuccess: () => {
-      toast.success("Rule diperbarui");
+      toast.success(t("Rule diperbarui"));
       resetForm();
       void qc.invalidateQueries({ queryKey: WORKFLOWS_KEY });
     },
@@ -130,7 +132,7 @@ export default function WorkflowPage() {
   const deleteMut = useMutation({
     mutationFn: (id: string) => workflowApi.remove(id),
     onSuccess: () => {
-      toast.success("Rule dihapus");
+      toast.success(t("Rule dihapus"));
       setRuleToDelete(null);
       if (editingId) resetForm();
       void qc.invalidateQueries({ queryKey: WORKFLOWS_KEY });
@@ -141,7 +143,7 @@ export default function WorkflowPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.name.trim() || !draft.trigger.trim() || !draft.reply.trim()) {
-      toast.error("Nama, kata kunci, dan balasan wajib diisi");
+      toast.error(t("Nama, kata kunci, dan balasan wajib diisi"));
       return;
     }
     if (editingId) updateMut.mutate();
@@ -162,17 +164,17 @@ export default function WorkflowPage() {
   const saving = createMut.isPending || updateMut.isPending;
 
   return (
-    <RequireTenantDashboard title="Workflow">
+    <RequireTenantDashboard title={t("Workflow")}>
     {!hasWorkflow ? (
       <PageHeader
-        title="Workflow"
-        description="Upgrade ke paket Business atau Pro untuk automasi kata kunci (rule-based)."
+        title={t("Workflow")}
+        description={t("Upgrade ke paket Business atau Pro untuk automasi kata kunci (rule-based).")}
       />
     ) : (
     <>
       <PageHeader
-        title="Workflow"
-        description="Balasan otomatis jika pesan WhatsApp mengandung kata kunci — dijalankan sebelum AI."
+        title={t("Workflow")}
+        description={t("Balasan otomatis jika pesan WhatsApp mengandung kata kunci — dijalankan sebelum AI.")}
       />
 
       <Card className="mb-6 border-dashed bg-muted/30">
@@ -193,12 +195,12 @@ export default function WorkflowPage() {
               &quot;Tanya harga&quot;).
             </li>
             <li>
-              <strong className="text-foreground">Jika pesan mengandung</strong> — kata/frasa
+              <strong className="text-foreground">{t("Jika pesan mengandung")}</strong> — kata/frasa
               (tidak case-sensitive), mis. <code className="rounded bg-muted px-1">harga</code>{" "}
-              atau <code className="rounded bg-muted px-1">berapa ongkir</code>.
+              atau <code className="rounded bg-muted px-1">{t("berapa ongkir")}</code>.
             </li>
             <li>
-              <strong className="text-foreground">Balasan otomatis</strong> — teks yang langsung
+              <strong className="text-foreground">{t("Balasan otomatis")}</strong> — teks yang langsung
               dikirim ke WhatsApp (maks disarankan 2–3 kalimat).
             </li>
           </ol>
@@ -258,26 +260,26 @@ export default function WorkflowPage() {
                   id="wf-name"
                   value={draft.name}
                   onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-                  placeholder="Mis. Tanya harga"
+                  placeholder={t("Mis. Tanya harga")}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="wf-trigger">Jika pesan mengandung</Label>
+                <Label htmlFor="wf-trigger">{t("Jika pesan mengandung")}</Label>
                 <Input
                   id="wf-trigger"
                   value={draft.trigger}
                   onChange={(e) => setDraft((d) => ({ ...d, trigger: e.target.value }))}
-                  placeholder="Mis. harga, ongkir, reseller"
+                  placeholder={t("Mis. harga, ongkir, reseller")}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="wf-reply">Balasan otomatis</Label>
+                <Label htmlFor="wf-reply">{t("Balasan otomatis")}</Label>
                 <Textarea
                   id="wf-reply"
                   rows={4}
                   value={draft.reply}
                   onChange={(e) => setDraft((d) => ({ ...d, reply: e.target.value }))}
-                  placeholder="Halo kak! Untuk info harga..."
+                  placeholder={t("Halo kak! Untuk info harga...")}
                 />
               </div>
               <div className="flex flex-wrap gap-2">
@@ -296,7 +298,7 @@ export default function WorkflowPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Rules aktif</CardTitle>
+            <CardTitle>{t("Rules aktif")}</CardTitle>
             <CardDescription>
               {rules.length === 0
                 ? "Belum ada rule — buat dari form atau contoh di atas."
@@ -374,7 +376,7 @@ export default function WorkflowPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus rule workflow?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Hapus rule workflow?")}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2 text-left text-sm text-muted-foreground">
                 <p>

@@ -53,6 +53,7 @@ import { toApiError } from "@/lib/api/client";
 import { formatFinanceDate, invalidateFinanceCaches, NO_WALLET, todayISOInTimezone } from "@/lib/finance/utils";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useLocale } from "@/lib/i18n/locale";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 import {
   CUSTOM_UNIT,
@@ -70,10 +71,10 @@ function defaultFeePercent(side: "buy" | "sell", assetType: string) {
   return "0";
 }
 
-function tradeTypeLabel(type: string) {
-  if (type === "investment_buy") return "Beli";
-  if (type === "investment_sell") return "Jual";
-  if (type === "dividend") return "Dividen";
+function tradeTypeLabel(type: string, translate: (source: string) => string) {
+  if (type === "investment_buy") return translate("Beli");
+  if (type === "investment_sell") return translate("Jual");
+  if (type === "dividend") return translate("Dividen");
   return type;
 }
 
@@ -124,6 +125,7 @@ function assetFieldHints(type: string) {
 }
 
 export default function InvestmentPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantKey = useTenantKey();
   const canManage = canPerformOwnerActions(user);
@@ -211,7 +213,7 @@ export default function InvestmentPage() {
         notes: assetForm.notes.trim() || undefined,
       }),
     onSuccess: () => {
-      toast.success("Aset berhasil ditambahkan");
+      toast.success(t("Aset berhasil ditambahkan"));
       invalidateFinanceCaches(qc, tenantKey);
       setOpenAddAsset(false);
       resetAssetForm();
@@ -230,7 +232,7 @@ export default function InvestmentPage() {
         notes: assetForm.notes.trim(),
       }),
     onSuccess: () => {
-      toast.success("Aset diperbarui");
+      toast.success(t("Aset diperbarui"));
       invalidateFinanceCaches(qc, tenantKey);
       setEditAssetId(null);
       resetAssetForm();
@@ -241,7 +243,7 @@ export default function InvestmentPage() {
   const deleteAssetMut = useMutation({
     mutationFn: (id: string) => financeApi.deleteAsset(id),
     onSuccess: () => {
-      toast.success("Aset dihapus");
+      toast.success(t("Aset dihapus"));
       invalidateFinanceCaches(qc, tenantKey);
       setDeleteAssetId(null);
     },
@@ -252,7 +254,7 @@ export default function InvestmentPage() {
     mutationFn: ({ assetId, price }: { assetId: string; price: number }) =>
       financeApi.updateAssetPrice(assetId, price),
     onSuccess: () => {
-      toast.success("Harga diperbarui");
+      toast.success(t("Harga diperbarui"));
       qc.invalidateQueries({ queryKey: ["finance-portfolio"] });
       setOpenUpdatePrice(null);
       setNewPrice("");
@@ -309,11 +311,11 @@ export default function InvestmentPage() {
       const side = recordTrade?.side ?? "buy";
       const assetType =
         portfolio?.assets.find((a) => a.id === recordTrade?.assetId)?.type ?? "stock";
-      const label = side === "sell" ? "Penjualan" : "Pembelian";
+      const label = side === "sell" ? t("Penjualan") : t("Pembelian");
       toast.success(
         data.status === "pending_approval"
-          ? `${label} menunggu persetujuan`
-          : `${label} tercatat`
+          ? t("{label} menunggu persetujuan", { label })
+          : t("{label} tercatat", { label }),
       );
       invalidateFinanceCaches(qc, tenantKey);
       if (tradeHistoryAssetId) {
@@ -329,7 +331,7 @@ export default function InvestmentPage() {
     mutationFn: ({ assetId, txnId }: { assetId: string; txnId: string }) =>
       financeApi.deleteAssetTrade(assetId, txnId),
     onSuccess: () => {
-      toast.success("Transaksi dihapus");
+      toast.success(t("Transaksi dihapus"));
       invalidateFinanceCaches(qc, tenantKey);
       if (tradeHistoryAssetId) {
         qc.invalidateQueries({ queryKey: ["finance-asset-trades", tradeHistoryAssetId] });
@@ -453,12 +455,12 @@ export default function InvestmentPage() {
   return (
     <>
       <FinanceSubPageHeader
-        title="Investasi & Aset"
-        description="Pantau portofolio investasi Anda."
+        title={t("Investasi & Aset")}
+        description={t("Pantau portofolio investasi Anda.")}
         actions={
           canManage ? (
             <Button onClick={openCreateAssetDialog}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Tambah Aset
+              <PlusCircle className="mr-2 h-4 w-4" /> {t("Tambah Aset")}
             </Button>
           ) : null
         }
@@ -469,19 +471,19 @@ export default function InvestmentPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Total Modal</p>
+              <p className="text-xs text-muted-foreground">{t("Total Modal")}</p>
               <p className="mt-1 text-xl font-bold">{formatIDR(portfolio.totalCost)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Nilai Saat Ini</p>
+              <p className="text-xs text-muted-foreground">{t("Nilai Saat Ini")}</p>
               <p className="mt-1 text-xl font-bold">{formatIDR(portfolio.currentValue)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Unrealized P&L</p>
+              <p className="text-xs text-muted-foreground">{t("Unrealized P&L")}</p>
               <p className={cn("mt-1 text-xl font-bold", pnlColor(portfolio.unrealizedPnl))}>
                 {parseFloat(portfolio.unrealizedPnl) >= 0 ? "+" : ""}{formatIDR(portfolio.unrealizedPnl)}
               </p>
@@ -490,7 +492,7 @@ export default function InvestmentPage() {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Total Dividen</p>
+              <p className="text-xs text-muted-foreground">{t("Total Dividen")}</p>
               <p className="mt-1 text-xl font-bold text-green-600">{formatIDR(portfolio.totalDividend)}</p>
             </CardContent>
           </Card>
@@ -498,9 +500,9 @@ export default function InvestmentPage() {
       )}
 
       <p className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md px-3 py-2">
-        <strong>Tambah Aset</strong> hanya mendaftarkan instrumen. Jumlah lot/unit dan modal dihitung dari{" "}
-        <strong>Catat Pembelian</strong> / <strong>Catat Penjualan</strong>. Setelah ada kepemilikan, gunakan{" "}
-        <strong>Update Harga</strong> untuk nilai pasar dan P&L unrealized. Saham Indonesia: 1 lot = 100 lembar; harga per lembar (mis. Rp 1.055).
+        {t(
+          "Tambah Aset hanya mendaftarkan instrumen. Jumlah lot/unit dan modal dihitung dari Catat Pembelian / Catat Penjualan. Setelah ada kepemilikan, gunakan Update Harga untuk nilai pasar dan P&L unrealized. Saham Indonesia: 1 lot = 100 lembar; harga per lembar (mis. Rp 1.055).",
+        )}
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -508,7 +510,7 @@ export default function InvestmentPage() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             className="pl-8"
-            placeholder="Cari nama atau ticker..."
+            placeholder={t("Cari nama atau ticker...")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
@@ -528,7 +530,7 @@ export default function InvestmentPage() {
               setPage(1);
             }}
           >
-            Cari
+            {t("Cari")}
           </Button>
           {search && (
             <Button
@@ -540,7 +542,7 @@ export default function InvestmentPage() {
                 setPage(1);
               }}
             >
-              Reset
+              {t("Reset")}
             </Button>
           )}
         </div>
@@ -556,12 +558,12 @@ export default function InvestmentPage() {
                 : ""}
             </p>
             <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
-              Coba lagi
+              {t("Coba lagi")}
             </Button>
           </CardContent>
         </Card>
       ) : isPending ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
       ) : assets.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
@@ -588,20 +590,20 @@ export default function InvestmentPage() {
                 </div>
                 {canManage && (
                   <div className="flex flex-wrap gap-2 justify-end shrink-0">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Ubah aset" onClick={() => openEditAsset(a)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" title={t("Ubah aset")} onClick={() => openEditAsset(a)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive"
-                      title="Hapus aset"
+                      title={t("Hapus aset")}
                       onClick={() => setDeleteAssetId(a.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                     <Button variant="default" size="sm" onClick={() => openTradeDialog(a.id, "buy")}>
-                      <ArrowDownCircle className="mr-1 h-3.5 w-3.5" /> Catat Pembelian
+                      <ArrowDownCircle className="mr-1 h-3.5 w-3.5" /> {t("Catat Pembelian")}
                     </Button>
                     <Button
                       variant="outline"
@@ -609,16 +611,16 @@ export default function InvestmentPage() {
                       disabled={(parseFloat(a.qtyHeld) || 0) <= 0}
                       onClick={() => openTradeDialog(a.id, "sell")}
                     >
-                      <ArrowUpCircle className="mr-1 h-3.5 w-3.5" /> Catat Penjualan
+                      <ArrowUpCircle className="mr-1 h-3.5 w-3.5" /> {t("Catat Penjualan")}
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => openDividendDialog(a.id)}>
-                      <Coins className="mr-1 h-3.5 w-3.5" /> Catat Dividen
+                      <Coins className="mr-1 h-3.5 w-3.5" /> {t("Catat Dividen")}
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => setOpenUpdatePrice(a.id)}>
-                      <RefreshCw className="mr-1 h-3.5 w-3.5" /> Update Harga
+                      <RefreshCw className="mr-1 h-3.5 w-3.5" /> {t("Update Harga")}
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => setTradeHistoryAssetId(a.id)}>
-                      <History className="mr-1 h-3.5 w-3.5" /> Riwayat
+                      <History className="mr-1 h-3.5 w-3.5" /> {t("Riwayat")}
                     </Button>
                   </div>
                 )}
@@ -631,7 +633,7 @@ export default function InvestmentPage() {
                 )}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
                   <div>
-                    <p className="text-xs text-muted-foreground">Qty Dipegang</p>
+                    <p className="text-xs text-muted-foreground">{t("Qty Dipegang")}</p>
                     <p className="font-medium">{formatQtyHeld(a)}</p>
                   </div>
                   <div>
@@ -639,18 +641,18 @@ export default function InvestmentPage() {
                     <p className="font-medium">{formatIDRPrice(a.avgBuyPrice)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Total Modal</p>
+                    <p className="text-xs text-muted-foreground">{t("Total Modal")}</p>
                     <p className="font-medium">{formatIDR(a.totalCost)}</p>
                   </div>
                   {a.currentValue && (
                     <div>
-                      <p className="text-xs text-muted-foreground">Nilai Kini</p>
+                      <p className="text-xs text-muted-foreground">{t("Nilai Kini")}</p>
                       <p className="font-medium">{formatIDR(a.currentValue)}</p>
                     </div>
                   )}
                   {a.unrealizedPnl && (
                     <div>
-                      <p className="text-xs text-muted-foreground">Unrealized P&L</p>
+                      <p className="text-xs text-muted-foreground">{t("Unrealized P&L")}</p>
                       <p className={cn("font-medium", pnlColor(a.unrealizedPnl))}>
                         {parseFloat(a.unrealizedPnl) >= 0 ? "+" : ""}{formatIDR(a.unrealizedPnl)}
                         {a.unrealizedPct && <span className="ml-1 text-xs">({a.unrealizedPct}%)</span>}
@@ -664,7 +666,7 @@ export default function InvestmentPage() {
                     </div>
                   )}
                   <div>
-                    <p className="text-xs text-muted-foreground">Total Dividen</p>
+                    <p className="text-xs text-muted-foreground">{t("Total Dividen")}</p>
                     <p className="font-medium text-green-600">{formatIDR(a.totalDividend)}</p>
                   </div>
                 </div>
@@ -679,10 +681,10 @@ export default function InvestmentPage() {
             </span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                Sebelumnya
+                {t("Sebelumnya")}
               </Button>
               <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-                Berikutnya
+                {t("Berikutnya")}
               </Button>
             </div>
           </div>
@@ -696,55 +698,55 @@ export default function InvestmentPage() {
           <DialogHeader>
             <DialogTitle>{editAssetId ? "Ubah Aset Investasi" : "Tambah Aset Investasi"}</DialogTitle>
             <DialogDescription>
-              Nama aset = nama lengkap yang mudah dibaca. Kode = ticker/simbol singkat (opsional, tapi disarankan untuk saham).
+              {t("Nama aset = nama lengkap yang mudah dibaca. Kode = ticker/simbol singkat (opsional, tapi disarankan untuk saham).")}
               {editAssetId && (parseFloat(assets.find((x) => x.id === editAssetId)?.qtyHeld ?? "0") || 0) > 0 && (
                 <span className="block mt-1 text-amber-700 dark:text-amber-400">
-                  Dompet tidak dapat diubah jika aset sudah memiliki transaksi beli/jual.
+                  {t("Dompet tidak dapat diubah jika aset sudah memiliki transaksi beli/jual.")}
                 </span>
               )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Nama Aset</Label>
+              <Label>{t("Nama Aset")}</Label>
               <Input
                 value={assetForm.name}
                 onChange={(e) => setAssetForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder={fieldHints.namePh}
+                placeholder={t(fieldHints.namePh)}
               />
-              <p className="mt-1 text-xs text-muted-foreground">{fieldHints.hint}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t(fieldHints.hint)}</p>
             </div>
             <div>
-              <Label>Kode / Ticker (opsional)</Label>
+              <Label>{t("Kode / Ticker (opsional)")}</Label>
               <Input
                 value={assetForm.ticker}
                 onChange={(e) => setAssetForm((f) => ({ ...f, ticker: e.target.value }))}
-                placeholder={fieldHints.tickerPh}
+                placeholder={t(fieldHints.tickerPh)}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Tipe</Label>
+                <Label>{t("Tipe")}</Label>
                 <select
                   className="w-full rounded-md border px-3 py-2 text-sm"
                   value={assetForm.type}
                   onChange={(e) => onAssetTypeChange(e.target.value)}
                 >
-                  <option value="stock">Saham</option>
-                  <option value="crypto">Kripto</option>
-                  <option value="gold">Emas</option>
-                  <option value="mutual_fund">Reksa Dana</option>
-                  <option value="other">Lainnya</option>
+                  <option value="stock">{t("Saham")}</option>
+                  <option value="crypto">{t("Kripto")}</option>
+                  <option value="gold">{t("Emas")}</option>
+                  <option value="mutual_fund">{t("Reksa Dana")}</option>
+                  <option value="other">{t("Lainnya")}</option>
                 </select>
               </div>
               <div>
-                <Label>Satuan kepemilikan</Label>
+                <Label>{t("Satuan kepemilikan")}</Label>
                 <Select
                   value={unitUsesCustom ? CUSTOM_UNIT : assetForm.unitName}
                   onValueChange={onUnitPresetChange}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Pilih satuan" />
+                    <SelectValue placeholder={t("Pilih satuan")} />
                   </SelectTrigger>
                   <SelectContent>
                     {unitPresets.map((p) => (
@@ -752,7 +754,7 @@ export default function InvestmentPage() {
                         {p.label}
                       </SelectItem>
                     ))}
-                    <SelectItem value={CUSTOM_UNIT}>Lainnya…</SelectItem>
+                    <SelectItem value={CUSTOM_UNIT}>{t("Lainnya…")}</SelectItem>
                   </SelectContent>
                 </Select>
                 {unitUsesCustom && (
@@ -769,10 +771,10 @@ export default function InvestmentPage() {
               </div>
             </div>
             <div>
-              <Label>Dompet</Label>
+              <Label>{t("Dompet")}</Label>
               {walletOptions.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Buat dompet terlebih dahulu di menu Dompet sebelum menambah aset.
+                  {t("Buat dompet terlebih dahulu di menu Dompet sebelum menambah aset.")}
                 </p>
               ) : (
                 <Select
@@ -783,11 +785,11 @@ export default function InvestmentPage() {
                   disabled={!!editAssetId && (parseFloat(assets.find((x) => x.id === editAssetId)?.qtyHeld ?? "0") || 0) > 0}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Pilih dompet" />
+                    <SelectValue placeholder={t("Pilih dompet")} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NO_WALLET} disabled>
-                      Pilih dompet
+                      {t("Pilih dompet")}
                     </SelectItem>
                     {walletOptions.map((w) => (
                       <SelectItem key={w.id} value={w.id}>
@@ -803,12 +805,12 @@ export default function InvestmentPage() {
               <Input
                 value={assetForm.notes}
                 onChange={(e) => setAssetForm((f) => ({ ...f, notes: e.target.value }))}
-                placeholder="Catatan internal"
+                placeholder={t("Catatan internal")}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeAssetDialog}>Batal</Button>
+            <Button variant="outline" onClick={closeAssetDialog}>{t("Batal")}</Button>
             <Button
               onClick={() => (editAssetId ? updateAssetMut.mutate() : createAssetMut.mutate())}
               disabled={
@@ -827,23 +829,23 @@ export default function InvestmentPage() {
       <AlertDialog open={!!deleteAssetId} onOpenChange={(open) => !open && setDeleteAssetId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus aset?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Hapus aset?")}</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteTarget
                 ? `Aset "${deleteTarget.name}" akan dihapus dari daftar.`
                 : "Aset akan dihapus dari daftar."}
               {(parseFloat(deleteTarget?.qtyHeld ?? "0") || 0) > 0 ? (
                 <span className="block mt-2 text-destructive">
-                  Aset masih memiliki kepemilikan. Hapus transaksi beli/jual lewat tombol <strong>Riwayat</strong> pada kartu aset,
+                  Aset masih memiliki kepemilikan. Hapus transaksi beli/jual lewat tombol <strong>{t("Riwayat")}</strong> pada kartu aset,
                   atau catat penjualan hingga qty menjadi 0.
                 </span>
               ) : (
-                <span className="block mt-2">Riwayat harga tetap tersimpan di database; aset tidak lagi muncul di portofolio.</span>
+                <span className="block mt-2">{t("Riwayat harga tetap tersimpan di database; aset tidak lagi muncul di portofolio.")}</span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>{t("Batal")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={
@@ -852,7 +854,7 @@ export default function InvestmentPage() {
               }
               onClick={() => deleteAssetId && deleteAssetMut.mutate(deleteAssetId)}
             >
-              Hapus
+              {t("Hapus")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -875,7 +877,7 @@ export default function InvestmentPage() {
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Jumlah dividen (Rp)</Label>
+              <Label>{t("Jumlah dividen (Rp)")}</Label>
               <Input
                 type="text"
                 inputMode="decimal"
@@ -887,24 +889,24 @@ export default function InvestmentPage() {
               />
             </div>
             <div>
-              <Label>Tanggal</Label>
+              <Label>{t("Tanggal")}</Label>
               <DatePicker
                 value={dividendForm.transactionDate}
                 onChange={(transactionDate) => setDividendForm((f) => ({ ...f, transactionDate }))}
               />
             </div>
             <div>
-              <Label>Keterangan (opsional)</Label>
+              <Label>{t("Keterangan (opsional)")}</Label>
               <Input
                 value={dividendForm.description}
                 onChange={(e) => setDividendForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="mis. Dividen interim TOTL"
+                placeholder={t("mis. Dividen interim TOTL")}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRecordDividendAssetId(null)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button
               onClick={() => recordDividendMut.mutate()}
@@ -956,10 +958,10 @@ export default function InvestmentPage() {
                 onChange={(e) => setTradeForm((f) => ({ ...f, pricePerUnit: e.target.value }))}
                 placeholder="mis. 1191,69"
               />
-              <p className="mt-1 text-xs text-muted-foreground">Boleh pakai koma atau titik desimal.</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t("Boleh pakai koma atau titik desimal.")}</p>
             </div>
             <div className="space-y-2">
-              <Label>Biaya transaksi</Label>
+              <Label>{t("Biaya transaksi")}</Label>
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -967,7 +969,7 @@ export default function InvestmentPage() {
                   size="sm"
                   onClick={() => setTradeForm((f) => ({ ...f, feeMode: "percent" }))}
                 >
-                  Persen (%)
+                  {t("Persen (%)")}
                 </Button>
                 <Button
                   type="button"
@@ -975,7 +977,7 @@ export default function InvestmentPage() {
                   size="sm"
                   onClick={() => setTradeForm((f) => ({ ...f, feeMode: "fixed" }))}
                 >
-                  Nominal (Rp)
+                  {t("Nominal (Rp)")}
                 </Button>
               </div>
               {tradeForm.feeMode === "percent" ? (
@@ -1010,7 +1012,7 @@ export default function InvestmentPage() {
               )}
             </div>
             <div>
-              <Label>Tanggal</Label>
+              <Label>{t("Tanggal")}</Label>
               <DatePicker
                 value={tradeForm.transactionDate}
                 onChange={(transactionDate) => setTradeForm((f) => ({ ...f, transactionDate }))}
@@ -1033,7 +1035,7 @@ export default function InvestmentPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRecordTrade(null)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button
               onClick={() => recordTradeMut.mutate()}
@@ -1059,43 +1061,43 @@ export default function InvestmentPage() {
           <DialogHeader>
             <DialogTitle>Riwayat Transaksi — {historyAsset?.name}</DialogTitle>
             <DialogDescription>
-              Hapus transaksi beli/jual yang salah agar kepemilikan dan saldo dompet kembali benar. Setelah qty 0, aset bisa dihapus.
+              {t("Hapus transaksi beli/jual yang salah agar kepemilikan dan saldo dompet kembali benar. Setelah qty 0, aset bisa dihapus.")}
             </DialogDescription>
           </DialogHeader>
           {tradesLoading ? (
-            <p className="text-sm text-muted-foreground">Memuat...</p>
+            <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
           ) : (tradesData?.items ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">Belum ada transaksi.</p>
+            <p className="text-sm text-muted-foreground py-4 text-center">{t("Belum ada transaksi.")}</p>
           ) : (
             <ul className="space-y-2">
-              {(tradesData?.items ?? []).map((t) => (
-                <li key={t.id} className="flex items-start justify-between gap-2 rounded-md border p-3 text-sm">
+              {(tradesData?.items ?? []).map((txn) => (
+                <li key={txn.id} className="flex items-start justify-between gap-2 rounded-md border p-3 text-sm">
                   <div className="min-w-0">
-                    <p className="font-medium">{tradeTypeLabel(t.type)}</p>
-                    <p className="text-xs text-muted-foreground">{formatFinanceDate(t.transactionDate, reportingTimezone)}</p>
-                    {t.type !== "dividend" && (
+                    <p className="font-medium">{tradeTypeLabel(txn.type, t)}</p>
+                    <p className="text-xs text-muted-foreground">{formatFinanceDate(txn.transactionDate, reportingTimezone)}</p>
+                    {txn.type !== "dividend" && (
                       <p className="text-xs mt-1">
-                        {parseFloat(t.quantity).toLocaleString("id-ID")} {historyAsset?.unitName ?? "unit"}
+                        {parseFloat(txn.quantity).toLocaleString("id-ID")} {historyAsset?.unitName ?? "unit"}
                         {" × "}
-                        {formatIDRPrice(t.pricePerUnit)} / {historyAsset?.priceUnitName ?? "unit"}
-                        {parseFloat(t.fee) > 0 && (
-                          <span> · biaya {formatIDR(t.fee)}</span>
+                        {formatIDRPrice(txn.pricePerUnit)} / {historyAsset?.priceUnitName ?? "unit"}
+                        {parseFloat(txn.fee) > 0 && (
+                          <span> · {t("biaya {fee}", { fee: formatIDR(txn.fee) })}</span>
                         )}
                       </p>
                     )}
-                    <p className="text-xs font-medium mt-0.5">{formatIDR(t.amount)}</p>
-                    {t.status === "pending_approval" && (
-                      <p className="text-xs text-amber-600">Menunggu persetujuan</p>
+                    <p className="text-xs font-medium mt-0.5">{formatIDR(txn.amount)}</p>
+                    {txn.status === "pending_approval" && (
+                      <p className="text-xs text-amber-600">{t("Menunggu persetujuan")}</p>
                     )}
                   </div>
-                  {canManage && t.status !== "pending_approval" && (
+                  {canManage && txn.status !== "pending_approval" && (
                     <Button
                       variant="ghost"
                       size="icon"
                       className="shrink-0 text-destructive hover:text-destructive"
                       onClick={() =>
                         tradeHistoryAssetId &&
-                        setDeleteTradeTarget({ assetId: tradeHistoryAssetId, txnId: t.id })
+                        setDeleteTradeTarget({ assetId: tradeHistoryAssetId, txnId: txn.id })
                       }
                     >
                       <Trash2 className="h-4 w-4" />
@@ -1107,7 +1109,7 @@ export default function InvestmentPage() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setTradeHistoryAssetId(null)}>
-              Tutup
+              {t("Tutup")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1116,13 +1118,13 @@ export default function InvestmentPage() {
       <AlertDialog open={!!deleteTradeTarget} onOpenChange={(open) => !open && setDeleteTradeTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus transaksi?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Hapus transaksi?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Transaksi akan dihapus dan saldo dompet disesuaikan. Kepemilikan aset dihitung ulang.
+              {t("Transaksi akan dihapus dan saldo dompet disesuaikan. Kepemilikan aset dihitung ulang.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>{t("Batal")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={deleteTradeMut.isPending}
@@ -1130,7 +1132,7 @@ export default function InvestmentPage() {
                 deleteTradeTarget && deleteTradeMut.mutate(deleteTradeTarget)
               }
             >
-              Hapus
+              {t("Hapus")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1140,8 +1142,8 @@ export default function InvestmentPage() {
       <Dialog open={!!openUpdatePrice} onOpenChange={() => setOpenUpdatePrice(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Update Harga Pasar</DialogTitle>
-            <DialogDescription>Masukkan harga pasar terbaru untuk menghitung nilai portofolio.</DialogDescription>
+            <DialogTitle>{t("Update Harga Pasar")}</DialogTitle>
+            <DialogDescription>{t("Masukkan harga pasar terbaru untuk menghitung nilai portofolio.")}</DialogDescription>
           </DialogHeader>
           <div>
             <Label>
@@ -1154,22 +1156,22 @@ export default function InvestmentPage() {
               onChange={(e) => setNewPrice(e.target.value)}
               placeholder="mis. 1055,50"
             />
-            <p className="mt-1 text-xs text-muted-foreground">Boleh pakai koma atau titik desimal.</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("Boleh pakai koma atau titik desimal.")}</p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenUpdatePrice(null)}>Batal</Button>
+            <Button variant="outline" onClick={() => setOpenUpdatePrice(null)}>{t("Batal")}</Button>
             <Button
               onClick={() => {
                 const p = parseDecimalInput(newPrice);
                 if (!Number.isFinite(p) || p <= 0) {
-                  toast.error("Harga tidak valid");
+                  toast.error(t("Harga tidak valid"));
                   return;
                 }
                 updatePriceMut.mutate({ assetId: openUpdatePrice!, price: p });
               }}
               disabled={!newPrice || updatePriceMut.isPending || !(parseDecimalInput(newPrice) > 0)}
             >
-              Simpan Harga
+              {t("Simpan Harga")}
             </Button>
           </DialogFooter>
         </DialogContent>

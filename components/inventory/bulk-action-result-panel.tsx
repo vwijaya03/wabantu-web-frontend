@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { useLocale } from "@/lib/i18n/locale";
 import {
   InventoryTable,
   InventoryTableBody,
@@ -29,6 +30,7 @@ export function BulkActionResultPanel({
   failed: number;
   results: BulkActionResultLine[];
 }) {
+  const { t } = useLocale();
   if (results.length === 0) return null;
 
   return (
@@ -41,9 +43,9 @@ export function BulkActionResultPanel({
       <InventoryTable>
         <InventoryTableHeader>
           <InventoryTableRow>
-            <InventoryTableHead>Item</InventoryTableHead>
-            <InventoryTableHead>Hasil</InventoryTableHead>
-            <InventoryTableHead>Catatan</InventoryTableHead>
+            <InventoryTableHead>{t("Item")}</InventoryTableHead>
+            <InventoryTableHead>{t("Hasil")}</InventoryTableHead>
+            <InventoryTableHead>{t("Catatan")}</InventoryTableHead>
           </InventoryTableRow>
         </InventoryTableHeader>
         <InventoryTableBody>

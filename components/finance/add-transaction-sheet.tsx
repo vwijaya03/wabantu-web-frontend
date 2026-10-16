@@ -39,6 +39,7 @@ import {
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 interface Props {
   open: boolean;
@@ -83,6 +84,7 @@ function buildCategoryGroups(categories: Category[]) {
 }
 
 export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantKey = useTenantKey();
   const canManage = canPerformOwnerActions(user);
@@ -167,11 +169,11 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
 
   const handleSubmit = async () => {
     if (!form.amount || !form.walletId) {
-      toast.error("Jumlah dan dompet wajib diisi");
+      toast.error(t("Jumlah dan dompet wajib diisi"));
       return;
     }
     if (isTransfer && !form.toWalletId) {
-      toast.error("Pilih dompet tujuan untuk transfer");
+      toast.error(t("Pilih dompet tujuan untuk transfer"));
       return;
     }
     setLoading(true);
@@ -187,7 +189,7 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
         currency: "IDR",
         tags: [],
       });
-      toast.success("Transaksi berhasil dicatat");
+      toast.success(t("Transaksi berhasil dicatat"));
       onCreated?.();
       onOpenChange(false);
       reset();
@@ -202,26 +204,28 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Catat Transaksi</SheetTitle>
+          <SheetTitle>{t("Catat Transaksi")}</SheetTitle>
           <SheetDescription>
-            Pemasukan, pengeluaran, dan transfer operasional. Beli/jual aset dan dividen dicatat di menu Investasi & Aset.
+            {t(
+              "Pemasukan, pengeluaran, dan transfer operasional. Beli/jual aset dan dividen dicatat di menu Investasi & Aset.",
+            )}
           </SheetDescription>
         </SheetHeader>
 
         <div className="mt-4 space-y-4">
           <div className="flex flex-wrap gap-2">
-            {quickTypes.map((t) => (
+            {quickTypes.map((txnType) => (
               <button
-                key={t.code}
+                key={txnType.code}
                 type="button"
                 className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                  effectiveTypeCode === t.code
+                  effectiveTypeCode === txnType.code
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
-                onClick={() => setForm((f) => ({ ...f, type: t.code, toWalletId: "", categoryId: "" }))}
+                onClick={() => setForm((f) => ({ ...f, type: txnType.code, toWalletId: "", categoryId: "" }))}
               >
-                {t.label}
+                {txnType.label}
               </button>
             ))}
             {moreTypes.length > 0 && (
@@ -233,15 +237,15 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
                 }}
               >
                 <SelectTrigger className="h-8 w-auto rounded-full px-3 text-sm">
-                  <SelectValue placeholder="Lainnya…" />
+                  <SelectValue placeholder={t("Lainnya…")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={MORE_TYPE_NONE} className="text-muted-foreground">
-                    Lainnya…
+                    {t("Lainnya…")}
                   </SelectItem>
-                  {moreTypes.map((t) => (
-                    <SelectItem key={t.code} value={t.code}>
-                      {t.label}
+                  {moreTypes.map((txnType) => (
+                    <SelectItem key={txnType.code} value={txnType.code}>
+                      {txnType.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -250,7 +254,7 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
           </div>
 
           <div>
-            <Label>Jumlah (Rp)</Label>
+            <Label>{t("Jumlah (Rp)")}</Label>
             <Input
               type="number"
               inputMode="numeric"
@@ -263,13 +267,13 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
           </div>
 
           <div>
-            <Label>Dompet {isTransfer ? "Asal" : ""}</Label>
+            <Label>{isTransfer ? t("Dompet Asal") : t("Dompet")}</Label>
             <Select
               value={form.walletId || NO_WALLET}
               onValueChange={(v) => setForm((f) => ({ ...f, walletId: v === NO_WALLET ? "" : v }))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Pilih dompet" />
+                <SelectValue placeholder={t("Pilih dompet")} />
               </SelectTrigger>
               <SelectContent>
                 {wallets.map((w) => (
@@ -283,13 +287,13 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
 
           {isTransfer && (
             <div>
-              <Label>Dompet Tujuan</Label>
+              <Label>{t("Dompet Tujuan")}</Label>
               <Select
                 value={form.toWalletId || NO_WALLET}
                 onValueChange={(v) => setForm((f) => ({ ...f, toWalletId: v === NO_WALLET ? "" : v }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih dompet tujuan" />
+                  <SelectValue placeholder={t("Pilih dompet tujuan")} />
                 </SelectTrigger>
                 <SelectContent>
                   {wallets.filter((w) => w.id !== form.walletId).map((w) => (
@@ -302,7 +306,7 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
 
           {!isTransfer && (
             <div>
-              <Label>Kategori (opsional)</Label>
+              <Label>{t("Kategori (opsional)")}</Label>
               <Select
                 value={form.categoryId || NO_CATEGORY}
                 onValueChange={(v) =>
@@ -310,10 +314,10 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih kategori" />
+                  <SelectValue placeholder={t("Pilih kategori")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NO_CATEGORY}>— Tanpa kategori —</SelectItem>
+                  <SelectItem value={NO_CATEGORY}>{t("— Tanpa kategori —")}</SelectItem>
                   {categoryGroups.map(({ parent, children }) => (
                     <SelectGroup key={parent.id}>
                       <SelectLabel>{parent.name}</SelectLabel>
@@ -330,7 +334,7 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
           )}
 
           <div>
-            <Label>Tanggal</Label>
+            <Label>{t("Tanggal")}</Label>
             <DatePicker
               value={form.transactionDate}
               onChange={(transactionDate) => setForm((f) => ({ ...f, transactionDate }))}
@@ -338,11 +342,11 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
           </div>
 
           <div>
-            <Label>Keterangan (opsional)</Label>
+            <Label>{t("Keterangan (opsional)")}</Label>
             <Textarea
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              placeholder="mis. Gaji karyawan Budi, Bayar listrik"
+              placeholder={t("mis. Gaji karyawan Budi, Bayar listrik")}
               rows={2}
             />
           </div>
@@ -350,10 +354,10 @@ export function AddTransactionSheet({ open, onOpenChange, onCreated }: Props) {
 
         <SheetFooter className="mt-6 flex-row gap-3">
           <Button variant="outline" className="flex-1" onClick={() => { onOpenChange(false); reset(); }}>
-            Batal
+            {t("Batal")}
           </Button>
           <Button className="flex-1" onClick={handleSubmit} disabled={loading || !selectedType}>
-            {loading ? "Menyimpan..." : "Simpan Transaksi"}
+            {loading ? t("Menyimpan...") : t("Simpan Transaksi")}
           </Button>
         </SheetFooter>
       </SheetContent>

@@ -11,17 +11,18 @@ import { tenantContextKey } from "@/lib/auth/tenant-context";
 import { eventExportJobsKey } from "@/lib/query/events-query-keys";
 import { downloadDataUrl } from "@/lib/download";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale";
 
-function exportKindLabel(kind: EventExportKind) {
+function exportKindLabel(kind: EventExportKind, t: (source: string) => string) {
   switch (kind) {
     case "staff_sheet":
-      return "Lembar operasional staf (Excel)";
+      return t("Lembar operasional staf (Excel)");
     case "staff_list":
-      return "Daftar staf & relawan (Excel)";
+      return t("Daftar staf & relawan (Excel)");
     case "patients_xlsx":
-      return "Daftar pasien (Excel)";
+      return t("Daftar pasien (Excel)");
     default:
-      return "Daftar pasien (PDF)";
+      return t("Daftar pasien (PDF)");
   }
 }
 
@@ -33,16 +34,16 @@ function exportFormatLabel(job: EventExportJob) {
   return "PDF";
 }
 
-function exportStatusLabel(status: string) {
+function exportStatusLabel(status: string, t: (source: string) => string) {
   switch (status) {
     case "done":
-      return "Selesai";
+      return t("Selesai");
     case "failed":
-      return "Gagal";
+      return t("Gagal");
     case "processing":
-      return "Memproses";
+      return t("Memproses");
     case "queued":
-      return "Antrian";
+      return t("Antrian");
     default:
       return status;
   }
@@ -64,6 +65,8 @@ export function EventExportJobsPanel({
   kinds?: EventExportKind[];
   className?: string;
 }) {
+  const { t, locale } = useLocale();
+  const dateLocale = locale === "en" ? "en-US" : "id-ID";
   const { user } = useAuth();
   const tenantKey = tenantContextKey(user);
   const { data, refetch, isFetching } = useQuery({
@@ -81,17 +84,15 @@ export function EventExportJobsPanel({
   return (
     <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-        <CardTitle className="text-base">Riwayat export</CardTitle>
+        <CardTitle className="text-base">{t("Riwayat export")}</CardTitle>
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
           <RefreshCw className={cn("mr-2 h-3.5 w-3.5", isFetching && "animate-spin")} />
-          Refresh
+          {t("Muat ulang")}
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Belum ada export. Generate dari tab Pasien atau Staf — file siap unduh akan muncul di sini.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("Belum ada export. Generate dari tab Pasien atau Staf — file siap unduh akan muncul di sini.")}</p>
         ) : null}
         {items.map((j) => (
           <div key={j.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
@@ -102,10 +103,12 @@ export function EventExportJobsPanel({
                 <FileText className="h-4 w-4 text-muted-foreground" />
               )}
               <div>
-                <p className="text-sm font-medium">{exportKindLabel(j.kind)}</p>
+                <p className="text-sm font-medium">{exportKindLabel(j.kind, t)}</p>
                 <p className="text-xs text-muted-foreground">
-                  {new Date(j.createdAt).toLocaleString("id-ID")}
-                  {j.rowCount != null && j.status === "done" ? ` · ${j.rowCount} baris` : ""}
+                  {new Date(j.createdAt).toLocaleString(dateLocale)}
+                  {j.rowCount != null && j.status === "done"
+                    ? ` · ${t("{count} baris", { count: j.rowCount })}`
+                    : ""}
                 </p>
               </div>
             </div>
@@ -116,7 +119,7 @@ export function EventExportJobsPanel({
               <Badge
                 variant={j.status === "done" ? "default" : j.status === "failed" ? "destructive" : "secondary"}
               >
-                {exportStatusLabel(j.status)}
+                {exportStatusLabel(j.status, t)}
               </Badge>
               {j.errorMsg && j.status !== "done" ? (
                 <p

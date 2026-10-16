@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import type { AITriageRepairPlan } from "@/lib/api/ai-triage";
+import { useLocale } from "@/lib/i18n/locale";
 
 export function RepairPreviewCard({
   plan,
@@ -14,9 +15,10 @@ export function RepairPreviewCard({
   onApply: () => void;
   busy?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <div className="space-y-3 rounded-md border p-3 text-sm">
-      <p className="font-medium">Pratinjau — belum mengubah database</p>
+      <p className="font-medium">{t("Pratinjau — belum mengubah database")}</p>
       <p>
         Operasi <code>{plan.operation}</code> · status {plan.status}
       </p>

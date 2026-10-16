@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { ImageUp, MinusCircle, PlusCircle, Sparkles, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useLocale } from "@/lib/i18n/locale";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 function applyWalletCategoryHints(
@@ -61,6 +62,7 @@ function applyWalletCategoryHints(
 }
 
 export default function TransactionImportImagePage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const [files, setFiles] = useState<File[]>([]);
@@ -97,8 +99,13 @@ export default function TransactionImportImagePage() {
   const quotaBanner =
     preview?.quotaNotice ??
     (tokenQuota
-      ? `Setiap penggunaan fitur AI (termasuk import transaksi dari gambar) akan mengurangi kuota token AI bulanan toko Anda. Sisa kuota token bulan ini: ${tokenQuota.remaining} dari ${tokenQuota.limit}.`
-      : "Setiap penggunaan fitur AI (termasuk import transaksi dari gambar) akan mengurangi kuota token AI bulanan toko Anda.");
+      ? t(
+          "Setiap penggunaan fitur AI (termasuk import transaksi dari gambar) akan mengurangi kuota token AI bulanan toko Anda. Sisa kuota token bulan ini: {remaining} dari {limit}.",
+          { remaining: tokenQuota.remaining, limit: tokenQuota.limit },
+        )
+      : t(
+          "Setiap penggunaan fitur AI (termasuk import transaksi dari gambar) akan mengurangi kuota token AI bulanan toko Anda.",
+        ));
 
   const previewMut = useMutation({
     mutationFn: () => transactionImageApi.preview(files),
@@ -106,9 +113,17 @@ export default function TransactionImportImagePage() {
       setPreview(d);
       const enriched = applyWalletCategoryHints(d.items, wallets, categories);
       setItems(enriched.map((it) => ({ ...it })));
-      const imgPart =
-        d.imagesProcessed && d.imagesProcessed > 1 ? ` dari ${d.imagesProcessed} gambar` : "";
-      toast.success(`Terdeteksi ${d.items.length} transaksi${imgPart} (pakai ${d.tokensUsed} token)`);
+      const imagesPart =
+        d.imagesProcessed && d.imagesProcessed > 1
+          ? t(" dari {n} gambar", { n: d.imagesProcessed })
+          : "";
+      toast.success(
+        t("Terdeteksi {count} transaksi{images} (pakai {tokens} token)", {
+          count: d.items.length,
+          images: imagesPart,
+          tokens: d.tokensUsed,
+        }),
+      );
       d.warnings?.forEach((w) => toast.warning(w));
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -167,50 +182,50 @@ export default function TransactionImportImagePage() {
   return (
     <>
       <PageHeader
-        title="Import transaksi dari gambar"
-        description="Upload screenshot daftar transaksi (mis. halaman Transaksi WABantu). AI membaca baris, jenis masuk/keluar, dan nominal — Anda konfirmasi sebelum disimpan."
+        title={t("Import transaksi dari gambar")}
+        description={t("Upload screenshot daftar transaksi (mis. halaman Transaksi WABantu). AI membaca baris, jenis masuk/keluar, dan nominal — Anda konfirmasi sebelum disimpan.")}
       />
       <p className="mb-4 text-sm">
         <Link
           href="/dashboard/finance/transactions"
           className="text-primary underline-offset-4 hover:underline"
         >
-          ← Kembali ke transaksi
+          {t("← Kembali ke transaksi")}
         </Link>
       </p>
 
       <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-        <p className="font-medium">Peringatan kuota AI</p>
+        <p className="font-medium">{t("Peringatan kuota AI")}</p>
         <p className="mt-1">{quotaBanner}</p>
         {quotaExhausted ? (
           <p className="mt-2 font-medium text-red-700 dark:text-red-300">
-            Kuota token habis — proses gambar dengan AI tidak dapat dilanjutkan.
+            {t("Kuota token habis — proses gambar dengan AI tidak dapat dilanjutkan.")}
           </p>
         ) : null}
       </div>
 
       <Card className="mb-6 border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Cara AI membedakan uang masuk vs keluar</CardTitle>
+          <CardTitle className="text-base">{t("Cara AI membedakan uang masuk vs keluar")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>
-            <span className="font-medium text-green-700 dark:text-green-400">Pemasukan</span>: ikon
+            <span className="font-medium text-green-700 dark:text-green-400">{t("Pemasukan")}</span>: ikon
             hijau / tanda <strong>+</strong> / nominal hijau / label &quot;Pemasukan&quot;.
           </p>
           <p>
-            <span className="font-medium text-red-700 dark:text-red-400">Pengeluaran</span>: ikon
+            <span className="font-medium text-red-700 dark:text-red-400">{t("Pengeluaran")}</span>: ikon
             merah / tanda <strong>−</strong> / nominal merah / label &quot;Pengeluaran&quot;.
           </p>
-          <p>Screenshot mutasi bank: CR/kredit biasanya masuk, DB/debit biasanya keluar (sudut pandang Anda).</p>
-          <p className="text-xs">Periksa kolom jenis di pratinjau — Anda bisa mengubah sebelum simpan.</p>
+          <p>{t("Screenshot mutasi bank: CR/kredit biasanya masuk, DB/debit biasanya keluar (sudut pandang Anda).")}</p>
+          <p className="text-xs">{t("Periksa kolom jenis di pratinjau — Anda bisa mengubah sebelum simpan.")}</p>
         </CardContent>
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>1. Upload screenshot</CardTitle>
+            <CardTitle>{t("1. Upload screenshot")}</CardTitle>
             <CardDescription>
               JPG/PNG/WEBP · maks. {CATALOG_IMAGE_MAX_MB} MB per file · hingga {CATALOG_IMAGE_MAX_FILES}{" "}
               gambar · total maks. {CATALOG_IMAGE_MAX_BATCH_MB} MB.
@@ -244,7 +259,7 @@ export default function TransactionImportImagePage() {
               ) : (
                 <Upload className="h-9 w-9 text-muted-foreground" aria-hidden />
               )}
-              <span className="text-sm font-medium">Pilih screenshot daftar transaksi</span>
+              <span className="text-sm font-medium">{t("Pilih screenshot daftar transaksi")}</span>
             </label>
 
             {files.length > 0 && !fileError ? (
@@ -284,7 +299,7 @@ export default function TransactionImportImagePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>2. Konfirmasi & simpan</CardTitle>
+            <CardTitle>{t("2. Konfirmasi & simpan")}</CardTitle>
             <CardDescription>
               Centang baris yang benar, perbaiki dompet/kategori/tanggal, lalu simpan ke Catat
               Transaksi.
@@ -292,11 +307,14 @@ export default function TransactionImportImagePage() {
           </CardHeader>
           <CardContent>
             {!preview ? (
-              <p className="text-sm text-muted-foreground">Proses gambar di langkah 1 terlebih dahulu.</p>
+              <p className="text-sm text-muted-foreground">{t("Proses gambar di langkah 1 terlebih dahulu.")}</p>
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  {includedCount} dari {items.length} transaksi akan disimpan
+                  {t("{included} dari {total} transaksi akan disimpan", {
+                    included: includedCount,
+                    total: items.length,
+                  })}
                 </p>
                 <Button
                   type="button"
@@ -308,7 +326,7 @@ export default function TransactionImportImagePage() {
                   {commitMut.isPending ? "Menyimpan…" : "Simpan transaksi terpilih"}
                 </Button>
                 {includedCount > 0 && items.some((i) => i.include && !i.walletId) ? (
-                  <p className="text-xs text-destructive">Setiap baris tercentang perlu dompet.</p>
+                  <p className="text-xs text-destructive">{t("Setiap baris tercentang perlu dompet.")}</p>
                 ) : null}
               </div>
             )}
@@ -319,7 +337,7 @@ export default function TransactionImportImagePage() {
       {items.length > 0 ? (
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Pratinjau transaksi</CardTitle>
+            <CardTitle>{t("Pratinjau transaksi")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {items.map((row, idx) => {
@@ -337,7 +355,7 @@ export default function TransactionImportImagePage() {
                       type="checkbox"
                       checked={row.include}
                       onChange={(e) => updateItem(idx, { include: e.target.checked })}
-                      aria-label="Sertakan"
+                      aria-label={t("Sertakan")}
                     />
                     {isIncome ? (
                       <PlusCircle className="h-5 w-5 text-green-600" aria-hidden />
@@ -346,7 +364,7 @@ export default function TransactionImportImagePage() {
                     )}
                   </div>
                   <div className="md:col-span-2">
-                    <Label className="text-xs">Jenis</Label>
+                    <Label className="text-xs">{t("Jenis")}</Label>
                     <Select
                       value={row.type}
                       onValueChange={(v) =>
@@ -360,20 +378,20 @@ export default function TransactionImportImagePage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="income">Pemasukan</SelectItem>
-                        <SelectItem value="expense">Pengeluaran</SelectItem>
+                        <SelectItem value="income">{t("Pemasukan")}</SelectItem>
+                        <SelectItem value="expense">{t("Pengeluaran")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="md:col-span-3">
-                    <Label className="text-xs">Deskripsi</Label>
+                    <Label className="text-xs">{t("Deskripsi")}</Label>
                     <Input
                       value={row.description}
                       onChange={(e) => updateItem(idx, { description: e.target.value })}
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <Label className="text-xs">Jumlah (IDR)</Label>
+                    <Label className="text-xs">{t("Jumlah (IDR)")}</Label>
                     <Input
                       type="number"
                       value={row.amount || ""}
@@ -388,14 +406,14 @@ export default function TransactionImportImagePage() {
                     </p>
                   </div>
                   <div className="md:col-span-2">
-                    <Label className="text-xs">Tanggal</Label>
+                    <Label className="text-xs">{t("Tanggal")}</Label>
                     <DatePicker
                       value={row.transactionDate}
                       onChange={(transactionDate) => updateItem(idx, { transactionDate })}
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <Label className="text-xs">Dompet</Label>
+                    <Label className="text-xs">{t("Dompet")}</Label>
                     <Select
                       value={row.walletId || ""}
                       onValueChange={(v) => updateItem(idx, { walletId: v })}
@@ -413,7 +431,7 @@ export default function TransactionImportImagePage() {
                     </Select>
                   </div>
                   <div className="md:col-span-12 md:col-start-2">
-                    <Label className="text-xs">Kategori</Label>
+                    <Label className="text-xs">{t("Kategori")}</Label>
                     <Select
                       value={row.categoryId || ""}
                       onValueChange={(v) => updateItem(idx, { categoryId: v })}
@@ -443,7 +461,9 @@ export default function TransactionImportImagePage() {
                     ) : null}
                     <p className="mt-1 text-xs text-muted-foreground">
                       {txnTypeLabel(row.type, txnTypes)}
-                      {row.walletNameHint ? ` · petunjuk dompet: ${row.walletNameHint}` : ""}
+                      {row.walletNameHint
+                        ? t(" · petunjuk dompet: {hint}", { hint: row.walletNameHint })
+                        : ""}
                     </p>
                   </div>
                 </div>

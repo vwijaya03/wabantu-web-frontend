@@ -1,6 +1,9 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getInboxHandoffDisplay } from "@/lib/inbox/handoff-display";
+import { useLocale } from "@/lib/i18n/locale";
 
 type InboxHandoffBadgeProps = {
   aiHandled: boolean;
@@ -22,32 +25,32 @@ export function InboxHandoffBadge({
   compact = false,
   className,
 }: InboxHandoffBadgeProps) {
+  const { t } = useLocale();
   const display = getInboxHandoffDisplay({ aiHandled, handoffReason });
+  const badgeLabel = t(display.badgeLabel);
+  const description =
+    display.description != null ? t(display.description) : null;
   const ariaLabel =
-    display.description != null
-      ? `${display.badgeLabel}. ${display.description}`
-      : undefined;
+    description != null ? `${badgeLabel}. ${description}` : undefined;
 
   return (
     <div
       className={cn(!compact && showDescription && "space-y-1", className)}
       role={ariaLabel ? "group" : undefined}
       aria-label={ariaLabel}
-      title={
-        !showDescription && display.description ? display.description : undefined
-      }
+      title={!showDescription && description ? description : undefined}
     >
       <Badge variant={display.badgeVariant} className="w-fit text-[10px]">
-        {display.badgeLabel}
+        {badgeLabel}
       </Badge>
-      {showDescription && display.description ? (
+      {showDescription && description ? (
         <p
           className={cn(
             "text-muted-foreground",
             descriptionClassName ?? "text-xs",
           )}
         >
-          {display.description}
+          {description}
         </p>
       ) : null}
     </div>

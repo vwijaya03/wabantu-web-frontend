@@ -23,8 +23,10 @@ import {
 import { cn } from "@/lib/utils";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function InventoryStockPage() {
+  const { t } = useLocale();
   const tenantKey = useTenantKey();
   const [q, setQ] = useState("");
   const [searchQ, setSearchQ] = useState("");
@@ -54,22 +56,22 @@ export default function InventoryStockPage() {
   const outOfStock = rows.filter((r) => r.available <= 0).length;
 
   return (
-    <RequireTenantDashboard title="Stok">
+    <RequireTenantDashboard title={t("Stok")}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <InventoryPageHeader
-          title="Stok Persediaan"
-          description="Saldo stok dan nilai persediaan per gudang."
+          title={t("Stok Persediaan")}
+          description={t("Saldo stok dan nilai persediaan per gudang.")}
           helpTopic="stock"
         />
         <div className="flex gap-2">
           <Button variant="outline" asChild>
-            <Link href="/dashboard/inventory/guide">Panduan Pemula</Link>
+            <Link href="/dashboard/inventory/guide">{t("Panduan Pemula")}</Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/dashboard/inventory/movements">Kartu Stok</Link>
+            <Link href="/dashboard/inventory/movements">{t("Kartu Stok")}</Link>
           </Button>
           <Button asChild>
-            <Link href="/dashboard/inventory/adjustments">Penyesuaian Stok</Link>
+            <Link href="/dashboard/inventory/adjustments">{t("Penyesuaian Stok")}</Link>
           </Button>
         </div>
       </div>
@@ -83,19 +85,19 @@ export default function InventoryStockPage() {
       <div className="my-4 grid gap-3 sm:grid-cols-3">
         <Card>
           <CardContent className="py-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Nilai persediaan</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Nilai persediaan")}</p>
             <p className="mt-1 text-2xl font-semibold">{formatIDR(totalValue)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="py-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Baris stok</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Baris stok")}</p>
             <p className="mt-1 text-2xl font-semibold">{rows.length}</p>
           </CardContent>
         </Card>
         <Card className={outOfStock > 0 ? "border-red-300 bg-red-50" : undefined}>
           <CardContent className="py-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Stok habis</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Stok habis")}</p>
             <p className={cn("mt-1 text-2xl font-semibold", outOfStock > 0 && "text-red-700")}>{outOfStock}</p>
           </CardContent>
         </Card>
@@ -105,13 +107,13 @@ export default function InventoryStockPage() {
         <Card className="mb-6 border-amber-300 bg-amber-50">
           <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="font-medium text-amber-900">Setup persediaan belum selesai</p>
+              <p className="font-medium text-amber-900">{t("Setup persediaan belum selesai")}</p>
               <p className="text-sm text-amber-800">
                 Fitur stok pada pesanan baru aktif setelah setup selesai. Atur metode HPP & gudang dulu.
               </p>
             </div>
             <Button asChild>
-              <Link href="/dashboard/inventory/setup">Mulai Setup</Link>
+              <Link href="/dashboard/inventory/setup">{t("Mulai Setup")}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -119,7 +121,7 @@ export default function InventoryStockPage() {
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Daftar Stok</CardTitle>
+          <CardTitle>{t("Daftar Stok")}</CardTitle>
           <form
             className="flex flex-wrap gap-2"
             onSubmit={(e) => {
@@ -128,7 +130,7 @@ export default function InventoryStockPage() {
             }}
           >
             <Input
-              placeholder="Cari produk / kode..."
+              placeholder={t("Cari produk / kode...")}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               className="w-56"
@@ -138,7 +140,7 @@ export default function InventoryStockPage() {
               value={warehouseId}
               onChange={(e) => setWarehouseId(e.target.value)}
             >
-              <option value="">Semua gudang</option>
+              <option value="">{t("Semua gudang")}</option>
               {warehouses.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name}
@@ -166,17 +168,17 @@ export default function InventoryStockPage() {
           <InventoryTable>
             <InventoryTableHeader>
               <InventoryTableRow>
-                <InventoryTableHead>Produk</InventoryTableHead>
-                <InventoryTableHead>Gudang</InventoryTableHead>
-                <InventoryTableHead align="right">On hand</InventoryTableHead>
-                <InventoryTableHead align="right">Tersedia</InventoryTableHead>
+                <InventoryTableHead>{t("Produk")}</InventoryTableHead>
+                <InventoryTableHead>{t("Gudang")}</InventoryTableHead>
+                <InventoryTableHead align="right">{t("On hand")}</InventoryTableHead>
+                <InventoryTableHead align="right">{t("Tersedia")}</InventoryTableHead>
                 <InventoryTableHead align="right">HPP/unit</InventoryTableHead>
-                <InventoryTableHead align="right">Nilai</InventoryTableHead>
+                <InventoryTableHead align="right">{t("Nilai")}</InventoryTableHead>
               </InventoryTableRow>
             </InventoryTableHeader>
             <InventoryTableBody>
               {isLoading ? (
-                <InventoryTableEmpty colSpan={6}>Memuat...</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={6}>{t("Memuat...")}</InventoryTableEmpty>
               ) : rows.length === 0 ? (
                 <InventoryTableEmpty colSpan={6}>
                   {searchQ ? "Tidak ada stok cocok." : "Belum ada stok."}

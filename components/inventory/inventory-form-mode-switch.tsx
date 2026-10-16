@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale";
 
 export type InventoryFormMode = "single" | "bulk";
 
@@ -15,6 +16,7 @@ export function InventoryFormModeSwitch({
   singleLabel?: string;
   bulkLabel?: string;
 }) {
+  const { t } = useLocale();
   return (
     <div className="inline-flex gap-1 rounded-lg border bg-muted/40 p-1">
       {([
@@ -30,7 +32,7 @@ export function InventoryFormModeSwitch({
             mode === value ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
           )}
         >
-          {label}
+          {t(label)}
         </button>
       ))}
     </div>

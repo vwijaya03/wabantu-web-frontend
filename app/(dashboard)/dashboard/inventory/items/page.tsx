@@ -37,8 +37,10 @@ import { toast } from "sonner";
 import { HelpCircle } from "lucide-react";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function InventoryItemsPage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const { user } = useAuth();
@@ -82,16 +84,16 @@ export default function InventoryItemsPage() {
       setChecked(new Set());
       invalidateTenantQueries(qc, tenantKey, "inventory", "config-items");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   return (
-    <RequireTenantDashboard title="Konfigurasi Item">
-      <InventoryPageHeader title="Konfigurasi Item Persediaan" description="Aktifkan pelacakan stok, metode HPP per item, bundle, dan batch/expiry." helpTopic="items" />
+    <RequireTenantDashboard title={t("Konfigurasi Item")}>
+      <InventoryPageHeader title={t("Konfigurasi Item Persediaan")} description={t("Aktifkan pelacakan stok, metode HPP per item, bundle, dan batch/expiry.")} helpTopic="items" />
 
       <Card className="mb-4 border-amber-200 bg-amber-50/50">
         <CardContent className="py-4 text-sm text-amber-950">
-          <p className="font-medium">Produk bundle tidak ditampilkan di sini</p>
+          <p className="font-medium">{t("Produk bundle tidak ditampilkan di sini")}</p>
           <p className="mt-1 text-amber-900/90">
             Bundle tidak dilacak stok di level parent — stok diambil dari komponen anak (nilai terkecil).
             Atur komponen bundle lewat tombol Konfigurasi di katalog produk yang menjadi parent bundle.
@@ -101,7 +103,7 @@ export default function InventoryItemsPage() {
 
       <Card className="mb-4 border-blue-200 bg-blue-50/40">
         <CardContent className="py-4 text-sm text-blue-950">
-          <p className="font-medium">Apa itu lacak stok?</p>
+          <p className="font-medium">{t("Apa itu lacak stok?")}</p>
           <p className="mt-1 text-blue-900/90">
             Aktifkan untuk produk fisik agar setiap penjualan, pembelian, dan penyesuaian mengubah saldo gudang serta HPP.
             Produk jasa biasanya tidak perlu dilacak. Bundle mengambil stok dari komponen di dalamnya — jangan lacak stok di parent bundle.
@@ -112,11 +114,11 @@ export default function InventoryItemsPage() {
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <CardTitle>Produk Katalog</CardTitle>
-            {canManage ? <InventoryFormModeSwitch mode={pageMode} onChange={setPageMode} singleLabel="Per produk" bulkLabel="Lacak massal" /> : null}
+            <CardTitle>{t("Produk Katalog")}</CardTitle>
+            {canManage ? <InventoryFormModeSwitch mode={pageMode} onChange={setPageMode} singleLabel={t("Per produk")} bulkLabel={t("Lacak massal")} /> : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Input placeholder="Cari produk..." value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />
+            <Input placeholder={t("Cari produk...")} value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />
             {canManage && pageMode === "bulk" && checked.size > 0 ? (
               <>
                 <Button size="sm" variant="outline" disabled={batchMut.isPending} onClick={() => batchMut.mutate({ trackStock: true })}>
@@ -151,19 +153,19 @@ export default function InventoryItemsPage() {
                         else visibleIds.forEach((id) => next.add(id));
                         return next;
                       });
-                    }} aria-label="Pilih semua" />
+                    }} aria-label={t("Pilih semua")} />
                   </InventoryTableHead>
                 ) : null}
-                <InventoryTableHead>Produk</InventoryTableHead>
-                <InventoryTableHead>Kode</InventoryTableHead>
-                <InventoryTableHead align="right">Aksi</InventoryTableHead>
+                <InventoryTableHead>{t("Produk")}</InventoryTableHead>
+                <InventoryTableHead>{t("Kode")}</InventoryTableHead>
+                <InventoryTableHead align="right">{t("Aksi")}</InventoryTableHead>
               </InventoryTableRow>
             </InventoryTableHeader>
             <InventoryTableBody>
               {isLoading ? (
-                <InventoryTableEmpty colSpan={canManage ? (pageMode === "bulk" ? 4 : 3) : 3}>Memuat...</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={canManage ? (pageMode === "bulk" ? 4 : 3) : 3}>{t("Memuat...")}</InventoryTableEmpty>
               ) : items.length === 0 ? (
-                <InventoryTableEmpty colSpan={canManage ? (pageMode === "bulk" ? 4 : 3) : 3}>Belum ada produk.</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={canManage ? (pageMode === "bulk" ? 4 : 3) : 3}>{t("Belum ada produk.")}</InventoryTableEmpty>
               ) : (
                 items.map((it) => (
                   <InventoryTableRow key={it.id}>
@@ -174,11 +176,11 @@ export default function InventoryItemsPage() {
                     ) : null}
                     <InventoryTableCell className="font-medium">
                       {it.name}
-                      {it.trackStock ? <Badge className="ml-2" variant="success">Dilacak</Badge> : null}
+                      {it.trackStock ? <Badge className="ml-2" variant="success">{t("Dilacak")}</Badge> : null}
                     </InventoryTableCell>
                     <InventoryTableCell className="text-muted-foreground">{it.externalCode}</InventoryTableCell>
                     <InventoryTableCell align="right">
-                      <Button variant="outline" size="sm" onClick={() => setSelected({ id: it.id, name: it.name, externalCode: it.externalCode } as CatalogItem)}>Konfigurasi</Button>
+                      <Button variant="outline" size="sm" onClick={() => setSelected({ id: it.id, name: it.name, externalCode: it.externalCode } as CatalogItem)}>{t("Konfigurasi")}</Button>
                     </InventoryTableCell>
                   </InventoryTableRow>
                 ))
@@ -193,8 +195,8 @@ export default function InventoryItemsPage() {
       <ConfirmDialog
         open={trackAllConfirmOpen}
         onOpenChange={setTrackAllConfirmOpen}
-        title="Lacak stok semua produk?"
-        description="Aktifkan lacak stok untuk semua produk katalog. Bundle akan dilewati. Nonaktifkan manual untuk produk jasa."
+        title={t("Lacak stok semua produk?")}
+        description={t("Aktifkan lacak stok untuk semua produk katalog. Bundle akan dilewati. Nonaktifkan manual untuk produk jasa.")}
         confirmLabel="Aktifkan"
         loading={batchMut.isPending}
         onConfirm={() => {
@@ -207,6 +209,7 @@ export default function InventoryItemsPage() {
 }
 
 function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | null; canManage: boolean; onClose: () => void }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const id = item?.id ?? "";
@@ -229,8 +232,8 @@ function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | nu
 
   const updateMut = useMutation({
     mutationFn: (input: Parameters<typeof inventoryApi.updateSku>[1]) => inventoryApi.updateSku(id, input),
-    onSuccess: () => { toast.success("Konfigurasi disimpan"); refresh(); },
-    onError: (e) => toast.error(toApiError(e).message),
+    onSuccess: () => { toast.success(t("Konfigurasi disimpan")); refresh(); },
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const [bComponents, setBComponents] = useState<Array<{ item: PickedItem | null; qty: string }>>([]);
@@ -253,14 +256,14 @@ function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | nu
         id,
         bComponents.filter((c) => c.item && Number(c.qty) > 0).map((c) => ({ childCatalogItemId: c.item!.id, qty: Number(c.qty) })),
       ),
-    onSuccess: () => { toast.success("Bundle disimpan"); setBundleMode(false); refresh(); },
-    onError: (e) => toast.error(toApiError(e).message),
+    onSuccess: () => { toast.success(t("Bundle disimpan")); setBundleMode(false); refresh(); },
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const clearBundleMut = useMutation({
     mutationFn: () => inventoryApi.setBundle(id, []),
-    onSuccess: () => { toast.success("Bundle dibatalkan"); setBundleMode(false); refresh(); },
-    onError: (e) => toast.error(toApiError(e).message),
+    onSuccess: () => { toast.success(t("Bundle dibatalkan")); setBundleMode(false); refresh(); },
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   return (
@@ -268,21 +271,21 @@ function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | nu
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{item?.name}</DialogTitle>
-          <DialogDescription className="sr-only">Konfigurasi persediaan produk</DialogDescription>
+          <DialogDescription className="sr-only">{t("Konfigurasi persediaan produk")}</DialogDescription>
         </DialogHeader>
         {!sku ? (
-          <p className="text-sm text-muted-foreground">Memuat...</p>
+          <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
         ) : !canManage ? (
-          <p className="text-sm text-muted-foreground">Hanya owner yang dapat mengubah konfigurasi.</p>
+          <p className="text-sm text-muted-foreground">{t("Hanya owner yang dapat mengubah konfigurasi.")}</p>
         ) : (
           <div className="space-y-4">
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={sku.trackStock} onChange={(e) => updateMut.mutate({ trackStock: e.target.checked })} />
-              <span className="font-medium">Lacak stok untuk item ini</span>
+              <span className="font-medium">{t("Lacak stok untuk item ini")}</span>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button type="button" className="text-muted-foreground" aria-label="Penjelasan lacak stok">
+                    <button type="button" className="text-muted-foreground" aria-label={t("Penjelasan lacak stok")}>
                       <HelpCircle className="h-4 w-4" />
                     </button>
                   </TooltipTrigger>
@@ -294,7 +297,7 @@ function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | nu
             </label>
 
             <div className="space-y-1.5">
-              <Label>Metode HPP</Label>
+              <Label>{t("Metode HPP")}</Label>
               <select
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={sku.costingMethod ?? "inherit"}
@@ -305,11 +308,11 @@ function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | nu
                   <option key={m} value={m}>{COSTING_METHOD_LABELS[m]}</option>
                 ))}
               </select>
-              <p className="text-xs text-muted-foreground">Mengubah metode akan menghitung ulang HPP item ini.</p>
+              <p className="text-xs text-muted-foreground">{t("Mengubah metode akan menghitung ulang HPP item ini.")}</p>
             </div>
 
             <div className="space-y-2">
-              <Label>Pelacakan tambahan</Label>
+              <Label>{t("Pelacakan tambahan")}</Label>
               {([
                 ["trackBatch", "Batch / lot"],
                 ["trackExpiry", "Tanggal kedaluwarsa"],
@@ -323,10 +326,10 @@ function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | nu
             </div>
 
             <div className="space-y-1.5">
-              <Label>Satuan dasar (opsional)</Label>
+              <Label>{t("Satuan dasar (opsional)")}</Label>
               <Input
                 defaultValue={sku.baseUom ?? ""}
-                placeholder="pcs / kg / box"
+                placeholder={t("pcs / kg / box")}
                 onBlur={(e) => { if (e.target.value !== (sku.baseUom ?? "")) updateMut.mutate({ baseUom: e.target.value }); }}
               />
             </div>
@@ -334,7 +337,7 @@ function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | nu
             <div className="rounded-lg border p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">Bundle / Paket</p>
+                  <p className="font-medium">{t("Bundle / Paket")}</p>
                   <p className="text-xs text-muted-foreground">
                     {sku.isBundle ? "Item ini bundle — stok diambil dari komponen." : "Jadikan bundle: stok dari SKU anak."}
                   </p>
@@ -365,16 +368,17 @@ function ItemConfigDialog({ item, canManage, onClose }: { item: CatalogItem | nu
                     </div>
                   ))}
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setBComponents((cs) => [...cs, { item: null, qty: "" }])}>+ Komponen</Button>
-                    <Button size="sm" onClick={() => saveBundleMut.mutate()} disabled={saveBundleMut.isPending}>Simpan Bundle</Button>
-                    {sku.isBundle ? <Button variant="ghost" size="sm" className="text-destructive" onClick={() => clearBundleMut.mutate()}>Batalkan bundle</Button> : null}
-                    <Button variant="ghost" size="sm" onClick={() => setBundleMode(false)}>Tutup</Button>
+                    <Button variant="outline" size="sm" onClick={() => setBComponents((cs) => [...cs, { item: null, qty: "" }])}>{t("+ Komponen")}</Button>
+                    <Button size="sm" onClick={() => saveBundleMut.mutate()} disabled={saveBundleMut.isPending}>{t("Simpan Bundle")}</Button>
+                    {sku.isBundle ? <Button variant="ghost" size="sm" className="text-destructive" onClick={() => clearBundleMut.mutate()}>{t("Batalkan bundle")}</Button> : null}
+                    <Button variant="ghost" size="sm" onClick={() => setBundleMode(false)}>{t("Tutup")}</Button>
                   </div>
                 </div>
               ) : null}
             </div>
 
-            {sku.isBundle ? <Badge variant="secondary">Bundle aktif</Badge> : sku.trackStock ? <Badge variant="success">Stok dilacak</Badge> : <Badge variant="secondary">Stok tidak dilacak</Badge>}
+            {sku.isBundle ? <Badge variant="secondary">{t("Bundle aktif")}</Badge> : null}
+            {sku.trackStock ? <Badge variant="success">{t("Stok dilacak")}</Badge> : <Badge variant="secondary">{t("Stok tidak dilacak")}</Badge>}
           </div>
         )}
       </DialogContent>

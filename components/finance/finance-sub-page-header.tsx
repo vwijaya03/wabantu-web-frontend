@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/i18n/locale";
 
 type FinanceSubPageHeaderProps = {
   title: string;
@@ -14,6 +17,7 @@ export function FinanceSubPageHeader({
   description,
   actions,
 }: FinanceSubPageHeaderProps) {
+  const { t } = useLocale();
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex min-w-0 items-start gap-3">
@@ -22,7 +26,7 @@ export function FinanceSubPageHeader({
           variant="outline"
           size="icon"
           className="mt-0.5 h-9 w-9 shrink-0"
-          aria-label="Kembali ke Finance"
+          aria-label={t("Kembali ke Finance")}
         >
           <Link href="/dashboard/finance">
             <ArrowLeft className="h-4 w-4" />

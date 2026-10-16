@@ -30,8 +30,10 @@ import { whatsappApi, type WhatsappChannel } from "@/lib/api/whatsapp";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function WhatsappPage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
@@ -48,7 +50,7 @@ export default function WhatsappPage() {
   const disconnectMut = useMutation({
     mutationFn: (id: string) => whatsappApi.disconnect(id),
     onSuccess: () => {
-      toast.success("Channel diputuskan.");
+      toast.success(t("Channel diputuskan."));
       invalidateTenantQueries(qc, tenantKey, "whatsapp-channels");
     },
     onError: (err) => toast.error(toApiError(err).message),
@@ -67,16 +69,16 @@ export default function WhatsappPage() {
   return (
     <>
       <PageHeader
-        title="WhatsApp"
-        description="Kelola channel WhatsApp yang sudah tersambung."
+        title={t("WhatsApp")}
+        description={t("Kelola channel WhatsApp yang sudah tersambung.")}
       />
 
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>Channel terhubung</CardTitle>
+            <CardTitle>{t("Channel terhubung")}</CardTitle>
             <Button asChild size="sm" variant="outline">
-              <Link href="/dashboard/whatsapp/onboarding">Connect / Reconnect</Link>
+              <Link href="/dashboard/whatsapp/onboarding">{t("Connect / Reconnect")}</Link>
             </Button>
           </div>
           <CardDescription>
@@ -171,7 +173,7 @@ export default function WhatsappPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus channel permanen?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Hapus channel permanen?")}</AlertDialogTitle>
             <AlertDialogDescription>
               Channel{" "}
               <span className="font-medium text-foreground">
@@ -182,7 +184,7 @@ export default function WhatsappPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMut.isPending}>Batal</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteMut.isPending}>{t("Batal")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={deleteMut.isPending}

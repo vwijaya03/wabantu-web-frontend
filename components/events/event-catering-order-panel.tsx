@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { eventsApi, type EventRow } from "@/lib/api/events";
-import { formatEventDateIdWithWeekday } from "@/lib/events-format";
 import { eventDetailKey } from "@/lib/query/events-query-keys";
+import { useLocale } from "@/lib/i18n/locale";
+import { useEventDateFormat } from "@/components/events/events-i18n";
 
 type Props = {
   eventId: string;
@@ -26,6 +27,7 @@ function buildCateringMessage(
   orderNotes: string,
   quantity: string,
   size: string,
+  formatEventDateIdWithWeekday: (value: string | null | undefined) => string,
 ): string {
   const dateLabel = formatEventDateIdWithWeekday(eventDate);
   const lines = [`Pesan ${itemName.trim()} untuk ${dateLabel}`];
@@ -50,6 +52,8 @@ export function EventCateringOrderPanel(props: Props) {
 }
 
 function EventCateringOrderPanelInner({ eventId, event, tenantKey, disabled }: Props) {
+  const { t } = useLocale();
+  const { formatEventDateIdWithWeekday } = useEventDateFormat();
   const qc = useQueryClient();
   const [itemName, setItemName] = useState("wedang pokak");
   const [quantity, setQuantity] = useState("2 Botol");
@@ -73,45 +77,53 @@ function EventCateringOrderPanelInner({ eventId, event, tenantKey, disabled }: P
         cateringOrderNotes,
       }),
     onSuccess: () => {
-      toast.success("Pesanan Catering disimpan");
+      toast.success(t("Pesanan Catering disimpan"));
       void qc.invalidateQueries({ queryKey: eventDetailKey(tenantKey, eventId) });
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
-      toast.error(e?.response?.data?.message ?? "Gagal menyimpan pesan"),
+      toast.error(e?.response?.data?.message ?? t("Gagal menyimpan pesan")),
   });
 
   const handleGenerate = () => {
-    const msg = buildCateringMessage(itemName, event.startDate, orderNotes, quantity, size);
+    const msg = buildCateringMessage(
+      itemName,
+      event.startDate,
+      orderNotes,
+      quantity,
+      size,
+      formatEventDateIdWithWeekday,
+    );
     setSavedMessage(msg);
   };
 
   const handleCopy = async () => {
     const text = savedMessage.trim();
     if (!text) {
-      toast.error("Buat atau isi pesan dulu");
+      toast.error(t("Buat atau isi pesan dulu"));
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      toast.success("Pesan disalin");
+      toast.success(t("Pesan disalin"));
     } catch {
-      toast.error("Gagal menyalin ke clipboard");
+      toast.error(t("Gagal menyalin ke clipboard"));
     }
   };
 
   return (
     <Card className="mt-4">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Pesanan Catering</CardTitle>
+        <CardTitle className="text-base">{t("Pesanan Catering")}</CardTitle>
         <CardDescription>
-          Buat teks pesan untuk vendor (mis. wedang pokak), simpan per acara, dan salin ke WhatsApp. Pesan
-          tersimpan terpisah dari Catatan acara — bisa dilihat/diubah di Edit acara → Pesanan Catering.
+          {t(
+            "Buat teks pesan untuk vendor (mis. wedang pokak), simpan per acara, dan salin ke WhatsApp. Pesan tersimpan terpisah dari Catatan acara — bisa dilihat/diubah di Edit acara → Pesanan Catering.",
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <Label>Nama pesanan</Label>
+            <Label>{t("Nama pesanan")}</Label>
             <Input
               value={itemName}
               disabled={disabled}
@@ -119,11 +131,11 @@ function EventCateringOrderPanelInner({ eventId, event, tenantKey, disabled }: P
             />
           </div>
           <div>
-            <Label>Tanggal acara</Label>
+            <Label>{t("Tanggal acara")}</Label>
             <Input value={formatEventDateIdWithWeekday(event.startDate)} readOnly disabled />
           </div>
           <div>
-            <Label>Jumlah</Label>
+            <Label>{t("Jumlah")}</Label>
             <Input
               value={quantity}
               disabled={disabled}
@@ -132,7 +144,7 @@ function EventCateringOrderPanelInner({ eventId, event, tenantKey, disabled }: P
             />
           </div>
           <div>
-            <Label>Ukuran</Label>
+            <Label>{t("Ukuran")}</Label>
             <Input
               value={size}
               disabled={disabled}
@@ -142,7 +154,7 @@ function EventCateringOrderPanelInner({ eventId, event, tenantKey, disabled }: P
           </div>
         </div>
         <div>
-          <Label>Catatan pesanan</Label>
+          <Label>{t("Catatan pesanan")}</Label>
           <Textarea
             rows={2}
             disabled={disabled}
@@ -153,10 +165,10 @@ function EventCateringOrderPanelInner({ eventId, event, tenantKey, disabled }: P
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={handleGenerate}>
-            Buat pesan
+            {t("Buat pesan")}
           </Button>
           <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => void handleCopy()}>
-            <Copy className="mr-1 h-3 w-3" /> Salin pesan
+            <Copy className="mr-1 h-3 w-3" /> {t("Salin pesan")}
           </Button>
           {!disabled ? (
             <Button
@@ -165,18 +177,18 @@ function EventCateringOrderPanelInner({ eventId, event, tenantKey, disabled }: P
               disabled={saveMut.isPending || !savedMessage.trim()}
               onClick={() => saveMut.mutate(savedMessage.trim())}
             >
-              Simpan
+              {t("Simpan")}
             </Button>
           ) : null}
         </div>
         <div>
-          <Label>Pratinjau / pesan tersimpan</Label>
+          <Label>{t("Pratinjau / pesan tersimpan")}</Label>
           <Textarea
             rows={5}
             disabled={disabled}
             value={savedMessage}
             onChange={(e) => setSavedMessage(e.target.value)}
-            placeholder="Klik Buat pesan atau ketik manual..."
+            placeholder={t("Klik Buat pesan atau ketik manual...")}
           />
         </div>
       </CardContent>

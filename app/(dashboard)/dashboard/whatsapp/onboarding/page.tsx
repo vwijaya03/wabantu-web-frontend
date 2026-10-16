@@ -27,6 +27,7 @@ import {
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 const OAUTH_PENDING_STORAGE_KEY = "wabantu:meta-oauth-pending";
 
@@ -49,6 +50,7 @@ const oauthPendingSchema = oauthSchema.pick({
 });
 
 export default function WhatsappOnboardingPage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
@@ -76,7 +78,7 @@ export default function WhatsappOnboardingPage() {
     mutationFn: (values: MetaConnectCallbackInput) =>
       whatsappApi.completeMetaConnect(values),
     onSuccess: () => {
-      toast.success("WhatsApp berhasil tersambung.");
+      toast.success(t("WhatsApp berhasil tersambung."));
       localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
       invalidateTenantQueries(qc, tenantKey, "whatsapp-channels");
       clearOAuthCallbackUrl();
@@ -109,7 +111,7 @@ export default function WhatsappOnboardingPage() {
         }),
       );
       window.location.assign(res.oauthUrl);
-      toast.success("OAuth URL dibuat. Lanjutkan authorize di Meta.");
+      toast.success(t("OAuth URL dibuat. Lanjutkan authorize di Meta."));
     },
     onError: (err) => toast.error(toApiError(err).message),
   });
@@ -134,7 +136,7 @@ export default function WhatsappOnboardingPage() {
     if (!raw) {
       clearOAuthCallbackUrl();
       oauthCallbackHandledRef.current = false;
-      toast.error("Data OAuth tidak ditemukan. Ulangi dari tombol Generate OAuth URL.");
+      toast.error(t("Data OAuth tidak ditemukan. Ulangi dari tombol Generate OAuth URL."));
       return;
     }
 
@@ -145,7 +147,7 @@ export default function WhatsappOnboardingPage() {
       localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
       clearOAuthCallbackUrl();
       oauthCallbackHandledRef.current = false;
-      toast.error("Data OAuth rusak. Ulangi proses connect.");
+      toast.error(t("Data OAuth rusak. Ulangi proses connect."));
       return;
     }
 
@@ -154,7 +156,7 @@ export default function WhatsappOnboardingPage() {
       localStorage.removeItem(OAUTH_PENDING_STORAGE_KEY);
       clearOAuthCallbackUrl();
       oauthCallbackHandledRef.current = false;
-      toast.error("Data connect tidak lengkap. Ulangi proses.");
+      toast.error(t("Data connect tidak lengkap. Ulangi proses."));
       return;
     }
 
@@ -166,7 +168,7 @@ export default function WhatsappOnboardingPage() {
     if (!pendingState || pendingState !== state) {
       clearOAuthCallbackUrl();
       oauthCallbackHandledRef.current = false;
-      toast.error("State OAuth tidak cocok. Ulangi proses connect.");
+      toast.error(t("State OAuth tidak cocok. Ulangi proses connect."));
       return;
     }
 
@@ -176,15 +178,15 @@ export default function WhatsappOnboardingPage() {
       displayName: parsed.data.displayName,
       phoneNumber: parsed.data.phoneNumber,
     });
-  }, [channelsLoaded, isConnected, completeOauthMut]);
+  }, [channelsLoaded, isConnected, completeOauthMut, t]);
 
   const showCompletingOAuth = completeOauthMut.isPending;
 
   return (
     <>
       <PageHeader
-        title="Onboarding WhatsApp"
-        description="Panduan cepat untuk client baru agar berhasil generate OAuth URL dan connect WhatsApp."
+        title={t("Onboarding WhatsApp")}
+        description={t("Panduan cepat untuk client baru agar berhasil generate OAuth URL dan connect WhatsApp.")}
       />
       <Card>
         <CardHeader>
@@ -202,19 +204,19 @@ export default function WhatsappOnboardingPage() {
             onSubmit={handleSubmit((v) => initOauthMut.mutate(v))}
             className="grid gap-4 sm:grid-cols-2"
           >
-            <Field label="Nama channel" error={errors.displayName?.message}>
-              <Input placeholder="Toko Pusat" {...register("displayName")} />
+            <Field label={t("Nama channel")} error={errors.displayName?.message}>
+              <Input placeholder={t("Toko Pusat")} {...register("displayName")} />
             </Field>
-            <Field label="Nomor WhatsApp Business" error={errors.phoneNumber?.message}>
+            <Field label={t("Nomor WhatsApp Business")} error={errors.phoneNumber?.message}>
               <Input placeholder="+6281234567890" {...register("phoneNumber")} />
             </Field>
-            <Field label="Meta App ID" error={errors.metaAppId?.message}>
+            <Field label={t("Meta App ID")} error={errors.metaAppId?.message}>
               <Input placeholder="1559xxxxxxxxxxx" {...register("metaAppId")} />
             </Field>
-            <Field label="Meta App Secret" error={errors.metaAppSecret?.message}>
+            <Field label={t("Meta App Secret")} error={errors.metaAppSecret?.message}>
               <Input
                 type="password"
-                placeholder="Isi App Secret dari Meta Developer"
+                placeholder={t("Isi App Secret dari Meta Developer")}
                 {...register("metaAppSecret")}
               />
             </Field>
@@ -254,7 +256,7 @@ export default function WhatsappOnboardingPage() {
                 </p>
                 {isConnected && !showCompletingOAuth ? (
                   <Button asChild variant="link" className="h-auto p-0 text-sm">
-                    <Link href="/dashboard/whatsapp">Buka halaman WhatsApp →</Link>
+                    <Link href="/dashboard/whatsapp">{t("Buka halaman WhatsApp →")}</Link>
                   </Button>
                 ) : null}
               </div>

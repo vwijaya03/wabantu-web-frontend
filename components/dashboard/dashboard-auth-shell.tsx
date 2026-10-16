@@ -34,6 +34,7 @@ import { DashboardRateLimitNotice } from "@/components/dashboard/dashboard-rate-
 import { setProfileHint } from "@/lib/auth/profile-hint";
 import { requestSessionReauth } from "@/lib/auth/session-reauth";
 import { useSyncQueriesOnTenantChange } from "@/hooks/use-sync-queries-on-tenant-change";
+import { useLocale } from "@/lib/i18n/locale";
 import {
   TenantSwitchOverlay,
   TenantSwitchProvider,
@@ -43,6 +44,7 @@ function applyPlatformRouteGuards(
   me: AuthUser,
   path: string,
   router: ReturnType<typeof useRouter>,
+  translate: (source: string) => string,
 ): boolean {
   const isAdminConsole =
     path === "/dashboard/admin" || path.startsWith("/dashboard/admin/");
@@ -67,7 +69,9 @@ function applyPlatformRouteGuards(
     !isAdminConsole &&
     !isPathAllowedForModules(path, me.impersonation.modules)
   ) {
-    toast.error("Modul ini tidak termasuk dalam izin akses tenant Anda.");
+    toast.error(
+      translate("Modul ini tidak termasuk dalam izin akses tenant Anda."),
+    );
     router.replace("/dashboard");
     return true;
   }
@@ -76,6 +80,7 @@ function applyPlatformRouteGuards(
 }
 
 export function DashboardAuthShell({ children }: { children: React.ReactNode }) {
+  const { t } = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const initialNextPathRef = useRef(pathname || "/dashboard");
@@ -110,7 +115,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
           if (cancelled) return;
           setUser(me);
           setReady(true);
-          applyPlatformRouteGuards(me, nextPath, router);
+          applyPlatformRouteGuards(me, nextPath, router, t);
         } catch (err) {
           if (cancelled) return;
           const apiErr = toApiError(err);
@@ -132,7 +137,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
         // Always mark ready after /auth/me — route guards may redirect (e.g. super_admin
         // /dashboard → /dashboard/admin) and must not leave the shell on "Memuat dashboard…".
         setReady(true);
-        applyPlatformRouteGuards(me, nextPath, router);
+        applyPlatformRouteGuards(me, nextPath, router, t);
       } catch (err) {
         if (cancelled) return;
         const apiErr = toApiError(err);
@@ -151,7 +156,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
               setUser(me);
               setRateLimited(false);
               setReady(true);
-              applyPlatformRouteGuards(me, nextPath, router);
+              applyPlatformRouteGuards(me, nextPath, router, t);
               return;
             } catch {
               /* fall through to login */
@@ -170,7 +175,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
       cancelled = true;
       reloadSessionRef.current = null;
     };
-  }, [router]);
+  }, [router, t]);
 
   // Logout / login / reauth in another tab
   useEffect(() => {
@@ -194,24 +199,26 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
       const me = (ev as CustomEvent<AuthUser>).detail;
       if (!me) return;
       setUser(me);
-      applyPlatformRouteGuards(me, pathname || "/dashboard", router);
+      applyPlatformRouteGuards(me, pathname || "/dashboard", router, t);
     };
 
     window.addEventListener(AUTH_SESSION_UPDATED, onSessionUpdated);
     return () => window.removeEventListener(AUTH_SESSION_UPDATED, onSessionUpdated);
-  }, [pathname, ready, router]);
+  }, [pathname, ready, router, t]);
 
   // Re-run guards when navigating (uses latest shell user, including after impersonation).
   useEffect(() => {
     if (!user || !ready) return;
-    applyPlatformRouteGuards(user, pathname || "/dashboard", router);
-  }, [pathname, ready, router, user]);
+    applyPlatformRouteGuards(user, pathname || "/dashboard", router, t);
+  }, [pathname, ready, router, user, t]);
 
   if (adminMeUnavailable && !ready) {
     return (
       <div className="flex min-h-svh items-center justify-center bg-muted/20 px-6 text-center">
         <p className="text-sm text-muted-foreground">
-          Endpoint belum tersedia: GET /platform-admin/me belum ada di backend yang terhubung.
+          {t(
+            "Endpoint belum tersedia: GET /platform-admin/me belum ada di backend yang terhubung.",
+          )}
         </p>
       </div>
     );
@@ -224,10 +231,10 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
       <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-muted/20 px-6 text-center">
         <div className="max-w-md space-y-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-5 py-4">
           <p className="text-sm font-medium text-amber-950 dark:text-amber-50">
-            {rateLimitTitle()}
+            {t(rateLimitTitle())}
           </p>
           <p className="text-sm text-muted-foreground">
-            {RATE_LIMIT_USER_MESSAGE}
+            {t(RATE_LIMIT_USER_MESSAGE)}
           </p>
         </div>
         <button
@@ -235,7 +242,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
           className="text-sm font-medium text-primary underline-offset-4 hover:underline"
           onClick={() => window.location.reload()}
         >
-          Muat ulang halaman
+          {t("Muat ulang halaman")}
         </button>
       </div>
       </>
@@ -247,7 +254,7 @@ export function DashboardAuthShell({ children }: { children: React.ReactNode }) 
       <>
         <SessionReauthDialog />
         <div className="flex min-h-svh items-center justify-center bg-muted/20">
-          <p className="text-sm text-muted-foreground">Memuat dashboard…</p>
+          <p className="text-sm text-muted-foreground">{t("Memuat dashboard…")}</p>
         </div>
       </>
     );

@@ -6,6 +6,7 @@ import { CheckCircle2, ChevronRight, Circle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useLocale } from "@/lib/i18n/locale";
 import {
   buildInventoryGuideSteps,
   inventoryGuideComplete,
@@ -21,6 +22,7 @@ type Props = {
 };
 
 export function InventoryGettingStarted({ setupCompleted, warehouseCount, stockRowCount }: Props) {
+  const { t } = useLocale();
   const [dismissed, setDismissed] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(DISMISS_KEY) === "1";
@@ -42,9 +44,9 @@ export function InventoryGettingStarted({ setupCompleted, warehouseCount, stockR
       <Card className="mb-6 border-primary/30 bg-primary/5">
         <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="font-medium">Lanjutkan panduan persediaan ({doneCount}/{requiredSteps.length})</p>
+            <p className="font-medium">{t("Lanjutkan panduan persediaan ({done}/{total})", { done: doneCount, total: requiredSteps.length })}</p>
             <p className="text-sm text-muted-foreground">
-              {next ? `Langkah berikutnya: ${next.title}` : "Hampir selesai — cek daftar di bawah."}
+              {next ? t("Langkah berikutnya: {title}", { title: t(next.title) }) : t("Hampir selesai — cek daftar di bawah.")}
             </p>
           </div>
           <Button
@@ -55,7 +57,7 @@ export function InventoryGettingStarted({ setupCompleted, warehouseCount, stockR
               setDismissed(false);
             }}
           >
-            Tampilkan panduan
+            {t("Tampilkan panduan")}
           </Button>
         </CardContent>
       </Card>
@@ -75,21 +77,21 @@ export function InventoryGettingStarted({ setupCompleted, warehouseCount, stockR
     <Card className="mb-6 border-primary/25 bg-gradient-to-br from-primary/5 to-background">
       <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
         <div className="space-y-1">
-          <CardTitle className="text-lg">Panduan pemula — mulai dari sini</CardTitle>
+          <CardTitle className="text-lg">{t("Panduan pemula — mulai dari sini")}</CardTitle>
           <p className="text-sm text-muted-foreground">
             Ikuti urutan ini sekali saja. Progress: {doneCount} dari {requiredSteps.length} langkah wajib selesai.
           </p>
         </div>
-        <Button variant="ghost" size="icon" className="shrink-0" onClick={dismiss} aria-label="Sembunyikan panduan">
+        <Button variant="ghost" size="icon" className="shrink-0" onClick={dismiss} aria-label={t("Sembunyikan panduan")}>
           <X className="h-4 w-4" />
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         {next ? (
           <div className="rounded-lg border border-primary/20 bg-background p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-primary">Rekomendasi berikutnya</p>
-            <p className="mt-1 font-medium">{next.title}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{next.description}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary">{t("Rekomendasi berikutnya")}</p>
+            <p className="mt-1 font-medium">{t(next.title)}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t(next.description)}</p>
             <Button asChild className="mt-3" size="sm">
               <Link href={next.href}>
                 Kerjakan sekarang
@@ -114,7 +116,7 @@ export function InventoryGettingStarted({ setupCompleted, warehouseCount, stockR
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-2">
                     <span className={step.done ? "text-muted-foreground line-through" : "font-medium"}>
-                      {step.order}. {step.title}
+                      {step.order}. {t(step.title)}
                     </span>
                     {step.optional ? (
                       <Badge variant="secondary" className="text-[10px]">
@@ -123,7 +125,7 @@ export function InventoryGettingStarted({ setupCompleted, warehouseCount, stockR
                     ) : null}
                   </span>
                   {!step.done ? (
-                    <span className="mt-0.5 block text-xs text-muted-foreground">{step.description}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{t(step.description)}</span>
                   ) : null}
                 </span>
                 <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />

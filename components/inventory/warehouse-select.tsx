@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { inventoryApi } from "@/lib/api/inventory";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 export function WarehouseSelect({
   value,
@@ -20,6 +21,7 @@ export function WarehouseSelect({
   className?: string;
   disabled?: boolean;
 }) {
+  const { t } = useLocale();
   const tenantKey = useTenantKey();
   const { data } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "inventory", "warehouses", "all"),
@@ -40,7 +42,7 @@ export function WarehouseSelect({
       {warehouses.map((w) => (
         <option key={w.id} value={w.id}>
           {w.name}
-          {w.isDefault ? " (default)" : ""}
+          {w.isDefault ? t(" (default)") : ""}
         </option>
       ))}
     </select>

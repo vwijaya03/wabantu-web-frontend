@@ -33,8 +33,10 @@ import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { invalidateTenantQueries, tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function InvoicesPage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const { user } = useAuth();
@@ -61,17 +63,17 @@ export default function InvoicesPage() {
       invalidateTenantQueries(qc, tenantKey, "inventory", "invoices");
       setDetailId(inv.id);
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   return (
-    <RequireTenantDashboard title="Faktur">
-      <InventoryPageHeader title="Faktur Penjualan" description="Dokumen faktur dari pesanan, lengkap dengan HPP per baris." helpTopic="invoices" />
+    <RequireTenantDashboard title={t("Faktur")}>
+      <InventoryPageHeader title={t("Faktur Penjualan")} description={t("Dokumen faktur dari pesanan, lengkap dengan HPP per baris.")} helpTopic="invoices" />
 
       {canManage ? (
         <Card className="mb-4">
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>Buat Faktur</CardTitle>
+            <CardTitle>{t("Buat Faktur")}</CardTitle>
             <InventoryFormModeSwitch mode={createMode} onChange={setCreateMode} />
           </CardHeader>
           <CardContent>
@@ -93,9 +95,9 @@ export default function InvoicesPage() {
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Daftar Faktur</CardTitle>
+          <CardTitle>{t("Daftar Faktur")}</CardTitle>
           <Input
-            placeholder="Cari no faktur..."
+            placeholder={t("Cari no faktur...")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { setSearchQ(q); setPage(1); } }}
@@ -106,18 +108,18 @@ export default function InvoicesPage() {
           <InventoryTable>
             <InventoryTableHeader>
               <InventoryTableRow>
-                <InventoryTableHead>No Faktur</InventoryTableHead>
-                <InventoryTableHead>Status</InventoryTableHead>
-                <InventoryTableHead align="right">Subtotal</InventoryTableHead>
-                <InventoryTableHead align="right">HPP</InventoryTableHead>
-                <InventoryTableHead>Tanggal</InventoryTableHead>
+                <InventoryTableHead>{t("No Faktur")}</InventoryTableHead>
+                <InventoryTableHead>{t("Status")}</InventoryTableHead>
+                <InventoryTableHead align="right">{t("Subtotal")}</InventoryTableHead>
+                <InventoryTableHead align="right">{t("HPP")}</InventoryTableHead>
+                <InventoryTableHead>{t("Tanggal")}</InventoryTableHead>
               </InventoryTableRow>
             </InventoryTableHeader>
             <InventoryTableBody>
               {isLoading ? (
-                <InventoryTableEmpty colSpan={5}>Memuat...</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={5}>{t("Memuat...")}</InventoryTableEmpty>
               ) : invoices.length === 0 ? (
-                <InventoryTableEmpty colSpan={5}>Belum ada faktur.</InventoryTableEmpty>
+                <InventoryTableEmpty colSpan={5}>{t("Belum ada faktur.")}</InventoryTableEmpty>
               ) : (
                 invoices.map((inv) => (
                   <InventoryTableRow key={inv.id} className="cursor-pointer" onClick={() => setDetailId(inv.id)}>
@@ -149,6 +151,7 @@ export default function InvoicesPage() {
 }
 
 function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; canManage: boolean; onClose: () => void }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -160,11 +163,11 @@ function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; ca
   const delMut = useMutation({
     mutationFn: () => inventoryApi.deleteInvoice(id!),
     onSuccess: () => {
-      toast.success("Faktur dihapus");
+      toast.success(t("Faktur dihapus"));
       onClose();
       invalidateTenantQueries(qc, tenantKey, "inventory", "invoices");
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
   return (
     <>
@@ -172,7 +175,7 @@ function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; ca
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{inv ? inv.invoiceNo : "Memuat..."}</DialogTitle>
-          <DialogDescription className="sr-only">Detail faktur penjualan</DialogDescription>
+          <DialogDescription className="sr-only">{t("Detail faktur penjualan")}</DialogDescription>
         </DialogHeader>
         {inv ? (
           <div className="space-y-3">
@@ -191,10 +194,10 @@ function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; ca
             <InventoryTable>
               <InventoryTableHeader>
                 <InventoryTableRow>
-                  <InventoryTableHead>Produk</InventoryTableHead>
-                  <InventoryTableHead align="right">Qty</InventoryTableHead>
-                  <InventoryTableHead align="right">Harga</InventoryTableHead>
-                  <InventoryTableHead align="right">HPP</InventoryTableHead>
+                  <InventoryTableHead>{t("Produk")}</InventoryTableHead>
+                  <InventoryTableHead align="right">{t("Qty")}</InventoryTableHead>
+                  <InventoryTableHead align="right">{t("Harga")}</InventoryTableHead>
+                  <InventoryTableHead align="right">{t("HPP")}</InventoryTableHead>
                 </InventoryTableRow>
               </InventoryTableHeader>
               <InventoryTableBody>
@@ -209,7 +212,7 @@ function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; ca
               </InventoryTableBody>
             </InventoryTable>
             <div className="flex justify-end gap-6 text-sm">
-              <span>Subtotal: <span className="font-semibold">{formatIDR(inv.subtotal)}</span></span>
+              <span>{t("Subtotal:")} <span className="font-semibold">{formatIDR(inv.subtotal)}</span></span>
               <span className="text-muted-foreground">Total HPP: {formatIDR(inv.totalCogs)}</span>
             </div>
           </div>
@@ -220,7 +223,7 @@ function InvoiceDetailDialog({ id, canManage, onClose }: { id: string | null; ca
     <ConfirmDialog
       open={deleteConfirmOpen}
       onOpenChange={setDeleteConfirmOpen}
-      title="Hapus faktur?"
+      title={t("Hapus faktur?")}
       description={inv ? `Faktur ${inv.invoiceNo} akan dihapus permanen.` : undefined}
       confirmLabel="Hapus"
       destructive

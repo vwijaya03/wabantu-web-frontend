@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 const pageSize = 20;
 
@@ -38,6 +39,7 @@ const emptyForm = {
 };
 
 export default function PriceTypesPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
@@ -65,12 +67,12 @@ export default function PriceTypesPage() {
   const createMut = useMutation({
     mutationFn: () => priceTypesApi.create(form),
     onSuccess: () => {
-      toast.success("Tipe harga ditambahkan");
+      toast.success(t("Tipe harga ditambahkan"));
       invalidate();
       setOpenCreate(false);
       setForm(emptyForm);
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const updateMut = useMutation({
@@ -81,30 +83,30 @@ export default function PriceTypesPage() {
         isDefault: form.isDefault,
       }),
     onSuccess: () => {
-      toast.success("Tipe harga diperbarui");
+      toast.success(t("Tipe harga diperbarui"));
       invalidate();
       setEditItem(null);
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const toggleActiveMut = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       priceTypesApi.update(id, { isActive }),
     onSuccess: () => {
-      toast.success("Status diperbarui");
+      toast.success(t("Status diperbarui"));
       invalidate();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => priceTypesApi.remove(id),
     onSuccess: () => {
-      toast.success("Tipe harga dihapus");
+      toast.success(t("Tipe harga dihapus"));
       invalidate();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const items = data?.items ?? [];
@@ -124,10 +126,10 @@ export default function PriceTypesPage() {
   if (!canManage) {
     return (
       <>
-        <PageHeader title="Tipe Harga" description="Kelola label harga umum, reseller, dan tipe kustom." />
+        <PageHeader title={t("Tipe Harga")} description={t("Kelola label harga umum, reseller, dan tipe kustom.")} />
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Hanya owner atau super admin yang sedang Pantau tenant yang dapat mengelola tipe harga.
+            {t("Hanya owner atau super admin yang sedang Pantau tenant yang dapat mengelola tipe harga.")}
           </CardContent>
         </Card>
       </>
@@ -140,13 +142,13 @@ export default function PriceTypesPage() {
         <Button variant="ghost" size="sm" asChild>
           <Link href="/dashboard/catalog">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Kembali ke Katalog
+            {t("Kembali ke Katalog")}
           </Link>
         </Button>
       </div>
       <PageHeader
-        title="Tipe Harga"
-        description="Definisikan harga umum, reseller, atau tipe lain. Kontak dan pesanan memakai tipe ini."
+        title={t("Tipe Harga")}
+        description={t("Definisikan harga umum, reseller, atau tipe lain. Kontak dan pesanan memakai tipe ini.")}
         actions={
           <Button
             onClick={() => {
@@ -154,7 +156,7 @@ export default function PriceTypesPage() {
               setOpenCreate(true);
             }}
           >
-            <PlusCircle className="mr-2 h-4 w-4" /> Tambah Tipe
+            <PlusCircle className="mr-2 h-4 w-4" /> {t("Tambah Tipe")}
           </Button>
         }
       />
@@ -164,7 +166,7 @@ export default function PriceTypesPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pl-9"
-            placeholder="Cari label atau kode…"
+            placeholder={t("Cari label atau kode…")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
@@ -182,16 +184,16 @@ export default function PriceTypesPage() {
             setPage(1);
           }}
         >
-          Cari
+          {t("Cari")}
         </Button>
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Memuat…</p>
+        <p className="text-sm text-muted-foreground">{t("Memuat…")}</p>
       ) : items.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Belum ada tipe harga. Sistem biasanya sudah menyiapkan &quot;umum&quot; dan &quot;reseller&quot;.
+            {t('Belum ada tipe harga. Sistem biasanya sudah menyiapkan "umum" dan "reseller".')}
           </CardContent>
         </Card>
       ) : (
@@ -203,13 +205,13 @@ export default function PriceTypesPage() {
                   <p className="font-medium">{item.label}</p>
                   <p className="text-xs text-muted-foreground">
                     <code>{item.code}</code>
-                    {" · urutan "}
+                    {t(" · urutan ")}
                     {item.displayOrder}
                   </p>
                   <div className="mt-1 flex flex-wrap gap-1">
-                    {item.isDefault && <Badge variant="secondary">Default</Badge>}
-                    {item.isSystem && <Badge variant="outline">Sistem</Badge>}
-                    {!item.isActive && <Badge variant="destructive">Nonaktif</Badge>}
+                    {item.isDefault && <Badge variant="secondary">{t("Default")}</Badge>}
+                    {item.isSystem && <Badge variant="outline">{t("Sistem")}</Badge>}
+                    {!item.isActive && <Badge variant="destructive">{t("Nonaktif")}</Badge>}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -218,7 +220,7 @@ export default function PriceTypesPage() {
                     size="sm"
                     onClick={() => toggleActiveMut.mutate({ id: item.id, isActive: !item.isActive })}
                   >
-                    {item.isActive ? "Nonaktifkan" : "Aktifkan"}
+                    {item.isActive ? t("Nonaktifkan") : t("Aktifkan")}
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => openEdit(item)}>
                     <Pencil className="h-3.5 w-3.5" />
@@ -246,11 +248,11 @@ export default function PriceTypesPage() {
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
-            {total} tipe · halaman {page} / {totalPages}
+            {t("{total} tipe · halaman {page} / {totalPages}", { total, page, totalPages })}
           </span>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              Sebelumnya
+              {t("Sebelumnya")}
             </Button>
             <Button
               variant="outline"
@@ -258,7 +260,7 @@ export default function PriceTypesPage() {
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
             >
-              Berikutnya
+              {t("Berikutnya")}
             </Button>
           </div>
         </div>
@@ -267,19 +269,19 @@ export default function PriceTypesPage() {
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tambah Tipe Harga</DialogTitle>
-            <DialogDescription>Contoh: grosir, member, distributor.</DialogDescription>
+            <DialogTitle>{t("Tambah Tipe Harga")}</DialogTitle>
+            <DialogDescription>{t("Contoh: grosir, member, distributor.")}</DialogDescription>
           </DialogHeader>
           <PriceTypeForm form={form} setForm={setForm} isCreate />
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenCreate(false)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button
               onClick={() => createMut.mutate()}
               disabled={!form.code.trim() || !form.label.trim() || createMut.isPending}
             >
-              Simpan
+              {t("Simpan")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -288,16 +290,16 @@ export default function PriceTypesPage() {
       <Dialog open={!!editItem} onOpenChange={(open) => !open && setEditItem(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Tipe Harga</DialogTitle>
-            <DialogDescription>Ubah label, urutan, atau tipe default tenant.</DialogDescription>
+            <DialogTitle>{t("Edit Tipe Harga")}</DialogTitle>
+            <DialogDescription>{t("Ubah label, urutan, atau tipe default tenant.")}</DialogDescription>
           </DialogHeader>
           <PriceTypeForm form={form} setForm={setForm} isCreate={false} isSystem={editItem?.isSystem} />
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditItem(null)}>
-              Batal
+              {t("Batal")}
             </Button>
             <Button onClick={() => updateMut.mutate()} disabled={!form.label.trim() || updateMut.isPending}>
-              Simpan
+              {t("Simpan")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -311,9 +313,9 @@ export default function PriceTypesPage() {
             setDeletePriceTypeLabel("");
           }
         }}
-        title="Hapus tipe harga?"
-        description={deletePriceTypeLabel ? `Tipe "${deletePriceTypeLabel}" akan dihapus permanen.` : undefined}
-        confirmLabel="Hapus"
+        title={t("Hapus tipe harga?")}
+        description={deletePriceTypeLabel ? t('Tipe "{label}" akan dihapus permanen.', { label: deletePriceTypeLabel }) : undefined}
+        confirmLabel={t("Hapus")}
         destructive
         loading={deleteMut.isPending}
         onConfirm={() => {
@@ -337,31 +339,32 @@ function PriceTypeForm({
   isCreate: boolean;
   isSystem?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <div className="space-y-3">
       {isCreate && (
         <div>
-          <Label>Kode (unik, huruf kecil)</Label>
+          <Label>{t("Kode (unik, huruf kecil)")}</Label>
           <Input
             value={form.code}
             onChange={(e) =>
               setForm({ ...form, code: e.target.value.toLowerCase().replace(/\s/g, "_") })
             }
-            placeholder="mis. grosir"
+            placeholder={t("mis. grosir")}
           />
         </div>
       )}
       <div>
-        <Label>Label tampilan</Label>
+        <Label>{t("Label tampilan")}</Label>
         <Input
           value={form.label}
           onChange={(e) => setForm({ ...form, label: e.target.value })}
-          placeholder="mis. Harga grosir"
+          placeholder={t("mis. Harga grosir")}
           disabled={isSystem}
         />
       </div>
       <div>
-        <Label>Urutan tampil</Label>
+        <Label>{t("Urutan tampil")}</Label>
         <Input
           type="number"
           value={form.displayOrder}
@@ -375,7 +378,7 @@ function PriceTypeForm({
           checked={form.isDefault}
           onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
         />
-        <Label htmlFor="isDefault">Jadikan tipe default (fallback jika kontak tanpa tipe)</Label>
+        <Label htmlFor="isDefault">{t("Jadikan tipe default (fallback jika kontak tanpa tipe)")}</Label>
       </div>
     </div>
   );

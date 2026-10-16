@@ -21,6 +21,7 @@ import {
 import { PageHeader } from "@/components/dashboard/page-header";
 import { adminApi } from "@/lib/api/admin";
 import { toApiError } from "@/lib/api/client";
+import { useLocale } from "@/lib/i18n/locale";
 import {
   AI_FUNCTIONS,
   AI_PROVIDERS,
@@ -72,6 +73,7 @@ function LinkEditor({
   catalog: AICatalog;
   onChange: (l: ChainLink) => void;
 }) {
+  const { t } = useLocale();
   const models = modelsFor(catalog, fn, link.provider);
   const info = catalog.providers.find((p) => p.id === link.provider);
   return (
@@ -116,7 +118,7 @@ function LinkEditor({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={DEFAULT_MODEL_VALUE}>Default provider</SelectItem>
+            <SelectItem value={DEFAULT_MODEL_VALUE}>{t("Default provider")}</SelectItem>
             {models.map((m) => (
               <SelectItem key={m.id} value={m.id}>
                 {m.label}
@@ -144,6 +146,7 @@ function FunctionCard({
   backendReady: boolean;
   tenantId: string | null;
 }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const [cfg, setCfg] = useState<AIFunctionConfig>(initial);
 
@@ -162,7 +165,7 @@ function FunctionCard({
   const resetMut = useMutation({
     mutationFn: () => aiProvidersApi.deleteTenantOverride(fn, tenantId as string),
     onSuccess: () => {
-      toast.success("Override tenant dihapus, kembali ke default global");
+      toast.success(t("Override tenant dihapus, kembali ke default global"));
       void qc.invalidateQueries({ queryKey: ["admin", "ai-providers"] });
     },
     onError: (err) => toast.error(toApiError(err).message),
@@ -209,8 +212,8 @@ function FunctionCard({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NO_FALLBACK}>Tanpa fallback</SelectItem>
-                <SelectItem value="on">Pakai fallback</SelectItem>
+                <SelectItem value={NO_FALLBACK}>{t("Tanpa fallback")}</SelectItem>
+                <SelectItem value="on">{t("Pakai fallback")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -247,6 +250,7 @@ function FunctionCard({
 }
 
 export default function AIProvidersPage() {
+  const { t } = useLocale();
   const { isAdmin } = useAdminSession();
   const [tenantSel, setTenantSel] = useState<string>(GLOBAL);
   const tenantId = tenantSel === GLOBAL ? null : tenantSel;
@@ -289,8 +293,8 @@ export default function AIProvidersPage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader
-        title="AI Providers"
-        description="Pilih provider, model, dan fallback per fungsi AI. Perubahan berlaku tanpa redeploy (cache backend ≤30 detik)."
+        title={t("AI Providers")}
+        description={t("Pilih provider, model, dan fallback per fungsi AI. Perubahan berlaku tanpa redeploy (cache backend ≤30 detik).")}
       />
 
       {loadError && (
@@ -318,7 +322,7 @@ export default function AIProvidersPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={GLOBAL}>Default global (semua tenant)</SelectItem>
+              <SelectItem value={GLOBAL}>{t("Default global (semua tenant)")}</SelectItem>
               {(tenantsQuery.data?.tenants ?? []).map((t) => (
                 <SelectItem key={t.id} value={t.id}>
                   {t.companyName}

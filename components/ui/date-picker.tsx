@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { format } from "date-fns";
-import { id as idLocale } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
+import { useDateFnsLocale, useLocale } from "@/lib/i18n/locale";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -32,6 +32,8 @@ export function DatePicker({
   toDate,
   id,
 }: DatePickerProps) {
+  const { t } = useLocale();
+  const dateLocale = useDateFnsLocale();
   const [open, setOpen] = React.useState(false);
   const selected = parseDateValue(value);
 
@@ -50,13 +52,13 @@ export function DatePicker({
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-          {selected ? format(selected, "d MMMM yyyy", { locale: idLocale }) : placeholder}
+          {selected ? format(selected, "d MMMM yyyy", { locale: dateLocale }) : t(placeholder)}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
-          locale={idLocale}
+          locale={dateLocale}
           selected={selected}
           onSelect={(date) => {
             onChange?.(date ? formatDateValue(date) : "");

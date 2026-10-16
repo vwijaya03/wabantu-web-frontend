@@ -31,12 +31,14 @@ import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale";
 
 const pageSize = 25;
 
 type SheetMode = "create" | "edit" | null;
 
 export default function CatalogPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
@@ -104,40 +106,40 @@ export default function CatalogPage() {
   const createMut = useMutation({
     mutationFn: () => catalogApi.create(toCreatePayload(form, priceTypes)),
     onSuccess: () => {
-      toast.success("Produk ditambahkan");
+      toast.success(t("Produk ditambahkan"));
       closeSheet();
       setPage(1);
       invalidateCatalog();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const updateMut = useMutation({
     mutationFn: () => catalogApi.update(editItem!.id, toUpdatePayload(form, priceTypes)),
     onSuccess: () => {
-      toast.success("Produk diperbarui");
+      toast.success(t("Produk diperbarui"));
       closeSheet();
       invalidateCatalog();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => catalogApi.remove(id),
     onSuccess: () => {
-      toast.success("Produk dihapus");
+      toast.success(t("Produk dihapus"));
       invalidateCatalog();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const toggleActiveMut = useMutation({
     mutationFn: (item: CatalogItem) => catalogApi.update(item.id, { isActive: !item.isActive }),
     onSuccess: () => {
-      toast.success("Status produk diperbarui");
+      toast.success(t("Status produk diperbarui"));
       invalidateCatalog();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const batchDeleteMut = useMutation({
@@ -147,21 +149,21 @@ export default function CatalogPage() {
       const failed = results.length - deleted;
       if (deleted === 0) {
         const firstErr = results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
-        throw firstErr?.reason ?? new Error("Gagal menghapus produk");
+        throw firstErr?.reason ?? new Error(t("Gagal menghapus produk"));
       }
       return { deleted, failed };
     },
     onSuccess: ({ deleted, failed }) => {
       if (failed > 0) {
-        toast.warning(`${deleted} produk dihapus, ${failed} gagal`);
+        toast.warning(t("{deleted} produk dihapus, {failed} gagal", { deleted, failed }));
       } else {
-        toast.success(`${deleted} produk dihapus`);
+        toast.success(t("{deleted} produk dihapus", { deleted }));
       }
       setSelectedIds(new Set());
       setBatchDeleteOpen(false);
       invalidateCatalog();
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
 
   const runSearch = () => {
@@ -204,26 +206,26 @@ export default function CatalogPage() {
 
   return (
     <>
-      <PageHeader title="Katalog Produk" description="Kelola produk untuk AI dan pesanan." />
+      <PageHeader title={t("Katalog Produk")} description={t("Kelola produk untuk AI dan pesanan.")} />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {canManage ? (
           <Button onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" />
-            Tambah produk
+            {t("Tambah produk")}
           </Button>
         ) : null}
         <Button variant="outline" asChild>
-          <Link href="/dashboard/catalog/import-text">Import teks AI</Link>
+          <Link href="/dashboard/catalog/import-text">{t("Import teks AI")}</Link>
         </Button>
         <Button variant="outline" asChild>
-          <Link href="/dashboard/catalog/import-image">Import gambar</Link>
+          <Link href="/dashboard/catalog/import-image">{t("Import gambar")}</Link>
         </Button>
         <Button variant="outline" asChild>
           <Link href="/dashboard/import">Import CSV</Link>
         </Button>
         <Button variant="ghost" asChild>
-          <Link href="/dashboard/catalog/price-types">Kelola tipe harga</Link>
+          <Link href="/dashboard/catalog/price-types">{t("Kelola tipe harga")}</Link>
         </Button>
       </div>
 
@@ -231,9 +233,9 @@ export default function CatalogPage() {
         <CardHeader>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle>Daftar produk ({total})</CardTitle>
+              <CardTitle>{t("Daftar produk ({total})", { total })}</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                Data dibatasi {pageSize} item per halaman agar tetap ringan meski SKU puluhan ribu.
+                {t("Data dibatasi {pageSize} item per halaman agar tetap ringan meski SKU puluhan ribu.", { pageSize })}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -246,18 +248,18 @@ export default function CatalogPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") runSearch();
                   }}
-                  placeholder="Cari nama, SKU, barcode..."
+                  placeholder={t("Cari nama, SKU, barcode...")}
                 />
               </div>
               <Button variant="secondary" onClick={runSearch}>
-                Cari
+                {t("Cari")}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => refetch()}
                 disabled={isFetching}
-                aria-label="Muat ulang daftar produk"
+                aria-label={t("Muat ulang daftar produk")}
               >
                 <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
               </Button>
@@ -274,10 +276,10 @@ export default function CatalogPage() {
           ) : null}
 
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Memuat...</p>
+            <p className="text-sm text-muted-foreground">{t("Memuat…")}</p>
           ) : items.length === 0 ? (
             <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-              Tidak ada produk yang cocok.
+              {t("Tidak ada produk yang cocok.")}
             </div>
           ) : (
             <CatalogProductTable
@@ -299,11 +301,11 @@ export default function CatalogPage() {
 
           <div className="mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
             <span className="text-muted-foreground">
-              {total === 0 ? "0 produk" : `Menampilkan ${firstItem}-${lastItem} dari ${total} produk`}
+              {total === 0 ? t("0 produk") : t("Menampilkan {from}-{to} dari {total} produk", { from: firstItem, to: lastItem, total })}
             </span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => goToPage(Math.max(1, page - 1))}>
-                Sebelumnya
+                {t("Sebelumnya")}
               </Button>
               <Button
                 variant="outline"
@@ -311,7 +313,7 @@ export default function CatalogPage() {
                 disabled={page >= totalPages}
                 onClick={() => goToPage(Math.min(totalPages, page + 1))}
               >
-                Berikutnya
+                {t("Berikutnya")}
               </Button>
             </div>
           </div>
@@ -335,9 +337,9 @@ export default function CatalogPage() {
       <ConfirmDialog
         open={batchDeleteOpen}
         onOpenChange={setBatchDeleteOpen}
-        title={`Hapus ${selectedIds.size} produk?`}
-        description="Produk yang dipilih akan dihapus permanen dari katalog."
-        confirmLabel="Hapus"
+        title={t("Hapus {count} produk?", { count: selectedIds.size })}
+        description={t("Produk yang dipilih akan dihapus permanen dari katalog.")}
+        confirmLabel={t("Hapus")}
         destructive
         loading={batchDeleteMut.isPending}
         onConfirm={() => batchDeleteMut.mutate(Array.from(selectedIds))}
@@ -351,9 +353,9 @@ export default function CatalogPage() {
             setDeleteProductName("");
           }
         }}
-        title="Hapus produk?"
-        description={deleteProductName ? `Produk "${deleteProductName}" akan dihapus permanen.` : undefined}
-        confirmLabel="Hapus"
+        title={t("Hapus produk?")}
+        description={deleteProductName ? t('Produk "{name}" akan dihapus permanen.', { name: deleteProductName }) : undefined}
+        confirmLabel={t("Hapus")}
         destructive
         loading={deleteMut.isPending}
         onConfirm={() => {

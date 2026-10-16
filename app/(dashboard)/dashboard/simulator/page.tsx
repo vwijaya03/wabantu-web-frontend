@@ -24,6 +24,7 @@ import { FIRESTORE_MESSAGES_ORDER_FIELD, firestorePaths } from "@/lib/firebase/p
 import { canPerformOwnerActions, hasTenantDashboardAccess } from "@/lib/api/auth";
 import { SimulatorOrderPanel } from "@/components/simulator/simulator-order-panel";
 import { toApiError } from "@/lib/api/client";
+import { useLocale } from "@/lib/i18n/locale";
 import {
   SIM_IMAGE_MIME,
   SIM_MAX_BUYER_NAME,
@@ -96,6 +97,7 @@ function SimBubble({ m }: { m: SimMessage }) {
 }
 
 export default function SimulatorPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const allowed = hasTenantDashboardAccess(user);
   const [kind, setKind] = useState<BuyerKind>("reseller");
@@ -156,7 +158,7 @@ export default function SimulatorPage() {
   if (!allowed) {
     return (
       <div className="p-6">
-        <PageHeader title="Simulator Chat" description="Untuk owner/staff tenant, atau super admin saat impersonate." />
+        <PageHeader title={t("Simulator Chat")} description={t("Untuk owner/staff tenant, atau super admin saat impersonate.")} />
         <p className="text-sm text-muted-foreground">
           Pilih/impersonate tenant dulu (mis. &quot;Toko Demo WABantu&quot;) untuk memakai simulator.
         </p>
@@ -173,8 +175,8 @@ export default function SimulatorPage() {
 
   const onPickFile = async (f: File | undefined) => {
     if (!f) return;
-    if (!(SIM_IMAGE_MIME as readonly string[]).includes(f.type)) return toast.error("Format gambar harus JPEG, PNG, atau WebP.");
-    if (f.size > SIM_MAX_IMAGE_BYTES) return toast.error("Ukuran gambar maksimal 2 MB.");
+    if (!(SIM_IMAGE_MIME as readonly string[]).includes(f.type)) return toast.error(t("Format gambar harus JPEG, PNG, atau WebP."));
+    if (f.size > SIM_MAX_IMAGE_BYTES) return toast.error(t("Ukuran gambar maksimal 2 MB."));
     const base64 = await fileToBase64(f);
     sendMut.mutate({ image: { base64, mimeType: f.type as SimImageMime }, text: text.trim() || undefined });
   };
@@ -182,8 +184,8 @@ export default function SimulatorPage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader
-        title="Simulator Chat"
-        description="Chat seperti di WhatsApp lewat pipeline yang sama, tanpa mengirim ke Meta. Harga mengikuti tingkat harga pembeli dari katalog."
+        title={t("Simulator Chat")}
+        description={t("Chat seperti di WhatsApp lewat pipeline yang sama, tanpa mengirim ke Meta. Harga mengikuti tingkat harga pembeli dari katalog.")}
       />
 
       <Card>
@@ -194,7 +196,7 @@ export default function SimulatorPage() {
             {pricing ? (
               <Badge>Tingkat: {pricing.tierLabel || pricing.tier}</Badge>
             ) : (
-              <Badge variant="outline">Tingkat harga: menunggu pesan pertama</Badge>
+              <Badge variant="outline">{t("Tingkat harga: menunggu pesan pertama")}</Badge>
             )}
           </div>
           <CardDescription>
@@ -204,24 +206,24 @@ export default function SimulatorPage() {
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-3 sm:items-end">
           <div className="space-y-1">
-            <Label>Jenis pembeli</Label>
+            <Label>{t("Jenis pembeli")}</Label>
             <Select value={kind} onValueChange={(v) => switchKind(v as BuyerKind)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="reseller">Reseller demo (reseller-demo)</SelectItem>
-                <SelectItem value="umum">Pembeli umum (sesi baru)</SelectItem>
+                <SelectItem value="reseller">{t("Reseller demo (reseller-demo)")}</SelectItem>
+                <SelectItem value="umum">{t("Pembeli umum (sesi baru)")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Nama pembeli (opsional)</Label>
+            <Label>{t("Nama pembeli (opsional)")}</Label>
             <Input
               value={buyerName}
               onChange={(e) => setBuyerName(e.target.value)}
               maxLength={SIM_MAX_BUYER_NAME}
-              placeholder="Pembeli Demo"
+              placeholder={t("Pembeli Demo")}
             />
           </div>
           <Button
@@ -270,7 +272,7 @@ export default function SimulatorPage() {
             {messagesQuery.isLoading ? (
               <Loader2 className="m-auto h-5 w-5 animate-spin" />
             ) : messages.length === 0 ? (
-              <p className="m-auto text-sm text-muted-foreground">Belum ada pesan. Mulai chat sebagai pembeli.</p>
+              <p className="m-auto text-sm text-muted-foreground">{t("Belum ada pesan. Mulai chat sebagai pembeli.")}</p>
             ) : (
               messages.map((m) => <SimBubble key={m.id} m={m} />)
             )}
@@ -292,7 +294,7 @@ export default function SimulatorPage() {
             <Input
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Ketik pesan (juga dipakai sebagai caption gambar)…"
+              placeholder={t("Ketik pesan (juga dipakai sebagai caption gambar)…")}
               maxLength={SIM_MAX_TEXT}
               disabled={sendMut.isPending}
             />

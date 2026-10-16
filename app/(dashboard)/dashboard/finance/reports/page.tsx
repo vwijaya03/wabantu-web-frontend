@@ -21,11 +21,13 @@ import {
 } from "@/lib/finance/utils";
 import { useReportingTimezone } from "@/hooks/use-reporting-timezone";
 import { useTenantKey } from "@/hooks/use-tenant-key";
+import { useLocale } from "@/lib/i18n/locale";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
 
 type ReportRange = "monthly" | "custom" | "all_time";
 
 export default function ReportsPage() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const tenantKey = useTenantKey();
   const reportingTimezone = useReportingTimezone();
@@ -73,10 +75,11 @@ export default function ReportsPage() {
       });
     },
     onSuccess: () => {
-      toast.success("Export dimulai — klik refresh untuk cek hasil");
+      toast.success(t("Export dimulai — klik refresh untuk cek hasil"));
       qc.invalidateQueries({ queryKey: ["finance-report-jobs"] });
     },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Gagal membuat export"),
+    onError: (err) =>
+      toast.error(err instanceof Error ? t(err.message) : t("Gagal membuat export")),
   });
 
   const months = comparison?.items ?? [];
@@ -85,35 +88,35 @@ export default function ReportsPage() {
   return (
     <>
       <FinanceSubPageHeader
-        title="Laporan Keuangan"
-        description="Ringkasan dan export laporan bisnis."
+        title={t("Laporan Keuangan")}
+        description={t("Ringkasan dan export laporan bisnis.")}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Export Laporan</CardTitle>
+          <CardTitle className="text-base">{t("Export Laporan")}</CardTitle>
           <CardDescription>
-            Pilih bulanan, rentang custom, atau sepanjang waktu. CSV untuk olah data, PDF untuk laporan siap baca.
+            {t("Pilih bulanan, rentang custom, atau sepanjang waktu. CSV untuk olah data, PDF untuk laporan siap baca.")}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-5">
           <div className="space-y-2">
-            <Label>Cakupan</Label>
+            <Label>{t("Cakupan")}</Label>
             <Select value={reportRange} onValueChange={(v) => setReportRange(v as ReportRange)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="monthly">Bulanan</SelectItem>
+                <SelectItem value="monthly">{t("Bulanan")}</SelectItem>
                 <SelectItem value="custom">Custom</SelectItem>
-                <SelectItem value="all_time">Sepanjang waktu</SelectItem>
+                <SelectItem value="all_time">{t("Sepanjang waktu")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {reportRange === "monthly" ? (
             <div className="space-y-2">
-              <Label>Periode</Label>
+              <Label>{t("Periode")}</Label>
               <Select value={effectivePeriod} onValueChange={setPeriod}>
                 <SelectTrigger>
                   <SelectValue />
@@ -130,25 +133,25 @@ export default function ReportsPage() {
           ) : reportRange === "custom" ? (
             <>
               <div className="space-y-2">
-                <Label>Tanggal Mulai</Label>
+                <Label>{t("Tanggal Mulai")}</Label>
                 <DatePicker value={customStartDate} onChange={setCustomStartDate} />
               </div>
               <div className="space-y-2">
-                <Label>Tanggal Selesai</Label>
+                <Label>{t("Tanggal Selesai")}</Label>
                 <DatePicker value={customEndDate} onChange={setCustomEndDate} />
               </div>
             </>
           ) : (
             <div className="space-y-2 md:col-span-2">
-              <Label>Periode</Label>
+              <Label>{t("Periode")}</Label>
               <div className="flex h-10 items-center rounded-md border px-3 text-sm text-muted-foreground">
-                Semua transaksi approved sejak awal penggunaan finance.
+                {t("Semua transaksi approved sejak awal penggunaan finance.")}
               </div>
             </div>
           )}
 
           <div className="space-y-2">
-            <Label>Format</Label>
+            <Label>{t("Format")}</Label>
             <Select value={format} onValueChange={(v) => setFormat(v as "pdf" | "csv")}>
               <SelectTrigger>
                 <SelectValue />
@@ -170,7 +173,7 @@ export default function ReportsPage() {
       </Card>
 
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Insight bulan:</span>
+        <span className="text-sm text-muted-foreground">{t("Insight bulan:")}</span>
         <Select value={effectivePeriod} onValueChange={setPeriod}>
           <SelectTrigger className="w-44">
             <SelectValue />
@@ -189,8 +192,8 @@ export default function ReportsPage() {
       {months.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Perbandingan 6 Bulan Terakhir</CardTitle>
-            <CardDescription>Pemasukan dan pengeluaran per bulan</CardDescription>
+            <CardTitle className="text-base">{t("Perbandingan 6 Bulan Terakhir")}</CardTitle>
+            <CardDescription>{t("Pemasukan dan pengeluaran per bulan")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -206,7 +209,7 @@ export default function ReportsPage() {
       {(categorySpending?.items?.length ?? 0) > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Pengeluaran per Kategori</CardTitle>
+            <CardTitle className="text-base">{t("Pengeluaran per Kategori")}</CardTitle>
             <CardDescription>{effectivePeriod}</CardDescription>
           </CardHeader>
           <CardContent>
@@ -230,7 +233,7 @@ export default function ReportsPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-base">Riwayat Export</CardTitle>
+              <CardTitle className="text-base">{t("Riwayat Export")}</CardTitle>
               <Button
                 variant="outline"
                 size="sm"
@@ -248,7 +251,7 @@ export default function ReportsPage() {
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium">{reportTypeLabel(j.type)}</p>
+                    <p className="text-sm font-medium">{t(reportTypeLabel(j.type))}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatFinanceDateTime(j.createdAt, reportingTimezone)}
                     </p>
@@ -261,7 +264,7 @@ export default function ReportsPage() {
                   <Badge
                     variant={j.status === "done" ? "default" : j.status === "failed" ? "destructive" : "secondary"}
                   >
-                    {reportStatusLabel(j.status)}
+                    {t(reportStatusLabel(j.status))}
                   </Badge>
                   {j.errorMsg && j.status !== "done" && (
                     <p
@@ -342,6 +345,7 @@ function reportTypeLabel(type: string) {
 }
 
 function MonthBar({ item, maxExpense }: { item: MonthlyComparisonItem; maxExpense: number }) {
+  const { t } = useLocale();
   const expPct = Math.min((parseFloat(item.expense) / maxExpense) * 100, 100);
   const incPct = Math.min((parseFloat(item.income) / maxExpense) * 100, 100);
   const net = parseFloat(item.net);
@@ -358,14 +362,14 @@ function MonthBar({ item, maxExpense }: { item: MonthlyComparisonItem; maxExpens
       </div>
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <span className="w-14 text-right text-[10px] text-muted-foreground">Masuk</span>
+          <span className="w-14 text-right text-[10px] text-muted-foreground">{t("Masuk")}</span>
           <div className="flex-1 h-2 rounded bg-muted overflow-hidden">
             <div className="h-full rounded bg-green-500" style={{ width: `${incPct}%` }} />
           </div>
           <span className="w-20 text-[10px] tabular-nums text-right">{formatIDR(item.income)}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-14 text-right text-[10px] text-muted-foreground">Keluar</span>
+          <span className="w-14 text-right text-[10px] text-muted-foreground">{t("Keluar")}</span>
           <div className="flex-1 h-2 rounded bg-muted overflow-hidden">
             <div className="h-full rounded bg-red-500" style={{ width: `${expPct}%` }} />
           </div>

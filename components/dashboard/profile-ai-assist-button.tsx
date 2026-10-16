@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { businessApi, type ProfileAISuggestField } from "@/lib/api/business";
 import { toApiError } from "@/lib/api/client";
+import { useLocale } from "@/lib/i18n/locale";
 
 type Props = {
   field: ProfileAISuggestField;
@@ -33,6 +34,7 @@ export function ProfileAiAssistButton({
   onApply,
   disabled,
 }: Props) {
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [hint, setHint] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
@@ -86,25 +88,25 @@ export function ProfileAiAssistButton({
           <div className="space-y-3">
             {currentValue?.trim() ? (
               <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                <p className="mb-1 font-medium text-foreground">Isian sekarang</p>
+                <p className="mb-1 font-medium text-foreground">{t("Isian sekarang")}</p>
                 <p className="whitespace-pre-wrap">{currentValue.trim()}</p>
               </div>
             ) : null}
             <div className="space-y-1.5">
-              <Label htmlFor={`ai-hint-${field}`}>Petunjuk tambahan (opsional)</Label>
+              <Label htmlFor={`ai-hint-${field}`}>{t("Petunjuk tambahan (opsional)")}</Label>
               <Textarea
                 id={`ai-hint-${field}`}
                 rows={2}
                 value={hint}
                 onChange={(e) => setHint(e.target.value)}
-                placeholder="Contoh: fokus pada jeans wanita, reseller welcome..."
+                placeholder={t("Contoh: fokus pada jeans wanita, reseller welcome...")}
                 maxLength={500}
                 disabled={suggestMut.isPending}
               />
             </div>
             {preview ? (
               <div className="space-y-1.5">
-                <Label>Pratinjau saran</Label>
+                <Label>{t("Pratinjau saran")}</Label>
                 <Textarea rows={5} readOnly value={preview} className="bg-muted/30" />
               </div>
             ) : null}
@@ -142,7 +144,7 @@ export function ProfileAiAssistButton({
                   if (!preview) return;
                   onApply(preview);
                   close();
-                  toast.success("Saran diterapkan — jangan lupa simpan");
+                  toast.success(t("Saran diterapkan — jangan lupa simpan"));
                 }}
               >
                 Pakai saran ini

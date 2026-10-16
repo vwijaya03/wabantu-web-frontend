@@ -32,7 +32,7 @@ import { DataTablePagination } from "@/components/events/data-table-toolbar";
 import { ListSortControl } from "@/components/events/list-sort-control";
 import { EventBreakFields } from "@/components/events/event-break-fields";
 import { eventsApi, type EventRow } from "@/lib/api/events";
-import { formatEventDateTimeRange } from "@/lib/events-format";
+import { useEventDateFormat } from "@/components/events/events-i18n";
 import { EVENT_LIST_SORT_DEFAULT, EVENT_LIST_SORT_OPTIONS } from "@/lib/events-sort";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canPerformOwnerActions } from "@/lib/api/auth";
@@ -40,12 +40,15 @@ import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantContextKey } from "@/lib/auth/tenant-context";
 import { eventsListKey } from "@/lib/query/events-query-keys";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 const STATUSES = ["DRAFT", "PUBLISHED", "CLOSED", "CANCELLED", "ARCHIVED"] as const;
 const PAGE_SIZE = 50;
 const ALL_STATUS = "__all__";
 
 export default function EventsListPage() {
+  const { t } = useLocale();
+  const { formatEventDateTimeRange } = useEventDateFormat();
   const router = useRouter();
   const { user } = useAuth();
   const tenantKey = tenantContextKey(user);
@@ -100,7 +103,7 @@ export default function EventsListPage() {
       });
     },
     onSuccess: () => {
-      toast.success("Acara dibuat");
+      toast.success(t("Acara dibuat"));
       void qc.invalidateQueries({ queryKey: ["events", tenantKey] });
       setOpen(false);
     },
@@ -112,7 +115,10 @@ export default function EventsListPage() {
     mutationFn: (id: string) => eventsApi.duplicateEvent(id),
     onSuccess: (res) => {
       toast.success(
-        `Disalin: ${res.peopleCopied} staf, ${res.patientsCopied} pasien`,
+        t("Disalin: {staff} staf, {patients} pasien", {
+          staff: res.peopleCopied,
+          patients: res.patientsCopied,
+        }),
       );
       void qc.invalidateQueries({ queryKey: ["events", tenantKey] });
       router.push(`/dashboard/events/${res.event.id}`);
@@ -126,17 +132,16 @@ export default function EventsListPage() {
   return (
     <>
       <PageHeader
-        title="Acara & Terapi"
-        description="Kelola acara pelayanan, staf, jadwal pasien, dan pendaftaran publik."
+        title={t("Acara & Terapi")}
+        description={t("Kelola acara pelayanan, staf, jadwal pasien, dan pendaftaran publik.")}
         actions={
           isOwner ? (
             <div className="flex gap-2">
               <Button variant="outline" asChild>
-                <Link href="/dashboard/events/masters">Master Data</Link>
+                <Link href="/dashboard/events/masters">{t("Master Data")}</Link>
               </Button>
               <Button onClick={() => setOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Acara Baru
-              </Button>
+                <Plus className="mr-2 h-4 w-4" />{t("Acara Baru")}</Button>
             </div>
           ) : null
         }
@@ -147,7 +152,7 @@ export default function EventsListPage() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             className="pl-8"
-            placeholder="Cari acara..."
+            placeholder={t("Cari acara...")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && (setSearch(q), setPage(1))}
@@ -159,9 +164,7 @@ export default function EventsListPage() {
             setSearch(q);
             setPage(1);
           }}
-        >
-          Cari
-        </Button>
+        >{t("Cari")}</Button>
         <Select
           value={statusFilter}
           onValueChange={(v) => {
@@ -170,10 +173,10 @@ export default function EventsListPage() {
           }}
         >
           <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder={t("Status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_STATUS}>Semua status</SelectItem>
+            <SelectItem value={ALL_STATUS}>{t("Semua status")}</SelectItem>
             {STATUSES.map((s) => (
               <SelectItem key={s} value={s}>
                 {s}
@@ -193,7 +196,7 @@ export default function EventsListPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <p className="text-sm text-muted-foreground">{t("Memuat...")}</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {(data?.items ?? []).map((ev) => (
@@ -213,7 +216,7 @@ export default function EventsListPage() {
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2 text-sm">
                 <Button size="sm" variant="outline" asChild>
-                  <Link href={`/dashboard/events/${ev.id}`}>Kelola</Link>
+                  <Link href={`/dashboard/events/${ev.id}`}>{t("Kelola")}</Link>
                 </Button>
                 {isOwner ? (
                   <Button
@@ -222,14 +225,12 @@ export default function EventsListPage() {
                     disabled={duplicateMut.isPending}
                     onClick={() => duplicateMut.mutate(ev.id)}
                   >
-                    <Copy className="mr-1 h-3 w-3" /> Duplikat
-                  </Button>
+                    <Copy className="mr-1 h-3 w-3" />{t("Duplikat")}</Button>
                 ) : null}
                 {tenantSlug && ev.status === "PUBLISHED" ? (
                   <Button size="sm" variant="ghost" asChild>
                     <Link href={`/register/${tenantSlug}/${ev.eventSlug}`} target="_blank">
-                      <ExternalLink className="mr-1 h-3 w-3" /> Pendaftaran publik
-                    </Link>
+                      <ExternalLink className="mr-1 h-3 w-3" />{t("Pendaftaran publik")}</Link>
                   </Button>
                 ) : null}
               </CardContent>
@@ -248,21 +249,19 @@ export default function EventsListPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Acara baru</DialogTitle>
-            <DialogDescription>
-              Pengaturan terapi otomatis dibuat. Staf dari roster dapat diimpor sekaligus.
-            </DialogDescription>
+            <DialogTitle>{t("Acara baru")}</DialogTitle>
+            <DialogDescription>{t("Pengaturan terapi otomatis dibuat. Staf dari roster dapat diimpor sekaligus.")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Nama acara</Label>
+              <Label>{t("Nama acara")}</Label>
               <Input
                 value={form.eventName}
                 onChange={(e) => setForm((f) => ({ ...f, eventName: e.target.value }))}
               />
             </div>
             <div>
-              <Label>Catatan acara</Label>
+              <Label>{t("Catatan acara")}</Label>
               <Textarea
                 rows={4}
                 placeholder={
@@ -273,10 +272,10 @@ export default function EventsListPage() {
               />
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Mulai</p>
+              <p className="text-xs font-medium text-muted-foreground">{t("Mulai")}</p>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-xs">Tanggal</Label>
+                  <Label className="text-xs">{t("Tanggal")}</Label>
                   <DatePicker
                     required
                     value={form.startDate}
@@ -284,7 +283,7 @@ export default function EventsListPage() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Jam</Label>
+                  <Label className="text-xs">{t("Jam")}</Label>
                   <TimePicker
                     value={form.startTime}
                     onChange={(startTime) => setForm((f) => ({ ...f, startTime }))}
@@ -293,10 +292,10 @@ export default function EventsListPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Selesai</p>
+              <p className="text-xs font-medium text-muted-foreground">{t("Selesai")}</p>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-xs">Tanggal</Label>
+                  <Label className="text-xs">{t("Tanggal")}</Label>
                   <DatePicker
                     required
                     value={form.endDate}
@@ -304,7 +303,7 @@ export default function EventsListPage() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Jam</Label>
+                  <Label className="text-xs">{t("Jam")}</Label>
                   <TimePicker
                     value={form.endTime}
                     onChange={(endTime) => setForm((f) => ({ ...f, endTime }))}
@@ -325,11 +324,9 @@ export default function EventsListPage() {
                 type="checkbox"
                 checked={form.importStaffFromRoster}
                 onChange={(e) => setForm((f) => ({ ...f, importStaffFromRoster: e.target.checked }))}
-              />
-              Import staf dari roster (tim tetap, tanpa isi ulang)
-            </label>
+              />{t("Import staf dari roster (tim tetap, tanpa isi ulang)")}</label>
             <div>
-              <Label>Status</Label>
+              <Label>{t("Status")}</Label>
               <Select
                 value={form.status}
                 onValueChange={(v) => setForm((f) => ({ ...f, status: v as EventRow["status"] }))}
@@ -351,15 +348,13 @@ export default function EventsListPage() {
             <Button
               onClick={() => {
                 if (!form.eventName.trim() || !form.startDate || !form.endDate) {
-                  toast.error("Nama acara dan tanggal wajib diisi");
+                  toast.error(t("Nama acara dan tanggal wajib diisi"));
                   return;
                 }
                 createMut.mutate();
               }}
               disabled={createMut.isPending}
-            >
-              Simpan
-            </Button>
+            >{t("Simpan")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

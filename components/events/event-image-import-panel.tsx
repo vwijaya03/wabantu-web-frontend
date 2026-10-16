@@ -38,6 +38,7 @@ import { roleUsesTherapies } from "@/lib/events-staff";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 type ImportKind = "staff" | "patients" | "therapies";
 type ImportPresentation = "inline" | "dialog";
@@ -57,6 +58,7 @@ export function EventImageImportPanel({
   onCommitted: () => void;
   presentation?: ImportPresentation;
 }) {
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -104,7 +106,12 @@ export function EventImageImportPanel({
       } else {
         setTherapyItems((data as TherapyImagePreview).items.map((i) => ({ ...i })));
       }
-      toast.success(`Terdeteksi ${data.items.length} baris (pakai ${data.tokensUsed} token)`);
+      toast.success(
+        t("Terdeteksi {count} baris (pakai {tokens} token)", {
+          count: data.items.length,
+          tokens: data.tokensUsed,
+        }),
+      );
       data.warnings?.forEach((w) => toast.warning(w));
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -155,8 +162,9 @@ export function EventImageImportPanel({
   const patientsHint =
     kind === "patients" ? (
       <p className="text-xs text-muted-foreground">
-        Kolom <strong>Jam</strong> dari gambar diisi ke slot otomatis saat commit (slot harus sudah di-generate di tab
-        Jadwal).
+        {t(
+          "Kolom Jam dari gambar diisi ke slot otomatis saat commit (slot harus sudah di-generate di tab Jadwal).",
+        )}
       </p>
     ) : null;
 
@@ -164,7 +172,10 @@ export function EventImageImportPanel({
     <div className="space-y-4">
         {tokenQuota ? (
           <p className="text-xs text-muted-foreground">
-            Sisa kuota token AI bulan ini: {tokenQuota.remaining} / {tokenQuota.limit}
+            {t("Sisa kuota token AI bulan ini: {remaining} / {limit}", {
+              remaining: tokenQuota.remaining,
+              limit: tokenQuota.limit,
+            })}
           </p>
         ) : null}
         <div
@@ -175,11 +186,17 @@ export function EventImageImportPanel({
         >
           <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            JPG/PNG/WEBP, maks. {EVENT_IMAGE_MAX_MB} MB/file, {EVENT_IMAGE_MAX_FILES} file, total{" "}
-            {EVENT_IMAGE_MAX_BATCH_MB} MB
+            {t(
+              "JPG/PNG/WEBP, maks. {maxMb} MB/file, {maxFiles} file, total {maxBatch} MB",
+              {
+                maxMb: EVENT_IMAGE_MAX_MB,
+                maxFiles: EVENT_IMAGE_MAX_FILES,
+                maxBatch: EVENT_IMAGE_MAX_BATCH_MB,
+              },
+            )}
           </p>
           <label className="mt-3 cursor-pointer">
-            <span className="text-sm font-medium text-primary underline">Pilih gambar</span>
+            <span className="text-sm font-medium text-primary underline">{t("Pilih gambar")}</span>
             <input
               type="file"
               accept={EVENT_IMAGE_ACCEPT}
@@ -209,7 +226,9 @@ export function EventImageImportPanel({
                 </Button>
               </li>
             ))}
-            <li className="text-xs text-muted-foreground">Total: {formatEventImageSize(totalBytes)}</li>
+            <li className="text-xs text-muted-foreground">
+              {t("Total:")} {formatEventImageSize(totalBytes)}
+            </li>
           </ul>
         ) : null}
         {fileError ? <p className="text-sm text-destructive">{fileError}</p> : null}
@@ -220,7 +239,7 @@ export function EventImageImportPanel({
             disabled={!files.length || !!fileError || previewMut.isPending || quotaExhausted}
             onClick={() => previewMut.mutate()}
           >
-            {previewMut.isPending ? "Memproses AI..." : "Baca gambar (AI)"}
+            {previewMut.isPending ? t("Memproses AI...") : t("Baca gambar (AI)")}
           </Button>
           {jobId ? (
             <Button
@@ -228,7 +247,7 @@ export function EventImageImportPanel({
               disabled={included === 0 || commitMut.isPending}
               onClick={() => commitMut.mutate()}
             >
-              {commitMut.isPending ? "Menyimpan..." : `Simpan (${included})`}
+              {commitMut.isPending ? t("Menyimpan...") : t("Simpan ({count})", { count: included })}
             </Button>
           ) : null}
         </div>
@@ -290,7 +309,7 @@ export function EventImageImportPanel({
                 />
                 <Input
                   value={row.attendanceLabel ?? ""}
-                  placeholder="Kehadiran"
+                  placeholder={t("Kehadiran")}
                   onChange={(e) =>
                     setStaffItems((prev) =>
                       prev.map((r, i) => (i === idx ? { ...r, attendanceLabel: e.target.value } : r)),
@@ -306,9 +325,7 @@ export function EventImageImportPanel({
                         prev.map((r, i) => (i === idx ? { ...r, isPencatat: e.target.checked } : r)),
                       )
                     }
-                  />
-                  Pencatat
-                </label>
+                  />{t("Pencatat")}</label>
               </div>
             ))}
           </div>
@@ -354,7 +371,7 @@ export function EventImageImportPanel({
                 />
                 <Input
                   value={row.complaint ?? ""}
-                  placeholder="Keluhan"
+                  placeholder={t("Keluhan")}
                   onChange={(e) =>
                     setPatientItems((prev) =>
                       prev.map((r, i) => (i === idx ? { ...r, complaint: e.target.value } : r)),
@@ -363,7 +380,7 @@ export function EventImageImportPanel({
                 />
                 <Input
                   value={row.preferredTime ?? ""}
-                  placeholder="Jam preferensi"
+                  placeholder={t("Jam preferensi")}
                   onChange={(e) =>
                     setPatientItems((prev) =>
                       prev.map((r, i) =>
@@ -401,7 +418,7 @@ export function EventImageImportPanel({
                 />
                 <Input
                   value={row.description ?? ""}
-                  placeholder="Deskripsi"
+                  placeholder={t("Deskripsi")}
                   onChange={(e) =>
                     setTherapyItems((prev) =>
                       prev.map((r, i) => (i === idx ? { ...r, description: e.target.value } : r)),
@@ -420,9 +437,7 @@ export function EventImageImportPanel({
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>
           <Button size="sm" variant="outline">
-            <ImageUp className="mr-1 h-4 w-4" />
-            Import dari gambar
-          </Button>
+            <ImageUp className="mr-1 h-4 w-4" />{t("Import dari gambar")}</Button>
         </DialogTrigger>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>

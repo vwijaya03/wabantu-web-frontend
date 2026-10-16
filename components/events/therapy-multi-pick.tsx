@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale } from "@/lib/i18n/locale";
+
 export function TherapyMultiPick({
   therapies,
   selected,
@@ -11,24 +13,27 @@ export function TherapyMultiPick({
   onChange: (ids: string[]) => void;
   disabled?: boolean;
 }) {
+  const { t } = useLocale();
+
   const toggle = (id: string) => {
     if (disabled) return;
     onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
   };
+
   return (
     <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
       {therapies.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Belum ada master terapi.</p>
+        <p className="text-xs text-muted-foreground">{t("Belum ada master terapi.")}</p>
       ) : (
-        therapies.map((t) => (
-          <label key={t.id} className="flex cursor-pointer items-center gap-2 text-sm">
+        therapies.map((therapy) => (
+          <label key={therapy.id} className="flex cursor-pointer items-center gap-2 text-sm">
             <input
               type="checkbox"
               disabled={disabled}
-              checked={selected.includes(t.id)}
-              onChange={() => toggle(t.id)}
+              checked={selected.includes(therapy.id)}
+              onChange={() => toggle(therapy.id)}
             />
-            {t.therapyName}
+            {therapy.therapyName}
           </label>
         ))
       )}

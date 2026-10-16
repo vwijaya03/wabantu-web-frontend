@@ -7,8 +7,10 @@ import { analyticsApi } from "@/lib/api/analytics";
 import { useTenantKey } from "@/hooks/use-tenant-key";
 import { useTenantQueryEnabled } from "@/hooks/use-tenant-query-enabled";
 import { tenantQueryKey } from "@/lib/query/tenant-query-key";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function AnalyticsPage() {
+  const { t } = useLocale();
   const tenantKey = useTenantKey();
   const tenantReady = useTenantQueryEnabled();
   const { data, isLoading } = useQuery({
@@ -23,8 +25,8 @@ export default function AnalyticsPage() {
   return (
     <>
       <PageHeader
-        title="Analytics"
-        description="Performa AI auto-reply dan kepuasan pelanggan."
+        title={t("Analytics")}
+        description={t("Performa AI auto-reply dan kepuasan pelanggan.")}
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
@@ -46,19 +48,19 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">AI coverage</p>
+            <p className="text-sm text-muted-foreground">{t("AI coverage")}</p>
             <p className="mt-2 text-2xl font-bold">{kpis?.aiCoveragePct ?? 0}%</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Handoff rate</p>
+            <p className="text-sm text-muted-foreground">{t("Handoff rate")}</p>
             <p className="mt-2 text-2xl font-bold">{kpis?.handoffRatePct ?? 0}%</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Conversion estimate</p>
+            <p className="text-sm text-muted-foreground">{t("Conversion estimate")}</p>
             <p className="mt-2 text-2xl font-bold">
               {kpis?.conversionEstimatePct ?? 0}%
             </p>
@@ -67,7 +69,7 @@ export default function AnalyticsPage() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Pertanyaan paling sering (30 hari)</CardTitle>
+          <CardTitle>{t("Pertanyaan paling sering (30 hari)")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           {(data?.topQuestions ?? []).length === 0 ? (

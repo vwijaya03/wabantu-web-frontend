@@ -33,22 +33,24 @@ import {
 } from "@/components/inventory/inventory-table";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale";
 
 export default function InventoryMaintenancePage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const canManage = canPerformOwnerActions(user);
 
   if (!canManage) {
     return (
-      <RequireTenantDashboard title="Pemeliharaan">
-        <InventoryPageHeader title="Pemeliharaan Persediaan" description="Hanya owner yang dapat menjalankan pemeliharaan." helpTopic="maintenance" />
+      <RequireTenantDashboard title={t("Pemeliharaan")}>
+        <InventoryPageHeader title={t("Pemeliharaan Persediaan")} description={t("Hanya owner yang dapat menjalankan pemeliharaan.")} helpTopic="maintenance" />
       </RequireTenantDashboard>
     );
   }
 
   return (
-    <RequireTenantDashboard title="Pemeliharaan">
-      <InventoryPageHeader title="Pemeliharaan Persediaan" description="Recalculate HPP, backfill pesanan lama, dan ringkasan nilai." helpTopic="maintenance" />
+    <RequireTenantDashboard title={t("Pemeliharaan")}>
+      <InventoryPageHeader title={t("Pemeliharaan Persediaan")} description={t("Recalculate HPP, backfill pesanan lama, dan ringkasan nilai.")} helpTopic="maintenance" />
       <BackfillMaintenanceSection />
       <div className="mt-6">
         <ValuationCard />
@@ -58,21 +60,22 @@ export default function InventoryMaintenancePage() {
 }
 
 function RecalcCard() {
+  const { t } = useLocale();
   const [confirm, setConfirm] = useState(false);
   const mut = useMutation({
     mutationFn: () => inventoryApi.recalculate(),
     onSuccess: (r) => { toast.success(`HPP dihitung ulang untuk ${r.recomputed} item/gudang`); setConfirm(false); },
-    onError: (e) => { toast.error(toApiError(e).message); setConfirm(false); },
+    onError: (e) => { toast.error(t(toApiError(e).message)); setConfirm(false); },
   });
   return (
     <Card>
-      <CardHeader><CardTitle><InventoryCardTitleWithHelp title="Recalculate HPP" helpTopic="maintenance-recalc" /></CardTitle></CardHeader>
+      <CardHeader><CardTitle><InventoryCardTitleWithHelp title={t("Recalculate HPP")} helpTopic="maintenance-recalc" /></CardTitle></CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
           Hitung ulang lapisan biaya, saldo, dan HPP dari riwayat pergerakan. Gunakan bila HPP terlihat tidak wajar.
         </p>
         <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Catatan: revaluasi manual <strong>tidak dipertahankan</strong> (dibangun ulang dari riwayat penerimaan/penjualan).
+          Catatan: revaluasi manual <strong>{t("tidak dipertahankan")}</strong> (dibangun ulang dari riwayat penerimaan/penjualan).
         </p>
         <Button onClick={() => setConfirm(true)} disabled={mut.isPending}>
           {mut.isPending ? "Menghitung..." : "Recalculate HPP"}
@@ -82,14 +85,14 @@ function RecalcCard() {
       <AlertDialog open={confirm} onOpenChange={setConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hitung ulang HPP semua item?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Hitung ulang HPP semua item?")}</AlertDialogTitle>
             <AlertDialogDescription>
               Lapisan biaya & saldo dibangun ulang dari riwayat pergerakan. Revaluasi manual tidak dipertahankan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel autoFocus>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={() => mut.mutate()} disabled={mut.isPending}>Ya, hitung ulang</AlertDialogAction>
+            <AlertDialogCancel autoFocus>{t("Batal")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => mut.mutate()} disabled={mut.isPending}>{t("Ya, hitung ulang")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -98,6 +101,7 @@ function RecalcCard() {
 }
 
 function BackfillMaintenanceSection() {
+  const { t } = useLocale();
   const [confirm, setConfirm] = useState(false);
   const [preview, setPreview] = useState<BackfillOrdersResult | null>(null);
   const [lastResult, setLastResult] = useState<BackfillOrdersResult | null>(null);
@@ -108,7 +112,7 @@ function BackfillMaintenanceSection() {
       setPreview(r);
       setLastResult(null);
     },
-    onError: (e) => toast.error(toApiError(e).message),
+    onError: (e) => toast.error(t(toApiError(e).message)),
   });
   const execMut = useMutation({
     mutationFn: () => inventoryApi.backfillOrders(true),
@@ -122,7 +126,7 @@ function BackfillMaintenanceSection() {
         toast.success(`Backfill selesai: ${r.processed} pesanan berhasil diproses`);
       }
     },
-    onError: (e) => { toast.error(toApiError(e).message); setConfirm(false); },
+    onError: (e) => { toast.error(t(toApiError(e).message)); setConfirm(false); },
   });
 
   const issues = preview?.issues?.length ? preview.issues : lastResult?.issues ?? [];
@@ -138,7 +142,7 @@ function BackfillMaintenanceSection() {
       <div className="grid gap-6 lg:grid-cols-2">
         <RecalcCard />
         <Card>
-          <CardHeader><CardTitle><InventoryCardTitleWithHelp title="Backfill Pesanan Lama" helpTopic="maintenance-backfill" /></CardTitle></CardHeader>
+          <CardHeader><CardTitle><InventoryCardTitleWithHelp title={t("Backfill Pesanan Lama")} helpTopic="maintenance-backfill" /></CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
               Potong stok untuk pesanan committed (Sedang diproses, Dalam pengiriman, Selesai) yang belum sinkron dengan persediaan.
@@ -149,16 +153,16 @@ function BackfillMaintenanceSection() {
 
             {preview ? (
               <div className="rounded-md border p-3 text-sm space-y-2">
-                <p>Pesanan akan diproses: <span className="font-semibold">{preview.pendingOrders.toLocaleString("id-ID")}</span></p>
+                <p>{t("Pesanan akan diproses:")} <span className="font-semibold">{preview.pendingOrders.toLocaleString("id-ID")}</span></p>
                 {insufficientCount(preview) > 0 ? (
                   <p className="text-amber-800">
                     {insufficientCount(preview).toLocaleString("id-ID")} pesanan stoknya tidak cukup dan akan gagal jika blokir stok minus aktif.
                   </p>
                 ) : preview.pendingOrders > 0 ? (
-                  <p className="text-emerald-700">Semua pesanan punya stok cukup.</p>
+                  <p className="text-emerald-700">{t("Semua pesanan punya stok cukup.")}</p>
                 ) : null}
                 {preview.pendingOrders > 0 ? (
-                  <Button className="mt-1" size="sm" onClick={() => setConfirm(true)}>Jalankan Backfill</Button>
+                  <Button className="mt-1" size="sm" onClick={() => setConfirm(true)}>{t("Jalankan Backfill")}</Button>
                 ) : null}
               </div>
             ) : null}
@@ -182,7 +186,7 @@ function BackfillMaintenanceSection() {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel autoFocus>Batal</AlertDialogCancel>
+                <AlertDialogCancel autoFocus>{t("Batal")}</AlertDialogCancel>
                 <AlertDialogAction onClick={() => execMut.mutate()} disabled={execMut.isPending}>
                   {execMut.isPending ? "Memproses..." : "Jalankan"}
                 </AlertDialogAction>
@@ -205,6 +209,7 @@ function BackfillMaintenanceSection() {
 }
 
 function ValuationCard() {
+  const { t } = useLocale();
   const tenantKey = useTenantKey();
   const { data } = useQuery({
     queryKey: tenantQueryKey(tenantKey, "inventory", "stock", "valuation"),
@@ -217,17 +222,17 @@ function ValuationCard() {
 
   return (
     <Card>
-      <CardHeader><CardTitle><InventoryCardTitleWithHelp title="Nilai Persediaan per Gudang" helpTopic="maintenance-valuation" /></CardTitle></CardHeader>
+      <CardHeader><CardTitle><InventoryCardTitleWithHelp title={t("Nilai Persediaan per Gudang")} helpTopic="maintenance-valuation" /></CardTitle></CardHeader>
       <CardContent>
         {byWarehouse.size === 0 ? (
-          <p className="text-sm text-muted-foreground">Belum ada nilai persediaan.</p>
+          <p className="text-sm text-muted-foreground">{t("Belum ada nilai persediaan.")}</p>
         ) : (
           <div className="space-y-3">
             <InventoryTable>
               <InventoryTableHeader>
                 <InventoryTableRow>
-                  <InventoryTableHead>Gudang</InventoryTableHead>
-                  <InventoryTableHead align="right">Nilai</InventoryTableHead>
+                  <InventoryTableHead>{t("Gudang")}</InventoryTableHead>
+                  <InventoryTableHead align="right">{t("Nilai")}</InventoryTableHead>
                 </InventoryTableRow>
               </InventoryTableHeader>
               <InventoryTableBody>
@@ -240,7 +245,7 @@ function ValuationCard() {
               </InventoryTableBody>
             </InventoryTable>
             <div className="flex items-center justify-between border-t pt-2 text-sm">
-              <span className="font-semibold">Total</span>
+              <span className="font-semibold">{t("Total")}</span>
               <span className="font-semibold">{formatIDR(total)}</span>
               <Badge variant="secondary">{rows.length} baris</Badge>
             </div>
