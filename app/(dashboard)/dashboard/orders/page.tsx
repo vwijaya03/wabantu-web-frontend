@@ -519,6 +519,7 @@ export default function OrdersPage() {
     mutationFn: () => ordersApi.batchDelete(Array.from(selectedIds)),
     onSuccess: (res) => {
       toast.success(t("{count} pesanan dihapus", { count: res.deleted }));
+      setBatchDeleteOpen(false);
       setSelectedIds(new Set());
       invalidateOrders();
     },
