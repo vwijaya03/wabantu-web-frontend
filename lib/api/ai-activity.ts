@@ -32,6 +32,7 @@ export interface AIActivityByModel {
   inputTokens: number;
   outputTokens: number;
   estimatedCostUsd: number;
+  costKnown?: boolean;
 }
 
 export interface AIActivitySummary {
