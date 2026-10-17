@@ -195,7 +195,10 @@ export default function AdminAIActivityPage() {
                     <p className="text-xs text-muted-foreground">{row.tier}</p>
                   </div>
                   <span className="text-muted-foreground">
-                    {row.calls}× · ${row.estimatedCostUsd.toFixed(4)}
+                    {row.calls}× ·{" "}
+                    {row.costKnown === false
+                      ? t("Harga model belum diketahui")
+                      : `$${row.estimatedCostUsd.toFixed(4)}`}
                   </span>
                 </div>
               ))
