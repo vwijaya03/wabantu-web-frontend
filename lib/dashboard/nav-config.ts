@@ -191,6 +191,7 @@ export const PLATFORM_NAV_SECTION: NavSection = {
     { href: "/dashboard/admin/ai-activity", label: "AI Activity", icon: Sparkles },
     { href: "/dashboard/admin/ai-triage", label: "AI Triage", icon: Wrench },
     { href: "/dashboard/admin/ai-retrieval", label: "AI Retrieval", icon: Database },
+    { href: "/dashboard/admin/ai-llm-first", label: "AI LLM-first", icon: Bot },
     { href: "/dashboard/admin/ai-regression", label: "AI Regression", icon: FlaskConical },
     { href: "/dashboard/admin/ai-providers", label: "AI Providers", icon: Bot },
     { href: "/dashboard/simulator", label: "Simulator Chat", icon: MessageSquare },
