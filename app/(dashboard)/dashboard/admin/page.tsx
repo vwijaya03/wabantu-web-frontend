@@ -246,6 +246,9 @@ export default function AdminPage() {
           <Link href="/dashboard/admin/ai-retrieval">{t("AI Retrieval (RAG) →")}</Link>
         </Button>
         <Button variant="outline" asChild>
+          <Link href="/dashboard/admin/ai-llm-first">{t("AI LLM-first →")}</Link>
+        </Button>
+        <Button variant="outline" asChild>
           <Link href="/dashboard/admin/ai-regression">{t("AI Regression →")}</Link>
         </Button>
         <Button
