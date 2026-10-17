@@ -23,6 +23,7 @@ export const adminEn: Record<string, string> = {
   "Batasi ke satu percakapan": "Limit to one conversation",
   "Belum ada data.": "No data yet.",
   "Belum ada panggilan LLM.": "No LLM calls yet.",
+  "Harga model belum diketahui": "Model price unknown",
   "Belum ada pesan. Mulai chat sebagai pembeli.": "No messages yet. Start chatting as a buyer.",
   "Cakupan yang diminta": "Requested scope",
   "Cari Dokumentasi": "Search documentation",
