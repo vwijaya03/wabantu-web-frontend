@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authApi } from "@/lib/api/auth";
+import { safeNext } from "@/lib/auth/safe-next";
 import { hasAccessToken } from "@/lib/auth/session";
 import { useLocale } from "@/lib/i18n/locale";
 
@@ -16,7 +17,7 @@ export function LoginSessionGate({ children }: { children: React.ReactNode }) {
   const { t } = useLocale();
   const router = useRouter();
   const search = useSearchParams();
-  const next = search.get("next") || "/dashboard";
+  const next = safeNext(search.get("next"));
   const [phase, setPhase] = useState<SessionPhase>("pending");
 
   useEffect(() => {

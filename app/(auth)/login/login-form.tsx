@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authApi } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/client";
+import { safeNext } from "@/lib/auth/safe-next";
 import { useLocale } from "@/lib/i18n/locale";
 
 const schema = z.object({
@@ -24,7 +25,7 @@ type FormValues = z.infer<typeof schema>;
 export function LoginForm() {
   const { t } = useLocale();
   const search = useSearchParams();
-  const next = search.get("next") || "/dashboard";
+  const next = safeNext(search.get("next"));
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
