@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { adminLogin } from "@/lib/api/admin-client";
 import { toApiError } from "@/lib/api/errors";
 import { setAdminSession } from "@/lib/auth/admin-session";
+import { safeNext } from "@/lib/auth/safe-next";
 import { useLocale } from "@/lib/i18n/locale";
 
 /** Halaman login superadmin. Sengaja TIDAK ditautkan dari /login client. */
@@ -26,10 +27,6 @@ function describeError(err: unknown): string {
   if (e.status === 404) return "Endpoint login admin belum tersedia di backend.";
   if (e.status === 0 || e.status >= 500) return "Gagal, coba lagi.";
   return "Login gagal. Periksa data lalu coba lagi.";
-}
-
-function safeNext(n: string | null): string {
-  return n && n.startsWith("/") && !n.startsWith("//") ? n : "/dashboard/admin/ai-providers";
 }
 
 function AdminLoginForm() {
@@ -49,7 +46,7 @@ function AdminLoginForm() {
       const { accessToken, expiresAt } = await adminLogin(email.trim(), password);
       setAdminSession(accessToken, expiresAt);
       setPassword("");
-      router.replace(safeNext(params.get("next")));
+      router.replace(safeNext(params.get("next"), "/dashboard/admin/ai-providers"));
     } catch (err) {
       // Jangan pernah log password / body request.
       setError(describeError(err));

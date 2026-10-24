@@ -316,6 +316,8 @@ Allows different layouts for marketing vs dashboard without `/dashboard` prefix 
 
 **File:** `app/(auth)/login/login-form.tsx`
 
+**Parameter `?next=` wajib lewat `safeNext()`** (`lib/auth/safe-next.ts`) sebelum dipakai untuk `location.assign` / `router.replace`. Lihat §8 "Validasi `?next=` (open redirect)".
+
 ## 4.6 `proxy.ts` (Next 16)
 
 Renamed from `middleware.ts`. Runs on **edge** before route handlers.
@@ -524,7 +526,7 @@ const conversations = useMemo(
 
 1. User submits `login-form.tsx` (Zod + RHF).
 2. `authApi.login` → POST `/auth/login` → `setAccessToken`.
-3. `window.location.assign(next)` → full navigation to `/dashboard`.
+3. `window.location.assign(next)` → full navigation; `next = safeNext(search.get("next"))` (default `/dashboard`, hanya path same-origin).
 4. `DashboardAuthShell` runs `authApi.me()` → renders app.
 
 ## 7.2 Inbox realtime update
@@ -592,11 +594,24 @@ api-go `AuthenticateHTTP` accepts this (see api-go auth docs).
 
 **Note:** Real enforcement is on **api-go** (`tag:owner`); UI checks are UX only.
 
+## Validasi `?next=` (open redirect)
+
+`/login?next=…` dan `/platform-admin/login?next=…` mengarahkan user setelah login. Nilai `next` berasal dari URL (bisa dibuat penyerang), jadi **selalu** lewat `safeNext(raw, fallback)` di `lib/auth/safe-next.ts`:
+
+| Dipakai di | Fallback |
+|------------|----------|
+| `app/(auth)/login/login-form.tsx` (`window.location.assign`) | `/dashboard` |
+| `components/auth/login-session-gate.tsx` (`router.replace`) | `/dashboard` |
+| `app/platform-admin/login/page.tsx` (`router.replace`) | `/dashboard/admin/ai-providers` |
+
+Aturan `safeNext`: hanya path relatif yang diawali **satu** `/`. Ditolak (→ fallback): URL absolut dan skema apa pun (`https:`, `javascript:`, `data:`, …), `//host`, varian backslash (`/\host`, `\host`), whitespace/karakter kontrol di mana pun (mis. ` /dashboard`, `/\t/evil.com` — browser membuang tab sehingga menjadi `//evil.com`), varian ter-encode yang setelah decode menjadi `//` atau berisi backslash, encoding rusak, input non-string/kosong. Nilai di-parse dengan `new URL(raw, "https://x.invalid")`, origin harus sama dengan base, dan yang dikembalikan hanya `pathname + search + hash`. Unit test: `e2e/specs/09-safe-next.spec.ts` (tanpa backend/browser: `npx playwright test e2e/specs/09-safe-next.spec.ts`).
+
 ## Security checklist for new features
 
 - [ ] Never log token or put in URL except SSE path.
 - [ ] Do not store JWT in `localStorage` unless product requires cross-tab (we use `sessionStorage` intentionally).
 - [ ] Sanitize user-generated content before `dangerouslySetInnerHTML` (avoid; use text nodes).
+- [ ] Redirect dari input URL/query (`next`, `returnTo`, dll.) wajib lewat `safeNext()`; jangan `location.assign`/`router.replace` nilai mentah.
 
 ---
 
