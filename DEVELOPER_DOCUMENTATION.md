@@ -61,7 +61,7 @@ flowchart TB
 
 | Layer | Technology |
 |-------|------------|
-| Framework | **Next.js 16.2** (App Router) |
+| Framework | **Next.js 16.4.3** (App Router; dipin exact, bump keamanan Okt 2026) |
 | UI library | **React 19.2** |
 | Language | **TypeScript 5** |
 | Styling | **Tailwind CSS v4** + CSS variables (OKLCH) |
