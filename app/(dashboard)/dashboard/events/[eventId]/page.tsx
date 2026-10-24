@@ -374,6 +374,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
     mutationFn: () => eventsApi.deleteEvent(eventId),
     onSuccess: () => {
       toast.success(t("Acara dihapus"));
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- tujuan hardcoded; full reload disengaja setelah hapus acara agar cache React Query acara yang sudah dihapus ikut dibuang.
       window.location.href = "/dashboard/events";
     },
     onError: () => toast.error(t("Gagal menghapus")),
