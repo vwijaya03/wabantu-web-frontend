@@ -115,12 +115,24 @@ Untuk kebutuhan catering per orang (mis. *nasi setengah*, *tanpa nasi*, *alergi 
 - Field **Catatan konsumsi (opsional)** muncul hanya saat checkbox **Dihitung untuk konsumsi (makan)** dicentang — di form pendaftaran staf publik (`/register/{slug-toko}/{slug-acara}/staff`) dan di dialog **Tambah staf** / **Edit staf** (tab **Staf**).
 - Maksimal **200 karakter** (ada penghitung `n/200`). Spasi di awal/akhir dipangkas.
 - Checkbox dimatikan → field disembunyikan dan isinya dikosongkan; catatan tidak dikirim.
-- Edit staf: kosongkan field untuk menghapus catatan. Karena `PUT` person adalah **full replace**, dialog edit **selalu** mengirim ulang `mealNotes` yang sudah ada (catatan tidak hilang saat mengedit field lain).
+- Edit staf: kosongkan field untuk menghapus catatan. Karena `PUT` person adalah **full replace**, dialog edit **selalu** mengirim ulang `mealNotes` yang sudah ada (catatan tidak hilang saat mengedit field lain — lihat *Edit staf = full replace* di bawah).
 - Catatan tampil di tabel **Daftar staf** di bawah nama (label kecil **Konsumsi** + teks), supaya panitia bisa melihatnya.
 - Halaman **Pantau staf publik** (`/monitor/{slug-toko}/{slug-acara}`) menampilkan catatan konsumsi di kolom **Catatan**, di bawah catatan biasa (di layar HP juga tampil di bawah nama, karena kolom Catatan berada di luar layar).
 - Lebih dari 200 karakter ditolak server (`400 invalid_argument`, pesan *"catatan konsumsi maksimal 200 karakter"*); pesan server ditampilkan sebagai toast di form registrasi maupun dashboard.
 
 Kontrak API: field JSON `mealNotes` (string opsional, maks. 200) di payload create/update person (`POST`/`PUT /events/detail/{eventId}/people[/{personId}]`) dan registrasi staf publik, serta di respons list person dan monitor publik. `PUT` = full replace: field hilang, string kosong, atau `countsTowardMeals=false` → NULL. Di respons, `mealNotes` dihilangkan bila NULL (omitempty) → FE memperlakukannya sebagai `undefined`. Komponen: `components/events/meal-notes-field.tsx`; helper `normalizeMealNotes` di `lib/events-staff.ts`.
+
+### Edit staf = full replace (developer)
+
+`PUT /api/v1/events/detail/:eventId/people/:personId` di api-go menulis ulang **semua** kolom (`full_name`, `person_type`, `attendance_status`, `arrival_time`, `departure_time`, `notes`, `counts_toward_meals`, `meal_notes`), lalu **menghapus & mengisi ulang** terapi + ketersediaan (`therapyIds`, `availableFrom`/`availableUntil`) untuk terapis/shijie/daoshi/fashi dan peran relawan + pencatat (`volunteerRoleId`, `isPencatat`) untuk relawan. Field yang tidak dikirim menjadi NULL/kosong; `countsTowardMeals` default TRUE bila tidak dikirim.
+
+Karena itu dialog **Edit staf** selalu mengirim **semua** nilai yang ada untuk **semua** peran — termasuk field yang tidak tampil untuk peran tersebut (mis. `notes` untuk non-relawan) — sehingga hanya field yang diubah user yang berbeda:
+
+`fullName`, `role` + `personType`, `attendanceStatus`, `arrivalTime`, `departureTime`, `notes`, `countsTowardMeals`, `mealNotes`, `therapyIds`, `availableFrom`, `availableUntil`, `volunteerRoleId`, `isPencatat` (+ `saveToRoster`).
+
+- Jam kosong dikirim `null`; jam dari list (`08:15:00`) dikirim sebagai `08:15` (waktu sama).
+- Prefill berasal dari respons list person (`GET .../people`) yang sudah memuat semua field di atas.
+- Logika ada di `lib/events-person-form.ts` (`personToStaffForm`, `buildUpdatePersonPayload`, `buildCreatePersonPayload`). Tes tanpa backend: `npx playwright test e2e/specs/08-event-person-update-payload.spec.ts` (edit nama saja untuk non-relawan, terapis, relawan → semua nilai asal tetap ada).
 
 ### Export lembar terapis (Excel)
 
@@ -274,6 +286,7 @@ Alur: upload → preview hasil AI → edit baris jika perlu → **Commit** ke ac
 | `components/events/data-table-toolbar.tsx` | Search + pagination |
 | `lib/api/events.ts` | Client API |
 | `lib/events-staff.ts` | Label peran, helper terapi |
+| `lib/events-person-form.ts` | Form staf + payload tambah/edit person (edit = full replace) |
 | `app/jadwal/[tenantSlug]/[eventSlug]/` | Halaman jadwal pasien publik |
 | `app/monitor/[tenantSlug]/[eventSlug]/` | Halaman pantau staf publik |
 | `lib/public-event-error.ts` | Pesan error aman untuk halaman publik |

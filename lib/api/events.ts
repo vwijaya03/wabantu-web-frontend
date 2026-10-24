@@ -75,12 +75,12 @@ export type UpsertEventPersonBody = {
   rosterId?: string;
   saveToRoster?: boolean;
   attendanceStatus?: string;
-  arrivalTime?: string;
-  departureTime?: string;
+  arrivalTime?: string | null;
+  departureTime?: string | null;
   notes?: string;
   therapyId?: string;
   therapyIds?: string[];
-  volunteerRoleId?: string;
+  volunteerRoleId?: string | null;
   isPencatat?: boolean;
   countsTowardMeals?: boolean;
   /**
@@ -88,8 +88,8 @@ export type UpsertEventPersonBody = {
    * field hilang / string kosong / `countsTowardMeals=false` → NULL, jadi edit WAJIB selalu mengirim catatan yang ada.
    */
   mealNotes?: string;
-  availableFrom?: string;
-  availableUntil?: string;
+  availableFrom?: string | null;
+  availableUntil?: string | null;
 };
 
 export interface StaffRosterEntry {

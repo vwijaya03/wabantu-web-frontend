@@ -60,7 +60,6 @@ import {
   eventStaffRosterKey,
 } from "@/lib/query/events-query-keys";
 import {
-  normalizeMealNotes,
   personTypeToRole,
   roleUsesTherapies,
   STAFF_ROLES,
@@ -72,6 +71,14 @@ import {
   STAFF_SORT_DEFAULT,
 } from "@/lib/events-sort";
 import { toast } from "sonner";
+import {
+  buildCreatePersonPayload,
+  buildUpdatePersonPayload,
+  emptyStaffForm,
+  personToStaffForm,
+  ROLE_TO_PERSON_TYPE,
+  type StaffForm,
+} from "@/lib/events-person-form";
 import { useLocale } from "@/lib/i18n/locale";
 import { useEventDateFormat } from "@/components/events/events-i18n";
 
@@ -79,69 +86,7 @@ const PAGE_SIZE = 20;
 const ATTENDANCE = ["PRESENT", "PARTIAL", "ABSENT"] as const;
 const ALL_ROLES = "__all__";
 
-const ROLE_TO_TYPE: Record<string, string> = {
-  terapis: "THERAPIST",
-  relawan: "VOLUNTEER",
-  shijie: "SHIJIE",
-  daoshi: "DAOSHI",
-  fashi: "FASHI",
-};
-
-type StaffForm = {
-  rosterId: string;
-  fullName: string;
-  role: string;
-  attendanceStatus: string;
-  therapyIds: string[];
-  volunteerRoleId: string;
-  isPencatat: boolean;
-  countsTowardMeals: boolean;
-  mealNotes: string;
-  saveToRoster: boolean;
-  notes: string;
-  arrivalTime: string;
-  departureTime: string;
-  availableFrom: string;
-  availableUntil: string;
-};
-
-const emptyForm = (): StaffForm => ({
-  rosterId: "",
-  fullName: "",
-  role: "terapis",
-  attendanceStatus: "PRESENT",
-  therapyIds: [],
-  volunteerRoleId: "",
-  isPencatat: false,
-  countsTowardMeals: true,
-  mealNotes: "",
-  saveToRoster: true,
-  notes: "",
-  arrivalTime: "",
-  departureTime: "",
-  availableFrom: "",
-  availableUntil: "",
-});
-
-function personToForm(p: EventPerson): StaffForm {
-  return {
-    rosterId: "",
-    fullName: p.fullName,
-    role: p.role ?? personTypeToRole(p.personType),
-    attendanceStatus: p.attendanceStatus || "PRESENT",
-    therapyIds: p.therapyIds ?? (p.therapyId ? [p.therapyId] : []),
-    volunteerRoleId: p.volunteerRoleId ?? "",
-    isPencatat: p.isPencatat ?? false,
-    countsTowardMeals: p.countsTowardMeals ?? true,
-    mealNotes: p.mealNotes ?? "",
-    saveToRoster: true,
-    notes: p.notes ?? "",
-    arrivalTime: p.arrivalTime?.slice(0, 5) ?? "",
-    departureTime: p.departureTime?.slice(0, 5) ?? "",
-    availableFrom: p.availableFrom?.slice(0, 5) ?? "",
-    availableUntil: p.availableUntil?.slice(0, 5) ?? "",
-  };
-}
+const ROLE_TO_TYPE = ROLE_TO_PERSON_TYPE;
 
 function StaffFormFields({
   form,
@@ -337,29 +282,6 @@ function StaffFormFields({
   );
 }
 
-function buildPayload(form: StaffForm, editing: boolean) {
-  const mealNotes = normalizeMealNotes(form.countsTowardMeals, form.mealNotes);
-  return {
-    rosterId: !editing && form.rosterId ? form.rosterId : undefined,
-    saveToRoster: form.saveToRoster,
-    fullName: form.fullName,
-    role: form.role,
-    attendanceStatus: form.attendanceStatus,
-    therapyIds: roleUsesTherapies(form.role) ? form.therapyIds : undefined,
-    volunteerRoleId: form.role === "relawan" ? form.volunteerRoleId || undefined : undefined,
-    isPencatat: form.role === "relawan" ? form.isPencatat : undefined,
-    notes: editing && form.role === "relawan" ? form.notes : undefined,
-    countsTowardMeals: form.countsTowardMeals,
-    // PUT person = full replace: edit SELALU mengirim catatan (yang lama ikut terkirim bila tidak diubah;
-    // "" = kosongkan → NULL). Tambah: hilangkan bila kosong.
-    mealNotes: editing ? mealNotes : mealNotes || undefined,
-    arrivalTime: form.arrivalTime || undefined,
-    departureTime: form.departureTime || undefined,
-    availableFrom: form.availableFrom || undefined,
-    availableUntil: form.availableUntil || undefined,
-  };
-}
-
 export function EventStaffTab({
   eventId,
   canEdit,
@@ -383,7 +305,7 @@ export function EventStaffTab({
   const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<EventPerson | null>(null);
-  const [form, setForm] = useState<StaffForm>(emptyForm());
+  const [form, setForm] = useState<StaffForm>(emptyStaffForm());
   const [deleteTarget, setDeleteTarget] = useState<EventPerson | null>(null);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -446,13 +368,13 @@ export function EventStaffTab({
   const saveMut = useMutation({
     mutationFn: () =>
       editing
-        ? eventsApi.updatePerson(eventId, editing.id, buildPayload(form, true))
-        : eventsApi.createPerson(eventId, buildPayload(form, false)),
+        ? eventsApi.updatePerson(eventId, editing.id, buildUpdatePersonPayload(form))
+        : eventsApi.createPerson(eventId, buildCreatePersonPayload(form)),
     onSuccess: () => {
       toast.success(editing ? t("Staf diperbarui") : t("Staf ditambahkan"));
       setDialogOpen(false);
       setEditing(null);
-      setForm(emptyForm());
+      setForm(emptyStaffForm());
       invalidate();
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -504,13 +426,13 @@ export function EventStaffTab({
 
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyForm());
+    setForm(emptyStaffForm());
     setDialogOpen(true);
   };
 
   const openEdit = (p: EventPerson) => {
     setEditing(p);
-    setForm(personToForm(p));
+    setForm(personToStaffForm(p));
     setDialogOpen(true);
   };
 
