@@ -324,4 +324,6 @@ export const eventsEn: Record<string, string> = {
   "Catatan konsumsi (opsional)": "Meal notes (optional)",
   "Contoh: nasi setengah, tanpa nasi, alergi udang": "E.g. half rice, no rice, shrimp allergy",
   "Konsumsi": "Meal",
+  "Catatan Kehadiran": "Attendance notes",
+  "Catatan Konsumsi": "Meal notes",
 };

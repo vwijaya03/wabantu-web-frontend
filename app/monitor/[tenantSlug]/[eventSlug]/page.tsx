@@ -37,6 +37,11 @@ function monitorRoleLabel(person: PublicStaffMonitorPerson) {
   return `${base} · ${roleName}`;
 }
 
+/** Catatan konsumsi hanya relevan untuk orang yang dihitung makan. */
+function mealNoteFor(person: PublicStaffMonitorPerson): string {
+  return person.countsTowardMeals ? person.mealNotes?.trim() ?? "" : "";
+}
+
 function sortMonitorStaff(staff: PublicStaffMonitorPerson[], sort: ListSortState) {
   const dir = sort.sortDir === "asc" ? 1 : -1;
   return [...staff].sort((a, b) => {
@@ -211,13 +216,14 @@ export default function PublicStaffMonitorPage({
                   onSortChange={setTableSort}
                 />
                 <TableHead className="w-20 text-center">Makan</TableHead>
-                <TableHead>Catatan</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("Catatan Kehadiran")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("Catatan Konsumsi")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedStaff.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-muted-foreground">
+                  <TableCell colSpan={6} className="text-muted-foreground">
                     Belum ada staf terdaftar.
                   </TableCell>
                 </TableRow>
@@ -226,12 +232,16 @@ export default function PublicStaffMonitorPage({
                   <TableRow key={`${person.fullName}-${person.roleLabel}-${index}`}>
                     <TableCell className="font-medium">
                       {person.fullName}
-                      {person.countsTowardMeals && person.mealNotes?.trim() ? (
-                        <div className="mt-0.5 max-w-[160px] whitespace-normal break-words text-xs font-normal text-muted-foreground sm:hidden">
-                          <span className="mr-1 rounded bg-amber-100 px-1 py-px text-[10px] font-medium text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
-                            {t("Konsumsi")}
-                          </span>
-                          {person.mealNotes.trim()}
+                      {person.notes?.trim() || mealNoteFor(person) ? (
+                        <div className="mt-0.5 max-w-[180px] space-y-0.5 whitespace-normal break-words text-xs font-normal text-muted-foreground sm:hidden">
+                          <div>
+                            <span className="mr-1 font-medium text-foreground">{t("Kehadiran")}:</span>
+                            {person.notes?.trim() || "—"}
+                          </div>
+                          <div>
+                            <span className="mr-1 font-medium text-foreground">{t("Konsumsi")}:</span>
+                            {mealNoteFor(person) || "—"}
+                          </div>
                         </div>
                       ) : null}
                     </TableCell>
@@ -244,16 +254,11 @@ export default function PublicStaffMonitorPage({
                         <X className="mx-auto size-4 text-red-600" aria-label="Tidak dihitung makan" />
                       )}
                     </TableCell>
-                    <TableCell className="max-w-xs whitespace-pre-wrap text-muted-foreground">
-                      {person.notes?.trim() || (person.countsTowardMeals && person.mealNotes?.trim() ? null : "—")}
-                      {person.countsTowardMeals && person.mealNotes?.trim() ? (
-                        <div className={person.notes?.trim() ? "mt-1 text-xs" : "text-xs"}>
-                          <span className="mr-1 rounded bg-amber-100 px-1 py-px text-[10px] font-medium text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
-                            {t("Konsumsi")}
-                          </span>
-                          {person.mealNotes.trim()}
-                        </div>
-                      ) : null}
+                    <TableCell className="hidden max-w-xs whitespace-pre-wrap break-words text-muted-foreground sm:table-cell">
+                      {person.notes?.trim() || "—"}
+                    </TableCell>
+                    <TableCell className="hidden max-w-xs whitespace-pre-wrap break-words text-muted-foreground sm:table-cell">
+                      {mealNoteFor(person) || "—"}
                     </TableCell>
                   </TableRow>
                 ))
