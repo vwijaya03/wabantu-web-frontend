@@ -57,6 +57,7 @@ export function AuthProvider({
       // Even if API is unreachable, clear local auth state so user can proceed.
     } finally {
       setUser(null);
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload disengaja untuk membuang state sesi in-memory saat logout.
       if (typeof window !== "undefined") window.location.href = "/login";
     }
   }, []);

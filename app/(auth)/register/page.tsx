@@ -41,6 +41,7 @@ export default function RegisterPage() {
     try {
       await authApi.register(values);
       toast.success(t("Akun berhasil dibuat"));
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- tujuan hardcoded; full reload disengaja agar AuthProvider memuat ulang sesi yang baru disimpan (persistSession) saat registrasi.
       window.location.assign("/dashboard");
     } catch (err) {
       const e = toApiError(err);
