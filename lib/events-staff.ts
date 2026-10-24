@@ -29,3 +29,15 @@ export const STAFF_ROLES = [
 export function staffRoleLabel(role: string): string {
   return STAFF_ROLES.find((r) => r.value === role)?.label ?? role;
 }
+
+/** Batas panjang catatan konsumsi per orang (kontrak backend `mealNotes`). */
+export const MEAL_NOTES_MAX_LENGTH = 200;
+
+/**
+ * Normalisasi `mealNotes` untuk payload API: trim; string kosong bila orang
+ * tidak dihitung konsumsi atau catatannya kosong (server menyimpan NULL).
+ */
+export function normalizeMealNotes(countsTowardMeals: boolean, mealNotes: string | undefined): string {
+  if (!countsTowardMeals) return "";
+  return (mealNotes ?? "").trim().slice(0, MEAL_NOTES_MAX_LENGTH);
+}

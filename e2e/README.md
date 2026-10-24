@@ -41,6 +41,7 @@ Buka trace: `npx playwright show-trace e2e-artifacts/test-results/<dir>/trace.zi
 - Sesi superadmin hanya di memori: spec menavigasi client-side setelah login admin (reload = login ulang).
 - Skenario 4: UI simulator tidak menampilkan provider; spec memverifikasi PUT config berhasil & simulator tetap membalas. Bukti provider yang dipakai: log backend / ai-activity / DB (QA).
 - Skenario 1: bila Firebase tidak dikonfigurasi, cek IndexedDB `firebaseLocalStorageDb` tetap 0 — revoke Firebase asli = UNVERIFIED.
+- Spec 8 (`08-event-person-update-payload.spec.ts`): unit test murni (tanpa backend/browser) untuk payload edit person — `PUT` person = full replace, jadi edit nama saja harus mengirim ulang semua nilai asal. Jalankan: `npx playwright test e2e/specs/08-event-person-update-payload.spec.ts`.
 
 ## Catatan run lokal (13 Okt 2026)
 - Dev server: `NEXT_PUBLIC_API_URL` **harus** berakhiran `/api/v1` (mis. `http://127.0.0.1:4000/api/v1`). `lib/env.ts` tidak menambah prefix untuk `apiUrl` (hanya untuk SSE), jadi tanpa `/api/v1` login client/admin kena 404 ("Endpoint login admin belum tersedia di backend").

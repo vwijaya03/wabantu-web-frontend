@@ -321,4 +321,7 @@ export const eventsEn: Record<string, string> = {
   "{name} akan dihapus dari acara ini.": "{name} akan dihapus dari event ini.",
   "{name} akan dihapus dari acara.": "{name} akan dihapus dari event.",
   "— Input manual —": "— Input manual —",
+  "Catatan konsumsi (opsional)": "Meal notes (optional)",
+  "Contoh: nasi setengah, tanpa nasi, alergi udang": "E.g. half rice, no rice, shrimp allergy",
+  "Konsumsi": "Meal",
 };
