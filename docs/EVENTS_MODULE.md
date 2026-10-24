@@ -108,6 +108,20 @@ Roster = daftar nama yang dipakai ulang di setiap acara, tanpa mengetik dari awa
 
 Import gambar staf: upload screenshot → review draft → commit.
 
+### Catatan konsumsi per orang
+
+Untuk kebutuhan catering per orang (mis. *nasi setengah*, *tanpa nasi*, *alergi udang*).
+
+- Field **Catatan konsumsi (opsional)** muncul hanya saat checkbox **Dihitung untuk konsumsi (makan)** dicentang — di form pendaftaran staf publik (`/register/{slug-toko}/{slug-acara}/staff`) dan di dialog **Tambah staf** / **Edit staf** (tab **Staf**).
+- Maksimal **200 karakter** (ada penghitung `n/200`). Spasi di awal/akhir dipangkas.
+- Checkbox dimatikan → field disembunyikan dan isinya dikosongkan; catatan tidak dikirim.
+- Edit staf: kosongkan field untuk menghapus catatan. Karena `PUT` person adalah **full replace**, dialog edit **selalu** mengirim ulang `mealNotes` yang sudah ada (catatan tidak hilang saat mengedit field lain).
+- Catatan tampil di tabel **Daftar staf** di bawah nama (label kecil **Konsumsi** + teks), supaya panitia bisa melihatnya.
+- Halaman **Pantau staf publik** (`/monitor/{slug-toko}/{slug-acara}`) menampilkan catatan konsumsi di kolom **Catatan**, di bawah catatan biasa (di layar HP juga tampil di bawah nama, karena kolom Catatan berada di luar layar).
+- Lebih dari 200 karakter ditolak server (`400 invalid_argument`, pesan *"catatan konsumsi maksimal 200 karakter"*); pesan server ditampilkan sebagai toast di form registrasi maupun dashboard.
+
+Kontrak API: field JSON `mealNotes` (string opsional, maks. 200) di payload create/update person (`POST`/`PUT /events/detail/{eventId}/people[/{personId}]`) dan registrasi staf publik, serta di respons list person dan monitor publik. `PUT` = full replace: field hilang, string kosong, atau `countsTowardMeals=false` → NULL. Di respons, `mealNotes` dihilangkan bila NULL (omitempty) → FE memperlakukannya sebagai `undefined`. Komponen: `components/events/meal-notes-field.tsx`; helper `normalizeMealNotes` di `lib/events-staff.ts`.
+
 ### Export lembar terapis (Excel)
 
 - Tab **Staf** → **Export Excel** → job async → unduh dari **Riwayat export**.

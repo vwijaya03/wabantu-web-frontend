@@ -18,6 +18,7 @@ import { eventsApi, type PublicStaffMonitorPerson } from "@/lib/api/events";
 import { formatEventDateTimeRange } from "@/lib/events-format";
 import { publicEventErrorCopy } from "@/lib/public-event-error";
 import type { ListSortState } from "@/lib/events-sort";
+import { useLocale } from "@/lib/i18n/locale";
 
 const MONITOR_SORT_DEFAULT: ListSortState = { sortBy: "fullName", sortDir: "asc" };
 
@@ -63,6 +64,7 @@ export default function PublicStaffMonitorPage({
   params: Promise<{ tenantSlug: string; eventSlug: string }>;
 }) {
   const { tenantSlug, eventSlug } = use(params);
+  const { t } = useLocale();
   const [tableSort, setTableSort] = useState(MONITOR_SORT_DEFAULT);
 
   const { data, isLoading, error, refetch, isFetching } = useQuery({
@@ -222,7 +224,17 @@ export default function PublicStaffMonitorPage({
               ) : (
                 sortedStaff.map((person, index) => (
                   <TableRow key={`${person.fullName}-${person.roleLabel}-${index}`}>
-                    <TableCell className="font-medium">{person.fullName}</TableCell>
+                    <TableCell className="font-medium">
+                      {person.fullName}
+                      {person.countsTowardMeals && person.mealNotes?.trim() ? (
+                        <div className="mt-0.5 max-w-[160px] whitespace-normal break-words text-xs font-normal text-muted-foreground sm:hidden">
+                          <span className="mr-1 rounded bg-amber-100 px-1 py-px text-[10px] font-medium text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
+                            {t("Konsumsi")}
+                          </span>
+                          {person.mealNotes.trim()}
+                        </div>
+                      ) : null}
+                    </TableCell>
                     <TableCell>{monitorRoleLabel(person)}</TableCell>
                     <TableCell>{therapyLabel(person.therapyNames, person.isPencatat)}</TableCell>
                     <TableCell className="text-center">
@@ -233,7 +245,15 @@ export default function PublicStaffMonitorPage({
                       )}
                     </TableCell>
                     <TableCell className="max-w-xs whitespace-pre-wrap text-muted-foreground">
-                      {person.notes?.trim() || "—"}
+                      {person.notes?.trim() || (person.countsTowardMeals && person.mealNotes?.trim() ? null : "—")}
+                      {person.countsTowardMeals && person.mealNotes?.trim() ? (
+                        <div className={person.notes?.trim() ? "mt-1 text-xs" : "text-xs"}>
+                          <span className="mr-1 rounded bg-amber-100 px-1 py-px text-[10px] font-medium text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
+                            {t("Konsumsi")}
+                          </span>
+                          {person.mealNotes.trim()}
+                        </div>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 ))

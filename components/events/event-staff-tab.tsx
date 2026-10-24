@@ -8,6 +8,7 @@ import { ExportSortPanel, resolveExportSort } from "@/components/events/export-s
 import { SortableTableHead } from "@/components/events/sortable-table-head";
 import { EventTabRefreshButton } from "@/components/events/event-tab-refresh-button";
 import { DataTablePagination, DataTableToolbar } from "@/components/events/data-table-toolbar";
+import { MealNotesField } from "@/components/events/meal-notes-field";
 import { TherapyMultiPick } from "@/components/events/therapy-multi-pick";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +60,7 @@ import {
   eventStaffRosterKey,
 } from "@/lib/query/events-query-keys";
 import {
+  normalizeMealNotes,
   personTypeToRole,
   roleUsesTherapies,
   STAFF_ROLES,
@@ -94,6 +96,7 @@ type StaffForm = {
   volunteerRoleId: string;
   isPencatat: boolean;
   countsTowardMeals: boolean;
+  mealNotes: string;
   saveToRoster: boolean;
   notes: string;
   arrivalTime: string;
@@ -111,6 +114,7 @@ const emptyForm = (): StaffForm => ({
   volunteerRoleId: "",
   isPencatat: false,
   countsTowardMeals: true,
+  mealNotes: "",
   saveToRoster: true,
   notes: "",
   arrivalTime: "",
@@ -129,6 +133,7 @@ function personToForm(p: EventPerson): StaffForm {
     volunteerRoleId: p.volunteerRoleId ?? "",
     isPencatat: p.isPencatat ?? false,
     countsTowardMeals: p.countsTowardMeals ?? true,
+    mealNotes: p.mealNotes ?? "",
     saveToRoster: true,
     notes: p.notes ?? "",
     arrivalTime: p.arrivalTime?.slice(0, 5) ?? "",
@@ -302,9 +307,24 @@ function StaffFormFields({
           <input
             type="checkbox"
             checked={form.countsTowardMeals}
-            onChange={(e) => setForm((f) => ({ ...f, countsTowardMeals: e.target.checked }))}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                countsTowardMeals: e.target.checked,
+                mealNotes: e.target.checked ? f.mealNotes : "",
+              }))
+            }
           />{t("Dihitung untuk konsumsi (makan)")}</label>
       </div>
+      {form.countsTowardMeals ? (
+        <div className="sm:col-span-2">
+          <MealNotesField
+            id="staff-meal-notes"
+            value={form.mealNotes}
+            onChange={(mealNotes) => setForm((f) => ({ ...f, mealNotes }))}
+          />
+        </div>
+      ) : null}
       <div className="sm:col-span-2">
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -318,6 +338,7 @@ function StaffFormFields({
 }
 
 function buildPayload(form: StaffForm, editing: boolean) {
+  const mealNotes = normalizeMealNotes(form.countsTowardMeals, form.mealNotes);
   return {
     rosterId: !editing && form.rosterId ? form.rosterId : undefined,
     saveToRoster: form.saveToRoster,
@@ -329,6 +350,9 @@ function buildPayload(form: StaffForm, editing: boolean) {
     isPencatat: form.role === "relawan" ? form.isPencatat : undefined,
     notes: editing && form.role === "relawan" ? form.notes : undefined,
     countsTowardMeals: form.countsTowardMeals,
+    // PUT person = full replace: edit SELALU mengirim catatan (yang lama ikut terkirim bila tidak diubah;
+    // "" = kosongkan → NULL). Tambah: hilangkan bila kosong.
+    mealNotes: editing ? mealNotes : mealNotes || undefined,
     arrivalTime: form.arrivalTime || undefined,
     departureTime: form.departureTime || undefined,
     availableFrom: form.availableFrom || undefined,
@@ -685,7 +709,20 @@ export function EventStaffTab({
                             />
                           </TableCell>
                         ) : null}
-                        <TableCell className="font-medium">{p.fullName}</TableCell>
+                        <TableCell className="font-medium">
+                          <div>{p.fullName}</div>
+                          {p.countsTowardMeals !== false && p.mealNotes ? (
+                            <div
+                              className="mt-0.5 max-w-[240px] whitespace-normal break-words text-xs font-normal text-muted-foreground"
+                              title={p.mealNotes}
+                            >
+                              <span className="mr-1 rounded bg-amber-100 px-1 py-px text-[10px] font-medium text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
+                                {t("Konsumsi")}
+                              </span>
+                              {p.mealNotes}
+                            </div>
+                          ) : null}
+                        </TableCell>
                         <TableCell>{staffRoleLabel(personTypeToRole(p.personType))}</TableCell>
                         <TableCell className="max-w-[200px] truncate text-muted-foreground">
                           {(p.therapyNames ?? []).join(", ") || "—"}

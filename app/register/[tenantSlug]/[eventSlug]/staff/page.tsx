@@ -15,9 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MealNotesField } from "@/components/events/meal-notes-field";
 import { TherapyMultiPick } from "@/components/events/therapy-multi-pick";
 import { eventsApi } from "@/lib/api/events";
-import { roleUsesTherapies, STAFF_ROLES } from "@/lib/events-staff";
+import { normalizeMealNotes, roleUsesTherapies, STAFF_ROLES } from "@/lib/events-staff";
 import { toApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 
@@ -35,6 +36,7 @@ export default function PublicStaffRegisterPage({
     phone: "",
     notes: "",
     countsTowardMeals: true,
+    mealNotes: "",
   });
   const [done, setDone] = useState(false);
 
@@ -55,6 +57,7 @@ export default function PublicStaffRegisterPage({
         phone: form.phone || undefined,
         notes: form.notes || undefined,
         countsTowardMeals: form.countsTowardMeals,
+        mealNotes: normalizeMealNotes(form.countsTowardMeals, form.mealNotes) || undefined,
       }),
     onSuccess: () => setDone(true),
     onError: (e) => toast.error(toApiError(e).message),
@@ -102,6 +105,7 @@ export default function PublicStaffRegisterPage({
       phone: "",
       notes: "",
       countsTowardMeals: true,
+      mealNotes: "",
     });
     setDone(false);
   };
@@ -211,10 +215,23 @@ export default function PublicStaffRegisterPage({
               <input
                 type="checkbox"
                 checked={form.countsTowardMeals}
-                onChange={(e) => setForm((f) => ({ ...f, countsTowardMeals: e.target.checked }))}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    countsTowardMeals: e.target.checked,
+                    mealNotes: e.target.checked ? f.mealNotes : "",
+                  }))
+                }
               />
               Dihitung untuk konsumsi (makan)
             </label>
+            {form.countsTowardMeals ? (
+              <MealNotesField
+                id="public-staff-meal-notes"
+                value={form.mealNotes}
+                onChange={(mealNotes) => setForm((f) => ({ ...f, mealNotes }))}
+              />
+            ) : null}
             <Button
               className="w-full"
               disabled={
