@@ -4,7 +4,7 @@ Spec di `e2e/specs/`, config di `playwright.config.ts`. Target & kredensial **ha
 
 ## Jalankan (lokal)
 ```bash
-nvm use 25.9.0
+nvm install 24.22.1 && nvm use 24.22.1   # sesuai .nvmrc; jangan Node 25
 npx playwright install --with-deps chromium   # sekali
 npm run dev                                   # FE :3000, rewrite /api/v1 → API_BACKEND_URL (default :4000)
 # terminal lain (backend: encore run di api-go)
