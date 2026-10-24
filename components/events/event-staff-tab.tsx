@@ -8,6 +8,7 @@ import { ExportSortPanel, resolveExportSort } from "@/components/events/export-s
 import { SortableTableHead } from "@/components/events/sortable-table-head";
 import { EventTabRefreshButton } from "@/components/events/event-tab-refresh-button";
 import { DataTablePagination, DataTableToolbar } from "@/components/events/data-table-toolbar";
+import { MealNotesField } from "@/components/events/meal-notes-field";
 import { TherapyMultiPick } from "@/components/events/therapy-multi-pick";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +71,14 @@ import {
   STAFF_SORT_DEFAULT,
 } from "@/lib/events-sort";
 import { toast } from "sonner";
+import {
+  buildCreatePersonPayload,
+  buildUpdatePersonPayload,
+  emptyStaffForm,
+  personToStaffForm,
+  ROLE_TO_PERSON_TYPE,
+  type StaffForm,
+} from "@/lib/events-person-form";
 import { useLocale } from "@/lib/i18n/locale";
 import { useEventDateFormat } from "@/components/events/events-i18n";
 
@@ -77,66 +86,7 @@ const PAGE_SIZE = 20;
 const ATTENDANCE = ["PRESENT", "PARTIAL", "ABSENT"] as const;
 const ALL_ROLES = "__all__";
 
-const ROLE_TO_TYPE: Record<string, string> = {
-  terapis: "THERAPIST",
-  relawan: "VOLUNTEER",
-  shijie: "SHIJIE",
-  daoshi: "DAOSHI",
-  fashi: "FASHI",
-};
-
-type StaffForm = {
-  rosterId: string;
-  fullName: string;
-  role: string;
-  attendanceStatus: string;
-  therapyIds: string[];
-  volunteerRoleId: string;
-  isPencatat: boolean;
-  countsTowardMeals: boolean;
-  saveToRoster: boolean;
-  notes: string;
-  arrivalTime: string;
-  departureTime: string;
-  availableFrom: string;
-  availableUntil: string;
-};
-
-const emptyForm = (): StaffForm => ({
-  rosterId: "",
-  fullName: "",
-  role: "terapis",
-  attendanceStatus: "PRESENT",
-  therapyIds: [],
-  volunteerRoleId: "",
-  isPencatat: false,
-  countsTowardMeals: true,
-  saveToRoster: true,
-  notes: "",
-  arrivalTime: "",
-  departureTime: "",
-  availableFrom: "",
-  availableUntil: "",
-});
-
-function personToForm(p: EventPerson): StaffForm {
-  return {
-    rosterId: "",
-    fullName: p.fullName,
-    role: p.role ?? personTypeToRole(p.personType),
-    attendanceStatus: p.attendanceStatus || "PRESENT",
-    therapyIds: p.therapyIds ?? (p.therapyId ? [p.therapyId] : []),
-    volunteerRoleId: p.volunteerRoleId ?? "",
-    isPencatat: p.isPencatat ?? false,
-    countsTowardMeals: p.countsTowardMeals ?? true,
-    saveToRoster: true,
-    notes: p.notes ?? "",
-    arrivalTime: p.arrivalTime?.slice(0, 5) ?? "",
-    departureTime: p.departureTime?.slice(0, 5) ?? "",
-    availableFrom: p.availableFrom?.slice(0, 5) ?? "",
-    availableUntil: p.availableUntil?.slice(0, 5) ?? "",
-  };
-}
+const ROLE_TO_TYPE = ROLE_TO_PERSON_TYPE;
 
 function StaffFormFields({
   form,
@@ -302,9 +252,24 @@ function StaffFormFields({
           <input
             type="checkbox"
             checked={form.countsTowardMeals}
-            onChange={(e) => setForm((f) => ({ ...f, countsTowardMeals: e.target.checked }))}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                countsTowardMeals: e.target.checked,
+                mealNotes: e.target.checked ? f.mealNotes : "",
+              }))
+            }
           />{t("Dihitung untuk konsumsi (makan)")}</label>
       </div>
+      {form.countsTowardMeals ? (
+        <div className="sm:col-span-2">
+          <MealNotesField
+            id="staff-meal-notes"
+            value={form.mealNotes}
+            onChange={(mealNotes) => setForm((f) => ({ ...f, mealNotes }))}
+          />
+        </div>
+      ) : null}
       <div className="sm:col-span-2">
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -315,25 +280,6 @@ function StaffFormFields({
       </div>
     </div>
   );
-}
-
-function buildPayload(form: StaffForm, editing: boolean) {
-  return {
-    rosterId: !editing && form.rosterId ? form.rosterId : undefined,
-    saveToRoster: form.saveToRoster,
-    fullName: form.fullName,
-    role: form.role,
-    attendanceStatus: form.attendanceStatus,
-    therapyIds: roleUsesTherapies(form.role) ? form.therapyIds : undefined,
-    volunteerRoleId: form.role === "relawan" ? form.volunteerRoleId || undefined : undefined,
-    isPencatat: form.role === "relawan" ? form.isPencatat : undefined,
-    notes: editing && form.role === "relawan" ? form.notes : undefined,
-    countsTowardMeals: form.countsTowardMeals,
-    arrivalTime: form.arrivalTime || undefined,
-    departureTime: form.departureTime || undefined,
-    availableFrom: form.availableFrom || undefined,
-    availableUntil: form.availableUntil || undefined,
-  };
 }
 
 export function EventStaffTab({
@@ -359,7 +305,7 @@ export function EventStaffTab({
   const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<EventPerson | null>(null);
-  const [form, setForm] = useState<StaffForm>(emptyForm());
+  const [form, setForm] = useState<StaffForm>(emptyStaffForm());
   const [deleteTarget, setDeleteTarget] = useState<EventPerson | null>(null);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -422,13 +368,13 @@ export function EventStaffTab({
   const saveMut = useMutation({
     mutationFn: () =>
       editing
-        ? eventsApi.updatePerson(eventId, editing.id, buildPayload(form, true))
-        : eventsApi.createPerson(eventId, buildPayload(form, false)),
+        ? eventsApi.updatePerson(eventId, editing.id, buildUpdatePersonPayload(form))
+        : eventsApi.createPerson(eventId, buildCreatePersonPayload(form)),
     onSuccess: () => {
       toast.success(editing ? t("Staf diperbarui") : t("Staf ditambahkan"));
       setDialogOpen(false);
       setEditing(null);
-      setForm(emptyForm());
+      setForm(emptyStaffForm());
       invalidate();
     },
     onError: (e) => toast.error(toApiError(e).message),
@@ -480,13 +426,13 @@ export function EventStaffTab({
 
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyForm());
+    setForm(emptyStaffForm());
     setDialogOpen(true);
   };
 
   const openEdit = (p: EventPerson) => {
     setEditing(p);
-    setForm(personToForm(p));
+    setForm(personToStaffForm(p));
     setDialogOpen(true);
   };
 
@@ -685,7 +631,20 @@ export function EventStaffTab({
                             />
                           </TableCell>
                         ) : null}
-                        <TableCell className="font-medium">{p.fullName}</TableCell>
+                        <TableCell className="font-medium">
+                          <div>{p.fullName}</div>
+                          {p.countsTowardMeals !== false && p.mealNotes ? (
+                            <div
+                              className="mt-0.5 max-w-[240px] whitespace-normal break-words text-xs font-normal text-muted-foreground"
+                              title={p.mealNotes}
+                            >
+                              <span className="mr-1 rounded bg-amber-100 px-1 py-px text-[10px] font-medium text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
+                                {t("Konsumsi")}
+                              </span>
+                              {p.mealNotes}
+                            </div>
+                          ) : null}
+                        </TableCell>
                         <TableCell>{staffRoleLabel(personTypeToRole(p.personType))}</TableCell>
                         <TableCell className="max-w-[200px] truncate text-muted-foreground">
                           {(p.therapyNames ?? []).join(", ") || "—"}

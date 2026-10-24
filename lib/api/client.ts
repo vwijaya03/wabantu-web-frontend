@@ -94,6 +94,7 @@ api.interceptors.response.use(
     // 401 dengan token impersonation → sesi pantau habis/dicabut: bersihkan dan kembali ke konsol admin.
     if (status === 401 && getImpersonationToken() && typeof window !== "undefined") {
       clearImpersonationSession();
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload disengaja untuk membuang state sesi impersonation in-memory.
       window.location.assign("/dashboard/admin?impersonationEnded=1");
       return Promise.reject(error);
     }

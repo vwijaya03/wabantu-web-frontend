@@ -61,14 +61,14 @@ flowchart TB
 
 | Layer | Technology |
 |-------|------------|
-| Framework | **Next.js 16.2** (App Router) |
+| Framework | **Next.js 16.4.3** (App Router; dipin exact, bump keamanan Okt 2026) |
 | UI library | **React 19.2** |
 | Language | **TypeScript 5** |
 | Styling | **Tailwind CSS v4** + CSS variables (OKLCH) |
 | Components | **shadcn/ui-style** (Radix + `cva` + `cn`) |
-| HTTP | **Axios** |
+| HTTP | **Axios** (≥1.20.0, patch keamanan Okt 2026) |
 | Server state | **TanStack React Query v5** |
-| Forms | **react-hook-form** + **Zod 4** |
+| Forms | **react-hook-form** + **Zod 4** (≥4.6.7) |
 | Toasts | **Sonner** |
 | Icons | **Lucide React** |
 

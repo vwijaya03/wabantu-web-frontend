@@ -9,13 +9,13 @@
 # =====================================================================
 
 # ---------- 1. Install all deps ----------
-FROM node:22-alpine AS deps
+FROM node:24.22.1-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 
 # ---------- 2. Build ----------
-FROM node:22-alpine AS builder
+FROM node:24.22.1-alpine AS builder
 WORKDIR /app
 
 # Public env vars must be present during `next build` to be inlined.
@@ -34,7 +34,7 @@ COPY . .
 RUN npm run build
 
 # ---------- 3. Runtime ----------
-FROM node:22-alpine AS runtime
+FROM node:24.22.1-alpine AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production \

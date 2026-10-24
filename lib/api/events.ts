@@ -61,6 +61,8 @@ export interface EventPerson {
   volunteerRoleName?: string;
   isPencatat?: boolean;
   countsTowardMeals?: boolean;
+  /** Catatan konsumsi per orang (mis. "nasi setengah"). Dihilangkan dari respons bila NULL (omitempty). */
+  mealNotes?: string;
   availableFrom?: string;
   availableUntil?: string;
   createdAt?: string;
@@ -73,16 +75,21 @@ export type UpsertEventPersonBody = {
   rosterId?: string;
   saveToRoster?: boolean;
   attendanceStatus?: string;
-  arrivalTime?: string;
-  departureTime?: string;
+  arrivalTime?: string | null;
+  departureTime?: string | null;
   notes?: string;
   therapyId?: string;
   therapyIds?: string[];
-  volunteerRoleId?: string;
+  volunteerRoleId?: string | null;
   isPencatat?: boolean;
   countsTowardMeals?: boolean;
-  availableFrom?: string;
-  availableUntil?: string;
+  /**
+   * Maks. 200 karakter (lebih → 400 invalid_argument). PUT person = full replace:
+   * field hilang / string kosong / `countsTowardMeals=false` → NULL, jadi edit WAJIB selalu mengirim catatan yang ada.
+   */
+  mealNotes?: string;
+  availableFrom?: string | null;
+  availableUntil?: string | null;
 };
 
 export interface StaffRosterEntry {
@@ -256,6 +263,8 @@ export interface PublicStaffMonitorPerson {
   isPencatat: boolean;
   countsTowardMeals: boolean;
   notes?: string;
+  /** Catatan konsumsi per orang; dihilangkan bila NULL. */
+  mealNotes?: string;
 }
 
 export interface PublicStaffMonitorResponse {
@@ -590,6 +599,8 @@ export const eventsApi = {
       phone?: string;
       notes?: string;
       countsTowardMeals?: boolean;
+      /** Maks. 200 karakter; dihilangkan bila kosong / tidak dihitung konsumsi. */
+      mealNotes?: string;
     },
   ) =>
     api
