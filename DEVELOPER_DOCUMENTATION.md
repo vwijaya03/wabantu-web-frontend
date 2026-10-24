@@ -66,9 +66,9 @@ flowchart TB
 | Language | **TypeScript 5** |
 | Styling | **Tailwind CSS v4** + CSS variables (OKLCH) |
 | Components | **shadcn/ui-style** (Radix + `cva` + `cn`) |
-| HTTP | **Axios** |
+| HTTP | **Axios** (≥1.20.0, patch keamanan Okt 2026) |
 | Server state | **TanStack React Query v5** |
-| Forms | **react-hook-form** + **Zod 4** |
+| Forms | **react-hook-form** + **Zod 4** (≥4.6.7) |
 | Toasts | **Sonner** |
 | Icons | **Lucide React** |
 
