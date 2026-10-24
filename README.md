@@ -18,7 +18,7 @@ Alur lengkap: **[APP_FLOW_GUIDE.md](./APP_FLOW_GUIDE.md)** · Backend: **[../api
 
 | # | Harus sudah ready | Cara cek |
 |---|-------------------|----------|
-| 1 | **Node.js 18+** (disarankan 20/22) | `node -v` — Next 16 tidak jalan di Node 14 |
+| 1 | **Node.js 24.22.1** (lihat `.nvmrc`; `engines`: `>=24.22.1 <25`) | `nvm use` lalu `node -v` → `v24.22.1`. Jangan pakai Node 25 (bukan LTS) |
 | 2 | **api-go** sedang jalan | `curl -s http://localhost:4000/api/v1/health` → JSON OK |
 | 3 | **Redis** (untuk session api-go) | `redis-cli ping` → `PONG` (lihat `../infra`) |
 | 4 | File env frontend | `cp .env.example .env.local` (atau `.env`) |
@@ -250,13 +250,16 @@ Untuk runtime, superadmin bisa buka `/dashboard/docs` → **Sumber Dokumentasi**
 | Tab baru langsung login | Dulu pakai `sessionStorage` | Sudah `localStorage` — refresh / login ulang sekali untuk migrasi |
 | Dashboard “Memuat…” lama | `GET /auth/me` gagal | Pastikan api-go + JWT secret; network tab |
 | Inbox tidak real-time | SSE via rewrite | Dev: otomatis ke `:4000` di `lib/env.ts`, atau set `NEXT_PUBLIC_SSE_API_URL=http://localhost:4000` |
-| `npm run build` syntax error | Node 14 | `nvm use 20` atau 22 |
+| `npm run build` syntax error / warning `EBADENGINE` | Versi Node tidak sesuai | `nvm install 24.22.1 && nvm use 24.22.1` |
 
 ## Docker (standalone deploy unit)
 
 The frontend ships its own `Dockerfile` (multi-stage, Next.js standalone
 output) and `docker-compose.yml`, so it can be built and shipped
 independently of the API or the infra services.
+
+Base image: `node:24.22.1-alpine` (dipin ke patch, sama dengan `.nvmrc` dan
+`engines` di `package.json`; jangan pakai tag `latest` atau Node 25).
 
 ```bash
 # Build & start the web container:
